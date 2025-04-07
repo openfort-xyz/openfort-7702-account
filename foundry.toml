@@ -1,0 +1,13 @@
+[profile.default]
+solc_version = '0.8.29'
+solc = '0.8.29'
+src = 'contracts'
+out = "out"
+libs = ["lib"]
+
+odyssey = true
+evm_version = "prague"
+
+remappings = ["@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts"]
+
+# See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
