@@ -75,7 +75,6 @@ contract OpenfortBaseAccount7702V1_4337 layout at 0x801ae8efc2175d3d963e799b27e0
     error OpenfortBaseAccount7702V1__InvalidTransactionLength();
     error OpenfortBaseAccount7702V1__InvalidTransactionTarget();
     error OpenfortBaseAccount7702V1__TransactionFailed(bytes returnData);
-    error OpenfortBaseAccount7702V1__InsufficientFunds();
     error OpenfortBaseAccount7702V1__WithdrawFailed();
 
     /// @notice Emitted when the account is initialized with an owner
