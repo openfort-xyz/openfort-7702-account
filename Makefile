@@ -6,7 +6,7 @@ export $(shell sed 's/=.*//' .env)
 deploy:
 	forge create contracts/core/OpenfortBaseAccount7702V1_4337.sol:OpenfortBaseAccount7702V1_4337 \
 		--rpc-url $(HOLESKY_RPC_URL) \
-		--account BURNER_KEY \
+		--private-key $(PRIVATE_KEY_OPENFORT_USER_7702) \
 		--broadcast \
 		--constructor-args $(HOLESKY_ENTRYPOINT_ADDRESS)
 
