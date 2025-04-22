@@ -26,7 +26,7 @@ import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.s
 import {IEntryPoint} from "@account-abstraction/contracts/interfaces/IEntryPoint.sol";
 import {PackedUserOperation} from "@account-abstraction/contracts/interfaces/PackedUserOperation.sol";
 import {SIG_VALIDATION_FAILED, SIG_VALIDATION_SUCCESS} from "@account-abstraction/contracts/core/Helpers.sol";
-
+import {console2 as console} from "forge-std/Test.sol";
 /**
  * @title Openfort Base Account 7702 with ERC-4337 Support
  * @author Openfort@0xkoiner
@@ -116,7 +116,7 @@ contract OpenfortBaseAccount7702V1_4337 layout at 0x801ae8efc2175d3d963e799b27e0
     function initialize(address _owner, uint256 _validUntil, bytes32 userOpHash, bytes calldata _signature, uint256 _nonce) external initializer {
 
         _clearStorage();
-        _validateNonceDirect(_nonce);
+        _validateNonce(_nonce);
         _notExpired(_validUntil);
 
         if (!_checkSignature(userOpHash, _signature)) {
@@ -215,7 +215,7 @@ contract OpenfortBaseAccount7702V1_4337 layout at 0x801ae8efc2175d3d963e799b27e0
      * @dev Ensures nonce is different to prevent replay attacks
      * @param _nonce The nonce to validate
      */
-    function _validateNonceDirect(uint256 _nonce) internal view {
+    function _validateNonce(uint256 _nonce) internal override view {
         if (_nonce == nonce) {
             revert OpenfortBaseAccount7702V1__InvalidNonce();
         }
