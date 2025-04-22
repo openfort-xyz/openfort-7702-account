@@ -26,7 +26,7 @@ import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.s
 import {IEntryPoint} from "@account-abstraction/contracts/interfaces/IEntryPoint.sol";
 import {PackedUserOperation} from "@account-abstraction/contracts/interfaces/PackedUserOperation.sol";
 import {SIG_VALIDATION_FAILED, SIG_VALIDATION_SUCCESS} from "@account-abstraction/contracts/core/Helpers.sol";
-import {console2 as console} from "forge-std/Test.sol";
+
 /**
  * @title Openfort Base Account 7702 with ERC-4337 Support
  * @author Openfort@0xkoiner
