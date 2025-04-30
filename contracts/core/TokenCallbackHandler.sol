@@ -7,7 +7,6 @@ import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Recei
 import {IERC777Recipient} from "@openzeppelin/contracts/interfaces/IERC777Recipient.sol";
 import {IERC1155Receiver} from "@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol";
 
-
 contract TokenCallbackHandler is IERC165, IERC721Receiver, IERC777Recipient, IERC1155Receiver {
     function tokensReceived(address, address, address, uint256, bytes calldata, bytes calldata)
         external
@@ -45,16 +44,8 @@ contract TokenCallbackHandler is IERC165, IERC721Receiver, IERC777Recipient, IER
         return this.onERC1155BatchReceived.selector;
     }
 
-    function supportsInterface(bytes4 interfaceId)  
-        external
-        view
-        virtual
-        override
-        returns (bool)
-    {
-        return interfaceId == type(IERC721Receiver).interfaceId  ||
-               interfaceId == type(IERC777Recipient).interfaceId ||
-               interfaceId == type(IERC1155Receiver).interfaceId ||
-               interfaceId == type(IERC165).interfaceId;
+    function supportsInterface(bytes4 interfaceId) external view virtual override returns (bool) {
+        return interfaceId == type(IERC721Receiver).interfaceId || interfaceId == type(IERC777Recipient).interfaceId
+            || interfaceId == type(IERC1155Receiver).interfaceId || interfaceId == type(IERC165).interfaceId;
     }
 }

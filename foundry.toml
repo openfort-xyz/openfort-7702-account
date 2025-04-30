@@ -5,10 +5,15 @@ src = 'contracts'
 out = "out"
 libs = ["lib"]
 extra_output = ["storageLayout"]
-
+via-ir = true
+optimizer = true
+optimizer_runs = 20000000
 odyssey = true
 evm_version = "prague"
+fs_permissions = [{ access = "read-write", path = "./bytecode.txt"}]
 
-remappings = ["@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts", "@account-abstraction/contracts/=lib/account-abstraction/contracts"]
+remappings = ["@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts",
+"@account-abstraction/contracts/=lib/account-abstraction/contracts",
+"@0xsequence/create3/contracts=lib/create3/contracts"]
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options

@@ -5,10 +5,10 @@ pragma solidity ^0.8.29;
 import {IValidation} from "contracts/interfaces/IValidation.sol";
 
 struct Transaction {
-        address to;
-        uint256 value;
-        bytes data;
-    }
+    address to;
+    uint256 value;
+    bytes data;
+}
 
 /**
  * @title IOpenfortBaseAccount Interface
@@ -24,11 +24,11 @@ interface IOpenfortBaseAccount {
      * @param _validation The validation struct containing signature and validation data
      */
     function initialize(address _owner, IValidation.Validation calldata _validation) external;
-    
+
     /**
      * @notice Executes a batch of transactions if called by the owner
      * @dev Should verify the caller and execute the transactions
      * @param _transactions An array of transactions to execute
      */
-    function execute(Transaction[] calldata _transactions) payable external;
+    function execute(Transaction[] calldata _transactions) external payable;
 }
