@@ -2,9 +2,9 @@ import { ethers } from 'ethers';
 
 // Constants
 const PRIVATE_KEY = process.env.PRIVATE_KEY_OPENFORT_USER_7702;
-const HOLESKY_RPC = process.env.HOLESKY_RPC_URL;
+const HOLESKY_RPC = process.env.SEPOLIA_RPC_URL;
 const SMART_ACCOUNT_ADDRESS = process.env.ADDRESS_OPENFORT_USER_ADDRESS_7702;
-const ENTRY_POINT_ADDRESS = process.env.HOLESKY_ENTRYPOINT_ADDRESS;
+const ENTRY_POINT_ADDRESS = process.env.SEPOLIA_ENTRYPOINT_ADDRESS;
 
 // Create a wallet from the private key
 const wallet = new ethers.Wallet(PRIVATE_KEY);
@@ -34,7 +34,7 @@ async function depositToEntryPoint() {
     console.log('Current balance in EntryPoint:', ethers.utils.formatEther(currentBalance), 'ETH');
     
     // Deposit amount (0.01 ETH)
-    const depositAmount = ethers.utils.parseEther('0.02');
+    const depositAmount = ethers.utils.parseEther('0.1');
     console.log('Depositing:', ethers.utils.formatEther(depositAmount), 'ETH to EntryPoint');
     
     // Send the deposit transaction

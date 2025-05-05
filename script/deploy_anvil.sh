@@ -7,7 +7,7 @@ source .env
 
 # Deploy
 forge script script/OpenfortBaseAccount7702V1Script.s.sol:OpenfortBaseAccount7702V1Deployer \
-  --rpc-url "$ANVIL_RPC_URL" \
+  --rpc-url "$SEPOLIA_RPC_URL" \
   --private-key "$ANVIL_PRIVATE_KEY_DEPLOYER" \
   --broadcast
 

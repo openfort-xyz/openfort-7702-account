@@ -3,8 +3,8 @@ import { ethers } from 'ethers';
 
 // ---------- Constants ----------
 const PRIVATE_KEY = process.env.PRIVATE_KEY_OPENFORT_USER_7702;
-const HOLESKY_RPC = process.env.HOLESKY_RPC_URL;
-const ENTRY_POINT_ADDRESS = process.env.HOLESKY_ENTRYPOINT_ADDRESS;
+const HOLESKY_RPC = process.env.SEPOLIA_RPC_URL;
+const ENTRY_POINT_ADDRESS = process.env.SEPOLIA_ENTRYPOINT_ADDRESS;
 
 // ---------- ABIs ----------
 const smartAccountAbi = [

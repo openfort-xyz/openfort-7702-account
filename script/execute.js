@@ -2,7 +2,7 @@ import { ethers } from 'ethers';
 
 // ---------- Constants ----------
 const PRIVATE_KEY = process.env.PRIVATE_KEY_OPENFORT_USER_7702;
-const HOLESKY_RPC = process.env.HOLESKY_RPC_URL;
+const HOLESKY_RPC = process.env.SEPOLIA_RPC_URL;
 const SMART_ACCOUNT_ADDRESS = process.env.ADDRESS_OPENFORT_USER_ADDRESS_7702;
 const TO_ADDRESS = '0xA84E4F9D72cb37A8276090D3FC50895BD8E5Aaf1';
 const AMOUNT_ETH = '0.01';
