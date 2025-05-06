@@ -13,15 +13,15 @@ contract ExecuteViaEntryPointOwner is Script {
     address constant CONTRACT = 0xA84E4F9D72cb37A8276090D3FC50895BD8E5Aaf1;
     address constant TOKEN = 0xd1F228d963E6910412a021aF009583B239b4aA77;
 
-    bytes32 constant VALID_PUBLIC_KEY_X = 0x731836d7c511eabb8d5677248445c3148aa665946cefe7135c56ff81cbd163ee;
-    bytes32 constant VALID_PUBLIC_KEY_Y = 0xaf052707d142bbd67a1b070ad31b4bf2bc9cbd60af010f961b4a8dcd26e0a6f1;
-    bytes public constant CHALLENGE = hex"deaddede";
-    bytes32 public constant VALID_SIGNATURE_R = 0x75c1d727c29e115aa4640a523f0392e49f54c80cbff2ba7eff391d0431644747;
-    bytes32 public constant VALID_SIGNATURE_S = 0x4cc9f8be00831835c58d47a38b7620c8738426d3d50f8444e920c6726c2f8edb;
+    bytes32 constant VALID_PUBLIC_KEY_X = 0x349f670ed4e7cd75f89f1a253d3794b1c52be51a9b03579f7160ae88121e7878;
+    bytes32 constant VALID_PUBLIC_KEY_Y = 0x0a0e01b7c0626be1b8dc3846d145ef31287a555873581ad6f8bee21914ee5eb1;
+    bytes public constant CHALLENGE = hex"ddddbeee";
+    bytes32 public constant VALID_SIGNATURE_R = 0x70b14935dd469e1952920e0164f06cbd809f0ab5a8d033395f8f4051643dac39;
+    bytes32 public constant VALID_SIGNATURE_S = 0x5b71c773e78a3104b7bca532f3ce9ac9b13e6d9a4aad2b8d99114c362ffff585;
     bytes public constant AUTHENTICATOR_DATA =
         hex"49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d97631d00000000";
     string public constant CLIENT_DATA_JSON =
-        "{\"type\":\"webauthn.get\",\"challenge\":\"3q3e3g\",\"origin\":\"http://localhost:5173\",\"crossOrigin\":false}";
+        "{\"type\":\"webauthn.get\",\"challenge\":\"3d2-7g\",\"origin\":\"http://localhost:5173\",\"crossOrigin\":false}";
     uint256 public constant CHALLENGE_INDEX = 23;
     uint256 public constant TYPE_INDEX = 1;
 

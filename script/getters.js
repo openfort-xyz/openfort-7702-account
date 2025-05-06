@@ -5,8 +5,8 @@ import { ethers } from 'ethers';
 // ---------- Config ----------
 const HOLESKY_RPC = process.env.SEPOLIA_RPC_URL;
 const SMART_ACCOUNT_ADDRESS = process.env.ADDRESS_OPENFORT_USER_ADDRESS_7702;
-const PUBLIC_KEY_X = '0xf03e98af7cae9db7b92fcda32babdb1fc641a3700246a578b6d72b055c3cd521';
-const PUBLIC_KEY_Y = '0x8aefd582dd60ad24e4c12c59ea5013cf24e8847f2d024e64feab5a327c404c74';
+const PUBLIC_KEY_X = '0x349f670ed4e7cd75f89f1a253d3794b1c52be51a9b03579f7160ae88121e7878';
+const PUBLIC_KEY_Y = '0x0a0e01b7c0626be1b8dc3846d145ef31287a555873581ad6f8bee21914ee5eb1';
 
 // ---------- ABI ----------
 const abi = [
