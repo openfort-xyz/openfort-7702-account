@@ -12,13 +12,16 @@ const PUBLIC_KEY_Y = '0x0a0e01b7c0626be1b8dc3846d145ef31287a555873581ad6f8bee219
 const abi = [
   'function owner() view returns (address)',
   'function nonce() view returns (uint256)',
-  'function getSessionKeyData(bytes32 _keyHash) external view returns (bool, uint48, uint48, uint48)'
+  'function getSessionKeyData(bytes32 _keyHash) external view returns (bool, uint48, uint48, uint48)',
+  "function idSessionKeys(uint256) view returns (tuple(bytes32 x, bytes32 y, address eoaAddress, uint8 keyType))"
+
 ];
 
 // ---------- Main ----------
 async function main() {
   const provider = new ethers.providers.JsonRpcProvider(HOLESKY_RPC);
   const smartAccount = new ethers.Contract(SMART_ACCOUNT_ADDRESS, abi, provider);
+  const KeyType = ["EOA", "WEBAUTHN"];    
 
   const owner = await smartAccount.owner();
   const nonce = await smartAccount.nonce();
@@ -26,8 +29,12 @@ async function main() {
   const keyHash = ethers.utils.keccak256(
     ethers.utils.solidityPack(['bytes32', 'bytes32'], [PUBLIC_KEY_X, PUBLIC_KEY_Y])
   );
-
+  
+  const id = 0;
+  const key = await smartAccount.idSessionKeys(id);
+  const kind = KeyType[Number(key.keyType)] ?? "UNKNOWN";
   const [isActive, validUntil, validAfter, limit] = await smartAccount.getSessionKeyData(keyHash);
+
   console.log('🧠 Smart Account State');
   console.log('----------------------');
   console.log('owner():', owner);
@@ -37,6 +44,11 @@ async function main() {
   console.log('validUntil:   ', new Date(validUntil * 1000).toISOString());
   console.log('validAfter:   ', new Date(validAfter * 1000).toISOString());
   console.log('usageLimit:   ', limit.toString());
+  console.log(`Key #${id}`);
+  console.log("- type      :", kind);
+  console.log("- EOA addr  :", key.eoaAddress);
+  console.log("- pubKey.x  :", key.x);
+  console.log("- pubKey.y  :", key.y);
 }
 
 main().catch(console.error);
