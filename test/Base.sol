@@ -46,7 +46,7 @@ contract Base is Test, ISessionKey {
     bytes32 constant ETH_PUBLIC_KEY_X         = hex"989ec43868cc759c0ade920a1440a31fb202d97830d34d41679f4fb14f9720e6";
     bytes32 constant ETH_PUBLIC_KEY_Y         = hex"c23e57ed0da1403d155480d89ef662cfcac99b67e3702b6bb0bec52c80eae170";
 
-bytes public constant ETH_CHALLENGE           = hex"cdb1960af7795cdb006deb92e6fe0fb3ef5f7cedd93b1894770f0116ea905386";
+    bytes public constant ETH_CHALLENGE           = hex"cdb1960af7795cdb006deb92e6fe0fb3ef5f7cedd93b1894770f0116ea905386";
 
     bytes32 public constant ETH_SIGNATURE_R   = hex"ba49c2440945342824b499869aee2c8fd08ae28f61ba3c755b5f8fcfa2e51829";
     bytes32 public constant ETH_SIGNATURE_S   = hex"6fe423e06548c859358ec0f7630fee8fb2c9b4e24abdc099370f294217ae5838";
@@ -85,6 +85,23 @@ bytes public constant ETH_CHALLENGE           = hex"cdb1960af7795cdb006deb92e6fe
 
     bytes32 public ETH_P256NOKEY_SIGNATURE_R = stdJson.readBytes32(json_eth, ".result2.P256NONKEY_rHex");
     bytes32 public ETH_P256NOKEY_SIGNATURE_S = stdJson.readBytes32(json_eth, ".result2.P256NONKEY_sHex");
+
+
+    // /* ──────────────────────────────────────────────────────────────── P256 ──── */
+    string public json_single_mint            = vm.readFile("test/data/p256_single_mint.json");
+
+    bytes32 MINT_P256_PUBLIC_KEY_X = stdJson.readBytes32(json_single_mint, ".result.P256_xHex");
+    bytes32 MINT_P256_PUBLIC_KEY_Y = stdJson.readBytes32(json_single_mint, ".result.P256_yHex");
+
+    bytes32 MINT_P256_SIGNATURE_R  = stdJson.readBytes32(json_single_mint, ".result.P256_lowSR");
+    bytes32 MINT_P256_SIGNATURE_S  = stdJson.readBytes32(json_single_mint, ".result.P256_lowSS");
+
+    /* ──────────────────────────────────────────────────────────── P256NONKEY ──── */
+    bytes32 MINT_P256NOKEY_PUBLIC_KEY_X       = stdJson.readBytes32(json_single_mint, ".result2.P256NONKEY_xHex");
+    bytes32 MINT_P256NOKEY_PUBLIC_KEY_Y       = stdJson.readBytes32(json_single_mint, ".result2.P256NONKEY_yHex");
+
+    bytes32 public MINT_P256NOKEY_SIGNATURE_R = stdJson.readBytes32(json_single_mint, ".result2.P256NONKEY_rHex");
+    bytes32 public MINT_P256NOKEY_SIGNATURE_S = stdJson.readBytes32(json_single_mint, ".result2.P256NONKEY_sHex");
 
     function _allowedSelectors() internal pure returns (bytes4[] memory sel) {
         sel = new bytes4[](3);

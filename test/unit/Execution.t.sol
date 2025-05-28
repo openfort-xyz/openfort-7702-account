@@ -369,6 +369,86 @@ contract RegistartionTest is Base {
         console.log("/* -------------------------------- test_ExecuteBatchSKEOA -------- */");
     }
 
+   function test_ExecuteSKP256() public {
+        console.log("/* ---------------------------------- test_ExecuteSKP256 -------- */");
+
+        bytes memory data = abi.encodeWithSelector(
+            MockERC20.mint.selector,
+            owner,
+            10e18
+        );
+        
+        bytes memory callData = abi.encodeWithSelector(
+            0xb61d27f6,
+            TOKEN,
+            0,
+            data
+        );
+
+        uint256 nonce      = entryPoint.getNonce(owner, 1);
+
+        PackedUserOperation memory userOp = PackedUserOperation({
+            sender: owner,
+            nonce: nonce,
+            initCode: hex"7702",
+            callData: callData,
+            accountGasLimits: _packAccountGasLimits(400000, 300000),
+            preVerificationGas: 800000,
+            gasFees: _packGasFees(80 gwei, 15 gwei),
+            paymasterAndData: hex"",
+            signature: hex""
+        });
+
+        bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
+        console.logBytes32(userOpHash);
+
+        ISessionKey.PubKey memory pubKeyExecuteBatch = ISessionKey.PubKey({
+            x: MINT_P256_PUBLIC_KEY_X,
+            y: MINT_P256_PUBLIC_KEY_Y
+        });
+
+        bytes memory _signature = account.encodeP256Signature(
+            MINT_P256_SIGNATURE_R,
+            MINT_P256_SIGNATURE_S,
+            pubKeyExecuteBatch
+        );
+
+        bytes4 magicValue = account.isValidSignature(userOpHash, _signature);
+        bool usedChallenge = account.usedChallenges(userOpHash);
+        console.log("usedChallenge", usedChallenge);
+        console.logBytes4(magicValue);
+
+        bool isValid = webAuthn.verifyP256Signature(
+            userOpHash,
+            MINT_P256_SIGNATURE_R,
+            MINT_P256_SIGNATURE_S,
+            MINT_P256_PUBLIC_KEY_X,
+            MINT_P256_PUBLIC_KEY_Y
+        );
+        console.log("isValid", isValid);
+
+        userOp.signature = _signature;
+
+        uint256 balanceOfBefore = IERC20(TOKEN).balanceOf(owner);
+
+        PackedUserOperation[] memory ops = new PackedUserOperation[](1);
+        ops[0] = userOp;
+        
+        bytes memory code = abi.encodePacked(
+        bytes3(0xef0100),
+        address(implementation) 
+        );
+        vm.etch(owner, code);
+
+        vm.prank(sender);
+        entryPoint.handleOps(ops, payable(sender));
+
+        uint256 balanceOfAfter = IERC20(TOKEN).balanceOf(owner);
+        console.log("balanceOf", balanceOfAfter);
+        assertEq(balanceOfBefore + 10e18, balanceOfAfter);
+        console.log("/* ---------------------------------- test_ExecuteSKP256 -------- */");
+    }
+
    function test_ExecuteBatchSKP256() public {
         console.log("/* ---------------------------------- test_ExecuteBatchSKP256 -------- */");
 
@@ -624,6 +704,23 @@ contract RegistartionTest is Base {
 
         vm.prank(address(entryPoint));
         account.registerSessionKey(keySK, validUntil, uint48(0), limit, true, TOKEN, spendInfo, _allowedSelectors(), 0);
+
+        pubKeySK = PubKey({
+            x: MINT_P256_PUBLIC_KEY_X,
+            y: MINT_P256_PUBLIC_KEY_Y
+        });
+
+        keySK = Key({
+            pubKey:     pubKeySK,
+            eoaAddress: address(0),
+            keyType:    KeyType.P256
+        });
+    
+
+        vm.etch(owner, code);
+
+        vm.prank(address(entryPoint));
+        account.registerSessionKey(keySK, validUntil, uint48(0), limit, true, TOKEN, spendInfo, _allowedSelectors(), 0);
     }
 
     function _register_SessionKeyP256NonKey() internal {
@@ -649,6 +746,23 @@ contract RegistartionTest is Base {
         bytes3(0xef0100),
         address(implementation) // or your logic contract
         );
+        vm.etch(owner, code);
+
+        vm.prank(address(entryPoint));
+        account.registerSessionKey(keySK, validUntil, uint48(0), limit, true, TOKEN, spendInfo, _allowedSelectors(), 0);
+
+        pubKeySK = PubKey({
+            x: MINT_P256NOKEY_PUBLIC_KEY_X,
+            y: MINT_P256NOKEY_PUBLIC_KEY_Y
+        });
+
+        keySK = Key({
+            pubKey:     pubKeySK,
+            eoaAddress: address(0),
+            keyType:    KeyType.P256
+        });
+    
+
         vm.etch(owner, code);
 
         vm.prank(address(entryPoint));
