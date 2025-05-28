@@ -24,7 +24,7 @@ test-registartion:
 	forge test --mp test/unit/Registartion.t.sol -vv --rpc-url $(SEPOLIA_RPC_URL)
 
 test-execution:
-	node script/P256.ts && forge test --mp test/unit/Registartion.t.sol -vv --rpc-url $(SEPOLIA_RPC_URL)
+	node script/P256.ts && forge test --mp test/unit/Execution.t.sol -vv --rpc-url $(SEPOLIA_RPC_URL)
 
 test-all:
 	node script/P256_ETH.ts && node script/P256.ts && forge test -vv --rpc-url $(SEPOLIA_RPC_URL)
@@ -67,3 +67,6 @@ simple-mainnet:
 	--etherscan-api-key $(ETHERSCAN_KEY) \
 	--broadcast \
 	--constructor-args 0x4337084D9E255Ff0702461CF8895CE9E3b5Ff108 
+
+push:
+	git push -u origin OPF7702_FUll_Suit

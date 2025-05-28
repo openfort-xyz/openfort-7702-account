@@ -75,6 +75,71 @@ contract RegistartionTest is Base {
 
     }
 
+    function test_ExecuteOwner() public {
+       console.log("/* -------------------------------- test_ExecuteOwner -------- */");
+
+        bytes memory data = abi.encodeWithSelector(
+            MockERC20.mint.selector,
+            owner,
+            10e18
+        );
+        
+        bytes memory callData = abi.encodeWithSelector(
+            0xb61d27f6,
+            TOKEN,
+            0,
+            data
+        );
+
+        uint256 nonce      = entryPoint.getNonce(owner, 1);
+
+        PackedUserOperation memory userOp = PackedUserOperation({
+            sender: owner,
+            nonce: nonce,
+            initCode: hex"7702",
+            callData: callData,
+            accountGasLimits: _packAccountGasLimits(400000, 300000),
+            preVerificationGas: 800000,
+            gasFees: _packGasFees(80 gwei, 15 gwei),
+            paymasterAndData: hex"",
+            signature: hex""
+        });
+
+        bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPk, userOpHash);
+        bytes memory signature = abi.encodePacked(r, s, v);
+
+        bytes memory _signature = account.encodeEOASignature(
+            signature
+        );
+
+        bytes4 magicValue = account.isValidSignature(userOpHash, signature);
+        console.logBytes4(magicValue);
+
+        userOp.signature = _signature;
+
+        uint256 balanceOfBefore = IERC20(TOKEN).balanceOf(owner);
+
+        PackedUserOperation[] memory ops = new PackedUserOperation[](1);
+        ops[0] = userOp;
+        
+        bytes memory code = abi.encodePacked(
+        bytes3(0xef0100),
+        address(implementation) 
+        );
+        vm.etch(owner, code);
+
+        vm.prank(sender);
+        entryPoint.handleOps(ops, payable(sender));
+
+        uint256 balanceOfAfter = IERC20(TOKEN).balanceOf(owner);
+        console.log("balanceOfBefore", balanceOfBefore);
+        console.log("balanceOf", balanceOfAfter);
+        assertEq(balanceOfBefore + 10e18, balanceOfAfter);
+        console.log("/* -------------------------------- test_ExecuteOwner -------- */");
+    }
+
     function test_ExecuteBatchOwner() public {
        console.log("/* -------------------------------- test_ExecuteBatchOwner -------- */");
 
@@ -125,7 +190,7 @@ contract RegistartionTest is Base {
 
         bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
 
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(owner, userOpHash);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPk, userOpHash);
         bytes memory signature = abi.encodePacked(r, s, v);
 
         bytes memory _signature = account.encodeEOASignature(
@@ -152,6 +217,7 @@ contract RegistartionTest is Base {
         entryPoint.handleOps(ops, payable(sender));
 
         uint256 balanceOfAfter = IERC20(TOKEN).balanceOf(sender);
+        console.log("balanceOfBefore", balanceOfBefore);
         console.log("balanceOf", balanceOfAfter);
         assertEq(balanceOfBefore + 5e18, balanceOfAfter);
         console.log("/* -------------------------------- test_ExecuteBatchOwner -------- */");
