@@ -29,6 +29,9 @@ test-execution:
 test-all:
 	node script/P256_ETH.ts && node script/P256.ts && forge test -vv --rpc-url $(SEPOLIA_RPC_URL)
 
+coverage:
+	forge coverage --ir-minimum --rpc-url $(SEPOLIA_RPC_URL) >> coverage.txt
+
 deploy-webauthn:
 	forge create src/utils/WebAuthnVerifier.sol:WebAuthnVerifier  \
 	--rpc-url $(SEPOLIA_RPC_URL) \
