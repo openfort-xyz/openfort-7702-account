@@ -86,7 +86,15 @@ contract OPF7702 layout at 0x801ae8efc2175d3d963e799b27e0e948b9a3fa84e2ce105a370
      * @param _signature Signature to validate ownership
      * @param _nonce Nonce to prevent replay attacks
      */
-    function initialize(Key calldata _key, SpendTokenInfo calldata _spendTokenInfo, bytes4[] calldata _allowedSelectors, bytes32 _hash, bytes memory _signature, uint256 _validUntil, uint256 _nonce) external initializer {
+    function initialize(
+        Key calldata _key, 
+        SpendTokenInfo calldata _spendTokenInfo, 
+        bytes4[] calldata _allowedSelectors, 
+        bytes32 _hash, 
+        bytes memory _signature, 
+        uint256 _validUntil, 
+        uint256 _nonce
+        ) external initializer {
         _requireForExecute();
         _clearStorage();
         _validateNonce(_nonce);
