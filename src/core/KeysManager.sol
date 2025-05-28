@@ -21,13 +21,13 @@ import {ISessionKey} from "src/interfaces/ISessionkey.sol";
 abstract contract KeysManager is BaseOPF7702, ISessionKey, SpendLimit {
     uint256 public constant MAX_SELECTORS = 10;
     address public constant DEAD_ADDRESS = 0xDeaDbeefdEAdbeefdEadbEEFdeadbeEFdEaDbeeF;
-    
+
     // Todo: id for EOA session Keys
     uint256 public id;
     mapping(uint256 id => Key key) public idSessionKeys;
     mapping(bytes32 sessionKey => SessionKey sessionKeyData) public sessionKeys;
     mapping(bytes32 challenge => bool isUsed) public usedChallenges;
-    
+
     uint256 public idEOA;
     mapping(uint256 idEOA => Key key) public idSessionKeysEOA;
     mapping(address sessionKeyEOA => SessionKey sessionKeyData) public sessionKeysEOA;
@@ -71,7 +71,6 @@ abstract contract KeysManager is BaseOPF7702, ISessionKey, SpendLimit {
 
         // Todo: Do we want register More then once WEBAUTHN?
         if (_key.keyType == KeyType.WEBAUTHN || _key.keyType == KeyType.P256 || _key.keyType == KeyType.P256NONKEY) {
-
             bytes32 keyHash = keccak256(abi.encodePacked(_key.pubKey.x, _key.pubKey.y));
 
             if (sessionKeys[keyHash].isActive) revert SessionKeyManager__SessionKeyRegistered();
@@ -219,28 +218,29 @@ abstract contract KeysManager is BaseOPF7702, ISessionKey, SpendLimit {
     }
 
     /**
-    * @notice Revokes all registered session keys
-    * @dev Only callable by accounts with ADMIN_ROLE
-    */
+     * @notice Revokes all registered session keys
+     * @dev Only callable by accounts with ADMIN_ROLE
+     */
     function revokeAllSessionKeys() external {
         _requireForExecute();
-        
+
         // Revoke WebAuthn/P256 keys
         for (uint256 i = 0; i < id; i++) {
             Key memory _key = getKeyById(i, KeyType.WEBAUTHN); // Default to WEBAUTHN, we'll check the actual type
-            
-            if (_key.keyType == KeyType.WEBAUTHN || _key.keyType == KeyType.P256 || _key.keyType == KeyType.P256NONKEY) {
+
+            if (_key.keyType == KeyType.WEBAUTHN || _key.keyType == KeyType.P256 || _key.keyType == KeyType.P256NONKEY)
+            {
                 bytes32 keyHash = keccak256(abi.encodePacked(_key.pubKey.x, _key.pubKey.y));
                 SessionKey storage sKey = sessionKeys[keyHash];
                 _revokeSessionKey(sKey);
                 emit SessionKeyRevoked(keyHash);
             }
         }
-        
+
         // Revoke EOA keys
         for (uint256 i = 0; i < idEOA; i++) {
             Key memory _key = getKeyById(i, KeyType.EOA);
-            
+
             if (_key.keyType == KeyType.EOA && _key.eoaAddress != address(0)) {
                 SessionKey storage sKey = sessionKeysEOA[_key.eoaAddress];
                 _revokeSessionKey(sKey);
@@ -248,7 +248,7 @@ abstract contract KeysManager is BaseOPF7702, ISessionKey, SpendLimit {
             }
         }
     }
-    
+
     /**
      * @notice Retrieves registration information for a key
      * @param _id ID of the key
@@ -277,14 +277,13 @@ abstract contract KeysManager is BaseOPF7702, ISessionKey, SpendLimit {
      * @return Key information
      */
     function getKeyById(uint256 _id, KeyType _keyType) public view returns (Key memory) {
-        if (_keyType ==  KeyType.WEBAUTHN || _keyType ==  KeyType.P256 || _keyType ==  KeyType.P256NONKEY) {
+        if (_keyType == KeyType.WEBAUTHN || _keyType == KeyType.P256 || _keyType == KeyType.P256NONKEY) {
             Key storage _key = idSessionKeys[_id];
             return _key;
         } else {
             Key storage _key = idSessionKeysEOA[_id];
             return _key;
         }
-
     }
 
     /**
@@ -374,21 +373,16 @@ abstract contract KeysManager is BaseOPF7702, ISessionKey, SpendLimit {
         );
     }
 
-
-    function encodeP256Signature(
-        bytes32 r,
-        bytes32 s,
-        PubKey memory pubKey
-    ) external pure returns (bytes memory) {
+    function encodeP256Signature(bytes32 r, bytes32 s, PubKey memory pubKey) external pure returns (bytes memory) {
         bytes memory inner = abi.encode(r, s, pubKey);
         return abi.encode(KeyType.P256, inner);
     }
 
-    function encodeP256NonKeySignature(
-        bytes32 r,
-        bytes32 s,
-        PubKey memory pubKey
-    ) external pure returns (bytes memory) {
+    function encodeP256NonKeySignature(bytes32 r, bytes32 s, PubKey memory pubKey)
+        external
+        pure
+        returns (bytes memory)
+    {
         bytes memory inner = abi.encode(r, s, pubKey);
         return abi.encode(KeyType.P256NONKEY, inner);
     }

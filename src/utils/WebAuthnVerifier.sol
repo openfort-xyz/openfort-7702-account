@@ -45,7 +45,7 @@ contract WebAuthnVerifier {
             r: r,
             s: s
         });
-        
+
         // Todo: test of Converting good or not
         bytes memory challengeBytes = toBytes(challenge);
         isValid = WebAuthn.verify(challengeBytes, requireUserVerification, auth, x, y);

@@ -14,6 +14,4 @@
 
 pragma solidity ^0.8.29;
 
-abstract contract Validation {
-    
-}
+abstract contract Validation {}

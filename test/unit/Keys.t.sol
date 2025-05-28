@@ -2,30 +2,30 @@
 
 pragma solidity ^0.8.29;
 
-import {Base}                        from "test/Base.sol";
-import {Test, console2 as console}   from "lib/forge-std/src/Test.sol";
-import {EntryPoint}                  from "lib/account-abstraction/contracts/core/EntryPoint.sol";
-import {IERC20}                      from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
-import {IEntryPoint}                 from "lib/account-abstraction/contracts/interfaces/IEntryPoint.sol";
+import {Base} from "test/Base.sol";
+import {Test, console2 as console} from "lib/forge-std/src/Test.sol";
+import {EntryPoint} from "lib/account-abstraction/contracts/core/EntryPoint.sol";
+import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
+import {IEntryPoint} from "lib/account-abstraction/contracts/interfaces/IEntryPoint.sol";
 
-import {OPF7702 as OPF7702}          from "src/core/OPF7702.sol";
-import {MockERC20}                   from "src/mocks/MockERC20.sol";
-import {SpendLimit}                  from "src/utils/SpendLimit.sol";
-import {ISessionKey}                 from "src/interfaces/ISessionkey.sol";
-import {WebAuthnVerifier}            from "src/utils/WebAuthnVerifier.sol";
-import {PackedUserOperation}         from "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
+import {OPF7702 as OPF7702} from "src/core/OPF7702.sol";
+import {MockERC20} from "src/mocks/MockERC20.sol";
+import {SpendLimit} from "src/utils/SpendLimit.sol";
+import {ISessionKey} from "src/interfaces/ISessionkey.sol";
+import {WebAuthnVerifier} from "src/utils/WebAuthnVerifier.sol";
+import {PackedUserOperation} from "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
 
 contract KeysTest is Base {
     /* ───────────────────────────────────────────────────────────── contracts ── */
-    IEntryPoint      public entryPoint;
+    IEntryPoint public entryPoint;
     WebAuthnVerifier public webAuthn;
-    OPF7702          public implementation;
-    OPF7702          public account;          // clone deployed at `owner`
+    OPF7702 public implementation;
+    OPF7702 public account; // clone deployed at `owner`
 
     /* ──────────────────────────────────────────────────────── key structures ── */
-    Key    internal keyMK;
+    Key internal keyMK;
     PubKey internal pubKeyMK;
-    Key    internal keySK;
+    Key internal keySK;
     PubKey internal pubKeySK;
 
     /* ─────────────────────────────────────────────────────────────── setup ──── */
@@ -37,7 +37,7 @@ contract KeysTest is Base {
 
         /* live contracts on fork */
         entryPoint = IEntryPoint(payable(SEPOLIA_ENTRYPOINT));
-        webAuthn   = WebAuthnVerifier(payable(SEPOLIA_WEBAUTHN));
+        webAuthn = WebAuthnVerifier(payable(SEPOLIA_WEBAUTHN));
 
         /* deploy implementation & bake it into `owner` address */
         implementation = new OPF7702(address(entryPoint));
@@ -50,7 +50,7 @@ contract KeysTest is Base {
         _register_SessionKeyEOA();
         _register_SessionKeyP256();
         _register_SessionKeyP256NonKey();
-        
+
         vm.prank(sender);
         entryPoint.depositTo{value: 0.11e18}(owner);
     }
@@ -69,32 +69,30 @@ contract KeysTest is Base {
         Key memory mk = account.getKeyById(0, KeyType.P256);
 
         bytes memory code = abi.encodePacked(
-        bytes3(0xef0100),
-        address(implementation) // or your logic contract
+            bytes3(0xef0100),
+            address(implementation) // or your logic contract
         );
         vm.etch(owner, code);
 
         vm.startPrank(owner);
-        
+
         account.revokeSessionKey(k1);
         account.revokeSessionKey(k2);
         account.revokeSessionKey(mk);
 
         vm.stopPrank();
-        (bool _isActivek1, uint256 _validUntilk1, , uint256 _limitk1) =
-            account.getSessionKeyData(k1.eoaAddress);
+        (bool _isActivek1, uint256 _validUntilk1,, uint256 _limitk1) = account.getSessionKeyData(k1.eoaAddress);
 
-        (bool _isActivek2, uint256 _validUntilk2, , uint256 _limitk2) =
+        (bool _isActivek2, uint256 _validUntilk2,, uint256 _limitk2) =
             account.getSessionKeyData(keccak256(abi.encodePacked(k2.pubKey.x, k2.pubKey.y)));
 
-        (bool _isActivemk, uint256 _validUntilmk, , uint256 _limitmk) =
+        (bool _isActivemk, uint256 _validUntilmk,, uint256 _limitmk) =
             account.getSessionKeyData(keccak256(abi.encodePacked(mk.pubKey.x, mk.pubKey.y)));
 
-        
         assertFalse(_isActivek1);
         assertFalse(_isActivek2);
         assertFalse(_isActivemk);
-        
+
         assertEq(_validUntilk1, 0);
         assertEq(_validUntilk2, 0);
         assertEq(_validUntilmk, 0);
@@ -112,34 +110,31 @@ contract KeysTest is Base {
         uint256 idLength = account.id();
         uint256 idLengthEOA = account.idEOA();
 
-        for(uint256 i = 0; i < idLengthEOA; i++ ) {
+        for (uint256 i = 0; i < idLengthEOA; i++) {
             Key memory k = account.getKeyById(i, KeyType.EOA);
-            (bool _isActive, uint256 _validUntil, , uint256 _limit) =
-            account.getSessionKeyData(k.eoaAddress);
+            (bool _isActive, uint256 _validUntil,, uint256 _limit) = account.getSessionKeyData(k.eoaAddress);
 
-            assertFalse(_isActive); 
+            assertFalse(_isActive);
             assertEq(_validUntil, 0);
             assertEq(_limit, 0);
-
         }
 
-        for(uint256 i = 0; i < idLength; i++ ) {
+        for (uint256 i = 0; i < idLength; i++) {
             Key memory k = account.getKeyById(i, KeyType.P256);
-            (bool _isActive, uint256 _validUntil, , uint256 _limit) =
-            account.getSessionKeyData(keccak256(abi.encodePacked(k.pubKey.x, k.pubKey.y)));
+            (bool _isActive, uint256 _validUntil,, uint256 _limit) =
+                account.getSessionKeyData(keccak256(abi.encodePacked(k.pubKey.x, k.pubKey.y)));
 
-            assertFalse(_isActive); 
+            assertFalse(_isActive);
             assertEq(_validUntil, 0);
             assertEq(_limit, 0);
-
         }
     }
 
     /* ─────────────────────────────────────────────────────────────── tests ──── */
     function _register_SessionKeyEOA() internal {
         uint256 count = 15;
-        
-        for(uint256 i; i < count; i++) {
+
+        for (uint256 i; i < count; i++) {
             uint48 validUntil = uint48(block.timestamp + 1 days);
             uint48 limit = uint48(3);
             pubKeySK = PubKey({
@@ -150,120 +145,90 @@ contract KeysTest is Base {
             string memory iString = vm.toString(i);
             address sessionKeyAddr = makeAddr(iString);
 
-            keySK = Key({
-                pubKey:     pubKeySK,
-                eoaAddress: sessionKeyAddr,
-                keyType:    KeyType.EOA
-            });
+            keySK = Key({pubKey: pubKeySK, eoaAddress: sessionKeyAddr, keyType: KeyType.EOA});
 
-            SpendLimit.SpendTokenInfo memory spendInfo = SpendLimit.SpendTokenInfo({
-                token: TOKEN,
-                limit: 1000e18
-            });
+            SpendLimit.SpendTokenInfo memory spendInfo = SpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000e18});
 
             bytes memory code = abi.encodePacked(
-            bytes3(0xef0100),
-            address(implementation) // or your logic contract
+                bytes3(0xef0100),
+                address(implementation) // or your logic contract
             );
             vm.etch(owner, code);
 
             vm.prank(address(entryPoint));
-            account.registerSessionKey(keySK, validUntil, uint48(0), limit, true, TOKEN, spendInfo, _allowedSelectors(), 0);
+            account.registerSessionKey(
+                keySK, validUntil, uint48(0), limit, true, TOKEN, spendInfo, _allowedSelectors(), 0
+            );
         }
     }
 
     function _register_SessionKeyP256() internal {
         uint256 count = 15;
-        
-        for(uint256 i; i < count; i++) {
+
+        for (uint256 i; i < count; i++) {
             uint48 validUntil = uint48(block.timestamp + 1 days);
             uint48 limit = uint48(3);
 
             bytes32 RANDOM_P256_PUBLIC_KEY_X = keccak256(abi.encodePacked("X_KEY", i, block.timestamp));
             bytes32 RANDOM_P256_PUBLIC_KEY_Y = keccak256(abi.encodePacked("Y_KEY", i, block.timestamp, msg.sender));
 
-            pubKeySK = PubKey({
-                x: RANDOM_P256_PUBLIC_KEY_X,
-                y: RANDOM_P256_PUBLIC_KEY_Y
-            });
+            pubKeySK = PubKey({x: RANDOM_P256_PUBLIC_KEY_X, y: RANDOM_P256_PUBLIC_KEY_Y});
 
-            keySK = Key({
-                pubKey:     pubKeySK,
-                eoaAddress: address(0),
-                keyType:    KeyType.P256
-            });
+            keySK = Key({pubKey: pubKeySK, eoaAddress: address(0), keyType: KeyType.P256});
 
-            SpendLimit.SpendTokenInfo memory spendInfo = SpendLimit.SpendTokenInfo({
-                token: TOKEN,
-                limit: 1000e18
-            });
+            SpendLimit.SpendTokenInfo memory spendInfo = SpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000e18});
 
             bytes memory code = abi.encodePacked(
-            bytes3(0xef0100),
-            address(implementation) // or your logic contract
+                bytes3(0xef0100),
+                address(implementation) // or your logic contract
             );
             vm.etch(owner, code);
 
             vm.prank(address(entryPoint));
-            account.registerSessionKey(keySK, validUntil, uint48(0), limit, true, TOKEN, spendInfo, _allowedSelectors(), 0);
+            account.registerSessionKey(
+                keySK, validUntil, uint48(0), limit, true, TOKEN, spendInfo, _allowedSelectors(), 0
+            );
         }
     }
 
     function _register_SessionKeyP256NonKey() internal {
         uint256 count = 10;
-        
-        for(uint256 i; i < count; i++) {
+
+        for (uint256 i; i < count; i++) {
             uint48 validUntil = uint48(block.timestamp + 1 days);
             uint48 limit = uint48(3);
 
             bytes32 RANDOM_P256_PUBLIC_KEY_X = keccak256(abi.encodePacked("X_KEY", i, block.timestamp + 1000));
-            bytes32 RANDOM_P256_PUBLIC_KEY_Y = keccak256(abi.encodePacked("Y_KEY", i, block.timestamp + 1000, msg.sender));
+            bytes32 RANDOM_P256_PUBLIC_KEY_Y =
+                keccak256(abi.encodePacked("Y_KEY", i, block.timestamp + 1000, msg.sender));
 
-            pubKeySK = PubKey({
-                x: RANDOM_P256_PUBLIC_KEY_X,
-                y: RANDOM_P256_PUBLIC_KEY_Y
-            });
+            pubKeySK = PubKey({x: RANDOM_P256_PUBLIC_KEY_X, y: RANDOM_P256_PUBLIC_KEY_Y});
 
-            keySK = Key({
-                pubKey:     pubKeySK,
-                eoaAddress: address(0),
-                keyType:    KeyType.P256NONKEY
-            });
+            keySK = Key({pubKey: pubKeySK, eoaAddress: address(0), keyType: KeyType.P256NONKEY});
 
-            SpendLimit.SpendTokenInfo memory spendInfo = SpendLimit.SpendTokenInfo({
-                token: TOKEN,
-                limit: 1000e18
-            });
+            SpendLimit.SpendTokenInfo memory spendInfo = SpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000e18});
 
             bytes memory code = abi.encodePacked(
-            bytes3(0xef0100),
-            address(implementation) // or your logic contract
+                bytes3(0xef0100),
+                address(implementation) // or your logic contract
             );
             vm.etch(owner, code);
 
             vm.prank(address(entryPoint));
-            account.registerSessionKey(keySK, validUntil, uint48(0), limit, true, TOKEN, spendInfo, _allowedSelectors(), 0);
+            account.registerSessionKey(
+                keySK, validUntil, uint48(0), limit, true, TOKEN, spendInfo, _allowedSelectors(), 0
+            );
         }
     }
 
     /* ─────────────────────────────────────────────────────────── helpers ──── */
     function _initializeAccount() internal {
         /* sample WebAuthn public key – replace with a real one if needed */
-        pubKeyMK = PubKey({
-            x: VALID_PUBLIC_KEY_X,
-            y: VALID_PUBLIC_KEY_Y
-        });
+        pubKeyMK = PubKey({x: VALID_PUBLIC_KEY_X, y: VALID_PUBLIC_KEY_Y});
 
-        keyMK = Key({
-            pubKey:     pubKeyMK,
-            eoaAddress: address(0),
-            keyType:    KeyType.WEBAUTHN
-        });
+        keyMK = Key({pubKey: pubKeyMK, eoaAddress: address(0), keyType: KeyType.WEBAUTHN});
 
-        SpendLimit.SpendTokenInfo memory spendInfo = SpendLimit.SpendTokenInfo({
-            token: TOKEN,
-            limit: 0
-        });
+        SpendLimit.SpendTokenInfo memory spendInfo = SpendLimit.SpendTokenInfo({token: TOKEN, limit: 0});
 
         /* sign arbitrary message so initialise() passes sig check */
         bytes32 msgHash = keccak256(abi.encode("Hello OPF7702"));
@@ -273,14 +238,6 @@ contract KeysTest is Base {
         uint256 validUntil = block.timestamp + 1 days;
 
         vm.prank(address(entryPoint));
-        account.initialize(
-            keyMK,
-            spendInfo,
-            _allowedSelectors(),
-            msgHash,
-            sig,
-            validUntil,
-            1
-        );
+        account.initialize(keyMK, spendInfo, _allowedSelectors(), msgHash, sig, validUntil, 1);
     }
 }

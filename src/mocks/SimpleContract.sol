@@ -5,10 +5,9 @@ import "lib/openzeppelin-contracts/contracts/access/Ownable.sol";
 import {ReentrancyGuard} from "lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 
 contract SimpleContract is ReentrancyGuard, Ownable {
-    
     /// @notice Emitted when deposit is added for gas fees
     event DepositAdded(address indexed source, uint256 amount);
-    
+
     /// @notice Emitted when withdrawal is made
     event WithdrawalMade(address indexed to, uint256 amount);
 
@@ -27,13 +26,13 @@ contract SimpleContract is ReentrancyGuard, Ownable {
     function withdraw(uint256 amount) external onlyOwner nonReentrant {
         uint256 withdrawAmount = amount == 0 ? address(this).balance : amount;
         require(withdrawAmount <= address(this).balance, "Insufficient balance");
-        
-        (bool success, ) = payable(owner()).call{value: withdrawAmount}("");
+
+        (bool success,) = payable(owner()).call{value: withdrawAmount}("");
         require(success, "Withdrawal failed");
-        
+
         emit WithdrawalMade(owner(), withdrawAmount);
     }
-    
+
     /// @notice Get contract balance
     function getBalance() external view returns (uint256) {
         return address(this).balance;

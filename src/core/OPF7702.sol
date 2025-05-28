@@ -14,7 +14,7 @@
 
 pragma solidity ^0.8.29;
 
-import {Test, console2 as console}   from "lib/forge-std/src/Test.sol";
+import {Test, console2 as console} from "lib/forge-std/src/Test.sol";
 import {KeysManager} from "src/core/KeysManager.sol";
 
 import {WebAuthnVerifier} from "src/utils/WebAuthnVerifier.sol";
@@ -24,7 +24,11 @@ import {ECDSA} from "lib/openzeppelin-contracts/contracts/utils/cryptography/ECD
 import {ReentrancyGuard} from "lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 import {Initializable} from "lib/openzeppelin-contracts/contracts/proxy/utils/Initializable.sol";
 import {PackedUserOperation} from "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
-import {SIG_VALIDATION_FAILED, SIG_VALIDATION_SUCCESS, _packValidationData} from "lib/account-abstraction/contracts/core/Helpers.sol";
+import {
+    SIG_VALIDATION_FAILED,
+    SIG_VALIDATION_SUCCESS,
+    _packValidationData
+} from "lib/account-abstraction/contracts/core/Helpers.sol";
 
 /**
  * @title Openfort Base Account 7702 with ERC-4337 Support
@@ -32,15 +36,10 @@ import {SIG_VALIDATION_FAILED, SIG_VALIDATION_SUCCESS, _packValidationData} from
  * @notice This contract implements an EIP-7702 compatible account with EIP-712 signatures and ERC-4337 support
  * @dev Implements EIP-7702, EIP-712, ERC-4337, and various token handling capabilities
  */
- 
+
 // address: 0xD24af0109E31F238440E2d6A6d49935d499274b7 14/05/2025
-// keccak256("openfort.baseAccount.7702.v1") = 0x801ae8efc2175d3d963e799b27e0e948b9a3fa84e2ce105a370245c8c127f368
-contract OPF7702 layout at 0x801ae8efc2175d3d963e799b27e0e948b9a3fa84e2ce105a370245c8c127f368 is
-    KeysManager,
-    Initializable, 
-    ReentrancyGuard,
-    WebAuthnVerifier
-{
+// keccak256("openfort.baseAccount.7702.v1") = 0x801ae8efc2175d3d963e799b27e0e948b9a3fa84e2ce105a370245c8c127f368 == 57943590311362240630886240343495690972153947532773266946162183175043753177960
+contract OPF7702 is KeysManager, Initializable, ReentrancyGuard, WebAuthnVerifier layout at 57943590311362240630886240343495690972153947532773266946162183175043753177960 {
     using ECDSA for bytes32;
 
     /**
@@ -77,7 +76,7 @@ contract OPF7702 layout at 0x801ae8efc2175d3d963e799b27e0e948b9a3fa84e2ce105a370
         _OPENFORT_CONTRACT_ADDRESS = address(this);
         _disableInitializers();
     }
-    
+
     /**
      * @notice Initializes the account
      * @dev Can only be called via EntryPoint or during contract creation
@@ -87,14 +86,14 @@ contract OPF7702 layout at 0x801ae8efc2175d3d963e799b27e0e948b9a3fa84e2ce105a370
      * @param _nonce Nonce to prevent replay attacks
      */
     function initialize(
-        Key calldata _key, 
-        SpendTokenInfo calldata _spendTokenInfo, 
-        bytes4[] calldata _allowedSelectors, 
-        bytes32 _hash, 
-        bytes memory _signature, 
-        uint256 _validUntil, 
+        Key calldata _key,
+        SpendTokenInfo calldata _spendTokenInfo,
+        bytes4[] calldata _allowedSelectors,
+        bytes32 _hash,
+        bytes memory _signature,
+        uint256 _validUntil,
         uint256 _nonce
-        ) external initializer {
+    ) external initializer {
         _requireForExecute();
         _clearStorage();
         _validateNonce(_nonce);
@@ -105,18 +104,20 @@ contract OPF7702 layout at 0x801ae8efc2175d3d963e799b27e0e948b9a3fa84e2ce105a370
         }
 
         nonce = _nonce;
-        // Todo: Ask Jaume if its good to do the MK with endless time 
-        registerSessionKey(_key, type(uint48).max, uint48(0), uint48(0), false, DEAD_ADDRESS, _spendTokenInfo, _allowedSelectors, 0);
-        
+        // Todo: Ask Jaume if its good to do the MK with endless time
+        registerSessionKey(
+            _key, type(uint48).max, uint48(0), uint48(0), false, DEAD_ADDRESS, _spendTokenInfo, _allowedSelectors, 0
+        );
+
         emit Initialized(_key);
     }
 
-   /**
+    /**
      * @notice Executes a batch of transactions
      * @dev Can only be called via EntryPoint or by self
      * @param _transactions Array of transactions to execute
      */
-    function execute(Transaction[] calldata _transactions) payable external nonReentrant {
+    function execute(Transaction[] calldata _transactions) external payable nonReentrant {
         _requireForExecute();
         if (_transactions.length == 0 || _transactions.length > 9) {
             revert OpenfortBaseAccount7702V1__InvalidTransactionLength();
@@ -136,12 +137,12 @@ contract OPF7702 layout at 0x801ae8efc2175d3d963e799b27e0e948b9a3fa84e2ce105a370
             }
 
             (bool success, bytes memory returnData) = target.call{value: value}(data);
-            
+
             if (!success) {
                 revert OpenfortBaseAccount7702V1__TransactionFailed(returnData);
             }
 
-            emit TransactionExecuted(target, value, data);      
+            emit TransactionExecuted(target, value, data);
         }
     }
 
@@ -179,7 +180,7 @@ contract OPF7702 layout at 0x801ae8efc2175d3d963e799b27e0e948b9a3fa84e2ce105a370
      * @dev Call a target contract and reverts if it fails.
      */
     function _call(address _target, uint256 _value, bytes calldata _calldata) internal virtual {
-        emit TransactionExecuted(_target, _value, _calldata);  
+        emit TransactionExecuted(_target, _value, _calldata);
         (bool success, bytes memory result) = _target.call{value: _value}(_calldata);
         if (!success) {
             assembly {
@@ -195,10 +196,12 @@ contract OPF7702 layout at 0x801ae8efc2175d3d963e799b27e0e948b9a3fa84e2ce105a370
      * @param userOpHash Hash of the user operation
      * @return validationData Packed validation data (success, validUntil, validAfter) or SIG_VALIDATION_SUCCESS | SIG_VALIDATION_FAILED
      */
-    function _validateSignature(
-        PackedUserOperation calldata userOp,
-        bytes32 userOpHash
-    ) internal virtual override returns (uint256 validationData) {
+    function _validateSignature(PackedUserOperation calldata userOp, bytes32 userOpHash)
+        internal
+        virtual
+        override
+        returns (uint256 validationData)
+    {
         (KeyType sigType, bytes memory sigData) = abi.decode(userOp.signature, (KeyType, bytes));
 
         if (sigType == KeyType.EOA) {
@@ -209,7 +212,7 @@ contract OPF7702 layout at 0x801ae8efc2175d3d963e799b27e0e948b9a3fa84e2ce105a370
             if (address(this) == signer) return 0;
 
             SessionKey storage sKey = sessionKeysEOA[signer];
-            
+
             PubKey memory _pubKey = PubKey({x: sKey.pubKey.x, y: sKey.pubKey.y});
             Key memory _key = Key({pubKey: _pubKey, eoaAddress: signer, keyType: KeyType.EOA});
 
@@ -262,8 +265,7 @@ contract OPF7702 layout at 0x801ae8efc2175d3d963e799b27e0e948b9a3fa84e2ce105a370
                 return _packValidationData(false, sKey.validUntil, sKey.validAfter);
             }
         } else if (sigType == KeyType.P256 || sigType == KeyType.P256NONKEY) {
-            (bytes32 r, bytes32 s, PubKey memory pubKey) =
-                abi.decode(sigData, (bytes32, bytes32, PubKey));
+            (bytes32 r, bytes32 s, PubKey memory pubKey) = abi.decode(sigData, (bytes32, bytes32, PubKey));
 
             if (usedChallenges[userOpHash]) return SIG_VALIDATION_FAILED;
 
@@ -271,13 +273,7 @@ contract OPF7702 layout at 0x801ae8efc2175d3d963e799b27e0e948b9a3fa84e2ce105a370
                 userOpHash = EfficientHashLib.sha2(userOpHash);
             }
 
-            bool isValid = verifyP256Signature(
-                userOpHash,
-                r,
-                s,
-                pubKey.x,
-                pubKey.y
-            );
+            bool isValid = verifyP256Signature(userOpHash, r, s, pubKey.x, pubKey.y);
 
             if (!isValid) return SIG_VALIDATION_FAILED;
 
@@ -314,7 +310,7 @@ contract OPF7702 layout at 0x801ae8efc2175d3d963e799b27e0e948b9a3fa84e2ce105a370
         if (_key.keyType == KeyType.WEBAUTHN) {
             bytes32 keyHash = keccak256(abi.encodePacked(_key.pubKey.x, _key.pubKey.y));
             sessionKey = sessionKeys[keyHash];
-        } else if(_key.keyType == KeyType.P256 || _key.keyType == KeyType.P256NONKEY) {
+        } else if (_key.keyType == KeyType.P256 || _key.keyType == KeyType.P256NONKEY) {
             bytes32 keyHash = keccak256(abi.encodePacked(_key.pubKey.x, _key.pubKey.y));
             sessionKey = sessionKeys[keyHash];
         } else if (_key.keyType == KeyType.EOA) {
@@ -342,7 +338,7 @@ contract OPF7702 layout at 0x801ae8efc2175d3d963e799b27e0e948b9a3fa84e2ce105a370
         return false;
     }
 
-   /**
+    /**
      * @notice Validates a single execute call
      * @param sessionKey Session key data
      * @param _callData Call data to validate
@@ -363,7 +359,7 @@ contract OPF7702 layout at 0x801ae8efc2175d3d963e799b27e0e948b9a3fa84e2ce105a370
 
         // Validate selector
         bytes4 innerSelector = bytes4(innerData);
-        
+
         if (!_isAllowedSelector(sessionKey.allowedSelectors, innerSelector)) {
             return false;
         }
@@ -411,7 +407,7 @@ contract OPF7702 layout at 0x801ae8efc2175d3d963e799b27e0e948b9a3fa84e2ce105a370
                 sessionKey.limit = sessionKey.limit - SafeCast.toUint48(numberOfInteractions);
             }
         }
-        
+
         // Validate each interaction
         for (uint256 i = 0; i < numberOfInteractions; ++i) {
             if (toContracts[i] == address(this)) return false;
@@ -448,10 +444,7 @@ contract OPF7702 layout at 0x801ae8efc2175d3d963e799b27e0e948b9a3fa84e2ce105a370
      * @param innerData Call data containing token transfer details
      * @return True if the token spend is valid, false otherwise
      */
-    function _validateTokenSpend(SessionKey storage sessionKey, bytes memory innerData)
-        internal
-        returns (bool)
-    {
+    function _validateTokenSpend(SessionKey storage sessionKey, bytes memory innerData) internal returns (bool) {
         uint256 startPos = innerData.length - 32;
         bytes32 value;
         assembly {
@@ -490,16 +483,14 @@ contract OPF7702 layout at 0x801ae8efc2175d3d963e799b27e0e948b9a3fa84e2ce105a370
      */
     function isValidSignature(bytes32 _hash, bytes memory _signature) public view returns (bytes4 magicValue) {
         uint256 key;
-            assembly {
-                key := mload(add(_signature, 32))
-            }
+        assembly {
+            key := mload(add(_signature, 32))
+        }
 
         if (key == uint256(KeyType.WEBAUTHN)) {
             return _validateWebAuthnSignature(_signature, _hash);
-        
         } else if (key == uint256(KeyType.P256) || key == uint256(KeyType.P256NONKEY)) {
             return _validateP256Signature(_signature, _hash);
-
         } else if (_signature.length == 64 || _signature.length == 65) {
             address signer = ECDSA.recover(_hash, _signature);
 
@@ -591,7 +582,7 @@ contract OPF7702 layout at 0x801ae8efc2175d3d963e799b27e0e948b9a3fa84e2ce105a370
 
         if (
             sessionKey.validUntil == 0 || sessionKey.validAfter > block.timestamp
-            || sessionKey.validUntil < block.timestamp || (!sessionKey.masterSessionKey && sessionKey.limit < 1)
+                || sessionKey.validUntil < block.timestamp || (!sessionKey.masterSessionKey && sessionKey.limit < 1)
         ) {
             return bytes4(0xffffffff);
         } else if (sessionKey.whoRegistrated != address(this)) {
