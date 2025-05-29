@@ -24,11 +24,12 @@ abstract contract KeysManager is BaseOPF7702, ISessionkey, SpendLimit {
 
     // Todo: id for EOA session Keys
     uint256 public id;
+    uint256 public idEOA;
+
     mapping(uint256 id => Key key) public idSessionKeys;
     mapping(bytes32 sessionKey => SessionKey sessionKeyData) public sessionKeys;
     mapping(bytes32 challenge => bool isUsed) public usedChallenges;
 
-    uint256 public idEOA;
     mapping(uint256 idEOA => Key key) public idSessionKeysEOA;
     mapping(address sessionKeyEOA => SessionKey sessionKeyData) public sessionKeysEOA;
 
@@ -69,7 +70,6 @@ abstract contract KeysManager is BaseOPF7702, ISessionkey, SpendLimit {
         if (_validUntil <= block.timestamp) revert SessionKeyManager__InvalidTimestamp();
         if (_validAfter > _validUntil) revert SessionKeyManager__InvalidTimestamp();
 
-        // Todo: Do we want register More then once WEBAUTHN?
         if (
             _key.keyType == KeyType.WEBAUTHN || _key.keyType == KeyType.P256
                 || _key.keyType == KeyType.P256NONKEY

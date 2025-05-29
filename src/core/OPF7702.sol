@@ -14,9 +14,7 @@
 
 pragma solidity ^0.8.29;
 
-import {Test, console2 as console} from "lib/forge-std/src/Test.sol";
 import {Execution} from "src/core/Execution.sol";
-
 import {WebAuthnVerifier} from "src/utils/WebAuthnVerifier.sol";
 import {EfficientHashLib} from "lib/solady/src/utils/EfficientHashLib.sol";
 import {SafeCast} from "lib/openzeppelin-contracts/contracts/utils/math/SafeCast.sol";
@@ -44,9 +42,6 @@ contract OPF7702 is Execution, Initializable, WebAuthnVerifier layout at 5794359
 
     /// @notice Address of the implementation contract
     address public immutable _OPENFORT_CONTRACT_ADDRESS;
-
-    /// @notice The EntryPoint singleton contract
-    address private immutable ENTRY_POINT;
 
     /// @notice Emitted when the account is initialized with an masterKey
     event Initialized(Key indexed masterKey);
@@ -177,7 +172,7 @@ contract OPF7702 is Execution, Initializable, WebAuthnVerifier layout at 5794359
             });
 
             if (sKey.masterSessionKey) return 0;
-            console.log("a");
+
             if (isValidSessionKey(_key, userOp.callData)) {
                 usedChallenges[userOpHash] = true;
                 return _packValidationData(false, sKey.validUntil, sKey.validAfter);

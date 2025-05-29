@@ -38,6 +38,9 @@ abstract contract BaseOPF7702 is
     error OpenfortBaseAccount7702V1__InvalidTransactionTarget();
     error OpenfortBaseAccount7702V1__TransactionFailed(bytes returnData);
 
+    /// @notice The EntryPoint singleton contract
+    address internal immutable ENTRY_POINT;
+
     /// @notice Current transaction nonce, used to prevent replay attacks
     uint256 public nonce;
 
@@ -89,8 +92,8 @@ abstract contract BaseOPF7702 is
      * @notice Return the EntryPoint used by this account
      * @return The EntryPoint contract
      */
-    function entryPoint() public pure override returns (IEntryPoint) {
-        return IEntryPoint(0x4337084D9E255Ff0702461CF8895CE9E3b5Ff108);
+    function entryPoint() public view override returns (IEntryPoint) {
+        return IEntryPoint(ENTRY_POINT);
     }
 
     /**
@@ -111,7 +114,7 @@ abstract contract BaseOPF7702 is
     function _clearStorage() internal {
         bytes32 baseSlot = keccak256("openfort.baseAccount.7702.v1");
 
-        for (uint256 i = 2; i < 6; i++) {
+        for (uint256 i = 0; i < 3; i++) {
             bytes32 slot = bytes32(uint256(baseSlot) + i);
             assembly {
                 sstore(slot, 0)
