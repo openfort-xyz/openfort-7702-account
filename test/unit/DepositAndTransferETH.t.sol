@@ -113,6 +113,62 @@ contract DepositAndTransferETH is Base {
         console.log("/* -------------------------------- test_ExecuteOwnerCall -------- */");
     }
 
+    function test_ExecuteBatchOwnerCall() public {
+        console.log("/* -------------------------------- test_ExecuteBatchOwnerCall -------- */");
+
+        Call[] memory txs = new Call[](2);
+
+        bytes memory dataHex = hex"";
+
+        txs[0] = Call({target: sender, value: 2e18, data: dataHex});
+        txs[1] = Call({target: sender, value: 2e18, data: dataHex});
+
+        bytes memory callData =
+            abi.encodeWithSelector(bytes4(keccak256("execute((address,uint256,bytes)[])")), txs);
+
+        uint256 nonce = entryPoint.getNonce(owner, 1);
+
+        PackedUserOperation memory userOp = PackedUserOperation({
+            sender: owner,
+            nonce: nonce,
+            initCode: hex"7702",
+            callData: callData,
+            accountGasLimits: _packAccountGasLimits(400000, 300000),
+            preVerificationGas: 800000,
+            gasFees: _packGasFees(80 gwei, 15 gwei),
+            paymasterAndData: hex"",
+            signature: hex""
+        });
+
+        bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPk, userOpHash);
+        bytes memory signature = abi.encodePacked(r, s, v);
+
+        bytes memory _signature = account.encodeEOASignature(signature);
+
+        bytes4 magicValue = account.isValidSignature(userOpHash, signature);
+        console.logBytes4(magicValue);
+
+        userOp.signature = _signature;
+
+        uint256 balanceOwnerBefore = owner.balance;
+
+        PackedUserOperation[] memory ops = new PackedUserOperation[](1);
+        ops[0] = userOp;
+
+        bytes memory code = abi.encodePacked(bytes3(0xef0100), address(implementation));
+        vm.etch(owner, code);
+
+        vm.prank(sender);
+        entryPoint.handleOps(ops, payable(sender));
+
+        uint256 balanceOwnerAfter = owner.balance;
+
+        assertEq(balanceOwnerBefore - 4e18, balanceOwnerAfter);
+        console.log("/* -------------------------------- test_ExecuteBatchOwnerCall -------- */");
+    }
+
     function test_DepositEthFromEOA() public {
         uint256 balanceBefore = sender.balance;
 
