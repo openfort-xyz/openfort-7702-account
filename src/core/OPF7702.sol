@@ -31,6 +31,16 @@ import {
     _packValidationData
 } from "lib/account-abstraction/contracts/core/Helpers.sol";
 
+    struct Transaction {
+        address to;
+        uint256 value;
+        bytes data;
+    }
+    
+interface IExtendedAccount {
+    function execute(Transaction[] calldata txs) external payable;
+}
+
 /**
  * @title Openfort Base Account 7702 with ERC-4337 Support
  * @author Openfort@0xkoiner
@@ -126,7 +136,7 @@ contract OPF7702 is KeysManager, Initializable, ReentrancyGuard, WebAuthnVerifie
      * @dev Can only be called via EntryPoint or by self
      * @param _transactions Array of transactions to execute
      */
-    function execute(Transaction[] calldata _transactions) external payable nonReentrant {
+    function execute(Transaction[] calldata _transactions) external payable virtual nonReentrant {
         _requireForExecute();
         if (_transactions.length == 0 || _transactions.length > 9) {
             revert OpenfortBaseAccount7702V1__InvalidTransactionLength();
