@@ -13,7 +13,8 @@ import {MockERC20} from "src/mocks/MockERC20.sol";
 import {SpendLimit} from "src/utils/SpendLimit.sol";
 import {ISessionKey} from "src/interfaces/ISessionkey.sol";
 import {WebAuthnVerifier} from "src/utils/WebAuthnVerifier.sol";
-import {PackedUserOperation} from "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
+import {PackedUserOperation} from
+    "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
 
 contract KeysTest is Base {
     /* ───────────────────────────────────────────────────────────── contracts ── */
@@ -81,7 +82,8 @@ contract KeysTest is Base {
         account.revokeSessionKey(mk);
 
         vm.stopPrank();
-        (bool _isActivek1, uint256 _validUntilk1,, uint256 _limitk1) = account.getSessionKeyData(k1.eoaAddress);
+        (bool _isActivek1, uint256 _validUntilk1,, uint256 _limitk1) =
+            account.getSessionKeyData(k1.eoaAddress);
 
         (bool _isActivek2, uint256 _validUntilk2,, uint256 _limitk2) =
             account.getSessionKeyData(keccak256(abi.encodePacked(k2.pubKey.x, k2.pubKey.y)));
@@ -112,7 +114,8 @@ contract KeysTest is Base {
 
         for (uint256 i = 0; i < idLengthEOA; i++) {
             Key memory k = account.getKeyById(i, KeyType.EOA);
-            (bool _isActive, uint256 _validUntil,, uint256 _limit) = account.getSessionKeyData(k.eoaAddress);
+            (bool _isActive, uint256 _validUntil,, uint256 _limit) =
+                account.getSessionKeyData(k.eoaAddress);
 
             assertFalse(_isActive);
             assertEq(_validUntil, 0);
@@ -147,7 +150,8 @@ contract KeysTest is Base {
 
             keySK = Key({pubKey: pubKeySK, eoaAddress: sessionKeyAddr, keyType: KeyType.EOA});
 
-            SpendLimit.SpendTokenInfo memory spendInfo = SpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000e18});
+            SpendLimit.SpendTokenInfo memory spendInfo =
+                SpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000e18});
 
             bytes memory code = abi.encodePacked(
                 bytes3(0xef0100),
@@ -169,14 +173,17 @@ contract KeysTest is Base {
             uint48 validUntil = uint48(block.timestamp + 1 days);
             uint48 limit = uint48(3);
 
-            bytes32 RANDOM_P256_PUBLIC_KEY_X = keccak256(abi.encodePacked("X_KEY", i, block.timestamp));
-            bytes32 RANDOM_P256_PUBLIC_KEY_Y = keccak256(abi.encodePacked("Y_KEY", i, block.timestamp, msg.sender));
+            bytes32 RANDOM_P256_PUBLIC_KEY_X =
+                keccak256(abi.encodePacked("X_KEY", i, block.timestamp));
+            bytes32 RANDOM_P256_PUBLIC_KEY_Y =
+                keccak256(abi.encodePacked("Y_KEY", i, block.timestamp, msg.sender));
 
             pubKeySK = PubKey({x: RANDOM_P256_PUBLIC_KEY_X, y: RANDOM_P256_PUBLIC_KEY_Y});
 
             keySK = Key({pubKey: pubKeySK, eoaAddress: address(0), keyType: KeyType.P256});
 
-            SpendLimit.SpendTokenInfo memory spendInfo = SpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000e18});
+            SpendLimit.SpendTokenInfo memory spendInfo =
+                SpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000e18});
 
             bytes memory code = abi.encodePacked(
                 bytes3(0xef0100),
@@ -198,7 +205,8 @@ contract KeysTest is Base {
             uint48 validUntil = uint48(block.timestamp + 1 days);
             uint48 limit = uint48(3);
 
-            bytes32 RANDOM_P256_PUBLIC_KEY_X = keccak256(abi.encodePacked("X_KEY", i, block.timestamp + 1000));
+            bytes32 RANDOM_P256_PUBLIC_KEY_X =
+                keccak256(abi.encodePacked("X_KEY", i, block.timestamp + 1000));
             bytes32 RANDOM_P256_PUBLIC_KEY_Y =
                 keccak256(abi.encodePacked("Y_KEY", i, block.timestamp + 1000, msg.sender));
 
@@ -206,7 +214,8 @@ contract KeysTest is Base {
 
             keySK = Key({pubKey: pubKeySK, eoaAddress: address(0), keyType: KeyType.P256NONKEY});
 
-            SpendLimit.SpendTokenInfo memory spendInfo = SpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000e18});
+            SpendLimit.SpendTokenInfo memory spendInfo =
+                SpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000e18});
 
             bytes memory code = abi.encodePacked(
                 bytes3(0xef0100),
@@ -228,7 +237,8 @@ contract KeysTest is Base {
 
         keyMK = Key({pubKey: pubKeyMK, eoaAddress: address(0), keyType: KeyType.WEBAUTHN});
 
-        SpendLimit.SpendTokenInfo memory spendInfo = SpendLimit.SpendTokenInfo({token: TOKEN, limit: 0});
+        SpendLimit.SpendTokenInfo memory spendInfo =
+            SpendLimit.SpendTokenInfo({token: TOKEN, limit: 0});
 
         /* sign arbitrary message so initialise() passes sig check */
         bytes32 msgHash = keccak256(abi.encode("Hello OPF7702"));

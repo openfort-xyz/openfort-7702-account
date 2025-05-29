@@ -70,7 +70,10 @@ abstract contract KeysManager is BaseOPF7702, ISessionKey, SpendLimit {
         if (_validAfter > _validUntil) revert SessionKeyManager__InvalidTimestamp();
 
         // Todo: Do we want register More then once WEBAUTHN?
-        if (_key.keyType == KeyType.WEBAUTHN || _key.keyType == KeyType.P256 || _key.keyType == KeyType.P256NONKEY) {
+        if (
+            _key.keyType == KeyType.WEBAUTHN || _key.keyType == KeyType.P256
+                || _key.keyType == KeyType.P256NONKEY
+        ) {
             bytes32 keyHash = keccak256(abi.encodePacked(_key.pubKey.x, _key.pubKey.y));
 
             if (sessionKeys[keyHash].isActive) revert SessionKeyManager__SessionKeyRegistered();
@@ -95,7 +98,9 @@ abstract contract KeysManager is BaseOPF7702, ISessionKey, SpendLimit {
             emit SessionKeyRegistrated(keyHash);
         } else if (_key.keyType == KeyType.EOA) {
             if (_key.eoaAddress == address(0)) revert SessionKeyManager__AddressCantBeZero();
-            if (sessionKeysEOA[_key.eoaAddress].isActive) revert SessionKeyManager__SessionKeyRegistered();
+            if (sessionKeysEOA[_key.eoaAddress].isActive) {
+                revert SessionKeyManager__SessionKeyRegistered();
+            }
 
             SessionKey storage sKey = sessionKeysEOA[_key.eoaAddress];
 
@@ -185,7 +190,10 @@ abstract contract KeysManager is BaseOPF7702, ISessionKey, SpendLimit {
      */
     function revokeSessionKey(Key calldata _key) external {
         _requireForExecute();
-        if (_key.keyType == KeyType.WEBAUTHN || _key.keyType == KeyType.P256 || _key.keyType == KeyType.P256NONKEY) {
+        if (
+            _key.keyType == KeyType.WEBAUTHN || _key.keyType == KeyType.P256
+                || _key.keyType == KeyType.P256NONKEY
+        ) {
             bytes32 keyHash = keccak256(abi.encodePacked(_key.pubKey.x, _key.pubKey.y));
             SessionKey storage sKey = sessionKeys[keyHash];
             _revokeSessionKey(sKey);
@@ -228,8 +236,10 @@ abstract contract KeysManager is BaseOPF7702, ISessionKey, SpendLimit {
         for (uint256 i = 0; i < id; i++) {
             Key memory _key = getKeyById(i, KeyType.WEBAUTHN); // Default to WEBAUTHN, we'll check the actual type
 
-            if (_key.keyType == KeyType.WEBAUTHN || _key.keyType == KeyType.P256 || _key.keyType == KeyType.P256NONKEY)
-            {
+            if (
+                _key.keyType == KeyType.WEBAUTHN || _key.keyType == KeyType.P256
+                    || _key.keyType == KeyType.P256NONKEY
+            ) {
                 bytes32 keyHash = keccak256(abi.encodePacked(_key.pubKey.x, _key.pubKey.y));
                 SessionKey storage sKey = sessionKeys[keyHash];
                 _revokeSessionKey(sKey);
@@ -261,13 +271,20 @@ abstract contract KeysManager is BaseOPF7702, ISessionKey, SpendLimit {
         view
         returns (KeyType keyType, address registeredBy, bool isActive)
     {
-        if (_keyType == KeyType.WEBAUTHN || _keyType == KeyType.P256 || _keyType == KeyType.P256NONKEY) {
+        if (
+            _keyType == KeyType.WEBAUTHN || _keyType == KeyType.P256
+                || _keyType == KeyType.P256NONKEY
+        ) {
             Key memory key = getKeyById(_id, KeyType.WEBAUTHN);
             bytes32 keyHash = keccak256(abi.encodePacked(key.pubKey.x, key.pubKey.y));
             return (key.keyType, sessionKeys[keyHash].whoRegistrated, sessionKeys[keyHash].isActive);
         } else if (_keyType == KeyType.EOA) {
             Key memory key = getKeyById(_id, KeyType.EOA);
-            return (key.keyType, sessionKeysEOA[key.eoaAddress].whoRegistrated, sessionKeysEOA[key.eoaAddress].isActive);
+            return (
+                key.keyType,
+                sessionKeysEOA[key.eoaAddress].whoRegistrated,
+                sessionKeysEOA[key.eoaAddress].isActive
+            );
         }
     }
 
@@ -277,7 +294,10 @@ abstract contract KeysManager is BaseOPF7702, ISessionKey, SpendLimit {
      * @return Key information
      */
     function getKeyById(uint256 _id, KeyType _keyType) public view returns (Key memory) {
-        if (_keyType == KeyType.WEBAUTHN || _keyType == KeyType.P256 || _keyType == KeyType.P256NONKEY) {
+        if (
+            _keyType == KeyType.WEBAUTHN || _keyType == KeyType.P256
+                || _keyType == KeyType.P256NONKEY
+        ) {
             Key storage _key = idSessionKeys[_id];
             return _key;
         } else {
@@ -294,7 +314,11 @@ abstract contract KeysManager is BaseOPF7702, ISessionKey, SpendLimit {
      * @return validAfter Timestamp after which the key becomes valid
      * @return limit Number of transactions allowed
      */
-    function getSessionKeyData(bytes32 _keyHash) external view returns (bool, uint48, uint48, uint48) {
+    function getSessionKeyData(bytes32 _keyHash)
+        external
+        view
+        returns (bool, uint48, uint48, uint48)
+    {
         bool isActive = sessionKeys[_keyHash].isActive;
         uint48 validUntil = sessionKeys[_keyHash].validUntil;
         uint48 validAfter = sessionKeys[_keyHash].validAfter;
@@ -373,7 +397,11 @@ abstract contract KeysManager is BaseOPF7702, ISessionKey, SpendLimit {
         );
     }
 
-    function encodeP256Signature(bytes32 r, bytes32 s, PubKey memory pubKey) external pure returns (bytes memory) {
+    function encodeP256Signature(bytes32 r, bytes32 s, PubKey memory pubKey)
+        external
+        pure
+        returns (bytes memory)
+    {
         bytes memory inner = abi.encode(r, s, pubKey);
         return abi.encode(KeyType.P256, inner);
     }

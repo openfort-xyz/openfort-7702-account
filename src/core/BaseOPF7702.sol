@@ -23,7 +23,14 @@ import "lib/openzeppelin-contracts/contracts/utils/introspection/ERC165.sol";
 import "lib/openzeppelin-contracts/contracts/token/ERC721/utils/ERC721Holder.sol";
 import "lib/openzeppelin-contracts/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 
-abstract contract BaseOPF7702 is IAccount, BaseAccount, IERC165, IERC1271, ERC1155Holder, ERC721Holder {
+abstract contract BaseOPF7702 is
+    IAccount,
+    BaseAccount,
+    IERC165,
+    IERC1271,
+    ERC1155Holder,
+    ERC721Holder
+{
     error OpenfortBaseAccount7702V1__InvalidNonce();
     error OpenfortBaseAccount7702V1__InvalidSignature();
     error OpenfortBaseAccount7702V1__ValidationExpired();
@@ -44,9 +51,15 @@ abstract contract BaseOPF7702 is IAccount, BaseAccount, IERC165, IERC1271, ERC11
         emit DepositAdded(msg.sender, msg.value);
     }
 
-    function supportsInterface(bytes4 _interfaceId) public pure override(ERC1155Holder, IERC165) returns (bool) {
-        return _interfaceId == type(IERC165).interfaceId || _interfaceId == type(IAccount).interfaceId
-            || _interfaceId == type(IERC1271).interfaceId || _interfaceId == type(IERC1155Receiver).interfaceId
+    function supportsInterface(bytes4 _interfaceId)
+        public
+        pure
+        override(ERC1155Holder, IERC165)
+        returns (bool)
+    {
+        return _interfaceId == type(IERC165).interfaceId
+            || _interfaceId == type(IAccount).interfaceId || _interfaceId == type(IERC1271).interfaceId
+            || _interfaceId == type(IERC1155Receiver).interfaceId
             || _interfaceId == type(IERC721Receiver).interfaceId;
     }
 
@@ -85,7 +98,10 @@ abstract contract BaseOPF7702 is IAccount, BaseAccount, IERC165, IERC1271, ERC11
      * @dev Only self-calls and EntryPoint calls are allowed
      */
     function _requireForExecute() internal view virtual override {
-        require(msg.sender == address(this) || msg.sender == address(entryPoint()), "not from self or EntryPoint");
+        require(
+            msg.sender == address(this) || msg.sender == address(entryPoint()),
+            "not from self or EntryPoint"
+        );
     }
 
     /**

@@ -14,7 +14,8 @@ import {MockERC20} from "src/mocks/MockERC20.sol";
 import {SpendLimit} from "src/utils/SpendLimit.sol";
 import {ISessionKey} from "src/interfaces/ISessionkey.sol";
 import {WebAuthnVerifier} from "src/utils/WebAuthnVerifier.sol";
-import {PackedUserOperation} from "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
+import {PackedUserOperation} from
+    "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
 
 contract DepositAndTransferETH is Base {
     /* ───────────────────────────────────────────────────────────── contracts ── */
@@ -119,7 +120,8 @@ contract DepositAndTransferETH is Base {
         bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
         console.logBytes32(userOpHash);
 
-        ISessionKey.PubKey memory pubKeyExecuteBatch = ISessionKey.PubKey({x: ETH_PUBLIC_KEY_X, y: ETH_PUBLIC_KEY_Y});
+        ISessionKey.PubKey memory pubKeyExecuteBatch =
+            ISessionKey.PubKey({x: ETH_PUBLIC_KEY_X, y: ETH_PUBLIC_KEY_Y});
 
         bytes memory _signature = account.encodeWebAuthnSignature(
             true,
@@ -199,7 +201,8 @@ contract DepositAndTransferETH is Base {
         datas[0] = callData1;
         datas[1] = callData2;
 
-        bytes memory callData = abi.encodeWithSelector(OPF7702.executeBatch.selector, targets, values, datas);
+        bytes memory callData =
+            abi.encodeWithSelector(OPF7702.executeBatch.selector, targets, values, datas);
 
         uint256 nonce = entryPoint.getNonce(owner, 1);
 
@@ -271,7 +274,8 @@ contract DepositAndTransferETH is Base {
         datas[0] = callData1;
         datas[1] = callData2;
 
-        bytes memory callData = abi.encodeWithSelector(OPF7702.executeBatch.selector, targets, values, datas);
+        bytes memory callData =
+            abi.encodeWithSelector(OPF7702.executeBatch.selector, targets, values, datas);
 
         uint256 nonce = entryPoint.getNonce(owner, 1);
 
@@ -293,8 +297,9 @@ contract DepositAndTransferETH is Base {
         ISessionKey.PubKey memory pubKeyExecuteBatch =
             ISessionKey.PubKey({x: ETH_P256_PUBLIC_KEY_X, y: ETH_P256_PUBLIC_KEY_Y});
 
-        bytes memory _signature =
-            account.encodeP256Signature(ETH_P256_SIGNATURE_R, ETH_P256_SIGNATURE_S, pubKeyExecuteBatch);
+        bytes memory _signature = account.encodeP256Signature(
+            ETH_P256_SIGNATURE_R, ETH_P256_SIGNATURE_S, pubKeyExecuteBatch
+        );
 
         bytes4 magicValue = account.isValidSignature(userOpHash, _signature);
         bool usedChallenge = account.usedChallenges(userOpHash);
@@ -302,7 +307,11 @@ contract DepositAndTransferETH is Base {
         console.logBytes4(magicValue);
 
         bool isValid = webAuthn.verifyP256Signature(
-            userOpHash, ETH_P256_SIGNATURE_R, ETH_P256_SIGNATURE_S, P256_PUBLIC_KEY_X, P256_PUBLIC_KEY_Y
+            userOpHash,
+            ETH_P256_SIGNATURE_R,
+            ETH_P256_SIGNATURE_S,
+            P256_PUBLIC_KEY_X,
+            P256_PUBLIC_KEY_Y
         );
         console.log("isValid", isValid);
 
@@ -332,7 +341,9 @@ contract DepositAndTransferETH is Base {
     }
 
     function test_ExecuteBatchSKP256NonKey() public {
-        console.log("/* ---------------------------------- test_ExecuteBatchSKP256NonKey -------- */");
+        console.log(
+            "/* ---------------------------------- test_ExecuteBatchSKP256NonKey -------- */"
+        );
 
         uint256 value = 0.1e18;
 
@@ -351,7 +362,8 @@ contract DepositAndTransferETH is Base {
         datas[0] = callData1;
         datas[1] = callData2;
 
-        bytes memory callData = abi.encodeWithSelector(OPF7702.executeBatch.selector, targets, values, datas);
+        bytes memory callData =
+            abi.encodeWithSelector(OPF7702.executeBatch.selector, targets, values, datas);
 
         uint256 nonce = entryPoint.getNonce(owner, 1);
 
@@ -373,8 +385,9 @@ contract DepositAndTransferETH is Base {
         ISessionKey.PubKey memory pubKeyExecuteBatch =
             ISessionKey.PubKey({x: ETH_P256NOKEY_PUBLIC_KEY_X, y: ETH_P256NOKEY_PUBLIC_KEY_Y});
 
-        bytes memory _signature =
-            account.encodeP256NonKeySignature(ETH_P256NOKEY_SIGNATURE_R, ETH_P256NOKEY_SIGNATURE_S, pubKeyExecuteBatch);
+        bytes memory _signature = account.encodeP256NonKeySignature(
+            ETH_P256NOKEY_SIGNATURE_R, ETH_P256NOKEY_SIGNATURE_S, pubKeyExecuteBatch
+        );
 
         bytes4 magicValue = account.isValidSignature(userOpHash, _signature);
         bool usedChallenge = account.usedChallenges(userOpHash);
@@ -415,7 +428,9 @@ contract DepositAndTransferETH is Base {
         console.log("balanceSenderBefore", balanceSenderBefore);
         console.log("balanceSenderAfter", balanceSenderAfter);
         assertEq(balanceOfBefore - (value * 2), balanceOfAfter);
-        console.log("/* ---------------------------------- test_ExecuteBatchSKP256NonKey -------- */");
+        console.log(
+            "/* ---------------------------------- test_ExecuteBatchSKP256NonKey -------- */"
+        );
     }
 
     function _register_SessionKeyEOA() internal {
@@ -428,7 +443,8 @@ contract DepositAndTransferETH is Base {
 
         keySK = Key({pubKey: pubKeySK, eoaAddress: sessionKey, keyType: KeyType.EOA});
 
-        SpendLimit.SpendTokenInfo memory spendInfo = SpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000e18});
+        SpendLimit.SpendTokenInfo memory spendInfo =
+            SpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000e18});
 
         bytes memory code = abi.encodePacked(
             bytes3(0xef0100),
@@ -438,7 +454,15 @@ contract DepositAndTransferETH is Base {
 
         vm.prank(address(entryPoint));
         account.registerSessionKey(
-            keySK, validUntil, uint48(0), limit, true, ETH_RECIVE, spendInfo, _allowedSelectorsEmpty(), ETH_LIMIT
+            keySK,
+            validUntil,
+            uint48(0),
+            limit,
+            true,
+            ETH_RECIVE,
+            spendInfo,
+            _allowedSelectorsEmpty(),
+            ETH_LIMIT
         );
     }
 
@@ -449,7 +473,8 @@ contract DepositAndTransferETH is Base {
 
         keySK = Key({pubKey: pubKeySK, eoaAddress: address(0), keyType: KeyType.P256});
 
-        SpendLimit.SpendTokenInfo memory spendInfo = SpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000e18});
+        SpendLimit.SpendTokenInfo memory spendInfo =
+            SpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000e18});
 
         bytes memory code = abi.encodePacked(
             bytes3(0xef0100),
@@ -459,7 +484,15 @@ contract DepositAndTransferETH is Base {
 
         vm.prank(address(entryPoint));
         account.registerSessionKey(
-            keySK, validUntil, uint48(0), limit, true, ETH_RECIVE, spendInfo, _allowedSelectorsEmpty(), ETH_LIMIT
+            keySK,
+            validUntil,
+            uint48(0),
+            limit,
+            true,
+            ETH_RECIVE,
+            spendInfo,
+            _allowedSelectorsEmpty(),
+            ETH_LIMIT
         );
     }
 
@@ -470,7 +503,8 @@ contract DepositAndTransferETH is Base {
 
         keySK = Key({pubKey: pubKeySK, eoaAddress: address(0), keyType: KeyType.P256NONKEY});
 
-        SpendLimit.SpendTokenInfo memory spendInfo = SpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000e18});
+        SpendLimit.SpendTokenInfo memory spendInfo =
+            SpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000e18});
 
         bytes memory code = abi.encodePacked(
             bytes3(0xef0100),
@@ -480,7 +514,15 @@ contract DepositAndTransferETH is Base {
 
         vm.prank(address(entryPoint));
         account.registerSessionKey(
-            keySK, validUntil, uint48(0), limit, true, ETH_RECIVE, spendInfo, _allowedSelectorsEmpty(), ETH_LIMIT
+            keySK,
+            validUntil,
+            uint48(0),
+            limit,
+            true,
+            ETH_RECIVE,
+            spendInfo,
+            _allowedSelectorsEmpty(),
+            ETH_LIMIT
         );
     }
 
@@ -491,7 +533,8 @@ contract DepositAndTransferETH is Base {
 
         keyMK = Key({pubKey: pubKeyMK, eoaAddress: address(0), keyType: KeyType.WEBAUTHN});
 
-        SpendLimit.SpendTokenInfo memory spendInfo = SpendLimit.SpendTokenInfo({token: TOKEN, limit: 0});
+        SpendLimit.SpendTokenInfo memory spendInfo =
+            SpendLimit.SpendTokenInfo({token: TOKEN, limit: 0});
 
         /* sign arbitrary message so initialise() passes sig check */
         bytes32 msgHash = keccak256(abi.encode("Hello OPF7702"));

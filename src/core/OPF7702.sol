@@ -23,7 +23,8 @@ import {SafeCast} from "lib/openzeppelin-contracts/contracts/utils/math/SafeCast
 import {ECDSA} from "lib/openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
 import {ReentrancyGuard} from "lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 import {Initializable} from "lib/openzeppelin-contracts/contracts/proxy/utils/Initializable.sol";
-import {PackedUserOperation} from "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
+import {PackedUserOperation} from
+    "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
 import {
     SIG_VALIDATION_FAILED,
     SIG_VALIDATION_SUCCESS,
@@ -106,7 +107,15 @@ contract OPF7702 is KeysManager, Initializable, ReentrancyGuard, WebAuthnVerifie
         nonce = _nonce;
         // Todo: Ask Jaume if its good to do the MK with endless time
         registerSessionKey(
-            _key, type(uint48).max, uint48(0), uint48(0), false, DEAD_ADDRESS, _spendTokenInfo, _allowedSelectors, 0
+            _key,
+            type(uint48).max,
+            uint48(0),
+            uint48(0),
+            false,
+            DEAD_ADDRESS,
+            _spendTokenInfo,
+            _allowedSelectors,
+            0
         );
 
         emit Initialized(_key);
@@ -149,7 +158,12 @@ contract OPF7702 is KeysManager, Initializable, ReentrancyGuard, WebAuthnVerifie
     /**
      * Execute a transaction (called directly from owner, or by entryPoint)
      */
-    function execute(address _target, uint256 _value, bytes calldata _calldata) public payable virtual nonReentrant {
+    function execute(address _target, uint256 _value, bytes calldata _calldata)
+        public
+        payable
+        virtual
+        nonReentrant
+    {
         _requireForExecute();
         _call(_target, _value, _calldata);
     }
@@ -157,14 +171,16 @@ contract OPF7702 is KeysManager, Initializable, ReentrancyGuard, WebAuthnVerifie
     /**
      * Execute a sequence of transactions. Maximum 9.
      */
-    function executeBatch(address[] calldata _target, uint256[] calldata _value, bytes[] calldata _calldata)
-        public
-        payable
-        virtual
-        nonReentrant
-    {
+    function executeBatch(
+        address[] calldata _target,
+        uint256[] calldata _value,
+        bytes[] calldata _calldata
+    ) public payable virtual nonReentrant {
         _requireForExecute();
-        if (_target.length > 9 || _target.length != _calldata.length || _target.length != _value.length) {
+        if (
+            _target.length > 9 || _target.length != _calldata.length
+                || _target.length != _value.length
+        ) {
             revert OpenfortBaseAccount7702V1__InvalidTransactionLength();
         }
         uint256 i;
@@ -230,7 +246,10 @@ contract OPF7702 is KeysManager, Initializable, ReentrancyGuard, WebAuthnVerifie
                 bytes32 r,
                 bytes32 s,
                 PubKey memory pubKey
-            ) = abi.decode(userOp.signature, (KeyType, bool, bytes, string, uint256, uint256, bytes32, bytes32, PubKey));
+            ) = abi.decode(
+                userOp.signature,
+                (KeyType, bool, bytes, string, uint256, uint256, bytes32, bytes32, PubKey)
+            );
 
             if (usedChallenges[userOpHash]) return SIG_VALIDATION_FAILED;
 
@@ -265,7 +284,8 @@ contract OPF7702 is KeysManager, Initializable, ReentrancyGuard, WebAuthnVerifie
                 return _packValidationData(false, sKey.validUntil, sKey.validAfter);
             }
         } else if (sigType == KeyType.P256 || sigType == KeyType.P256NONKEY) {
-            (bytes32 r, bytes32 s, PubKey memory pubKey) = abi.decode(sigData, (bytes32, bytes32, PubKey));
+            (bytes32 r, bytes32 s, PubKey memory pubKey) =
+                abi.decode(sigData, (bytes32, bytes32, PubKey));
 
             if (usedChallenges[userOpHash]) return SIG_VALIDATION_FAILED;
 
@@ -303,7 +323,11 @@ contract OPF7702 is KeysManager, Initializable, ReentrancyGuard, WebAuthnVerifie
      * @param _callData Call data to be executed
      * @return True if the session key is allowed to execute the call, false otherwise
      */
-    function isValidSessionKey(Key memory _key, bytes calldata _callData) internal virtual returns (bool) {
+    function isValidSessionKey(Key memory _key, bytes calldata _callData)
+        internal
+        virtual
+        returns (bool)
+    {
         // 1. Get the session key based on key type
         SessionKey storage sessionKey;
 
@@ -344,7 +368,10 @@ contract OPF7702 is KeysManager, Initializable, ReentrancyGuard, WebAuthnVerifie
      * @param _callData Call data to validate
      * @return True if the call is valid, false otherwise
      */
-    function _validateExecuteCall(SessionKey storage sessionKey, bytes calldata _callData) internal returns (bool) {
+    function _validateExecuteCall(SessionKey storage sessionKey, bytes calldata _callData)
+        internal
+        returns (bool)
+    {
         // Decode the execute call parameters
         address toContract;
         bytes memory innerData;
@@ -444,7 +471,10 @@ contract OPF7702 is KeysManager, Initializable, ReentrancyGuard, WebAuthnVerifie
      * @param innerData Call data containing token transfer details
      * @return True if the token spend is valid, false otherwise
      */
-    function _validateTokenSpend(SessionKey storage sessionKey, bytes memory innerData) internal returns (bool) {
+    function _validateTokenSpend(SessionKey storage sessionKey, bytes memory innerData)
+        internal
+        returns (bool)
+    {
         uint256 startPos = innerData.length - 32;
         bytes32 value;
         assembly {
@@ -466,7 +496,11 @@ contract OPF7702 is KeysManager, Initializable, ReentrancyGuard, WebAuthnVerifie
      * @param selector Selector to check
      * @return True if the selector is allowed, false otherwise
      */
-    function _isAllowedSelector(bytes4[] storage selectors, bytes4 selector) internal view returns (bool) {
+    function _isAllowedSelector(bytes4[] storage selectors, bytes4 selector)
+        internal
+        view
+        returns (bool)
+    {
         for (uint256 i = 0; i < selectors.length; ++i) {
             if (selectors[i] == selector) {
                 return true;
@@ -481,7 +515,11 @@ contract OPF7702 is KeysManager, Initializable, ReentrancyGuard, WebAuthnVerifie
      * @param _signature Signature to verify
      * @return magicValue Magic value indicating whether signature is valid
      */
-    function isValidSignature(bytes32 _hash, bytes memory _signature) public view returns (bytes4 magicValue) {
+    function isValidSignature(bytes32 _hash, bytes memory _signature)
+        public
+        view
+        returns (bytes4 magicValue)
+    {
         uint256 key;
         assembly {
             key := mload(add(_signature, 32))
@@ -499,7 +537,8 @@ contract OPF7702 is KeysManager, Initializable, ReentrancyGuard, WebAuthnVerifie
 
             if (
                 sessionKey.validUntil == 0 || sessionKey.validAfter > block.timestamp
-                    || sessionKey.validUntil < block.timestamp || (!sessionKey.masterSessionKey && sessionKey.limit < 1)
+                    || sessionKey.validUntil < block.timestamp
+                    || (!sessionKey.masterSessionKey && sessionKey.limit < 1)
             ) {
                 return bytes4(0xffffffff);
             } else if (sessionKey.whoRegistrated != address(this)) {
@@ -517,7 +556,11 @@ contract OPF7702 is KeysManager, Initializable, ReentrancyGuard, WebAuthnVerifie
      * @param _signature WebAuthn signature data
      * @return Magic value if the signature is valid, otherwise 0xffffffff
      */
-    function _validateWebAuthnSignature(bytes memory _signature, bytes32 _hash) internal view returns (bytes4) {
+    function _validateWebAuthnSignature(bytes memory _signature, bytes32 _hash)
+        internal
+        view
+        returns (bytes4)
+    {
         (
             ,
             bool requireUserVerification,
@@ -528,7 +571,9 @@ contract OPF7702 is KeysManager, Initializable, ReentrancyGuard, WebAuthnVerifie
             bytes32 r,
             bytes32 s,
             PubKey memory pubKey
-        ) = abi.decode(_signature, (KeyType, bool, bytes, string, uint256, uint256, bytes32, bytes32, PubKey));
+        ) = abi.decode(
+            _signature, (KeyType, bool, bytes, string, uint256, uint256, bytes32, bytes32, PubKey)
+        );
 
         if (usedChallenges[_hash]) return bytes4(0xffffffff);
 
@@ -552,7 +597,8 @@ contract OPF7702 is KeysManager, Initializable, ReentrancyGuard, WebAuthnVerifie
 
         if (
             sessionKey.validUntil == 0 || sessionKey.validAfter > block.timestamp
-                || sessionKey.validUntil < block.timestamp || (!sessionKey.masterSessionKey && sessionKey.limit < 1)
+                || sessionKey.validUntil < block.timestamp
+                || (!sessionKey.masterSessionKey && sessionKey.limit < 1)
         ) {
             return bytes4(0xffffffff);
         } else if (sessionKey.whoRegistrated != address(this)) {
@@ -562,7 +608,11 @@ contract OPF7702 is KeysManager, Initializable, ReentrancyGuard, WebAuthnVerifie
         }
     }
 
-    function _validateP256Signature(bytes memory _signature, bytes32 _hash) internal view returns (bytes4) {
+    function _validateP256Signature(bytes memory _signature, bytes32 _hash)
+        internal
+        view
+        returns (bytes4)
+    {
         (KeyType key, bytes memory inner) = abi.decode(_signature, (KeyType, bytes));
 
         (bytes32 r, bytes32 s, PubKey memory pubKey) = abi.decode(inner, (bytes32, bytes32, PubKey));
@@ -582,7 +632,8 @@ contract OPF7702 is KeysManager, Initializable, ReentrancyGuard, WebAuthnVerifie
 
         if (
             sessionKey.validUntil == 0 || sessionKey.validAfter > block.timestamp
-                || sessionKey.validUntil < block.timestamp || (!sessionKey.masterSessionKey && sessionKey.limit < 1)
+                || sessionKey.validUntil < block.timestamp
+                || (!sessionKey.masterSessionKey && sessionKey.limit < 1)
         ) {
             return bytes4(0xffffffff);
         } else if (sessionKey.whoRegistrated != address(this)) {

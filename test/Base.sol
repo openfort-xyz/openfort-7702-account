@@ -27,13 +27,18 @@ contract Base is Test, ISessionKey {
     address internal sessionKey = vm.addr(sessionKeyPk);
 
     /* ───────────────────────────────────────────────────────────── master key ── */
-    bytes32 constant VALID_PUBLIC_KEY_X = hex"4ada96f06b4e3f3db9ca23d28f3197e643be29315e4c0401e4760bcd5c885f8f";
-    bytes32 constant VALID_PUBLIC_KEY_Y = hex"703d50715d723db90aef1d363e6342fe82ce04cba3c0c959445d1d3b26aa40e1";
+    bytes32 constant VALID_PUBLIC_KEY_X =
+        hex"4ada96f06b4e3f3db9ca23d28f3197e643be29315e4c0401e4760bcd5c885f8f";
+    bytes32 constant VALID_PUBLIC_KEY_Y =
+        hex"703d50715d723db90aef1d363e6342fe82ce04cba3c0c959445d1d3b26aa40e1";
 
-    bytes public constant CHALLENGE = hex"07e9d1cdf79ae1f7bb91f70d074812afde29e9d34b05dcb67304328360cd2c35";
+    bytes public constant CHALLENGE =
+        hex"07e9d1cdf79ae1f7bb91f70d074812afde29e9d34b05dcb67304328360cd2c35";
 
-    bytes32 public constant VALID_SIGNATURE_R = hex"1e00b572138f5cbf39c486e6e01cf522643715c7ce718c55731ec6e53e3529fd";
-    bytes32 public constant VALID_SIGNATURE_S = hex"420a289ff162e1645b2cbf5e363e747ae62996b6e41927c5733be23be1a858b6";
+    bytes32 public constant VALID_SIGNATURE_R =
+        hex"1e00b572138f5cbf39c486e6e01cf522643715c7ce718c55731ec6e53e3529fd";
+    bytes32 public constant VALID_SIGNATURE_S =
+        hex"420a289ff162e1645b2cbf5e363e747ae62996b6e41927c5733be23be1a858b6";
 
     bytes public constant AUTHENTICATOR_DATA =
         hex"49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d97631d00000000";
@@ -45,10 +50,13 @@ contract Base is Test, ISessionKey {
     uint256 public constant TYPE_INDEX = 1;
 
     /* ───────────────────────────────────────────────────────────── master key ── */
-    bytes32 constant MINT_VALID_PUBLIC_KEY_X = hex"a45baf6070dec66ca140b5152e6c9947c4a3fcec322e0626e6ce393e18b0ee81";
-    bytes32 constant MINT_VALID_PUBLIC_KEY_Y = hex"a1a3260ee81d1036cf9fea854c55f1d02cc869d365340d900a1191a9e32e7eee";
+    bytes32 constant MINT_VALID_PUBLIC_KEY_X =
+        hex"a45baf6070dec66ca140b5152e6c9947c4a3fcec322e0626e6ce393e18b0ee81";
+    bytes32 constant MINT_VALID_PUBLIC_KEY_Y =
+        hex"a1a3260ee81d1036cf9fea854c55f1d02cc869d365340d900a1191a9e32e7eee";
 
-    bytes public constant MINT_CHALLENGE = hex"ba609dbeed0e0f8c94f3c69042c0a1b93aab17685eadcb2e45ad95e066062b68";
+    bytes public constant MINT_CHALLENGE =
+        hex"ba609dbeed0e0f8c94f3c69042c0a1b93aab17685eadcb2e45ad95e066062b68";
 
     bytes32 public constant MINT_VALID_SIGNATURE_R =
         hex"546ac03d0190caab0cec299508e937e40fb0ef56a8794e368f806ed47aa19d29";
@@ -65,10 +73,13 @@ contract Base is Test, ISessionKey {
     uint256 public constant MINT_TYPE_INDEX = 1;
 
     /* ───────────────────────────────────────────────────────────── master key ── */
-    bytes32 constant BATCH_VALID_PUBLIC_KEY_X = hex"579e6072ffd5fccf23915a9191a10f6aa76b6a1388f6120d855d71d6d80546c9";
-    bytes32 constant BATCH_VALID_PUBLIC_KEY_Y = hex"77b8b80c69d0bd4b0e7563610fc9042bc14b2c766a782428f6fd7a332d914a98";
+    bytes32 constant BATCH_VALID_PUBLIC_KEY_X =
+        hex"579e6072ffd5fccf23915a9191a10f6aa76b6a1388f6120d855d71d6d80546c9";
+    bytes32 constant BATCH_VALID_PUBLIC_KEY_Y =
+        hex"77b8b80c69d0bd4b0e7563610fc9042bc14b2c766a782428f6fd7a332d914a98";
 
-    bytes public constant BATCH_CHALLENGE = hex"ca8668fcdb9e094a54111e411d5d51383a7800e7d33db625be6dfc15109f62e3";
+    bytes public constant BATCH_CHALLENGE =
+        hex"ca8668fcdb9e094a54111e411d5d51383a7800e7d33db625be6dfc15109f62e3";
 
     bytes32 public constant BATCH_VALID_SIGNATURE_R =
         hex"bcfb6382912bf8067637ce9b11c68cd51bab1d4f91ad63e7bfa1a8841517c982";
@@ -85,13 +96,18 @@ contract Base is Test, ISessionKey {
     uint256 public constant BATCH_TYPE_INDEX = 1;
 
     /* ───────────────────────────────────────────────────────────── master key ── */
-    bytes32 constant ETH_PUBLIC_KEY_X = hex"989ec43868cc759c0ade920a1440a31fb202d97830d34d41679f4fb14f9720e6";
-    bytes32 constant ETH_PUBLIC_KEY_Y = hex"c23e57ed0da1403d155480d89ef662cfcac99b67e3702b6bb0bec52c80eae170";
+    bytes32 constant ETH_PUBLIC_KEY_X =
+        hex"989ec43868cc759c0ade920a1440a31fb202d97830d34d41679f4fb14f9720e6";
+    bytes32 constant ETH_PUBLIC_KEY_Y =
+        hex"c23e57ed0da1403d155480d89ef662cfcac99b67e3702b6bb0bec52c80eae170";
 
-    bytes public constant ETH_CHALLENGE = hex"cdb1960af7795cdb006deb92e6fe0fb3ef5f7cedd93b1894770f0116ea905386";
+    bytes public constant ETH_CHALLENGE =
+        hex"cdb1960af7795cdb006deb92e6fe0fb3ef5f7cedd93b1894770f0116ea905386";
 
-    bytes32 public constant ETH_SIGNATURE_R = hex"ba49c2440945342824b499869aee2c8fd08ae28f61ba3c755b5f8fcfa2e51829";
-    bytes32 public constant ETH_SIGNATURE_S = hex"6fe423e06548c859358ec0f7630fee8fb2c9b4e24abdc099370f294217ae5838";
+    bytes32 public constant ETH_SIGNATURE_R =
+        hex"ba49c2440945342824b499869aee2c8fd08ae28f61ba3c755b5f8fcfa2e51829";
+    bytes32 public constant ETH_SIGNATURE_S =
+        hex"6fe423e06548c859358ec0f7630fee8fb2c9b4e24abdc099370f294217ae5838";
 
     string public constant ETH_CLIENT_DATA_JSON =
         "{\"type\":\"webauthn.get\",\"challenge\":\"zbGWCvd5XNsAbeuS5v4Ps-9ffO3ZOxiUdw8BFuqQU4Y\",\"origin\":\"http://localhost:5173\",\"crossOrigin\":false}";
@@ -125,8 +141,10 @@ contract Base is Test, ISessionKey {
     bytes32 ETH_P256NOKEY_PUBLIC_KEY_X = stdJson.readBytes32(json_eth, ".result2.P256NONKEY_xHex");
     bytes32 ETH_P256NOKEY_PUBLIC_KEY_Y = stdJson.readBytes32(json_eth, ".result2.P256NONKEY_yHex");
 
-    bytes32 public ETH_P256NOKEY_SIGNATURE_R = stdJson.readBytes32(json_eth, ".result2.P256NONKEY_rHex");
-    bytes32 public ETH_P256NOKEY_SIGNATURE_S = stdJson.readBytes32(json_eth, ".result2.P256NONKEY_sHex");
+    bytes32 public ETH_P256NOKEY_SIGNATURE_R =
+        stdJson.readBytes32(json_eth, ".result2.P256NONKEY_rHex");
+    bytes32 public ETH_P256NOKEY_SIGNATURE_S =
+        stdJson.readBytes32(json_eth, ".result2.P256NONKEY_sHex");
 
     // /* ──────────────────────────────────────────────────────────────── P256 ──── */
     string public json_single_mint = vm.readFile("test/data/p256_single_mint.json");
@@ -138,11 +156,15 @@ contract Base is Test, ISessionKey {
     bytes32 MINT_P256_SIGNATURE_S = stdJson.readBytes32(json_single_mint, ".result.P256_lowSS");
 
     /* ──────────────────────────────────────────────────────────── P256NONKEY ──── */
-    bytes32 MINT_P256NOKEY_PUBLIC_KEY_X = stdJson.readBytes32(json_single_mint, ".result2.P256NONKEY_xHex");
-    bytes32 MINT_P256NOKEY_PUBLIC_KEY_Y = stdJson.readBytes32(json_single_mint, ".result2.P256NONKEY_yHex");
+    bytes32 MINT_P256NOKEY_PUBLIC_KEY_X =
+        stdJson.readBytes32(json_single_mint, ".result2.P256NONKEY_xHex");
+    bytes32 MINT_P256NOKEY_PUBLIC_KEY_Y =
+        stdJson.readBytes32(json_single_mint, ".result2.P256NONKEY_yHex");
 
-    bytes32 public MINT_P256NOKEY_SIGNATURE_R = stdJson.readBytes32(json_single_mint, ".result2.P256NONKEY_rHex");
-    bytes32 public MINT_P256NOKEY_SIGNATURE_S = stdJson.readBytes32(json_single_mint, ".result2.P256NONKEY_sHex");
+    bytes32 public MINT_P256NOKEY_SIGNATURE_R =
+        stdJson.readBytes32(json_single_mint, ".result2.P256NONKEY_rHex");
+    bytes32 public MINT_P256NOKEY_SIGNATURE_S =
+        stdJson.readBytes32(json_single_mint, ".result2.P256NONKEY_sHex");
 
     function _allowedSelectors() internal pure returns (bytes4[] memory sel) {
         sel = new bytes4[](3);
@@ -164,7 +186,11 @@ contract Base is Test, ISessionKey {
         return bytes32((callGasLimit << 128) | verificationGasLimit);
     }
 
-    function _packGasFees(uint256 maxFeePerGas, uint256 maxPriorityFeePerGas) internal pure returns (bytes32) {
+    function _packGasFees(uint256 maxFeePerGas, uint256 maxPriorityFeePerGas)
+        internal
+        pure
+        returns (bytes32)
+    {
         return bytes32((maxFeePerGas << 128) | maxPriorityFeePerGas);
     }
 

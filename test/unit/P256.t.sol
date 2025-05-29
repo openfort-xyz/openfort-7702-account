@@ -12,7 +12,8 @@ import {MockERC20} from "src/mocks/MockERC20.sol";
 import {SpendLimit} from "src/utils/SpendLimit.sol";
 import {ISessionKey} from "src/interfaces/ISessionkey.sol";
 import {WebAuthnVerifier} from "src/utils/WebAuthnVerifier.sol";
-import {PackedUserOperation} from "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
+import {PackedUserOperation} from
+    "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
 
 contract P256Test is Base {
     /* ───────────────────────────────────────────────────────────── contracts ── */
@@ -51,7 +52,8 @@ contract P256Test is Base {
         console.log("/* ------------- test_ExecuteBatchSKP256 ------------- */");
 
         bytes memory callData1 = abi.encodeWithSelector(MockERC20.mint.selector, owner, 10e18);
-        bytes memory callData2 = abi.encodeWithSelector(IERC20(TOKEN).transfer.selector, sender, 5e18);
+        bytes memory callData2 =
+            abi.encodeWithSelector(IERC20(TOKEN).transfer.selector, sender, 5e18);
 
         address[] memory targets = new address[](2);
         uint256[] memory values = new uint256[](2);
@@ -65,7 +67,8 @@ contract P256Test is Base {
         datas[0] = callData1;
         datas[1] = callData2;
 
-        bytes memory callData = abi.encodeWithSelector(OPF7702.executeBatch.selector, targets, values, datas);
+        bytes memory callData =
+            abi.encodeWithSelector(OPF7702.executeBatch.selector, targets, values, datas);
         uint256 nonce = entryPoint.getNonce(owner, 1);
 
         PackedUserOperation memory userOp = PackedUserOperation({
@@ -84,9 +87,11 @@ contract P256Test is Base {
         console.log("userOpHash:");
         console.logBytes32(userOpHash);
 
-        ISessionKey.PubKey memory pubKey = ISessionKey.PubKey({x: P256_PUBLIC_KEY_X, y: P256_PUBLIC_KEY_Y});
+        ISessionKey.PubKey memory pubKey =
+            ISessionKey.PubKey({x: P256_PUBLIC_KEY_X, y: P256_PUBLIC_KEY_Y});
 
-        bytes memory _signature = account.encodeP256Signature(P256_SIGNATURE_R, P256_SIGNATURE_S, pubKey);
+        bytes memory _signature =
+            account.encodeP256Signature(P256_SIGNATURE_R, P256_SIGNATURE_S, pubKey);
         console.log("isValidSignature:");
         console.logBytes4(account.isValidSignature(userOpHash, _signature));
 
@@ -119,13 +124,16 @@ contract P256Test is Base {
 
         keySK = Key({pubKey: pubKeySK, eoaAddress: address(0), keyType: KeyType.P256});
 
-        SpendLimit.SpendTokenInfo memory spendInfo = SpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000e18});
+        SpendLimit.SpendTokenInfo memory spendInfo =
+            SpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000e18});
 
         bytes memory code = abi.encodePacked(bytes3(0xef0100), address(implementation));
         vm.etch(owner, code);
 
         vm.prank(address(entryPoint));
-        account.registerSessionKey(keySK, validUntil, 0, limit, true, TOKEN, spendInfo, _allowedSelectors(), 0);
+        account.registerSessionKey(
+            keySK, validUntil, 0, limit, true, TOKEN, spendInfo, _allowedSelectors(), 0
+        );
     }
 
     function _initializeAccount() internal {
@@ -133,7 +141,8 @@ contract P256Test is Base {
 
         keyMK = Key({pubKey: pubKeyMK, eoaAddress: address(0), keyType: KeyType.WEBAUTHN});
 
-        SpendLimit.SpendTokenInfo memory spendInfo = SpendLimit.SpendTokenInfo({token: TOKEN, limit: 0});
+        SpendLimit.SpendTokenInfo memory spendInfo =
+            SpendLimit.SpendTokenInfo({token: TOKEN, limit: 0});
 
         bytes32 msgHash = keccak256(abi.encode("Hello OPF7702"));
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPk, msgHash);

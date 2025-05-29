@@ -14,7 +14,8 @@ import {MockERC20} from "src/mocks/MockERC20.sol";
 import {SpendLimit} from "src/utils/SpendLimit.sol";
 import {ISessionKey} from "src/interfaces/ISessionkey.sol";
 import {WebAuthnVerifier} from "src/utils/WebAuthnVerifier.sol";
-import {PackedUserOperation} from "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
+import {PackedUserOperation} from
+    "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
 
 contract RegistartionTest is Base {
     /* ───────────────────────────────────────────────────────────── contracts ── */
@@ -89,7 +90,8 @@ contract RegistartionTest is Base {
 
         txs[0] = OPF7702.Transaction({to: TOKEN, value: 0, data: dataHex});
 
-        bytes memory callData = abi.encodeWithSelector(bytes4(keccak256("execute((address,uint256,bytes)[])")), txs);
+        bytes memory callData =
+            abi.encodeWithSelector(bytes4(keccak256("execute((address,uint256,bytes)[])")), txs);
 
         uint256 nonce = entryPoint.getNonce(owner, 1);
 
@@ -142,13 +144,15 @@ contract RegistartionTest is Base {
 
         bytes memory dataHex = abi.encodeWithSelector(MockERC20.mint.selector, owner, 10e18);
 
-        bytes memory dataHex2 = abi.encodeWithSelector(IERC20(TOKEN).transfer.selector, sender, 5e18);
+        bytes memory dataHex2 =
+            abi.encodeWithSelector(IERC20(TOKEN).transfer.selector, sender, 5e18);
 
         txs[0] = OPF7702.Transaction({to: TOKEN, value: 0, data: dataHex});
 
         txs[1] = OPF7702.Transaction({to: TOKEN, value: 0, data: dataHex2});
 
-        bytes memory callData = abi.encodeWithSelector(bytes4(keccak256("execute((address,uint256,bytes)[])")), txs);
+        bytes memory callData =
+            abi.encodeWithSelector(bytes4(keccak256("execute((address,uint256,bytes)[])")), txs);
 
         uint256 nonce = entryPoint.getNonce(owner, 1);
 
@@ -253,7 +257,8 @@ contract RegistartionTest is Base {
 
         bytes memory callData1 = abi.encodeWithSelector(MockERC20.mint.selector, owner, 10e18);
 
-        bytes memory callData2 = abi.encodeWithSelector(IERC20(TOKEN).transfer.selector, sender, 5e18);
+        bytes memory callData2 =
+            abi.encodeWithSelector(IERC20(TOKEN).transfer.selector, sender, 5e18);
 
         address[] memory targets = new address[](2);
         uint256[] memory values = new uint256[](2);
@@ -267,7 +272,8 @@ contract RegistartionTest is Base {
         datas[0] = callData1;
         datas[1] = callData2;
 
-        bytes memory callData = abi.encodeWithSelector(OPF7702.executeBatch.selector, targets, values, datas);
+        bytes memory callData =
+            abi.encodeWithSelector(OPF7702.executeBatch.selector, targets, values, datas);
 
         uint256 nonce = entryPoint.getNonce(owner, 1);
 
@@ -394,7 +400,8 @@ contract RegistartionTest is Base {
 
         bytes memory callData1 = abi.encodeWithSelector(MockERC20.mint.selector, owner, 10e18);
 
-        bytes memory callData2 = abi.encodeWithSelector(IERC20(TOKEN).transfer.selector, sender, 5e18);
+        bytes memory callData2 =
+            abi.encodeWithSelector(IERC20(TOKEN).transfer.selector, sender, 5e18);
 
         address[] memory targets = new address[](2);
         uint256[] memory values = new uint256[](2);
@@ -408,7 +415,8 @@ contract RegistartionTest is Base {
         datas[0] = callData1;
         datas[1] = callData2;
 
-        bytes memory callData = abi.encodeWithSelector(OPF7702.executeBatch.selector, targets, values, datas);
+        bytes memory callData =
+            abi.encodeWithSelector(OPF7702.executeBatch.selector, targets, values, datas);
 
         uint256 nonce = entryPoint.getNonce(owner, 1);
 
@@ -534,7 +542,8 @@ contract RegistartionTest is Base {
 
         bytes memory callData1 = abi.encodeWithSelector(MockERC20.mint.selector, owner, 10e18);
 
-        bytes memory callData2 = abi.encodeWithSelector(IERC20(TOKEN).transfer.selector, sender, 5e18);
+        bytes memory callData2 =
+            abi.encodeWithSelector(IERC20(TOKEN).transfer.selector, sender, 5e18);
 
         address[] memory targets = new address[](2);
         uint256[] memory values = new uint256[](2);
@@ -548,7 +557,8 @@ contract RegistartionTest is Base {
         datas[0] = callData1;
         datas[1] = callData2;
 
-        bytes memory callData = abi.encodeWithSelector(OPF7702.executeBatch.selector, targets, values, datas);
+        bytes memory callData =
+            abi.encodeWithSelector(OPF7702.executeBatch.selector, targets, values, datas);
 
         uint256 nonce = entryPoint.getNonce(owner, 1);
 
@@ -620,8 +630,9 @@ contract RegistartionTest is Base {
         ISessionKey.PubKey memory pubKeyExecuteBatch =
             ISessionKey.PubKey({x: MINT_P256_PUBLIC_KEY_X, y: MINT_P256_PUBLIC_KEY_Y});
 
-        bytes memory _signature =
-            account.encodeP256Signature(MINT_P256_SIGNATURE_R, MINT_P256_SIGNATURE_S, pubKeyExecuteBatch);
+        bytes memory _signature = account.encodeP256Signature(
+            MINT_P256_SIGNATURE_R, MINT_P256_SIGNATURE_S, pubKeyExecuteBatch
+        );
 
         bytes4 magicValue = account.isValidSignature(userOpHash, _signature);
         bool usedChallenge = account.usedChallenges(userOpHash);
@@ -629,7 +640,11 @@ contract RegistartionTest is Base {
         console.logBytes4(magicValue);
 
         bool isValid = webAuthn.verifyP256Signature(
-            userOpHash, MINT_P256_SIGNATURE_R, MINT_P256_SIGNATURE_S, MINT_P256_PUBLIC_KEY_X, MINT_P256_PUBLIC_KEY_Y
+            userOpHash,
+            MINT_P256_SIGNATURE_R,
+            MINT_P256_SIGNATURE_S,
+            MINT_P256_PUBLIC_KEY_X,
+            MINT_P256_PUBLIC_KEY_Y
         );
         console.log("isValid", isValid);
 
@@ -657,7 +672,8 @@ contract RegistartionTest is Base {
 
         bytes memory callData1 = abi.encodeWithSelector(MockERC20.mint.selector, owner, 10e18);
 
-        bytes memory callData2 = abi.encodeWithSelector(IERC20(TOKEN).transfer.selector, sender, 5e18);
+        bytes memory callData2 =
+            abi.encodeWithSelector(IERC20(TOKEN).transfer.selector, sender, 5e18);
 
         address[] memory targets = new address[](2);
         uint256[] memory values = new uint256[](2);
@@ -671,7 +687,8 @@ contract RegistartionTest is Base {
         datas[0] = callData1;
         datas[1] = callData2;
 
-        bytes memory callData = abi.encodeWithSelector(OPF7702.executeBatch.selector, targets, values, datas);
+        bytes memory callData =
+            abi.encodeWithSelector(OPF7702.executeBatch.selector, targets, values, datas);
 
         uint256 nonce = entryPoint.getNonce(owner, 1);
 
@@ -690,9 +707,11 @@ contract RegistartionTest is Base {
         bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
         console.logBytes32(userOpHash);
 
-        ISessionKey.PubKey memory pubKeyExecuteBatch = ISessionKey.PubKey({x: P256_PUBLIC_KEY_X, y: P256_PUBLIC_KEY_Y});
+        ISessionKey.PubKey memory pubKeyExecuteBatch =
+            ISessionKey.PubKey({x: P256_PUBLIC_KEY_X, y: P256_PUBLIC_KEY_Y});
 
-        bytes memory _signature = account.encodeP256Signature(P256_SIGNATURE_R, P256_SIGNATURE_S, pubKeyExecuteBatch);
+        bytes memory _signature =
+            account.encodeP256Signature(P256_SIGNATURE_R, P256_SIGNATURE_S, pubKeyExecuteBatch);
 
         bytes4 magicValue = account.isValidSignature(userOpHash, _signature);
         bool usedChallenge = account.usedChallenges(userOpHash);
@@ -790,11 +809,14 @@ contract RegistartionTest is Base {
     }
 
     function test_ExecuteBatchSKP256NonKey() public {
-        console.log("/* ---------------------------------- test_ExecuteBatchSKP256NonKey -------- */");
+        console.log(
+            "/* ---------------------------------- test_ExecuteBatchSKP256NonKey -------- */"
+        );
 
         bytes memory callData1 = abi.encodeWithSelector(MockERC20.mint.selector, owner, 10e18);
 
-        bytes memory callData2 = abi.encodeWithSelector(IERC20(TOKEN).transfer.selector, sender, 5e18);
+        bytes memory callData2 =
+            abi.encodeWithSelector(IERC20(TOKEN).transfer.selector, sender, 5e18);
 
         address[] memory targets = new address[](2);
         uint256[] memory values = new uint256[](2);
@@ -808,7 +830,8 @@ contract RegistartionTest is Base {
         datas[0] = callData1;
         datas[1] = callData2;
 
-        bytes memory callData = abi.encodeWithSelector(OPF7702.executeBatch.selector, targets, values, datas);
+        bytes memory callData =
+            abi.encodeWithSelector(OPF7702.executeBatch.selector, targets, values, datas);
 
         uint256 nonce = entryPoint.getNonce(owner, 1);
 
@@ -830,8 +853,9 @@ contract RegistartionTest is Base {
         ISessionKey.PubKey memory pubKeyExecuteBatch =
             ISessionKey.PubKey({x: P256NOKEY_PUBLIC_KEY_X, y: P256NOKEY_PUBLIC_KEY_Y});
 
-        bytes memory _signature =
-            account.encodeP256NonKeySignature(P256NOKEY_SIGNATURE_R, P256NOKEY_SIGNATURE_S, pubKeyExecuteBatch);
+        bytes memory _signature = account.encodeP256NonKeySignature(
+            P256NOKEY_SIGNATURE_R, P256NOKEY_SIGNATURE_S, pubKeyExecuteBatch
+        );
 
         bytes4 magicValue = account.isValidSignature(userOpHash, _signature);
         bool usedChallenge = account.usedChallenges(userOpHash);
@@ -841,7 +865,11 @@ contract RegistartionTest is Base {
         bytes32 _hash = EfficientHashLib.sha2(userOpHash);
         console.logBytes32(_hash);
         bool isValid = webAuthn.verifyP256Signature(
-            _hash, P256NOKEY_SIGNATURE_R, P256NOKEY_SIGNATURE_S, P256NOKEY_PUBLIC_KEY_X, P256NOKEY_PUBLIC_KEY_Y
+            _hash,
+            P256NOKEY_SIGNATURE_R,
+            P256NOKEY_SIGNATURE_S,
+            P256NOKEY_PUBLIC_KEY_X,
+            P256NOKEY_PUBLIC_KEY_Y
         );
         console.log("isValid Test", isValid);
 
@@ -861,7 +889,9 @@ contract RegistartionTest is Base {
         uint256 balanceOfAfter = IERC20(TOKEN).balanceOf(sender);
         console.log("balanceOf", balanceOfAfter);
         assertEq(balanceOfBefore + 5e18, balanceOfAfter);
-        console.log("/* ---------------------------------- test_ExecuteBatchSKP256NonKey -------- */");
+        console.log(
+            "/* ---------------------------------- test_ExecuteBatchSKP256NonKey -------- */"
+        );
     }
 
     function _register_SessionKeyEOA() internal {
@@ -874,7 +904,8 @@ contract RegistartionTest is Base {
 
         keySK = Key({pubKey: pubKeySK, eoaAddress: sessionKey, keyType: KeyType.EOA});
 
-        SpendLimit.SpendTokenInfo memory spendInfo = SpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000e18});
+        SpendLimit.SpendTokenInfo memory spendInfo =
+            SpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000e18});
 
         bytes memory code = abi.encodePacked(
             bytes3(0xef0100),
@@ -883,7 +914,9 @@ contract RegistartionTest is Base {
         vm.etch(owner, code);
 
         vm.prank(address(entryPoint));
-        account.registerSessionKey(keySK, validUntil, uint48(0), limit, true, TOKEN, spendInfo, _allowedSelectors(), 0);
+        account.registerSessionKey(
+            keySK, validUntil, uint48(0), limit, true, TOKEN, spendInfo, _allowedSelectors(), 0
+        );
     }
 
     function _register_SessionKeyP256() internal {
@@ -893,7 +926,8 @@ contract RegistartionTest is Base {
 
         keySK = Key({pubKey: pubKeySK, eoaAddress: address(0), keyType: KeyType.P256});
 
-        SpendLimit.SpendTokenInfo memory spendInfo = SpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000e18});
+        SpendLimit.SpendTokenInfo memory spendInfo =
+            SpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000e18});
 
         bytes memory code = abi.encodePacked(
             bytes3(0xef0100),
@@ -902,7 +936,9 @@ contract RegistartionTest is Base {
         vm.etch(owner, code);
 
         vm.prank(address(entryPoint));
-        account.registerSessionKey(keySK, validUntil, uint48(0), limit, true, TOKEN, spendInfo, _allowedSelectors(), 0);
+        account.registerSessionKey(
+            keySK, validUntil, uint48(0), limit, true, TOKEN, spendInfo, _allowedSelectors(), 0
+        );
 
         pubKeySK = PubKey({x: MINT_P256_PUBLIC_KEY_X, y: MINT_P256_PUBLIC_KEY_Y});
 
@@ -911,7 +947,9 @@ contract RegistartionTest is Base {
         vm.etch(owner, code);
 
         vm.prank(address(entryPoint));
-        account.registerSessionKey(keySK, validUntil, uint48(0), limit, true, TOKEN, spendInfo, _allowedSelectors(), 0);
+        account.registerSessionKey(
+            keySK, validUntil, uint48(0), limit, true, TOKEN, spendInfo, _allowedSelectors(), 0
+        );
     }
 
     function _register_SessionKeyP256NonKey() internal {
@@ -921,7 +959,8 @@ contract RegistartionTest is Base {
 
         keySK = Key({pubKey: pubKeySK, eoaAddress: address(0), keyType: KeyType.P256NONKEY});
 
-        SpendLimit.SpendTokenInfo memory spendInfo = SpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000e18});
+        SpendLimit.SpendTokenInfo memory spendInfo =
+            SpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000e18});
 
         bytes memory code = abi.encodePacked(
             bytes3(0xef0100),
@@ -930,7 +969,9 @@ contract RegistartionTest is Base {
         vm.etch(owner, code);
 
         vm.prank(address(entryPoint));
-        account.registerSessionKey(keySK, validUntil, uint48(0), limit, true, TOKEN, spendInfo, _allowedSelectors(), 0);
+        account.registerSessionKey(
+            keySK, validUntil, uint48(0), limit, true, TOKEN, spendInfo, _allowedSelectors(), 0
+        );
 
         pubKeySK = PubKey({x: MINT_P256NOKEY_PUBLIC_KEY_X, y: MINT_P256NOKEY_PUBLIC_KEY_Y});
 
@@ -939,7 +980,9 @@ contract RegistartionTest is Base {
         vm.etch(owner, code);
 
         vm.prank(address(entryPoint));
-        account.registerSessionKey(keySK, validUntil, uint48(0), limit, true, TOKEN, spendInfo, _allowedSelectors(), 0);
+        account.registerSessionKey(
+            keySK, validUntil, uint48(0), limit, true, TOKEN, spendInfo, _allowedSelectors(), 0
+        );
     }
 
     function _register_MKMint() internal {
@@ -951,7 +994,8 @@ contract RegistartionTest is Base {
 
         keyMK_Mint = Key({pubKey: pubKeyMK_Mint, eoaAddress: address(0), keyType: KeyType.WEBAUTHN});
 
-        SpendLimit.SpendTokenInfo memory spendInfo_Mint = SpendLimit.SpendTokenInfo({token: TOKEN, limit: 0});
+        SpendLimit.SpendTokenInfo memory spendInfo_Mint =
+            SpendLimit.SpendTokenInfo({token: TOKEN, limit: 0});
 
         bytes memory code = abi.encodePacked(
             bytes3(0xef0100),
@@ -961,7 +1005,15 @@ contract RegistartionTest is Base {
 
         vm.prank(address(entryPoint));
         account.registerSessionKey(
-            keyMK_Mint, validUntil, uint48(0), limit, true, TOKEN, spendInfo_Mint, _allowedSelectors(), 0
+            keyMK_Mint,
+            validUntil,
+            uint48(0),
+            limit,
+            true,
+            TOKEN,
+            spendInfo_Mint,
+            _allowedSelectors(),
+            0
         );
     }
 
@@ -972,9 +1024,11 @@ contract RegistartionTest is Base {
         /* sample WebAuthn public key – replace with a real one if needed */
         pubKeyMK_BATCH = PubKey({x: BATCH_VALID_PUBLIC_KEY_X, y: BATCH_VALID_PUBLIC_KEY_Y});
 
-        keyMK_BATCH = Key({pubKey: pubKeyMK_BATCH, eoaAddress: address(0), keyType: KeyType.WEBAUTHN});
+        keyMK_BATCH =
+            Key({pubKey: pubKeyMK_BATCH, eoaAddress: address(0), keyType: KeyType.WEBAUTHN});
 
-        SpendLimit.SpendTokenInfo memory spendInfo_BATCH = SpendLimit.SpendTokenInfo({token: TOKEN, limit: 0});
+        SpendLimit.SpendTokenInfo memory spendInfo_BATCH =
+            SpendLimit.SpendTokenInfo({token: TOKEN, limit: 0});
 
         bytes memory code = abi.encodePacked(
             bytes3(0xef0100),
@@ -984,7 +1038,15 @@ contract RegistartionTest is Base {
 
         vm.prank(address(entryPoint));
         account.registerSessionKey(
-            keyMK_BATCH, validUntil, uint48(0), limit, true, TOKEN, spendInfo_BATCH, _allowedSelectors(), 0
+            keyMK_BATCH,
+            validUntil,
+            uint48(0),
+            limit,
+            true,
+            TOKEN,
+            spendInfo_BATCH,
+            _allowedSelectors(),
+            0
         );
     }
 
@@ -995,7 +1057,8 @@ contract RegistartionTest is Base {
 
         keyMK = Key({pubKey: pubKeyMK, eoaAddress: address(0), keyType: KeyType.WEBAUTHN});
 
-        SpendLimit.SpendTokenInfo memory spendInfo = SpendLimit.SpendTokenInfo({token: TOKEN, limit: 0});
+        SpendLimit.SpendTokenInfo memory spendInfo =
+            SpendLimit.SpendTokenInfo({token: TOKEN, limit: 0});
 
         /* sign arbitrary message so initialise() passes sig check */
         bytes32 msgHash = keccak256(abi.encode("Hello OPF7702"));

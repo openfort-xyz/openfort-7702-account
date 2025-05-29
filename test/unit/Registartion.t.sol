@@ -15,7 +15,8 @@ import {KeysManager} from "src/core/KeysManager.sol";
 import {SpendLimit} from "src/utils/SpendLimit.sol";
 import {ISessionKey} from "src/interfaces/ISessionkey.sol";
 import {WebAuthnVerifier} from "src/utils/WebAuthnVerifier.sol";
-import {PackedUserOperation} from "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
+import {PackedUserOperation} from
+    "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
 
 contract RegistartionTest is Base {
     /* ───────────────────────────────────────────────────────────── contracts ── */
@@ -87,7 +88,8 @@ contract RegistartionTest is Base {
         address skAddress = makeAddr("skAddress");
         keySK = Key({pubKey: pubKeySK, eoaAddress: skAddress, keyType: KeyType.WEBAUTHN});
 
-        SpendLimit.SpendTokenInfo memory spendInfo = SpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000e18});
+        SpendLimit.SpendTokenInfo memory spendInfo =
+            SpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000e18});
 
         bytes memory callData = abi.encodeWithSelector(
             KeysManager.registerSessionKey.selector,
@@ -178,7 +180,8 @@ contract RegistartionTest is Base {
 
         keySK = Key({pubKey: pubKeySK, eoaAddress: address(0), keyType: KeyType.P256});
 
-        SpendLimit.SpendTokenInfo memory spendInfo = SpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000e18});
+        SpendLimit.SpendTokenInfo memory spendInfo =
+            SpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000e18});
 
         bytes memory callData = abi.encodeWithSelector(
             KeysManager.registerSessionKey.selector,
@@ -263,14 +266,17 @@ contract RegistartionTest is Base {
     }
 
     function test_RegisterSessionKeyP256NonKeyWithMK() public {
-        console.log("/* ----------------------- test_RegisterSessionKeyP256NonKeyWithMK -------- */");
+        console.log(
+            "/* ----------------------- test_RegisterSessionKeyP256NonKeyWithMK -------- */"
+        );
         uint48 validUntil = uint48(1795096759);
         uint48 limit = uint48(3);
         pubKeySK = PubKey({x: P256NOKEY_PUBLIC_KEY_X, y: P256NOKEY_PUBLIC_KEY_Y});
 
         keySK = Key({pubKey: pubKeySK, eoaAddress: address(0), keyType: KeyType.P256NONKEY});
 
-        SpendLimit.SpendTokenInfo memory spendInfo = SpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000e18});
+        SpendLimit.SpendTokenInfo memory spendInfo =
+            SpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000e18});
 
         bytes memory callData = abi.encodeWithSelector(
             KeysManager.registerSessionKey.selector,
@@ -351,7 +357,9 @@ contract RegistartionTest is Base {
         Key memory k = account.getKeyById(0, KeyType.WEBAUTHN);
         console.logBytes32(k.pubKey.x);
         console.logBytes32(k.pubKey.y);
-        console.log("/* ----------------------- test_RegisterSessionKeyP256NonKeyWithMK -------- */");
+        console.log(
+            "/* ----------------------- test_RegisterSessionKeyP256NonKeyWithMK -------- */"
+        );
     }
 
     function _register_SessionKeyEOA() internal {
@@ -364,7 +372,8 @@ contract RegistartionTest is Base {
 
         keySK = Key({pubKey: pubKeySK, eoaAddress: sessionKey, keyType: KeyType.EOA});
 
-        SpendLimit.SpendTokenInfo memory spendInfo = SpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000e18});
+        SpendLimit.SpendTokenInfo memory spendInfo =
+            SpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000e18});
 
         bytes memory code = abi.encodePacked(
             bytes3(0xef0100),
@@ -373,7 +382,9 @@ contract RegistartionTest is Base {
         vm.etch(owner, code);
 
         vm.prank(address(entryPoint));
-        account.registerSessionKey(keySK, validUntil, uint48(0), limit, true, TOKEN, spendInfo, _allowedSelectors(), 0);
+        account.registerSessionKey(
+            keySK, validUntil, uint48(0), limit, true, TOKEN, spendInfo, _allowedSelectors(), 0
+        );
     }
 
     function _register_SessionKeyP256() internal {
@@ -383,7 +394,8 @@ contract RegistartionTest is Base {
 
         keySK = Key({pubKey: pubKeySK, eoaAddress: address(0), keyType: KeyType.P256});
 
-        SpendLimit.SpendTokenInfo memory spendInfo = SpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000e18});
+        SpendLimit.SpendTokenInfo memory spendInfo =
+            SpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000e18});
 
         bytes memory code = abi.encodePacked(
             bytes3(0xef0100),
@@ -392,7 +404,9 @@ contract RegistartionTest is Base {
         vm.etch(owner, code);
 
         vm.prank(address(entryPoint));
-        account.registerSessionKey(keySK, validUntil, uint48(0), limit, true, TOKEN, spendInfo, _allowedSelectors(), 0);
+        account.registerSessionKey(
+            keySK, validUntil, uint48(0), limit, true, TOKEN, spendInfo, _allowedSelectors(), 0
+        );
     }
 
     function _register_SessionKeyP256NonKey() internal {
@@ -402,7 +416,8 @@ contract RegistartionTest is Base {
 
         keySK = Key({pubKey: pubKeySK, eoaAddress: address(0), keyType: KeyType.P256NONKEY});
 
-        SpendLimit.SpendTokenInfo memory spendInfo = SpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000e18});
+        SpendLimit.SpendTokenInfo memory spendInfo =
+            SpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000e18});
 
         bytes memory code = abi.encodePacked(
             bytes3(0xef0100),
@@ -411,7 +426,9 @@ contract RegistartionTest is Base {
         vm.etch(owner, code);
 
         vm.prank(address(entryPoint));
-        account.registerSessionKey(keySK, validUntil, uint48(0), limit, true, TOKEN, spendInfo, _allowedSelectors(), 0);
+        account.registerSessionKey(
+            keySK, validUntil, uint48(0), limit, true, TOKEN, spendInfo, _allowedSelectors(), 0
+        );
     }
 
     /* ─────────────────────────────────────────────────────────── helpers ──── */
@@ -421,7 +438,8 @@ contract RegistartionTest is Base {
 
         keyMK = Key({pubKey: pubKeyMK, eoaAddress: address(0), keyType: KeyType.WEBAUTHN});
 
-        SpendLimit.SpendTokenInfo memory spendInfo = SpendLimit.SpendTokenInfo({token: TOKEN, limit: 0});
+        SpendLimit.SpendTokenInfo memory spendInfo =
+            SpendLimit.SpendTokenInfo({token: TOKEN, limit: 0});
 
         /* sign arbitrary message so initialise() passes sig check */
         bytes32 msgHash = keccak256(abi.encode("Hello OPF7702"));

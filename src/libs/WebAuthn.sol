@@ -177,7 +177,11 @@ library WebAuthn {
     /// @dev Performs a best-effort attempt to `abi.decode(auth)`. Won't revert.
     /// If any fields cannot be successfully extracted, `decoded` will not be populated,
     /// which will cause `verify` to return false (as `clientDataJSON` is empty).
-    function tryDecodeAuth(bytes memory encodedAuth) internal pure returns (WebAuthnAuth memory decoded) {
+    function tryDecodeAuth(bytes memory encodedAuth)
+        internal
+        pure
+        returns (WebAuthnAuth memory decoded)
+    {
         /// @solidity memory-safe-assembly
         assembly {
             for { let n := mload(encodedAuth) } iszero(lt(n, 0xc0)) {} {
@@ -219,7 +223,11 @@ library WebAuthn {
     ///     )
     /// ```
     /// Returns the empty string if any length or index exceeds 16 bits.
-    function tryEncodeAuthCompact(WebAuthnAuth memory auth) internal pure returns (bytes memory result) {
+    function tryEncodeAuthCompact(WebAuthnAuth memory auth)
+        internal
+        pure
+        returns (bytes memory result)
+    {
         /// @solidity memory-safe-assembly
         assembly {
             function copyBytes(o_, s_, c_) -> _e {
@@ -253,7 +261,11 @@ library WebAuthn {
     /// @dev Approximately the same gas as `tryDecodeAuth`, but helps save on calldata.
     /// If any fields cannot be successfully extracted, `decoded` will not be populated,
     /// which will cause `verify` to return false (as `clientDataJSON` is empty).
-    function tryDecodeAuthCompact(bytes memory encodedAuth) internal pure returns (WebAuthnAuth memory decoded) {
+    function tryDecodeAuthCompact(bytes memory encodedAuth)
+        internal
+        pure
+        returns (WebAuthnAuth memory decoded)
+    {
         /// @solidity memory-safe-assembly
         assembly {
             function extractBytes(o_, l_) -> _m {
