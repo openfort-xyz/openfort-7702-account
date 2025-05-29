@@ -32,20 +32,6 @@ import {
 } from "lib/account-abstraction/contracts/core/Helpers.sol";
 
 /**
- * @notice Structure for representing a transaction to be executed by the account
- * @dev Contains destination address, ETH value, and calldata
- */
-struct Transaction {
-    address to;
-    uint256 value;
-    bytes data;
-}
-
-interface IExtendedAccount {
-    function execute(Transaction[] calldata txs) external payable;
-}
-
-/**
  * @title Openfort Base Account 7702 with ERC-4337 Support
  * @author Openfort@0xkoiner
  * @notice This contract implements an EIP-7702 compatible account with EIP-712 signatures and ERC-4337 support
@@ -130,18 +116,18 @@ contract OPF7702 is KeysManager, Initializable, ReentrancyGuard, WebAuthnVerifie
      * @dev Can only be called via EntryPoint or by self
      * @param _transactions Array of transactions to execute
      */
-    function execute(Transaction[] calldata _transactions) external payable virtual nonReentrant {
+    function execute(Call[] calldata _transactions) external payable virtual nonReentrant {
         _requireForExecute();
         if (_transactions.length == 0 || _transactions.length > 9) {
             revert OpenfortBaseAccount7702V1__InvalidTransactionLength();
         }
 
         uint256 transactionsLength = _transactions.length;
-        Transaction calldata transactionCall;
+        Call calldata transactionCall;
 
         for (uint256 i = 0; i < transactionsLength; i++) {
             transactionCall = _transactions[i];
-            address target = transactionCall.to;
+            address target = transactionCall.target;
             uint256 value = transactionCall.value;
             bytes memory data = transactionCall.data;
 

@@ -84,11 +84,11 @@ contract RegistartionTest is Base {
     function test_ExecuteOwnerCall() public {
         console.log("/* -------------------------------- test_ExecuteOwnerCall -------- */");
 
-        Transaction[] memory txs = new Transaction[](1);
+        Call[] memory txs = new Call[](1);
 
         bytes memory dataHex = abi.encodeWithSelector(MockERC20.mint.selector, owner, 10e18);
 
-        txs[0] = Transaction({to: TOKEN, value: 0, data: dataHex});
+        txs[0] = Call({to: TOKEN, value: 0, data: dataHex});
 
         bytes memory callData =
             abi.encodeWithSelector(bytes4(keccak256("execute((address,uint256,bytes)[])")), txs);
@@ -140,16 +140,16 @@ contract RegistartionTest is Base {
     function test_ExecuteBatchOwnerCall() public {
         console.log("/* -------------------------------- test_ExecuteBatchOwnerCall -------- */");
 
-        Transaction[] memory txs = new Transaction[](2);
+        Call[] memory txs = new Call[](2);
 
         bytes memory dataHex = abi.encodeWithSelector(MockERC20.mint.selector, owner, 10e18);
 
         bytes memory dataHex2 =
             abi.encodeWithSelector(IERC20(TOKEN).transfer.selector, sender, 5e18);
 
-        txs[0] = Transaction({to: TOKEN, value: 0, data: dataHex});
+        txs[0] = Call({to: TOKEN, value: 0, data: dataHex});
 
-        txs[1] = Transaction({to: TOKEN, value: 0, data: dataHex2});
+        txs[1] = Call({to: TOKEN, value: 0, data: dataHex2});
 
         bytes memory callData =
             abi.encodeWithSelector(bytes4(keccak256("execute((address,uint256,bytes)[])")), txs);
