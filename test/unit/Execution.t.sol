@@ -88,7 +88,7 @@ contract RegistartionTest is Base {
 
         bytes memory dataHex = abi.encodeWithSelector(MockERC20.mint.selector, owner, 10e18);
 
-        txs[0] = Call({to: TOKEN, value: 0, data: dataHex});
+        txs[0] = Call({target: TOKEN, value: 0, data: dataHex});
 
         bytes memory callData =
             abi.encodeWithSelector(bytes4(keccak256("execute((address,uint256,bytes)[])")), txs);
@@ -147,9 +147,9 @@ contract RegistartionTest is Base {
         bytes memory dataHex2 =
             abi.encodeWithSelector(IERC20(TOKEN).transfer.selector, sender, 5e18);
 
-        txs[0] = Call({to: TOKEN, value: 0, data: dataHex});
+        txs[0] = Call({target: TOKEN, value: 0, data: dataHex});
 
-        txs[1] = Call({to: TOKEN, value: 0, data: dataHex2});
+        txs[1] = Call({target: TOKEN, value: 0, data: dataHex2});
 
         bytes memory callData =
             abi.encodeWithSelector(bytes4(keccak256("execute((address,uint256,bytes)[])")), txs);
