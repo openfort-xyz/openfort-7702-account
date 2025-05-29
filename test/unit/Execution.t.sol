@@ -26,6 +26,8 @@ contract RegistartionTest is Base {
     /* ──────────────────────────────────────────────────────── key structures ── */
     Key internal keyMK;
     PubKey internal pubKeyMK;
+    Key internal keyMK_Mint;
+    PubKey internal pubKeyMK_Mint;
     Key internal keySK;
     PubKey internal pubKeySK;
 
@@ -48,6 +50,7 @@ contract RegistartionTest is Base {
         vm.stopPrank();
 
         _initializeAccount();
+        _register_MKMint();
         _register_SessionKeyEOA();
         _register_SessionKeyP256();
         _register_SessionKeyP256NonKey();
@@ -307,6 +310,81 @@ contract RegistartionTest is Base {
         console.log("/* -------------------------------- test_ExecuteBatchOwner -------- */");
     }
 
+    function test_ExecuteMasterKey() public {
+        console.log("/* ---------------------------------- test_ExecuteMasterKey -------- */");
+
+        bytes memory data = abi.encodeWithSelector(MockERC20.mint.selector, owner, 10e18);
+
+        bytes memory callData = abi.encodeWithSelector(0xb61d27f6, TOKEN, 0, data);
+
+        uint256 nonce = entryPoint.getNonce(owner, 1);
+
+        PackedUserOperation memory userOp = PackedUserOperation({
+            sender: owner,
+            nonce: nonce,
+            initCode: hex"7702",
+            callData: callData,
+            accountGasLimits: _packAccountGasLimits(400000, 300000),
+            preVerificationGas: 800000,
+            gasFees: _packGasFees(80 gwei, 15 gwei),
+            paymasterAndData: hex"",
+            signature: hex""
+        });
+
+        bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
+        console.logBytes32(userOpHash);
+
+        ISessionKey.PubKey memory pubKeyExecuteBatch =
+            ISessionKey.PubKey({x: MINT_VALID_PUBLIC_KEY_X, y: MINT_VALID_PUBLIC_KEY_Y});
+
+        bytes memory _signature = account.encodeWebAuthnSignature(
+            true,
+            MINT_AUTHENTICATOR_DATA,
+            MINT_CLIENT_DATA_JSON,
+            MINT_CHALLENGE_INDEX,
+            MINT_TYPE_INDEX,
+            MINT_VALID_SIGNATURE_R,
+            MINT_VALID_SIGNATURE_S,
+            pubKeyExecuteBatch
+        );
+
+        bytes4 magicValue = account.isValidSignature(userOpHash, _signature);
+        bool usedChallenge = account.usedChallenges(userOpHash);
+        console.log("usedChallenge", usedChallenge);
+        console.logBytes4(magicValue);
+
+        bool isValid = webAuthn.verifySoladySignature(
+            userOpHash,
+            true,
+            MINT_AUTHENTICATOR_DATA,
+            MINT_CLIENT_DATA_JSON,
+            MINT_CHALLENGE_INDEX,
+            MINT_TYPE_INDEX,
+            MINT_VALID_SIGNATURE_R,
+            MINT_VALID_SIGNATURE_S,
+            MINT_VALID_PUBLIC_KEY_X,
+            MINT_VALID_PUBLIC_KEY_Y
+        );
+        console.log("isValid", isValid);
+
+        userOp.signature = _signature;
+
+        uint256 balanceOfBefore = IERC20(TOKEN).balanceOf(owner);
+
+        PackedUserOperation[] memory ops = new PackedUserOperation[](1);
+        ops[0] = userOp;
+
+        bytes memory code = abi.encodePacked(bytes3(0xef0100), address(implementation));
+        vm.etch(owner, code);
+
+        vm.prank(sender);
+        entryPoint.handleOps(ops, payable(sender));
+
+        uint256 balanceOfAfter = IERC20(TOKEN).balanceOf(owner);
+        console.log("balanceOf", balanceOfAfter);
+        assertEq(balanceOfBefore + 10e18, balanceOfAfter);
+        console.log("/* ---------------------------------- test_ExecuteMasterKey -------- */");
+    }
     function test_ExecuteSKEOA() public {
         console.log("/* -------------------------------- test_ExecuteSKEOA -------- */");
 
@@ -768,6 +846,27 @@ contract RegistartionTest is Base {
 
         vm.prank(address(entryPoint));
         account.registerSessionKey(keySK, validUntil, uint48(0), limit, true, TOKEN, spendInfo, _allowedSelectors(), 0);
+    }
+
+    function _register_MKMint() internal {
+        uint48 validUntil = type(uint48).max;
+        uint48 limit = uint48(0);
+
+        /* sample WebAuthn public key – replace with a real one if needed */
+        pubKeyMK_Mint = PubKey({x: MINT_VALID_PUBLIC_KEY_X, y: MINT_VALID_PUBLIC_KEY_Y});
+
+        keyMK_Mint = Key({pubKey: pubKeyMK_Mint, eoaAddress: address(0), keyType: KeyType.WEBAUTHN});
+
+        SpendLimit.SpendTokenInfo memory spendInfo_Mint = SpendLimit.SpendTokenInfo({token: TOKEN, limit: 0});
+
+        bytes memory code = abi.encodePacked(
+            bytes3(0xef0100),
+            address(implementation) // or your logic contract
+        );
+        vm.etch(owner, code);
+
+        vm.prank(address(entryPoint));
+        account.registerSessionKey(keyMK_Mint, validUntil, uint48(0), limit, true, TOKEN, spendInfo_Mint, _allowedSelectors(), 0);
     }
 
     /* ─────────────────────────────────────────────────────────── helpers ──── */

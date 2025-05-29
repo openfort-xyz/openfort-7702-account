@@ -45,6 +45,24 @@ contract Base is Test, ISessionKey {
     uint256 public constant TYPE_INDEX = 1;
 
     /* ───────────────────────────────────────────────────────────── master key ── */
+    bytes32 constant MINT_VALID_PUBLIC_KEY_X = hex"a45baf6070dec66ca140b5152e6c9947c4a3fcec322e0626e6ce393e18b0ee81";
+    bytes32 constant MINT_VALID_PUBLIC_KEY_Y = hex"a1a3260ee81d1036cf9fea854c55f1d02cc869d365340d900a1191a9e32e7eee";
+
+    bytes public constant MINT_CHALLENGE = hex"ba609dbeed0e0f8c94f3c69042c0a1b93aab17685eadcb2e45ad95e066062b68";
+
+    bytes32 public constant MINT_VALID_SIGNATURE_R = hex"546ac03d0190caab0cec299508e937e40fb0ef56a8794e368f806ed47aa19d29";
+    bytes32 public constant MINT_VALID_SIGNATURE_S = hex"77c92c666860f01042879f72d7518fe7b5d03c0b79d5be0e4a0d0580d0e6c2c2";
+
+    bytes public constant MINT_AUTHENTICATOR_DATA =
+        hex"49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d97631d00000000";
+
+    string public constant MINT_CLIENT_DATA_JSON =
+        "{\"type\":\"webauthn.get\",\"challenge\":\"umCdvu0OD4yU88aQQsChuTqrF2hercsuRa2V4GYGK2g\",\"origin\":\"http://localhost:5173\",\"crossOrigin\":false}";
+
+    uint256 public constant MINT_CHALLENGE_INDEX = 23;
+    uint256 public constant MINT_TYPE_INDEX = 1;
+
+    /* ───────────────────────────────────────────────────────────── master key ── */
     bytes32 constant ETH_PUBLIC_KEY_X = hex"989ec43868cc759c0ade920a1440a31fb202d97830d34d41679f4fb14f9720e6";
     bytes32 constant ETH_PUBLIC_KEY_Y = hex"c23e57ed0da1403d155480d89ef662cfcac99b67e3702b6bb0bec52c80eae170";
 
