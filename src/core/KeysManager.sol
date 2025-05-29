@@ -16,9 +16,9 @@ pragma solidity ^0.8.29;
 
 import {SpendLimit} from "src/utils/SpendLimit.sol";
 import {BaseOPF7702} from "src/core/BaseOPF7702.sol";
-import {ISessionKey} from "src/interfaces/ISessionkey.sol";
+import {ISessionkey} from "src/interfaces/ISessionkey.sol";
 
-abstract contract KeysManager is BaseOPF7702, ISessionKey, SpendLimit {
+abstract contract KeysManager is BaseOPF7702, ISessionkey, SpendLimit {
     uint256 public constant MAX_SELECTORS = 10;
     address public constant DEAD_ADDRESS = 0xDeaDbeefdEAdbeefdEadbEEFdeadbeEFdEaDbeeF;
 

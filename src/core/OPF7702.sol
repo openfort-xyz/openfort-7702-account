@@ -473,6 +473,7 @@ contract OPF7702 is KeysManager, Initializable, ReentrancyGuard, WebAuthnVerifie
      */
     function _validateTokenSpend(SessionKey storage sessionKey, bytes memory innerData)
         internal
+        override
         returns (bool)
     {
         uint256 startPos = innerData.length - 32;

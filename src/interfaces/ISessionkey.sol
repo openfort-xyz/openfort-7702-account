@@ -4,7 +4,7 @@ pragma solidity ^0.8.29;
 
 import {SpendLimit} from "src/utils/SpendLimit.sol";
 
-interface ISessionKey {
+interface ISessionkey {
     /**
      * @notice Types of session keys supported by the contract
      * @param EOA Standard Ethereum account key

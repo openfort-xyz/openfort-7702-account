@@ -12,7 +12,7 @@ import {IEntryPoint} from "lib/account-abstraction/contracts/interfaces/IEntryPo
 import {OPF7702 as OPF7702} from "src/core/OPF7702.sol";
 import {MockERC20} from "src/mocks/MockERC20.sol";
 import {SpendLimit} from "src/utils/SpendLimit.sol";
-import {ISessionKey} from "src/interfaces/ISessionkey.sol";
+import {ISessionkey} from "src/interfaces/ISessionkey.sol";
 import {WebAuthnVerifier} from "src/utils/WebAuthnVerifier.sol";
 import {PackedUserOperation} from
     "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
@@ -120,8 +120,8 @@ contract DepositAndTransferETH is Base {
         bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
         console.logBytes32(userOpHash);
 
-        ISessionKey.PubKey memory pubKeyExecuteBatch =
-            ISessionKey.PubKey({x: ETH_PUBLIC_KEY_X, y: ETH_PUBLIC_KEY_Y});
+        ISessionkey.PubKey memory pubKeyExecuteBatch =
+            ISessionkey.PubKey({x: ETH_PUBLIC_KEY_X, y: ETH_PUBLIC_KEY_Y});
 
         bytes memory _signature = account.encodeWebAuthnSignature(
             true,
@@ -294,8 +294,8 @@ contract DepositAndTransferETH is Base {
         bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
         console.logBytes32(userOpHash);
 
-        ISessionKey.PubKey memory pubKeyExecuteBatch =
-            ISessionKey.PubKey({x: ETH_P256_PUBLIC_KEY_X, y: ETH_P256_PUBLIC_KEY_Y});
+        ISessionkey.PubKey memory pubKeyExecuteBatch =
+            ISessionkey.PubKey({x: ETH_P256_PUBLIC_KEY_X, y: ETH_P256_PUBLIC_KEY_Y});
 
         bytes memory _signature = account.encodeP256Signature(
             ETH_P256_SIGNATURE_R, ETH_P256_SIGNATURE_S, pubKeyExecuteBatch
@@ -382,8 +382,8 @@ contract DepositAndTransferETH is Base {
         bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
         console.logBytes32(userOpHash);
 
-        ISessionKey.PubKey memory pubKeyExecuteBatch =
-            ISessionKey.PubKey({x: ETH_P256NOKEY_PUBLIC_KEY_X, y: ETH_P256NOKEY_PUBLIC_KEY_Y});
+        ISessionkey.PubKey memory pubKeyExecuteBatch =
+            ISessionkey.PubKey({x: ETH_P256NOKEY_PUBLIC_KEY_X, y: ETH_P256NOKEY_PUBLIC_KEY_Y});
 
         bytes memory _signature = account.encodeP256NonKeySignature(
             ETH_P256NOKEY_SIGNATURE_R, ETH_P256NOKEY_SIGNATURE_S, pubKeyExecuteBatch

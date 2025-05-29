@@ -4,11 +4,11 @@ pragma solidity ^0.8.29;
 
 /* ───────────────────────────────────────────────────────────── imports ──── */
 import {Test, console2 as console} from "lib/forge-std/src/Test.sol";
-import {ISessionKey} from "src/interfaces/ISessionkey.sol";
+import {ISessionkey} from "src/interfaces/ISessionkey.sol";
 import "forge-std/StdJson.sol";
 
 /* ──────────────────────────────────────────────────────────────── base ──── */
-contract Base is Test, ISessionKey {
+contract Base is Test, ISessionkey {
     /* ───────────────────────────────────────────────────────────── constants ── */
     address constant SEPOLIA_ENTRYPOINT = 0x4337084D9E255Ff0702461CF8895CE9E3b5Ff108;
     address constant SEPOLIA_WEBAUTHN = 0xeD43b3a3D00d791BC0B353666b5780B0F9245CC1;

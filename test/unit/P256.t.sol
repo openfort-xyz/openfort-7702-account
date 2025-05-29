@@ -10,7 +10,7 @@ import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.so
 import {OPF7702 as OPF7702} from "src/core/OPF7702.sol";
 import {MockERC20} from "src/mocks/MockERC20.sol";
 import {SpendLimit} from "src/utils/SpendLimit.sol";
-import {ISessionKey} from "src/interfaces/ISessionkey.sol";
+import {ISessionkey} from "src/interfaces/ISessionkey.sol";
 import {WebAuthnVerifier} from "src/utils/WebAuthnVerifier.sol";
 import {PackedUserOperation} from
     "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
@@ -87,8 +87,8 @@ contract P256Test is Base {
         console.log("userOpHash:");
         console.logBytes32(userOpHash);
 
-        ISessionKey.PubKey memory pubKey =
-            ISessionKey.PubKey({x: P256_PUBLIC_KEY_X, y: P256_PUBLIC_KEY_Y});
+        ISessionkey.PubKey memory pubKey =
+            ISessionkey.PubKey({x: P256_PUBLIC_KEY_X, y: P256_PUBLIC_KEY_Y});
 
         bytes memory _signature =
             account.encodeP256Signature(P256_SIGNATURE_R, P256_SIGNATURE_S, pubKey);
