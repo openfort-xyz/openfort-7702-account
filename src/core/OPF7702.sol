@@ -31,12 +31,12 @@ import {
     _packValidationData
 } from "lib/account-abstraction/contracts/core/Helpers.sol";
 
-    struct Transaction {
-        address to;
-        uint256 value;
-        bytes data;
-    }
-    
+struct Transaction {
+    address to;
+    uint256 value;
+    bytes data;
+}
+
 interface IExtendedAccount {
     function execute(Transaction[] calldata txs) external payable;
 }
