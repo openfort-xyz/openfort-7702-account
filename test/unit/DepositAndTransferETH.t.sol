@@ -312,8 +312,7 @@ contract DepositAndTransferETH is Base {
         datas[0] = callData1;
         datas[1] = callData2;
 
-        bytes memory callData =
-            abi.encodeWithSelector(OPF7702.executeBatch.selector, targets, values, datas);
+        bytes memory callData = abi.encodeWithSelector(0x47e1da2a, targets, values, datas);
 
         uint256 nonce = entryPoint.getNonce(owner, 1);
 
@@ -385,8 +384,7 @@ contract DepositAndTransferETH is Base {
         datas[0] = callData1;
         datas[1] = callData2;
 
-        bytes memory callData =
-            abi.encodeWithSelector(OPF7702.executeBatch.selector, targets, values, datas);
+        bytes memory callData = abi.encodeWithSelector(0x47e1da2a, targets, values, datas);
 
         uint256 nonce = entryPoint.getNonce(owner, 1);
 
@@ -473,8 +471,7 @@ contract DepositAndTransferETH is Base {
         datas[0] = callData1;
         datas[1] = callData2;
 
-        bytes memory callData =
-            abi.encodeWithSelector(OPF7702.executeBatch.selector, targets, values, datas);
+        bytes memory callData = abi.encodeWithSelector(0x47e1da2a, targets, values, datas);
 
         uint256 nonce = entryPoint.getNonce(owner, 1);
 

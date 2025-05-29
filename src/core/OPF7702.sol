@@ -15,13 +15,12 @@
 pragma solidity ^0.8.29;
 
 import {Test, console2 as console} from "lib/forge-std/src/Test.sol";
-import {KeysManager} from "src/core/KeysManager.sol";
+import {Execution} from "src/core/Execution.sol";
 
 import {WebAuthnVerifier} from "src/utils/WebAuthnVerifier.sol";
 import {EfficientHashLib} from "lib/solady/src/utils/EfficientHashLib.sol";
 import {SafeCast} from "lib/openzeppelin-contracts/contracts/utils/math/SafeCast.sol";
 import {ECDSA} from "lib/openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
-import {ReentrancyGuard} from "lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 import {Initializable} from "lib/openzeppelin-contracts/contracts/proxy/utils/Initializable.sol";
 import {PackedUserOperation} from
     "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
@@ -40,11 +39,8 @@ import {
 
 // address: 0xD24af0109E31F238440E2d6A6d49935d499274b7 14/05/2025
 // keccak256("openfort.baseAccount.7702.v1") = 0x801ae8efc2175d3d963e799b27e0e948b9a3fa84e2ce105a370245c8c127f368 == 57943590311362240630886240343495690972153947532773266946162183175043753177960
-contract OPF7702 is KeysManager, Initializable, ReentrancyGuard, WebAuthnVerifier layout at 57943590311362240630886240343495690972153947532773266946162183175043753177960 {
+contract OPF7702 is Execution, Initializable, WebAuthnVerifier layout at 57943590311362240630886240343495690972153947532773266946162183175043753177960 {
     using ECDSA for bytes32;
-
-    bytes4 internal constant EXECUTE_SELECTOR = 0xb61d27f6;
-    bytes4 internal constant EXECUTEBATCH_SELECTOR = 0x47e1da2a;
 
     /// @notice Address of the implementation contract
     address public immutable _OPENFORT_CONTRACT_ADDRESS;
@@ -54,9 +50,6 @@ contract OPF7702 is KeysManager, Initializable, ReentrancyGuard, WebAuthnVerifie
 
     /// @notice Emitted when the account is initialized with an masterKey
     event Initialized(Key indexed masterKey);
-
-    /// @notice Emitted when a transaction is executed
-    event TransactionExecuted(address indexed target, uint256 value, bytes data);
 
     /**
      * @notice Sets up the contract with EIP-712 domain and the EntryPoint
@@ -109,90 +102,6 @@ contract OPF7702 is KeysManager, Initializable, ReentrancyGuard, WebAuthnVerifie
         );
 
         emit Initialized(_key);
-    }
-
-    /**
-     * @notice Executes a batch of transactions
-     * @dev Can only be called via EntryPoint or by self
-     * @param _transactions Array of transactions to execute
-     */
-    function execute(Call[] calldata _transactions) external payable virtual nonReentrant {
-        _requireForExecute();
-        if (_transactions.length == 0 || _transactions.length > 9) {
-            revert OpenfortBaseAccount7702V1__InvalidTransactionLength();
-        }
-
-        uint256 transactionsLength = _transactions.length;
-        Call calldata transactionCall;
-
-        for (uint256 i = 0; i < transactionsLength; i++) {
-            transactionCall = _transactions[i];
-            address target = transactionCall.target;
-            uint256 value = transactionCall.value;
-            bytes memory data = transactionCall.data;
-
-            if (target == address(this)) {
-                revert OpenfortBaseAccount7702V1__InvalidTransactionTarget();
-            }
-
-            (bool success, bytes memory returnData) = target.call{value: value}(data);
-
-            if (!success) {
-                revert OpenfortBaseAccount7702V1__TransactionFailed(returnData);
-            }
-
-            emit TransactionExecuted(target, value, data);
-        }
-    }
-
-    /**
-     * Execute a transaction (called directly from owner, or by entryPoint)
-     */
-    function execute(address _target, uint256 _value, bytes calldata _calldata)
-        public
-        virtual
-        override
-        nonReentrant
-    {
-        _requireForExecute();
-        _call(_target, _value, _calldata);
-    }
-
-    /**
-     * Execute a sequence of transactions. Maximum 9.
-     */
-    function executeBatch(
-        address[] calldata _target,
-        uint256[] calldata _value,
-        bytes[] calldata _calldata
-    ) public payable virtual nonReentrant {
-        _requireForExecute();
-        if (
-            _target.length > 9 || _target.length != _calldata.length
-                || _target.length != _value.length
-        ) {
-            revert OpenfortBaseAccount7702V1__InvalidTransactionLength();
-        }
-        uint256 i;
-        for (i; i < _target.length;) {
-            _call(_target[i], _value[i], _calldata[i]);
-            unchecked {
-                ++i;
-            }
-        }
-    }
-
-    /**
-     * @dev Call a target contract and reverts if it fails.
-     */
-    function _call(address _target, uint256 _value, bytes calldata _calldata) internal virtual {
-        emit TransactionExecuted(_target, _value, _calldata);
-        (bool success, bytes memory result) = _target.call{value: _value}(_calldata);
-        if (!success) {
-            assembly {
-                revert(add(result, 32), mload(result))
-            }
-        }
     }
 
     /**
