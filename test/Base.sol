@@ -9,7 +9,13 @@ import "forge-std/StdJson.sol";
 
 /* ──────────────────────────────────────────────────────────────── base ──── */
 contract Base is Test, ISessionkey {
+    struct Transaction {
+        address to;
+        uint256 value;
+        bytes data;
+    }
     /* ───────────────────────────────────────────────────────────── constants ── */
+
     address constant SEPOLIA_ENTRYPOINT = 0x4337084D9E255Ff0702461CF8895CE9E3b5Ff108;
     address constant SEPOLIA_WEBAUTHN = 0xeD43b3a3D00d791BC0B353666b5780B0F9245CC1;
     address constant TOKEN = 0x9C0b94fb071Ed4066d7C18F4b68968e311A66209;

@@ -31,6 +31,10 @@ import {
     _packValidationData
 } from "lib/account-abstraction/contracts/core/Helpers.sol";
 
+/**
+ * @notice Structure for representing a transaction to be executed by the account
+ * @dev Contains destination address, ETH value, and calldata
+ */
 struct Transaction {
     address to;
     uint256 value;
@@ -52,16 +56,6 @@ interface IExtendedAccount {
 // keccak256("openfort.baseAccount.7702.v1") = 0x801ae8efc2175d3d963e799b27e0e948b9a3fa84e2ce105a370245c8c127f368 == 57943590311362240630886240343495690972153947532773266946162183175043753177960
 contract OPF7702 is KeysManager, Initializable, ReentrancyGuard, WebAuthnVerifier layout at 57943590311362240630886240343495690972153947532773266946162183175043753177960 {
     using ECDSA for bytes32;
-
-    /**
-     * @notice Structure for representing a transaction to be executed by the account
-     * @dev Contains destination address, ETH value, and calldata
-     */
-    struct Transaction {
-        address to;
-        uint256 value;
-        bytes data;
-    }
 
     bytes4 internal constant EXECUTE_SELECTOR = 0xb61d27f6;
     bytes4 internal constant EXECUTEBATCH_SELECTOR = 0x47e1da2a;
