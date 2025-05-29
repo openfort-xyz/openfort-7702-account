@@ -1,51 +1,11 @@
-Compiling 88 files with Solc 0.8.29
-Solc 0.8.29 finished in 7.28s
-Compiler run successful!
-Analysing contracts...
-Running tests...
-
-Ran 1 test for test/unit/P256.t.sol:P256Test
-[PASS] test_ExecuteBatchSKP256() (gas: 632958)
-Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 3.73s (824.08ms CPU time)
-
-Ran 4 tests for test/unit/Registartion.t.sol:RegistartionTest
-[PASS] test_RegisterSessionKeyEOAWithMK() (gas: 700750)
-[PASS] test_RegisterSessionKeyP256NonKeyWithMK() (gas: 708059)
-[PASS] test_RegisterSessionKeyP256WithMK() (gas: 721967)
-[PASS] test_getKeyById_zero() (gas: 49124)
-Suite result: ok. 4 passed; 0 failed; 0 skipped; finished in 3.79s (310.03ms CPU time)
-
-Ran 4 tests for test/unit/Execution.t.sol:RegistartionTest
-[PASS] test_ExecuteBatchSKEOA() (gas: 265585)
-[PASS] test_ExecuteBatchSKP256() (gas: 809638)
-[PASS] test_ExecuteBatchSKP256NonKey() (gas: 817279)
-[PASS] test_getKeyById_zero() (gas: 49170)
-Suite result: ok. 4 passed; 0 failed; 0 skipped; finished in 3.86s (309.81ms CPU time)
-
-Ran 6 tests for test/unit/DepositAndTransferETH.t.sol:DepositAndTransferETH
-[PASS] test_DepositEthFromEOA() (gas: 32768)
-[PASS] test_ExecuteBatchSKEOA() (gas: 238798)
-[PASS] test_ExecuteBatchSKP256() (gas: 791486)
-[PASS] test_ExecuteBatchSKP256NonKey() (gas: 789176)
-[PASS] test_ExecuteMasterKey() (gas: 715278)
-[PASS] test_TransferFromAccount() (gas: 28378)
-Suite result: ok. 6 passed; 0 failed; 0 skipped; finished in 4.50s (406.16ms CPU time)
-
-Ran 2 tests for test/unit/Keys.t.sol:KeysTest
-[PASS] test_RevokeALL() (gas: 2124880)
-[PASS] test_RevokeByID() (gas: 164323)
-Suite result: ok. 2 passed; 0 failed; 0 skipped; finished in 37.59s (536.64ms CPU time)
-
-Ran 5 test suites in 37.91s (53.46s CPU time): 17 tests passed, 0 failed, 0 skipped (17 total tests)
-
-╭--------------------------------+------------------+------------------+-----------------+----------------╮
-| File                           | % Lines          | % Statements     | % Branches      | % Funcs        |
-+=========================================================================================================+
-| src/core/BaseOPF7702.sol       | 58.33% (14/24)   | 45.83% (11/24)   | 50.00% (2/4)    | 85.71% (6/7)   |
-|--------------------------------+------------------+------------------+-----------------+----------------|
-| src/core/KeysManager.sol       | 86.07% (105/122) | 81.29% (126/155) | 40.00% (10/25)  | 80.00% (12/15) |
-|--------------------------------+------------------+------------------+-----------------+----------------|
-| src/core/OPF7702.sol           | 66.51% (139/209) | 70.43% (181/257) | 52.83% (28/53)  | 87.50% (14/16) |
-|--------------------------------+------------------+------------------+-----------------+----------------|
-| src/utils/SpendLimit.sol       | 0.00% (0/8)      | 0.00% (0/8)      | 0.00% (0/1)     | 0.00% (0/1)    |
-╰--------------------------------+------------------+------------------+-----------------+----------------╯
+╭--------------------------------+------------------+------------------+-----------------+-----------------╮
+| File                           | % Lines          | % Statements     | % Branches      | % Funcs         |
++==========================================================================================================+
+| src/core/BaseOPF7702.sol       | 63.64% (14/22)   | 45.83% (11/24)   | 50.00% (2/4)    | 85.71% (6/7)    |
+|--------------------------------+------------------+------------------+-----------------+-----------------|
+| src/core/Execution.sol         | 71.43% (25/35)   | 76.92% (30/39)   | 0.00% (0/5)     | 100.00% (4/4)   |
+|--------------------------------+------------------+------------------+-----------------+-----------------|
+| src/core/KeysManager.sol       | 84.96% (113/133) | 81.29% (126/155) | 40.00% (10/25)  | 80.00% (12/15)  |
+|--------------------------------+------------------+------------------+-----------------+-----------------|
+| src/core/OPF7702.sol           | 82.86% (145/175) | 86.18% (187/217) | 64.58% (31/48)  | 100.00% (12/12) |
+╰--------------------------------+------------------+------------------+-----------------+-----------------╯
