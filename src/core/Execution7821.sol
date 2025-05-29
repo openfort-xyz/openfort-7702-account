@@ -14,8 +14,6 @@
 
 pragma solidity ^0.8.29;
 
-import {console2 as console} from "lib/forge-std/src/test.sol";
-
 import {KeysManager} from "src/core/KeysManager.sol";
 import {ReentrancyGuard} from "lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 
