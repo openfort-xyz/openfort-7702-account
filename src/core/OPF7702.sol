@@ -75,7 +75,7 @@ contract OPF7702 is Execution, Initializable, WebAuthnVerifier layout at 5794359
     ) external initializer {
         _requireForExecute();
         _clearStorage();
-        _validateNonce(_nonce);
+        _validateNonce(_nonce); // Todo: Maybe not need this checking if the assumption comes via Epoint or direct
         _notExpired(_validUntil);
 
         if (!_checkSignature(_hash, _signature)) {
