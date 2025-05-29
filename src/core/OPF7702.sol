@@ -164,8 +164,8 @@ contract OPF7702 is KeysManager, Initializable, ReentrancyGuard, WebAuthnVerifie
      */
     function execute(address _target, uint256 _value, bytes calldata _calldata)
         public
-        payable
         virtual
+        override
         nonReentrant
     {
         _requireForExecute();
