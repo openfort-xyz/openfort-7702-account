@@ -14,7 +14,7 @@
 
 pragma solidity ^0.8.29;
 
-import {Execution} from "src/core/Execution.sol";
+import {Execution7821} from "src/core/Execution7821.sol";
 import {WebAuthnVerifier} from "src/utils/WebAuthnVerifier.sol";
 import {EfficientHashLib} from "lib/solady/src/utils/EfficientHashLib.sol";
 import {SafeCast} from "lib/openzeppelin-contracts/contracts/utils/math/SafeCast.sol";
@@ -37,7 +37,7 @@ import {
 
 // address: 0xD24af0109E31F238440E2d6A6d49935d499274b7 14/05/2025
 // keccak256("openfort.baseAccount.7702.v1") = 0x801ae8efc2175d3d963e799b27e0e948b9a3fa84e2ce105a370245c8c127f368 == 57943590311362240630886240343495690972153947532773266946162183175043753177960
-contract OPF7702 is Execution, Initializable, WebAuthnVerifier layout at 57943590311362240630886240343495690972153947532773266946162183175043753177960 {
+contract OPF7702 is Execution7821, Initializable, WebAuthnVerifier layout at 57943590311362240630886240343495690972153947532773266946162183175043753177960 {
     using ECDSA for bytes32;
 
     /// @notice Address of the implementation contract

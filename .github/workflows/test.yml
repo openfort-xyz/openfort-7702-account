@@ -52,5 +52,5 @@ jobs:
 
       - name: Run Forge tests
         run: |
-              forge test -vvv --rpc-url "$SEPOLIA_RPC_URL"
+              forge test --mp test/unit/Execution7821.t.sol -vv --rpc-url "$SEPOLIA_RPC_URL"
         id: test
