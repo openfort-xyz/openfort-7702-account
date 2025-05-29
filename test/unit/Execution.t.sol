@@ -960,7 +960,9 @@ contract RegistartionTest is Base {
         vm.etch(owner, code);
 
         vm.prank(address(entryPoint));
-        account.registerSessionKey(keyMK_Mint, validUntil, uint48(0), limit, true, TOKEN, spendInfo_Mint, _allowedSelectors(), 0);
+        account.registerSessionKey(
+            keyMK_Mint, validUntil, uint48(0), limit, true, TOKEN, spendInfo_Mint, _allowedSelectors(), 0
+        );
     }
 
     function _register_MKBatch() internal {
@@ -981,7 +983,9 @@ contract RegistartionTest is Base {
         vm.etch(owner, code);
 
         vm.prank(address(entryPoint));
-        account.registerSessionKey(keyMK_BATCH, validUntil, uint48(0), limit, true, TOKEN, spendInfo_BATCH, _allowedSelectors(), 0);
+        account.registerSessionKey(
+            keyMK_BATCH, validUntil, uint48(0), limit, true, TOKEN, spendInfo_BATCH, _allowedSelectors(), 0
+        );
     }
 
     /* ─────────────────────────────────────────────────────────── helpers ──── */

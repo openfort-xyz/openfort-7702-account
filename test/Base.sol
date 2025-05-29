@@ -50,8 +50,10 @@ contract Base is Test, ISessionKey {
 
     bytes public constant MINT_CHALLENGE = hex"ba609dbeed0e0f8c94f3c69042c0a1b93aab17685eadcb2e45ad95e066062b68";
 
-    bytes32 public constant MINT_VALID_SIGNATURE_R = hex"546ac03d0190caab0cec299508e937e40fb0ef56a8794e368f806ed47aa19d29";
-    bytes32 public constant MINT_VALID_SIGNATURE_S = hex"77c92c666860f01042879f72d7518fe7b5d03c0b79d5be0e4a0d0580d0e6c2c2";
+    bytes32 public constant MINT_VALID_SIGNATURE_R =
+        hex"546ac03d0190caab0cec299508e937e40fb0ef56a8794e368f806ed47aa19d29";
+    bytes32 public constant MINT_VALID_SIGNATURE_S =
+        hex"77c92c666860f01042879f72d7518fe7b5d03c0b79d5be0e4a0d0580d0e6c2c2";
 
     bytes public constant MINT_AUTHENTICATOR_DATA =
         hex"49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d97631d00000000";
@@ -68,8 +70,10 @@ contract Base is Test, ISessionKey {
 
     bytes public constant BATCH_CHALLENGE = hex"ca8668fcdb9e094a54111e411d5d51383a7800e7d33db625be6dfc15109f62e3";
 
-    bytes32 public constant BATCH_VALID_SIGNATURE_R = hex"bcfb6382912bf8067637ce9b11c68cd51bab1d4f91ad63e7bfa1a8841517c982";
-    bytes32 public constant BATCH_VALID_SIGNATURE_S = hex"181aff235b74caa953a88f00db66da16fb263bd765f7892b56dccae6b45d8b9b";
+    bytes32 public constant BATCH_VALID_SIGNATURE_R =
+        hex"bcfb6382912bf8067637ce9b11c68cd51bab1d4f91ad63e7bfa1a8841517c982";
+    bytes32 public constant BATCH_VALID_SIGNATURE_S =
+        hex"181aff235b74caa953a88f00db66da16fb263bd765f7892b56dccae6b45d8b9b";
 
     bytes public constant BATCH_AUTHENTICATOR_DATA =
         hex"49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d97631d00000000";
