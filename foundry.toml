@@ -10,3 +10,7 @@ dotenv = ".env.p256"
 fs_permissions = [
   { access = "read", path = "./test/data" }
 ]
+
+[fmt]
+line_length = 100
+bracket_spacing = false
