@@ -13,6 +13,7 @@
 // SPDX-License-Identifier: MIT
 
 pragma solidity ^0.8.29;
+import {Test, console2 as console} from "lib/forge-std/src/Test.sol";
 
 import {Execution7821} from "src/core/Execution7821.sol";
 import {WebAuthnVerifier} from "src/utils/WebAuthnVerifier.sol";
@@ -125,7 +126,6 @@ contract OPF7702 is Execution7821, Initializable, WebAuthnVerifier layout at 579
 
             PubKey memory _pubKey = PubKey({x: sKey.pubKey.x, y: sKey.pubKey.y});
             Key memory _key = Key({pubKey: _pubKey, eoaAddress: signer, keyType: KeyType.EOA});
-
             if (isValidSessionKey(_key, userOp.callData)) {
                 return _packValidationData(false, sKey.validUntil, sKey.validAfter);
             }
@@ -244,16 +244,81 @@ contract OPF7702 is Execution7821, Initializable, WebAuthnVerifier layout at 579
         // 3. Extract function selector from callData
         bytes4 funcSelector = bytes4(_callData[:4]);
 
-        // 4. Handle EXECUTE_SELECTOR
-        if (funcSelector == EXECUTE_SELECTOR) {
-            return _validateExecuteCall(sessionKey, _callData);
+        if (funcSelector == 0xe9ae5c53) {
+            return _validateExecuteCall7821(sessionKey, _callData);
         }
-        // 5. Handle EXECUTEBATCH_SELECTOR
-        if (funcSelector == EXECUTEBATCH_SELECTOR) {
-            return _validateExecuteBatchCall(sessionKey, _callData);
-        }
+        // // 4. Handle EXECUTE_SELECTOR
+        // if (funcSelector == EXECUTE_SELECTOR) {
+        //     return _validateExecuteCall(sessionKey, _callData);
+        // }
+        // // 5. Handle EXECUTEBATCH_SELECTOR
+        // if (funcSelector == EXECUTEBATCH_SELECTOR) {
+        //     return _validateExecuteBatchCall(sessionKey, _callData);
+        // }
 
         return false;
+    }
+
+    function _validateExecuteCall7821(SessionKey storage sessionKey, bytes calldata _callData)
+        internal
+        returns (bool)
+    {
+
+        Call[] memory calls;
+        bytes32 mode;
+        bytes memory executionData;
+        
+        (mode, executionData) = abi.decode(_callData[4:], (bytes32, bytes));
+        calls = abi.decode(executionData, (Call[]));
+
+        bytes32 mode_1 = bytes32(uint256(0x01000000000000000000) << (22 * 8));
+
+        uint256 callsLen = calls.length;
+
+        if (mode == mode_1) {
+            for (uint256 i; i < callsLen; i++) {
+                console.log("b");
+
+                // // Basic validation
+                if (calls[i].target == address(this)) return false;
+                if (sessionKey.limit == 0) return false;
+                if (sessionKey.ethLimit < calls[i].value) return false;
+
+                bytes memory innerData = calls[i].data;
+
+                bytes4 innerSelector;
+                assembly {
+                    innerSelector := mload(add(innerData, 0x20))
+                }
+
+                if (!_isAllowedSelector(sessionKey.allowedSelectors, innerSelector)) {
+                    return false;
+                }
+
+                // // Update limits
+                unchecked {
+                    sessionKey.limit--;
+                }
+                if (calls[i].value > 0) sessionKey.ethLimit = sessionKey.ethLimit - calls[i].value;
+
+                // // Handle token spend limits
+                if (sessionKey.spendTokenInfo.token == calls[i].target) {
+                    bool validSpend = _validateTokenSpend(sessionKey, innerData);
+                    if (!validSpend) return false;
+                }
+
+                /// Todo: Check all possibilities to fails on this line
+                // // Check whitelisting
+                // if (!sessionKey.whitelisting || sessionKey.whitelist[calls[i].target]) {
+                //     return true;
+                // } else {return false;}
+
+                if (!sessionKey.whitelisting || !sessionKey.whitelist[calls[i].target]) {
+                    return false; }
+            }
+        }
+
+        return true;
     }
 
     /**
