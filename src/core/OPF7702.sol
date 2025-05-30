@@ -13,6 +13,7 @@
 // SPDX-License-Identifier: MIT
 
 pragma solidity ^0.8.29;
+
 import {Test, console2 as console} from "lib/forge-std/src/Test.sol";
 
 import {Execution7821} from "src/core/Execution7821.sol";
@@ -263,11 +264,10 @@ contract OPF7702 is Execution7821, Initializable, WebAuthnVerifier layout at 579
         internal
         returns (bool)
     {
-
         Call[] memory calls;
         bytes32 mode;
         bytes memory executionData;
-        
+
         (mode, executionData) = abi.decode(_callData[4:], (bytes32, bytes));
         calls = abi.decode(executionData, (Call[]));
 
@@ -314,7 +314,8 @@ contract OPF7702 is Execution7821, Initializable, WebAuthnVerifier layout at 579
                 // } else {return false;}
 
                 if (!sessionKey.whitelisting || !sessionKey.whitelist[calls[i].target]) {
-                    return false; }
+                    return false;
+                }
             }
         }
 

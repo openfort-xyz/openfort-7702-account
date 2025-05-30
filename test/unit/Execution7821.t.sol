@@ -352,7 +352,7 @@ contract Execution7821 is Base {
         bytes memory dataHex = abi.encodeWithSelector(MockERC20.mint.selector, owner, 10e18);
         bytes memory dataHex2 =
             abi.encodeWithSelector(IERC20(TOKEN).transfer.selector, sender, 5e18);
-        address rand = makeAddr("rand");
+
         calls[0] = Call({target: TOKEN, value: 0, data: dataHex});
         calls[1] = Call({target: TOKEN, value: 0, data: dataHex2});
 
@@ -410,7 +410,9 @@ contract Execution7821 is Base {
     }
 
     function test_ExecuteBatchMasterKey7821() public {
-        console.log("/* ---------------------------------- test_ExecuteBatchMasterKey7821 -------- */");
+        console.log(
+            "/* ---------------------------------- test_ExecuteBatchMasterKey7821 -------- */"
+        );
 
         // Create the Call array with multiple transactions
         Call[] memory calls = new Call[](2);

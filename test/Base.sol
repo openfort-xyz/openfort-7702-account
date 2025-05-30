@@ -80,23 +80,23 @@ contract Base is Test, ISessionkey {
 
     /* ───────────────────────────────────────────────────────────── master key ── */
     bytes32 constant BATCH_VALID_PUBLIC_KEY_X =
-        hex"579e6072ffd5fccf23915a9191a10f6aa76b6a1388f6120d855d71d6d80546c9";
+        hex"61fa540f345d4e8eae9f535c426605361efdeee1d528ca783256f780b09c181d";
     bytes32 constant BATCH_VALID_PUBLIC_KEY_Y =
-        hex"77b8b80c69d0bd4b0e7563610fc9042bc14b2c766a782428f6fd7a332d914a98";
+        hex"64823d31924d886f08487d80934eeaa765304f830eefd70adc806b94a05a2b72";
 
     bytes public constant BATCH_CHALLENGE =
-        hex"ca8668fcdb9e094a54111e411d5d51383a7800e7d33db625be6dfc15109f62e3";
+        hex"e25bff7b0f643883a5a658e6c5eccef7cffb3163dcd06749a1b5d85844d8ebb8";
 
     bytes32 public constant BATCH_VALID_SIGNATURE_R =
-        hex"bcfb6382912bf8067637ce9b11c68cd51bab1d4f91ad63e7bfa1a8841517c982";
+        hex"37a01984d8470580abbb2bc6ac79369dcab4e45da23c67d9a8ff6e706a7df667";
     bytes32 public constant BATCH_VALID_SIGNATURE_S =
-        hex"181aff235b74caa953a88f00db66da16fb263bd765f7892b56dccae6b45d8b9b";
+        hex"730b4c7ede8fcc38e5b0d16f2cebbbbd7555e5037be4af723d06841bc3075983";
 
     bytes public constant BATCH_AUTHENTICATOR_DATA =
         hex"49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d97631d00000000";
 
     string public constant BATCH_CLIENT_DATA_JSON =
-        "{\"type\":\"webauthn.get\",\"challenge\":\"yoZo_NueCUpUER5BHV1RODp4AOfTPbYlvm38FRCfYuM\",\"origin\":\"http://localhost:5173\",\"crossOrigin\":false}";
+        "{\"type\":\"webauthn.get\",\"challenge\":\"4lv_ew9kOIOlpljmxezO98_7MWPc0GdJobXYWETY67g\",\"origin\":\"http://localhost:5173\",\"crossOrigin\":false}";
 
     uint256 public constant BATCH_CHALLENGE_INDEX = 23;
     uint256 public constant BATCH_TYPE_INDEX = 1;
