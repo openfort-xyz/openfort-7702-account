@@ -21,6 +21,9 @@ abstract contract Execution7821 is KeysManager, ReentrancyGuard {
     bytes4 internal constant EXECUTE_SELECTOR = 0xb61d27f6;
     bytes4 internal constant EXECUTEBATCH_SELECTOR = 0x47e1da2a;
 
+    bytes32 internal constant mode_1 = bytes32(uint256(0x01000000000000000000) << (22 * 8));
+    bytes32 internal constant mode_3 = bytes32(uint256(0x01000000000078210002) << (22 * 8));
+
     /// @dev The execution mode is not supported.
     error UnsupportedExecutionMode();
 
