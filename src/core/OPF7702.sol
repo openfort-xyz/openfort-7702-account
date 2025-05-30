@@ -248,15 +248,6 @@ contract OPF7702 is Execution7821, Initializable, WebAuthnVerifier layout at 579
         if (funcSelector == 0xe9ae5c53) {
             return _validateExecuteCall7821(sessionKey, _callData);
         }
-        // // 4. Handle EXECUTE_SELECTOR
-        // if (funcSelector == EXECUTE_SELECTOR) {
-        //     return _validateExecuteCall(sessionKey, _callData);
-        // }
-        // // 5. Handle EXECUTEBATCH_SELECTOR
-        // if (funcSelector == EXECUTEBATCH_SELECTOR) {
-        //     return _validateExecuteBatchCall(sessionKey, _callData);
-        // }
-
         return false;
     }
 
@@ -266,114 +257,73 @@ contract OPF7702 is Execution7821, Initializable, WebAuthnVerifier layout at 579
     {
         bytes32 mode;
         bytes memory executionData;
-
         (mode, executionData) = abi.decode(_callData[4:], (bytes32, bytes));
 
-        Call[] memory calls;
-        bytes[] memory batches;
-        uint256 callsLen;
-        uint256 batchesLen;
-
         if (mode == mode_1) {
-            calls = abi.decode(executionData, (Call[]));
-            callsLen = calls.length;
-        } else if (mode == mode_3) {
-            batches = abi.decode(executionData, (bytes[]));
-            batchesLen = batches.length;
-        }
-
-        if (mode == mode_1) {
-            for (uint256 i = 0; i < callsLen; i++) {
-                // // Basic validation
-                if (calls[i].target == address(this)) return false;
-                if (sessionKey.limit == 0) return false;
-                if (sessionKey.ethLimit < calls[i].value) return false;
-
-                bytes memory innerData = calls[i].data;
-
-                bytes4 innerSelector;
-                assembly {
-                    innerSelector := mload(add(innerData, 0x20))
-                }
-
-                if (!_isAllowedSelector(sessionKey.allowedSelectors, innerSelector)) {
-                    return false;
-                }
-
-                // // Update limits
-                unchecked {
-                    sessionKey.limit--;
-                }
-                if (calls[i].value > 0) sessionKey.ethLimit = sessionKey.ethLimit - calls[i].value;
-
-                // // Handle token spend limits
-                if (sessionKey.spendTokenInfo.token == calls[i].target) {
-                    bool validSpend = _validateTokenSpend(sessionKey, innerData);
-                    if (!validSpend) return false;
-                }
-
-                /// Todo: Check all possibilities to fails on this line
-                // // Check whitelisting
-                // if (!sessionKey.whitelisting || sessionKey.whitelist[calls[i].target]) {
-                //     return true;
-                // } else {return false;}
-
-                if (!sessionKey.whitelisting || !sessionKey.whitelist[calls[i].target]) {
+            Call[] memory calls = abi.decode(executionData, (Call[]));
+            for (uint256 i = 0; i < calls.length; i++) {
+                if (!_validateCall(sessionKey, calls[i])) {
                     return false;
                 }
             }
-
             return true;
         }
 
         if (mode == mode_3) {
-            for (uint256 i = 0; i < batchesLen; i++) {
-                calls = abi.decode(batches[i], (Call[]));
-                callsLen = calls.length;
-
-                for (uint256 j = 0; j < callsLen; j++) {
-                    if (calls[j].target == address(this)) return false;
-                    if (sessionKey.limit == 0) return false;
-                    if (sessionKey.ethLimit < calls[j].value) return false;
-
-                    bytes memory innerData = calls[j].data;
-
-                    bytes4 innerSelector;
-                    assembly {
-                        innerSelector := mload(add(innerData, 0x20))
-                    }
-
-                    if (!_isAllowedSelector(sessionKey.allowedSelectors, innerSelector)) {
-                        return false;
-                    }
-
-                    // // Update limits
-                    unchecked {
-                        sessionKey.limit--;
-                    }
-                    if (calls[j].value > 0) {
-                        sessionKey.ethLimit = sessionKey.ethLimit - calls[j].value;
-                    }
-
-                    // // Handle token spend limits
-                    if (sessionKey.spendTokenInfo.token == calls[j].target) {
-                        bool validSpend = _validateTokenSpend(sessionKey, innerData);
-                        if (!validSpend) return false;
-                    }
-                    /// Todo: Check all possibilities to fails on this line
-                    // // Check whitelisting
-                    // if (!sessionKey.whitelisting || sessionKey.whitelist[calls[i].target]) {
-                    //     return true;
-                    // } else {return false;}
-
-                    if (!sessionKey.whitelisting || !sessionKey.whitelist[calls[j].target]) {
+            bytes[] memory batches = abi.decode(executionData, (bytes[]));
+            for (uint256 i = 0; i < batches.length; i++) {
+                Call[] memory calls = abi.decode(batches[i], (Call[]));
+                for (uint256 j = 0; j < calls.length; j++) {
+                    if (!_validateCall(sessionKey, calls[j])) {
                         return false;
                     }
                 }
             }
             return true;
         }
+
         return false;
+    }
+
+    function _validateCall(SessionKey storage sessionKey, Call memory call)
+        private
+        returns (bool)
+    {
+        if (call.target == address(this)) return false;
+        if (sessionKey.limit == 0) return false;
+        if (sessionKey.ethLimit < call.value) return false;
+
+        bytes memory innerData = call.data;
+        bytes4 innerSelector;
+        assembly {
+            innerSelector := mload(add(innerData, 0x20))
+        }
+
+        if (!_isAllowedSelector(sessionKey.allowedSelectors, innerSelector)) {
+            return false;
+        }
+
+        unchecked {
+            sessionKey.limit--;
+        }
+        if (call.value > 0) {
+            sessionKey.ethLimit -= call.value;
+        }
+
+        if (sessionKey.spendTokenInfo.token == call.target) {
+            bool validSpend = _validateTokenSpend(sessionKey, innerData);
+            if (!validSpend) return false;
+        }
+        /// Todo: Check all possibilities to fails on this line
+        // // Check whitelisting
+        // if (!sessionKey.whitelisting || sessionKey.whitelist[calls[i].target]) {
+        //     return true;
+        // } else {return false;}
+        if (!sessionKey.whitelisting || !sessionKey.whitelist[call.target]) {
+            return false;
+        }
+
+        return true;
     }
 
     /**
