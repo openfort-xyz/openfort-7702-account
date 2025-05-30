@@ -102,6 +102,29 @@ contract Base is Test, ISessionkey {
     uint256 public constant BATCH_TYPE_INDEX = 1;
 
     /* ───────────────────────────────────────────────────────────── master key ── */
+    bytes32 constant BATCHS_VALID_PUBLIC_KEY_X =
+        hex"47ad348f59ee125d486b87284fa317f0d9ac60b57f5a7b00112f016dabe5e7cd";
+    bytes32 constant BATCHS_VALID_PUBLIC_KEY_Y =
+        hex"84332649762b5c5743fb68c16b7917d596123a6abd3b04813308ca5bd6e0374f";
+
+    bytes public constant BATCHS_CHALLENGE =
+        hex"dd901464b06d62c1602eac47f402261c733d97bed67bae107e6f783a28e3220c";
+
+    bytes32 public constant BATCHS_VALID_SIGNATURE_R =
+        hex"5f5a9febf06e3138b165fdd0cd29c47bb817c955eac8cdf11156069028ffebcf";
+    bytes32 public constant BATCHS_VALID_SIGNATURE_S =
+        hex"6aa3ee7a49f007506ebca71911515b70d26dc1498a6607e2e00cb1c6a90f80c8";
+
+    bytes public constant BATCHS_AUTHENTICATOR_DATA =
+        hex"49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d97631d00000000";
+
+    string public constant BATCHS_CLIENT_DATA_JSON =
+        "{\"type\":\"webauthn.get\",\"challenge\":\"3ZAUZLBtYsFgLqxH9AImHHM9l77We64Qfm94OijjIgw\",\"origin\":\"http://localhost:5173\",\"crossOrigin\":false}";
+
+    uint256 public constant BATCHS_CHALLENGE_INDEX = 23;
+    uint256 public constant BATCHS_TYPE_INDEX = 1;
+
+    /* ───────────────────────────────────────────────────────────── master key ── */
     bytes32 constant ETH_PUBLIC_KEY_X =
         hex"989ec43868cc759c0ade920a1440a31fb202d97830d34d41679f4fb14f9720e6";
     bytes32 constant ETH_PUBLIC_KEY_Y =
