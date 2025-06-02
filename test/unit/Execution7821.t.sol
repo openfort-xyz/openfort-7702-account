@@ -893,7 +893,6 @@ contract Execution7821 is Base {
         bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
         console.logBytes32(userOpHash);
 
-
         ISessionkey.PubKey memory pubKeyExecuteBatch =
             ISessionkey.PubKey({x: MINT_P256_PUBLIC_KEY_X, y: MINT_P256_PUBLIC_KEY_Y});
 
@@ -934,6 +933,147 @@ contract Execution7821 is Base {
         console.log("/* ---------------------------------- test_ExecuteBatchP2567821 -------- */");
     }
 
+    function test_ExecuteBatchOfBatchesP2567821() public {
+        // Create first batch - minting operations
+        Call[] memory mintBatch = new Call[](2);
+        mintBatch[0] = Call({
+            target: TOKEN,
+            value: 0,
+            data: abi.encodeWithSelector(MockERC20.mint.selector, owner, 10e18)
+        });
+        mintBatch[1] = Call({
+            target: TOKEN,
+            value: 0,
+            data: abi.encodeWithSelector(MockERC20.mint.selector, sender, 1e18)
+        });
+
+        // Create second batch - transfer operations (FROM OWNER)
+        Call[] memory transferBatch = new Call[](2);
+        transferBatch[0] = Call({
+            target: TOKEN,
+            value: 0,
+            data: abi.encodeWithSelector(IERC20.transfer.selector, sender, 1e18)
+        });
+        transferBatch[1] = Call({
+            target: TOKEN,
+            value: 0,
+            data: abi.encodeWithSelector(IERC20.transfer.selector, address(0x123), 1e18)
+        });
+
+        // Create third batch - approval operations
+        Call[] memory approveBatch = new Call[](1);
+        approveBatch[0] = Call({
+            target: TOKEN,
+            value: 0,
+            data: abi.encodeWithSelector(IERC20.transfer.selector, address(0x456), 1e18)
+        });
+
+        // Encode each batch separately
+        bytes memory batch1Data = abi.encode(mintBatch);
+        bytes memory batch2Data = abi.encode(transferBatch);
+        bytes memory batch3Data = abi.encode(approveBatch);
+
+        // Create array of batch data
+        bytes[] memory batches = new bytes[](3);
+        batches[0] = batch1Data;
+        batches[1] = batch2Data;
+        batches[2] = batch3Data;
+
+        // Mode for batch of batches (ID = 3)
+        bytes32 mode = bytes32(uint256(0x01000000000078210002) << (22 * 8));
+
+        // Encode the execution data as bytes[] array
+        bytes memory executionData = abi.encode(batches);
+
+        // Create the callData for the ERC-7821 execute function
+        bytes memory callData =
+            abi.encodeWithSelector(bytes4(keccak256("execute(bytes32,bytes)")), mode, executionData);
+
+        uint256 nonce = entryPoint.getNonce(owner, 1);
+
+        PackedUserOperation memory userOp = PackedUserOperation({
+            sender: owner,
+            nonce: nonce,
+            initCode: hex"7702",
+            callData: callData,
+            accountGasLimits: _packAccountGasLimits(400000, 300000),
+            preVerificationGas: 800000,
+            gasFees: _packGasFees(80 gwei, 15 gwei),
+            paymasterAndData: hex"",
+            signature: hex""
+        });
+
+        bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
+        console.logBytes32(userOpHash);
+
+        ISessionkey.PubKey memory pubKeyExecuteBatch =
+            ISessionkey.PubKey({x: P256_PUBLIC_KEY_X, y: P256_PUBLIC_KEY_Y});
+
+        bytes memory _signature = account.encodeP256Signature(
+            P256_SIGNATURE_R, P256_SIGNATURE_S, pubKeyExecuteBatch
+        );
+
+        bytes4 magicValue = account.isValidSignature(userOpHash, _signature);
+        bool usedChallenge = account.usedChallenges(userOpHash);
+        console.log("usedChallenge", usedChallenge);
+        console.logBytes4(magicValue);
+
+        bool isValid = webAuthn.verifyP256Signature(
+            userOpHash,
+            P256_SIGNATURE_R,
+            P256_SIGNATURE_S,
+            P256_PUBLIC_KEY_X,
+            P256_PUBLIC_KEY_Y
+        );
+        console.log("isValid", isValid);
+
+        userOp.signature = _signature;
+
+        uint256 balanceOfBefore = IERC20(TOKEN).balanceOf(owner);
+        uint256 balanceOfBeforeSender = IERC20(TOKEN).balanceOf(sender);
+        uint256 balanceOfBefore0x123 = IERC20(TOKEN).balanceOf(address(0x123));
+
+        console.log("BEFORE EXECUTION:");
+        console.log("Owner balance:", balanceOfBefore);
+        console.log("Sender balance:", balanceOfBeforeSender);
+        console.log("0x123 balance:", balanceOfBefore0x123);
+
+        PackedUserOperation[] memory ops = new PackedUserOperation[](1);
+        ops[0] = userOp;
+
+        bytes memory code = abi.encodePacked(bytes3(0xef0100), address(implementation));
+        vm.etch(owner, code);
+
+        vm.prank(sender);
+        entryPoint.handleOps(ops, payable(sender));
+
+        uint256 balanceOfAfter = IERC20(TOKEN).balanceOf(owner);
+        uint256 balanceOfAfterSender = IERC20(TOKEN).balanceOf(sender);
+        uint256 balanceOfAfter0x123 = IERC20(TOKEN).balanceOf(address(0x123));
+
+        console.log("AFTER EXECUTION:");
+        console.log("Owner balance:", balanceOfAfter);
+        console.log("Sender balance:", balanceOfAfterSender);
+        console.log("0x123 balance:", balanceOfAfter0x123);
+
+        // CORRECTED ASSERTIONS based on your actual test transactions:
+
+        // Owner should: +10e18 (mint) -1e18 (to sender) -1e18 (to 0x123) -1e18 (to 0x456) = +7e18
+        assertEq(balanceOfAfter, balanceOfBefore + 7e18, "Owner should gain 7e18");
+
+        // Sender should: +1e18 (mint) +1e18 (from owner) = +2e18
+        assertEq(balanceOfAfterSender, balanceOfBeforeSender + 2e18, "Sender should gain 2e18");
+
+        // 0x123 should: +1e18 (from owner) = +1e18
+        assertEq(balanceOfAfter0x123, balanceOfBefore0x123 + 1e18, "0x123 should gain 1e18");
+
+        // Remove or comment out the approval check since third batch is doing transfer, not approve
+        // uint256 allowance = IERC20(TOKEN).allowance(owner, address(0x456));
+        // assertEq(allowance, 1e18, "Approval should be 1e18");
+        console.log(
+            "/* -------------------------------- test_ExecuteBatchOfBatchesSKEOA7821 -------- */"
+        );
+    }
 
     // function test_ExecuteSKEOA() public {
     //     console.log("/* -------------------------------- test_ExecuteSKEOA -------- */");
