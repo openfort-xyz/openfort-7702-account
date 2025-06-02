@@ -1,3 +1,7 @@
+# Load environment variables from .env
+include .env
+export $(shell sed 's/=.*//' .env)
+
 .SILENT:
 
 install-ts:
