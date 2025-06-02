@@ -35,7 +35,9 @@ test-all:
 
 coverage:
 	forge coverage --ir-minimum --rpc-url $(SEPOLIA_RPC_URL) >> coverage.txt
-
+gas:
+	forge test --gas-report --rpc-url $(SEPOLIA_RPC_URL)
+	
 deploy-webauthn:
 	forge create src/utils/WebAuthnVerifier.sol:WebAuthnVerifier  \
 	--rpc-url $(SEPOLIA_RPC_URL) \
