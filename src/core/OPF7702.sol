@@ -458,7 +458,7 @@ contract OPF7702 is Execution, Initializable, WebAuthnVerifier layout at 5794359
             abi.decode(_callData[4:], (address[], uint256[], bytes[]));
 
         uint256 n = targets.length;
-        if (n == 0 || n > 9) {
+        if (n == 0 || n > MAX_TX) {
             return false;
         }
 
