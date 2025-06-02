@@ -4,13 +4,6 @@ pragma solidity ^0.8.29;
 
 /// @dev Interface for minimal batch executor.
 interface IERC7821 {
-    /// @dev Call struct for the `execute` function.
-    struct Call {
-        address to; // Replaced with `address(this)` if `address(0)`.
-        uint256 value; // Amount of native currency (i.e. Ether) to send.
-        bytes data; // Calldata to send with the call.
-    }
-
     /// @dev Executes the calls in `executionData`.
     /// Reverts and bubbles up error if any call fails.
     ///

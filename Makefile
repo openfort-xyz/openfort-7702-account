@@ -1,3 +1,7 @@
+# Load environment variables from .env
+include .env
+export $(shell sed 's/=.*//' .env)
+
 .SILENT:
 
 install-ts:
@@ -25,9 +29,6 @@ test-registartion:
 
 test-execution:
 	node script/P256_Single_Mint.ts && node script/P256.ts && forge test --mp test/unit/Execution.t.sol -vv --rpc-url $(SEPOLIA_RPC_URL)
-
-test-all:
-	node script/P256_Single_Mint.ts && node script/P256_ETH.ts && node script/P256.ts && forge test -vv --rpc-url $(SEPOLIA_RPC_URL)
 
 test-all-7821:
 	node script/P256_Single_Mint.ts && node script/P256_ETH.ts && node script/P256.ts && forge test --mp test/unit/Execution7821.t.sol -vv --rpc-url $(SEPOLIA_RPC_URL)

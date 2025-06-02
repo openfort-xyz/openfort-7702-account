@@ -18,6 +18,7 @@ import {IAccount} from "lib/account-abstraction/contracts/interfaces/IAccount.so
 import {BaseAccount} from "lib/account-abstraction/contracts/core/BaseAccount.sol";
 import {IEntryPoint} from "lib/account-abstraction/contracts/interfaces/IEntryPoint.sol";
 
+import "src/interfaces/IERC7821.sol";
 import "lib/openzeppelin-contracts/contracts/interfaces/IERC1271.sol";
 import "lib/openzeppelin-contracts/contracts/utils/introspection/ERC165.sol";
 import "lib/openzeppelin-contracts/contracts/token/ERC721/utils/ERC721Holder.sol";
@@ -27,9 +28,10 @@ abstract contract BaseOPF7702 is
     IAccount,
     BaseAccount,
     IERC165,
+    IERC7821,
     IERC1271,
-    ERC1155Holder,
-    ERC721Holder
+    ERC721Holder,
+    ERC1155Holder
 {
     error OpenfortBaseAccount7702V1__InvalidNonce();
     error OpenfortBaseAccount7702V1__InvalidSignature();
@@ -63,7 +65,8 @@ abstract contract BaseOPF7702 is
         return _interfaceId == type(IERC165).interfaceId
             || _interfaceId == type(IAccount).interfaceId || _interfaceId == type(IERC1271).interfaceId
             || _interfaceId == type(IERC1155Receiver).interfaceId
-            || _interfaceId == type(IERC721Receiver).interfaceId;
+            || _interfaceId == type(IERC721Receiver).interfaceId
+            || _interfaceId == type(IERC7821).interfaceId;
     }
 
     /**
