@@ -32,9 +32,13 @@ abstract contract BaseOPF7702 is
     BaseAccount,
     IERC165,
     IERC1271,
-    ERC1155Holder,
-    ERC721Holder
+    ERC721Holder,
+    ERC1155Holder
 {
+    // =============================================================
+    //                            ERRORS
+    // =============================================================
+
     /// @notice Thrown when the provided nonce equals the current nonce (replay protection).
     error OpenfortBaseAccount7702V1__InvalidNonce();
     /// @notice Thrown when a signature fails verification.
@@ -49,16 +53,35 @@ abstract contract BaseOPF7702 is
     /// @param returnData The data returned by the failing call.
     error OpenfortBaseAccount7702V1__TransactionFailed(bytes returnData);
 
+    // =============================================================
+    //                          CONSTANTS
+    // =============================================================
+
+    /// @dev Number of storage slots to clear in `_clearStorage`.
+    uint256 private constant _NUM_CLEAR_SLOTS = 3;
+
+    // =============================================================
+    //                          STATE VARIABLES
+    // =============================================================
+
     /// @notice The EntryPoint singleton contract used to dispatch user operations.
     address internal immutable ENTRY_POINT;
 
     /// @notice Current transaction nonce, used to prevent replay attacks.
     uint256 public nonce;
 
+    // =============================================================
+    //                             EVENTS
+    // =============================================================
+
     /// @notice Emitted when ETH is deposited into this account for covering gas fees.
     /// @param source The address that sent the ETH deposit.
     /// @param amount The amount of ETH deposited.
     event DepositAdded(address indexed source, uint256 amount);
+
+    // =============================================================
+    //                       RECEIVE / FALLBACK
+    // =============================================================
 
     /// @notice Fallback function to receive ETH without data.
     /// @dev `msg.data` does not match any function signature.
@@ -70,6 +93,10 @@ abstract contract BaseOPF7702 is
         emit DepositAdded(msg.sender, msg.value);
     }
 
+    // =============================================================
+    //                        INTERNAL FUNCTIONS
+    // =============================================================
+
     /**
      * @notice Clears the contract’s custom storage slots for reinitialization purposes.
      * @dev Uses inline assembly to set three consecutive storage slots (starting at keccak256("openfort.baseAccount.7702.v1")) to zero.
@@ -77,11 +104,13 @@ abstract contract BaseOPF7702 is
      */
     function _clearStorage() internal {
         bytes32 baseSlot = keccak256("openfort.baseAccount.7702.v1");
-
-        for (uint256 i = 0; i < 3; i++) {
+        for (uint256 i = 0; i < _NUM_CLEAR_SLOTS;) {
             bytes32 slot = bytes32(uint256(baseSlot) + i);
             assembly {
                 sstore(slot, 0)
+            }
+            unchecked {
+                i++;
             }
         }
     }
@@ -116,9 +145,13 @@ abstract contract BaseOPF7702 is
     function _requireForExecute() internal view virtual override {
         require(
             msg.sender == address(this) || msg.sender == address(entryPoint()),
-            "not from self or EntryPoint"
+            "BaseOPF7702: unauthorized caller"
         );
     }
+
+    // =============================================================
+    //                         PUBLIC FUNCTIONS
+    // =============================================================
 
     /**
      * @notice Returns the entry point contract used by this account.
