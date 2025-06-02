@@ -1075,6 +1075,90 @@ contract Execution7821 is Base {
         );
     }
 
+    function test_ExecuteBatchP256NonKey7821() public {
+        console.log(
+            "/* ---------------------------------- test_ExecuteBatchP2567821 -------- */"
+        );
+
+        // Create the Call array with multiple transactions
+        Call[] memory calls = new Call[](2);
+
+        bytes memory dataHex = abi.encodeWithSelector(MockERC20.mint.selector, owner, 10e18);
+        bytes memory dataHex2 =
+            abi.encodeWithSelector(IERC20(TOKEN).transfer.selector, sender, 5e18);
+
+        calls[0] = Call({target: TOKEN, value: 0, data: dataHex});
+        calls[1] = Call({target: TOKEN, value: 0, data: dataHex2});
+
+        // ERC-7821 mode for batch execution (still mode ID = 1)
+        bytes32 mode = bytes32(uint256(0x01000000000000000000) << (22 * 8));
+
+        // Encode the execution data as Call[] array
+        bytes memory executionData = abi.encode(calls);
+
+        // Create the callData for the ERC-7821 execute function
+        bytes memory callData =
+            abi.encodeWithSelector(bytes4(keccak256("execute(bytes32,bytes)")), mode, executionData);
+
+        uint256 nonce = entryPoint.getNonce(owner, 1);
+
+        PackedUserOperation memory userOp = PackedUserOperation({
+            sender: owner,
+            nonce: nonce,
+            initCode: hex"7702",
+            callData: callData,
+            accountGasLimits: _packAccountGasLimits(400000, 300000),
+            preVerificationGas: 800000,
+            gasFees: _packGasFees(80 gwei, 15 gwei),
+            paymasterAndData: hex"",
+            signature: hex""
+        });
+
+        bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
+        console.logBytes32(userOpHash);
+
+        ISessionkey.PubKey memory pubKeyExecuteBatch =
+            ISessionkey.PubKey({x: MINT_P256NOKEY_PUBLIC_KEY_X, y: MINT_P256NOKEY_PUBLIC_KEY_Y});
+
+        bytes memory _signature = account.encodeP256NonKeySignature(
+            MINT_P256NOKEY_SIGNATURE_R, MINT_P256NOKEY_SIGNATURE_S, pubKeyExecuteBatch
+        );
+
+        bytes4 magicValue = account.isValidSignature(userOpHash, _signature);
+        bool usedChallenge = account.usedChallenges(userOpHash);
+        console.log("usedChallenge", usedChallenge);
+        console.logBytes4(magicValue);
+
+        bytes32 _hash = EfficientHashLib.sha2(userOpHash);
+        console.logBytes32(_hash);
+        bool isValid = webAuthn.verifyP256Signature(
+            _hash,
+            MINT_P256NOKEY_SIGNATURE_R,
+            MINT_P256NOKEY_SIGNATURE_S,
+            MINT_P256NOKEY_PUBLIC_KEY_X,
+            MINT_P256NOKEY_PUBLIC_KEY_Y
+        );
+        console.log("isValid Test", isValid);
+
+        userOp.signature = _signature;
+
+        uint256 balanceOfBefore = IERC20(TOKEN).balanceOf(sender);
+
+        PackedUserOperation[] memory ops = new PackedUserOperation[](1);
+        ops[0] = userOp;
+
+        bytes memory code = abi.encodePacked(bytes3(0xef0100), address(implementation));
+        vm.etch(owner, code);
+
+        vm.prank(sender);
+        entryPoint.handleOps(ops, payable(sender));
+
+        uint256 balanceOfAfter = IERC20(TOKEN).balanceOf(sender);
+        console.log("balanceOf", balanceOfAfter);
+        assertEq(balanceOfBefore + 5e18, balanceOfAfter);
+        console.log("/* ---------------------------------- test_ExecuteBatchP2567821 -------- */");
+    }
+
     // function test_ExecuteSKEOA() public {
     //     console.log("/* -------------------------------- test_ExecuteSKEOA -------- */");
 
