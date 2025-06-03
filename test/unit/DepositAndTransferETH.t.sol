@@ -41,14 +41,23 @@ contract DepositAndTransferETH is Base {
         entryPoint = IEntryPoint(payable(SEPOLIA_ENTRYPOINT));
         webAuthn = WebAuthnVerifier(payable(SEPOLIA_WEBAUTHN));
 
+        _createInitialGuradian();
         /* deploy implementation & bake it into `owner` address */
-        implementation = new OPF7702(address(entryPoint));
+        implementation = new OPF7702(
+            address(entryPoint),
+            RECOVERY_PERIOD,
+            LOCK_PERIOD,
+            SECURITY_PERIOD,
+            SECURITY_WINDOW,
+            keyGuardianEOA
+        );
         vm.etch(owner, address(implementation).code);
         account = OPF7702(payable(owner));
 
         vm.stopPrank();
 
         _deal();
+        _createInitialGuradian();
         _initializeAccount();
         _register_SessionKeyEOA();
         _register_SessionKeyP256();

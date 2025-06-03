@@ -22,6 +22,11 @@ contract Base is Test, ISessionkey {
     address constant ETH_RECIVE = 0xCdB635ee58926769ee2789fA0942Ef04A4ae9d16;
     uint256 constant ETH_LIMIT = 1e18;
 
+    uint256 constant RECOVERY_PERIOD = 2 days;
+    uint256 constant LOCK_PERIOD = 5 days;
+    uint256 constant SECURITY_PERIOD = 1.5 days;
+    uint256 constant SECURITY_WINDOW = 0.5 days;
+
     /* ─────────────────────────────────────────────────────────── actors/keys ── */
     uint256 internal senderPk = vm.envUint("PRIVATE_KEY_SENDER");
     address internal sender = vm.addr(senderPk);
@@ -172,6 +177,37 @@ contract Base is Test, ISessionkey {
     bytes32 public MINT_P256NOKEY_SIGNATURE_S =
         stdJson.readBytes32(json_single_mint, ".result2.P256NONKEY_sHex");
 
+    /* ───────────────────────────────────────────────────────────── recovery key ── */
+    Key internal keyGuardianEOA;
+    PubKey internal pubKeyGuardianEOA;
+
+    uint256 public GUARDIAN_EOA_PRIVATE_KEY = vm.envUint("GUARDIAN_EOA_PRIVATE_KEY");
+    address internal GUARDIAN_EOA_ADDRESS = vm.addr(GUARDIAN_EOA_PRIVATE_KEY);
+
+    Key internal keyGuardianWebAuthn;
+    PubKey internal pubKeyGuardianWebAuthn;
+    bytes32 constant GUARDIAN_PUBLIC_KEY_X =
+        hex"e52e02ebbc3a44f64536b1fcd75912bdd10e60b81a266c85b5521ef70b14181a";
+    bytes32 constant GUARDIAN_PUBLIC_KEY_Y =
+        hex"750ee32269162f0bd710e4ed4820da9ef1265f7cf9c8f44ffc3235cf041d84fd";
+
+    bytes public constant GUARDIAN_CHALLENGE =
+        hex"dd901464b06d62c1602eac47f402261c733d97bed67bae107e6f783a28e3220c";
+
+    bytes32 public constant GUARDIAN_SIGNATURE_R =
+        hex"d28a5af88ed7b32eb2e1634c0bf7548fc6d731d8b732f05277f60f7dabf1abad";
+    bytes32 public constant GUARDIAN_SIGNATURE_S =
+        hex"5f4dae7d1683232fb1b070b90aa70583e69ca74d1356d904384a0347b039601a";
+
+    bytes public constant GUARDIAN_AUTHENTICATOR_DATA =
+        hex"49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d97631d00000000";
+
+    string public constant GUARDIAN_CLIENT_DATA_JSON =
+        "{\"type\":\"webauthn.get\",\"challenge\":\"3ZAUZLBtYsFgLqxH9AImHHM9l77We64Qfm94OijjIgw\",\"origin\":\"http://localhost:5173\",\"crossOrigin\":false}";
+
+    uint256 public constant GUARDIAN_CHALLENGE_INDEX = 23;
+    uint256 public constant GUARDIAN_TYPE_INDEX = 1;
+
     function _allowedSelectors() internal pure returns (bytes4[] memory sel) {
         sel = new bytes4[](3);
         sel[0] = 0xa9059cbb;
@@ -203,5 +239,18 @@ contract Base is Test, ISessionkey {
     function _deal() public {
         deal(owner, 10e18);
         deal(sender, 10e18);
+    }
+
+    function _createInitialGuradian() public {
+        pubKeyGuardianEOA = PubKey({
+            x: 0x0000000000000000000000000000000000000000000000000000000000000000,
+            y: 0x0000000000000000000000000000000000000000000000000000000000000000
+        });
+        keyGuardianEOA =
+            Key({pubKey: pubKeyGuardianEOA, eoaAddress: GUARDIAN_EOA_ADDRESS, keyType: KeyType.EOA});
+
+        pubKeyGuardianWebAuthn = PubKey({x: GUARDIAN_PUBLIC_KEY_X, y: GUARDIAN_PUBLIC_KEY_Y});
+        keyGuardianWebAuthn =
+            Key({pubKey: pubKeyGuardianWebAuthn, eoaAddress: address(0), keyType: KeyType.WEBAUTHN});
     }
 }

@@ -35,7 +35,15 @@ contract P256Test is Base {
         entryPoint = IEntryPoint(payable(SEPOLIA_ENTRYPOINT));
         webAuthn = WebAuthnVerifier(payable(SEPOLIA_WEBAUTHN));
 
-        implementation = new OPF7702(address(entryPoint));
+        _createInitialGuradian();
+        implementation = new OPF7702(
+            address(entryPoint),
+            RECOVERY_PERIOD,
+            LOCK_PERIOD,
+            SECURITY_PERIOD,
+            SECURITY_WINDOW,
+            keyGuardianEOA
+        );
         vm.etch(owner, address(implementation).code);
         account = OPF7702(payable(owner));
 
