@@ -35,7 +35,14 @@ import {Test, console2 as console} from "lib/forge-std/src/Test.sol";
  *    == 57943590311362240630886240343495690972153947532773266946162183175043753177960
  */
 contract OPF7702Recoverable is OPF7702, EIP712 layout at 57943590311362240630886240343495690972153947532773266946162183175043753177960 {
+    error OPF7702Recoverable__AccountLocked();
+    error OPF7702Recoverable__DuplicatedProposal();
+    error OPF7702Recoverable__DuplicatedGuardian();
     error OPF7702Recoverable__AddressOrPubKeyCantBeZero();
+    error OPF7702Recoverable__GuardianCannotBeAddressThis();
+    error OPF7702Recoverable__GuardianCanBeOnlyEOAOrWebAuthn();
+    error OPF7702Recoverable__GuardianCannotBeCurrentMasterKey();
+    error OPF7702Recoverable__NewGuardianCanBeOnlyEOAOrWebAuthn();
 
     struct GuardianIdentity {
         bool isActive;
@@ -142,25 +149,30 @@ contract OPF7702Recoverable is OPF7702, EIP712 layout at 57943590311362240630886
     }
 
     function initializeGuardians(Key memory _initialGuardian) private {
-        if (
-            _initialGuardian.eoaAddress == address(0)
-                && (_initialGuardian.pubKey.x == bytes32(0) && _initialGuardian.pubKey.y == bytes32(0))
-        ) revert OPF7702Recoverable__AddressOrPubKeyCantBeZero();
+        _requireNonEmptyGuardian(_initialGuardian);
+        bytes32 gHash = _guardianHash(_initialGuardian);
 
-        bytes32 guradianHash;
-        if (_initialGuardian.keyType == KeyType.EOA) {
-            guradianHash = keccak256(abi.encodePacked(_initialGuardian.eoaAddress));
-        } else if (_initialGuardian.keyType == KeyType.WEBAUTHN) {
-            guradianHash =
-                keccak256(abi.encodePacked(_initialGuardian.pubKey.x, _initialGuardian.pubKey.y));
+        guardiansData.guardians.push(gHash);
+        GuardianIdentity storage gi = guardiansData.data[gHash];
+        gi.isActive = true;
+        gi.index = 0;
+        gi.pending = 0;
+        gi.keyType = _initialGuardian.keyType;
+    }
+
+    function _guardianHash(Key memory _guardian) internal pure returns (bytes32) {
+        if (_guardian.keyType == KeyType.EOA) {
+            return keccak256(abi.encodePacked(_guardian.eoaAddress));
+        } else if (_guardian.keyType == KeyType.WEBAUTHN) {
+            return keccak256(abi.encodePacked(_guardian.pubKey.x, _guardian.pubKey.y));
         }
+        revert OPF7702Recoverable__NewGuardianCanBeOnlyEOAOrWebAuthn();
+    }
 
-        guardiansData.guardians.push(guradianHash);
-        console.logBytes32(guradianHash);
-        guardiansData.data[guradianHash].isActive = true;
-        guardiansData.data[guradianHash].index = 0;
-        guardiansData.data[guradianHash].pending = 0;
-        guardiansData.data[guradianHash].keyType = _initialGuardian.keyType;
+    function _requireNonEmptyGuardian(Key memory _guardian) internal pure {
+        bool hasAddress = _guardian.eoaAddress != address(0);
+        bool hasPubKey = _guardian.pubKey.x != bytes32(0) || _guardian.pubKey.y != bytes32(0);
+        if (!hasAddress && !hasPubKey) revert OPF7702Recoverable__AddressOrPubKeyCantBeZero();
     }
 
     function getGuardians() external view virtual returns (bytes32[] memory) {
@@ -172,8 +184,56 @@ contract OPF7702Recoverable is OPF7702, EIP712 layout at 57943590311362240630886
                 ++i; // gas optimization
             }
         }
-        console.log("inside", guardiansData.guardians.length);
 
         return guardians;
+    }
+
+    function isLocked() public view virtual returns (bool) {
+        return guardiansData.lock > block.timestamp;
+    }
+
+    function isGuardian(Key memory _guardian) public view returns (bool) {
+        bytes32 guradianHash;
+        if (_guardian.keyType == KeyType.EOA) {
+            guradianHash = keccak256(abi.encodePacked(_guardian.eoaAddress));
+        } else if (_guardian.keyType == KeyType.WEBAUTHN) {
+            guradianHash = keccak256(abi.encodePacked(_guardian.pubKey.x, _guardian.pubKey.y));
+        }
+        return guardiansData.data[guradianHash].isActive;
+    }
+
+    function proposeGuardian(Key memory _guardian) external {
+        _requireForExecute();
+        if (isLocked()) revert OPF7702Recoverable__AccountLocked();
+
+        _requireNonEmptyGuardian(_guardian);
+        bytes32 gHash = _guardianHash(_guardian);
+        GuardianIdentity storage gi = guardiansData.data[gHash];
+
+        // 1. Self‑guardian check
+        if (address(this) == _guardian.eoaAddress) {
+            revert OPF7702Recoverable__GuardianCannotBeAddressThis();
+        }
+
+        // 2. Not current master key
+        Key memory mk = getKeyById(0, KeyType.P256);
+        if (_guardian.pubKey.x == mk.pubKey.x && _guardian.pubKey.y == mk.pubKey.y) {
+            revert OPF7702Recoverable__GuardianCannotBeCurrentMasterKey();
+        }
+
+        // 3. Only EOA/WebAuthn
+        if (_guardian.keyType != KeyType.EOA && _guardian.keyType != KeyType.WEBAUTHN) {
+            revert OPF7702Recoverable__NewGuardianCanBeOnlyEOAOrWebAuthn();
+        }
+
+        // 4. Already active?
+        if (gi.isActive) revert OPF7702Recoverable__DuplicatedGuardian();
+
+        // 5. Already pending?
+        if (gi.pending != 0 && block.timestamp <= gi.pending + securityWindow) {
+            revert OPF7702Recoverable__DuplicatedProposal();
+        }
+
+        gi.pending = block.timestamp + securityPeriod;
     }
 }

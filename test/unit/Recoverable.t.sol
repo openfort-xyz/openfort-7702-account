@@ -31,6 +31,11 @@ contract Recoverable is Base {
     Key internal keySK;
     PubKey internal pubKeySK;
 
+    Key internal propose_KeyGuardianEOA;
+    PubKey internal propose_PubKeyGuardianEOA;
+    Key internal propose_keyGuardianWebAuthn;
+    PubKey internal propose_pubKeyGuardianWebAuthn;
+
     /* ─────────────────────────────────────────────────────────────── setup ──── */
     function setUp() public {
         vm.startPrank(sender);
@@ -56,6 +61,7 @@ contract Recoverable is Base {
         _register_SessionKeyEOA();
         _register_SessionKeyP256();
         _register_SessionKeyP256NonKey();
+        _poroposeGuardian();
 
         vm.prank(sender);
         entryPoint.depositTo{value: 0.11e18}(owner);
@@ -76,9 +82,59 @@ contract Recoverable is Base {
                 ++i;
             }
         }
+        bool isActive = account.isGuardian(keyGuardianEOA);
+        console.log("isActive", isActive);
+
+        assertTrue(isActive);
 
         assertEq(guardians[0], keccak256(abi.encodePacked(GUARDIAN_EOA_ADDRESS)));
+
         console.log("/* --------------------------------- test_AfterConstructor -------- */");
+    }
+
+    function test_AfterProposal() external view {
+        console.log("/* --------------------------------- test_AfterProposal -------- */");
+
+        bool isActiveEOA = account.isGuardian(propose_KeyGuardianEOA);
+        console.log("isActiveEOA", isActiveEOA);
+
+        bool isActiveWebAuthn = account.isGuardian(propose_keyGuardianWebAuthn);
+        console.log("isActiveWebAuthn", isActiveWebAuthn);
+
+        assertFalse(isActiveEOA);
+        assertFalse(isActiveWebAuthn);
+        console.log("/* --------------------------------- test_AfterProposal -------- */");
+    }
+
+    function _poroposeGuardian() internal {
+        propose_PubKeyGuardianEOA = PubKey({
+            x: 0x0000000000000000000000000000000000000000000000000000000000000000,
+            y: 0x0000000000000000000000000000000000000000000000000000000000000000
+        });
+        propose_KeyGuardianEOA =
+            Key({pubKey: propose_PubKeyGuardianEOA, eoaAddress: sessionKey, keyType: KeyType.EOA});
+
+        bytes memory code = abi.encodePacked(
+            bytes3(0xef0100),
+            address(implementation) // or your logic contract
+        );
+        vm.etch(owner, code);
+
+        vm.prank(address(entryPoint));
+        account.proposeGuardian(propose_KeyGuardianEOA);
+
+        propose_pubKeyGuardianWebAuthn =
+            PubKey({x: MINT_VALID_PUBLIC_KEY_X, y: MINT_VALID_PUBLIC_KEY_Y});
+        propose_keyGuardianWebAuthn = Key({
+            pubKey: propose_pubKeyGuardianWebAuthn,
+            eoaAddress: address(0),
+            keyType: KeyType.WEBAUTHN
+        });
+
+        vm.etch(owner, code);
+
+        vm.prank(address(entryPoint));
+        account.proposeGuardian(propose_keyGuardianWebAuthn);
     }
 
     function _register_SessionKeyEOA() internal {

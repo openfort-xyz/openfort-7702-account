@@ -37,11 +37,7 @@ contract P256Test is Base {
 
         _createInitialGuradian();
         implementation = new OPF7702(
-            address(entryPoint),
-            RECOVERY_PERIOD,
-            LOCK_PERIOD,
-            SECURITY_PERIOD,
-            SECURITY_WINDOW
+            address(entryPoint), RECOVERY_PERIOD, LOCK_PERIOD, SECURITY_PERIOD, SECURITY_WINDOW
         );
         vm.etch(owner, address(implementation).code);
         account = OPF7702(payable(owner));
@@ -157,7 +153,8 @@ contract P256Test is Base {
         uint256 validUntil = block.timestamp + 1 days;
 
         vm.prank(address(entryPoint));
-        account.initialize(keyMK, spendInfo, _allowedSelectors(), msgHash, sig, validUntil, 1, keyGuardianEOA);
-
+        account.initialize(
+            keyMK, spendInfo, _allowedSelectors(), msgHash, sig, validUntil, 1, keyGuardianEOA
+        );
     }
 }
