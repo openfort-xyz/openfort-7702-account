@@ -45,12 +45,7 @@ contract RegistartionTest is Base {
         _createInitialGuradian();
         /* deploy implementation & bake it into `owner` address */
         implementation = new OPF7702(
-            address(entryPoint),
-            RECOVERY_PERIOD,
-            LOCK_PERIOD,
-            SECURITY_PERIOD,
-            SECURITY_WINDOW,
-            keyGuardianEOA
+            address(entryPoint), RECOVERY_PERIOD, LOCK_PERIOD, SECURITY_PERIOD, SECURITY_WINDOW
         );
         vm.etch(owner, address(implementation).code);
         account = OPF7702(payable(owner));
@@ -457,6 +452,8 @@ contract RegistartionTest is Base {
         uint256 validUntil = block.timestamp + 1 days;
 
         vm.prank(address(entryPoint));
-        account.initialize(keyMK, spendInfo, _allowedSelectors(), msgHash, sig, validUntil, 1);
+        account.initialize(
+            keyMK, spendInfo, _allowedSelectors(), msgHash, sig, validUntil, 1, keyGuardianEOA
+        );
     }
 }

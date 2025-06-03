@@ -60,64 +60,6 @@ contract OPF7702 is Execution, Initializable, WebAuthnVerifier {
     }
 
     /**
-     * @notice Initializes the account with a “master” session key (no spending or whitelist restrictions).
-     * @dev
-     *  • Callable only via EntryPoint or a self-call.
-     *  • Clears previous storage, checks nonce & expiration, verifies signature.
-     *  • Registers the provided `_key` as a master session key:
-     *     - validUntil = max (never expires)
-     *     - validAfter  = 0
-     *     - limit       = 0  (master)
-     *     - whitelisting = false
-     *     - DEAD_ADDRESS placeholder in whitelistedContracts
-     *  • Emits `Initialized(_key)`.
-     *
-     * @param _key              The Key struct (master session key).
-     * @param _spendTokenInfo   Token limit info (ignored for master).
-     * @param _allowedSelectors Unused selectors (ignored for master).
-     * @param _hash             Hash to sign (EIP-712 or UserOp hash).
-     * @param _signature        Signature over `_hash` by this contract.
-     * @param _validUntil       Expiration timestamp for this initialization.
-     * @param _nonce            Nonce to prevent replay.
-     */
-    function initialize(
-        Key calldata _key,
-        SpendTokenInfo calldata _spendTokenInfo,
-        bytes4[] calldata _allowedSelectors,
-        bytes32 _hash,
-        bytes memory _signature,
-        uint256 _validUntil,
-        uint256 _nonce
-    ) external initializer {
-        _requireForExecute();
-        _clearStorage();
-        _validateNonce(_nonce);
-        _notExpired(_validUntil);
-
-        if (!_checkSignature(_hash, _signature)) {
-            revert OpenfortBaseAccount7702V1__InvalidSignature();
-        }
-
-        // record new nonce
-        nonce = _nonce;
-
-        // register masterKey: never expires, no spending/whitelist restrictions
-        registerSessionKey(
-            _key,
-            type(uint48).max, // validUntil = max
-            0, // validAfter = 0
-            0, // limit = 0 (master)
-            false, // no whitelisting
-            DEAD_ADDRESS, // dummy contract address
-            _spendTokenInfo, // token info (ignored)
-            _allowedSelectors, // selectors (ignored)
-            0 // ethLimit = 0
-        );
-
-        emit Initialized(_key);
-    }
-
-    /**
      * @notice EIP-4337 signature validation hook — routes to the correct key type validator.
      * @dev
      *  • Extracts `(KeyType, bytes)` from `userOp.signature`.
