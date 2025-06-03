@@ -44,7 +44,7 @@ import {
  *    0x801ae8efc2175d3d963e799b27e0e948b9a3fa84e2ce105a370245c8c127f368
  *    == 57943590311362240630886240343495690972153947532773266946162183175043753177960
  */
-contract OPF7702 is Execution, Initializable, WebAuthnVerifier layout at 57943590311362240630886240343495690972153947532773266946162183175043753177960 {
+contract OPF7702 is Execution, Initializable, WebAuthnVerifier {
     using ECDSA for bytes32;
 
     /// @notice Address of this implementation contract
