@@ -266,7 +266,7 @@ contract Recoverable is Base {
                 abi.encodePacked(propose_pubKeyGuardianWebAuthn.x, propose_pubKeyGuardianWebAuthn.y)
             )
         );
-        
+
         _revokeGuardian();
         uint256 pendingEOA = account.getPendingStatusGuardians(propose_KeyGuardianEOA);
         uint256 pendingWebAuthn = account.getPendingStatusGuardians(propose_keyGuardianWebAuthn);
@@ -294,7 +294,6 @@ contract Recoverable is Base {
         bool isActiveEOA_After = account.isGuardian(propose_KeyGuardianEOA);
         console.log("isActiveEOA_After", isActiveEOA_After);
         assertTrue(!isActiveEOA_After);
-
 
         assertEq(guardians[0], keccak256(abi.encodePacked(GUARDIAN_EOA_ADDRESS)));
         assertEq(
