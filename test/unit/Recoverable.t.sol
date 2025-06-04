@@ -36,6 +36,8 @@ contract Recoverable is Base {
     Key internal propose_keyGuardianWebAuthn;
     PubKey internal propose_pubKeyGuardianWebAuthn;
 
+    uint256 internal proposalTimestamp;
+
     /* ─────────────────────────────────────────────────────────────── setup ──── */
     function setUp() public {
         vm.startPrank(sender);
@@ -103,6 +105,14 @@ contract Recoverable is Base {
 
         assertFalse(isActiveEOA);
         assertFalse(isActiveWebAuthn);
+
+        uint256 pendingEOA = account.getPendingStatusGuardians(propose_KeyGuardianEOA);
+        uint256 pendingWebAuthn= account.getPendingStatusGuardians(propose_keyGuardianWebAuthn);
+        console.log("pendingEOA", pendingEOA);
+        console.log("pendingWebAuthn", pendingWebAuthn);
+
+        assertEq(pendingEOA, proposalTimestamp + SECURITY_PERIOD);
+        assertEq(pendingWebAuthn, proposalTimestamp + SECURITY_PERIOD);
         console.log("/* --------------------------------- test_AfterProposal -------- */");
     }
 
@@ -119,6 +129,8 @@ contract Recoverable is Base {
             address(implementation) // or your logic contract
         );
         vm.etch(owner, code);
+
+        proposalTimestamp = block.timestamp;
 
         vm.prank(address(entryPoint));
         account.proposeGuardian(propose_KeyGuardianEOA);

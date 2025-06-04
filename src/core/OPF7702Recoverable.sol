@@ -40,7 +40,6 @@ contract OPF7702Recoverable is OPF7702, EIP712 layout at 57943590311362240630886
     error OPF7702Recoverable__DuplicatedGuardian();
     error OPF7702Recoverable__AddressOrPubKeyCantBeZero();
     error OPF7702Recoverable__GuardianCannotBeAddressThis();
-    error OPF7702Recoverable__GuardianCanBeOnlyEOAOrWebAuthn();
     error OPF7702Recoverable__GuardianCannotBeCurrentMasterKey();
     error OPF7702Recoverable__NewGuardianCanBeOnlyEOAOrWebAuthn();
 
@@ -66,13 +65,13 @@ contract OPF7702Recoverable is OPF7702, EIP712 layout at 57943590311362240630886
     bytes32 private constant RECOVER_TYPEHASH =
         0x9f7aca777caf11405930359f601a4db01fad1b2d79ef3f2f9e93c835e9feffa5;
 
+    uint256 internal immutable recoveryPeriod;
+    uint256 internal immutable lockPeriod;
+    uint256 internal immutable securityPeriod;
+    uint256 internal immutable securityWindow;
+
     GuardiansData internal guardiansData;
     RecoveryData public recoveryData;
-
-    uint256 internal recoveryPeriod;
-    uint256 internal lockPeriod;
-    uint256 internal securityPeriod;
-    uint256 internal securityWindow;
 
     constructor(
         address _entryPoint,
@@ -186,6 +185,11 @@ contract OPF7702Recoverable is OPF7702, EIP712 layout at 57943590311362240630886
         }
 
         return guardians;
+    }
+
+    function getPendingStatusGuardians(Key memory _guardian) external view returns (uint256) {
+        bytes32 gHash = _guardianHash(_guardian);
+        return guardiansData.data[gHash].pending;
     }
 
     function isLocked() public view virtual returns (bool) {
