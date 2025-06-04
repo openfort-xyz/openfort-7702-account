@@ -107,7 +107,7 @@ contract Recoverable is Base {
         assertFalse(isActiveWebAuthn);
 
         uint256 pendingEOA = account.getPendingStatusGuardians(propose_KeyGuardianEOA);
-        uint256 pendingWebAuthn= account.getPendingStatusGuardians(propose_keyGuardianWebAuthn);
+        uint256 pendingWebAuthn = account.getPendingStatusGuardians(propose_keyGuardianWebAuthn);
         console.log("pendingEOA", pendingEOA);
         console.log("pendingWebAuthn", pendingWebAuthn);
 
