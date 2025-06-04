@@ -36,11 +36,16 @@ import {Test, console2 as console} from "lib/forge-std/src/Test.sol";
  */
 contract OPF7702Recoverable is OPF7702, EIP712 layout at 57943590311362240630886240343495690972153947532773266946162183175043753177960 {
     error OPF7702Recoverable__AccountLocked();
+    error OPF7702Recoverable__UnknownRevoke();
+    error OPF7702Recoverable__MustBeGuardian();
     error OPF7702Recoverable__UnknownProposal();
     error OPF7702Recoverable__OngoingRecovery();
+    error OPF7702Recoverable__DuplicatedRevoke();
     error OPF7702Recoverable__NoOngoingRecovery();
     error OPF7702Recoverable__DuplicatedProposal();
     error OPF7702Recoverable__DuplicatedGuardian();
+    error OPF7702Recoverable__PendingRevokeNotOver();
+    error OPF7702Recoverable__PendingRevokeExpired();
     error OPF7702Recoverable__PendingProposalExpired();
     error OPF7702Recoverable__PendingProposalNotOver();
     error OPF7702Recoverable__AddressOrPubKeyCantBeZero();
@@ -291,5 +296,48 @@ contract OPF7702Recoverable is OPF7702, EIP712 layout at 57943590311362240630886
         if (gi.isActive) revert OPF7702Recoverable__DuplicatedGuardian();
 
         gi.pending = 0;
+    }
+
+    function revokeGuardian(Key memory _guardian) external {
+        _requireForExecute();
+        if (isLocked()) revert OPF7702Recoverable__AccountLocked();
+
+        bytes32 gHash = _guardianHash(_guardian);
+        GuardianIdentity storage gi = guardiansData.data[gHash];
+
+        if (!gi.isActive) revert OPF7702Recoverable__MustBeGuardian();
+
+        if (gi.pending != 0 && block.timestamp <= gi.pending + securityWindow) {
+            revert OPF7702Recoverable__DuplicatedRevoke();
+        }
+
+        gi.pending = block.timestamp + securityPeriod;
+    }
+
+    function confirmGuardianRevocation(Key memory _guardian) external {
+        _requireForExecute();
+        if (isLocked()) revert OPF7702Recoverable__AccountLocked();
+
+        bytes32 gHash = _guardianHash(_guardian);
+        GuardianIdentity storage gi = guardiansData.data[gHash];
+
+        if (gi.pending == 0) revert OPF7702Recoverable__UnknownRevoke();
+        if (block.timestamp < gi.pending) revert OPF7702Recoverable__PendingRevokeNotOver();
+        if (block.timestamp > gi.pending + securityWindow) {
+            revert OPF7702Recoverable__PendingRevokeExpired();
+        }
+        if (!gi.isActive) revert OPF7702Recoverable__MustBeGuardian();
+
+        uint256 lastIndex = guardiansData.guardians.length - 1;
+        bytes32 lastHash = guardiansData.guardians[lastIndex];
+        uint256 targetIndex = gi.index;
+
+        if (gHash != lastHash) {
+            guardiansData.guardians[targetIndex] = lastHash;
+            guardiansData.data[lastHash].index = targetIndex;
+        }
+        guardiansData.guardians.pop();
+
+        delete guardiansData.data[gHash];
     }
 }
