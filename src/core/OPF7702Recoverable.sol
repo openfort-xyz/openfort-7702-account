@@ -340,4 +340,17 @@ contract OPF7702Recoverable is OPF7702, EIP712 layout at 57943590311362240630886
 
         delete guardiansData.data[gHash];
     }
+
+    function cancelGuardianRevocation(Key memory _guardian) external {
+        _requireForExecute();
+        if (isLocked()) revert OPF7702Recoverable__AccountLocked();
+
+        bytes32 gHash = _guardianHash(_guardian);
+        GuardianIdentity storage gi = guardiansData.data[gHash];
+
+        if (!gi.isActive) revert OPF7702Recoverable__MustBeGuardian();
+        if (gi.pending == 0) revert OPF7702Recoverable__UnknownRevoke();
+
+        guardiansData.data[gHash].pending = 0;
+    }
 }
