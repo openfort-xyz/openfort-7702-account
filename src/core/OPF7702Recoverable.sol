@@ -14,7 +14,9 @@
 pragma solidity ^0.8.29;
 
 import {OPF7702} from "src/core/OPF7702.sol";
+import {Math} from "lib/openzeppelin-contracts/contracts/utils/math/Math.sol";
 import {EIP712} from "lib/openzeppelin-contracts/contracts/utils/cryptography/EIP712.sol";
+import {SafeCast} from "lib/openzeppelin-contracts/contracts/utils/math/SafeCast.sol";
 import {Test, console2 as console} from "lib/forge-std/src/Test.sol";
 
 /**
@@ -46,6 +48,7 @@ contract OPF7702Recoverable is OPF7702, EIP712 layout at 57943590311362240630886
     error OPF7702Recoverable__DuplicatedGuardian();
     error OPF7702Recoverable__PendingRevokeNotOver();
     error OPF7702Recoverable__PendingRevokeExpired();
+    error OPF7702Recoverable__GuardianCannotBeOwner();
     error OPF7702Recoverable__PendingProposalExpired();
     error OPF7702Recoverable__PendingProposalNotOver();
     error OPF7702Recoverable__AddressOrPubKeyCantBeZero();
@@ -216,6 +219,10 @@ contract OPF7702Recoverable is OPF7702, EIP712 layout at 57943590311362240630886
         return guardiansData.data[guradianHash].isActive;
     }
 
+    function guardianCount() public view virtual returns (uint256) {
+        return guardiansData.guardians.length;
+    }
+
     function _requireRecovery(bool _isRecovery) internal view {
         if (_isRecovery && recoveryData.executeAfter == 0) {
             revert OPF7702Recoverable__NoOngoingRecovery();
@@ -223,6 +230,10 @@ contract OPF7702Recoverable is OPF7702, EIP712 layout at 57943590311362240630886
         if (!_isRecovery && recoveryData.executeAfter > 0) {
             revert OPF7702Recoverable__OngoingRecovery();
         }
+    }
+
+    function _setLock(uint256 _releaseAfter) internal {
+        guardiansData.lock = _releaseAfter;
     }
 
     function proposeGuardian(Key memory _guardian) external {
@@ -352,5 +363,25 @@ contract OPF7702Recoverable is OPF7702, EIP712 layout at 57943590311362240630886
         if (gi.pending == 0) revert OPF7702Recoverable__UnknownRevoke();
 
         guardiansData.data[gHash].pending = 0;
+    }
+
+    function startRecovery(Key memory _recoveryKey, Key memory _guardian) external virtual {
+        // Todo: Must _requireForExecute(); ?? or  _requireForExecuteOrGuardian();
+        // Many Options to run startRecovery() :
+        // ---------------->    EOA Guardian                      ----> Yes ----> Epoint/Relay  ----> msg.sender  ----> _requireForExecute();
+        //                                      ----> If Sponsored
+        // ----------------> WebAuthn Guardian                    ----> No  ----> Direct Engn.  ----> ?msg.sender? : A. msg.sender == EOA Guardian || B. WebAuthn Guardian???
+        _requireRecovery(false);
+        if (isLocked()) revert OPF7702Recoverable__AccountLocked();
+        if (!isGuardian(_guardian)) revert OPF7702Recoverable__MustBeGuardian();
+        _requireNonEmptyGuardian(_recoveryKey);
+        if (isGuardian(_recoveryKey)) revert OPF7702Recoverable__GuardianCannotBeOwner();
+        uint64 executeAfter = SafeCast.toUint64(block.timestamp + recoveryPeriod);
+        uint32 quorum = SafeCast.toUint32(Math.ceilDiv(guardianCount(), 2));
+
+        recoveryData =
+            RecoveryData({key: _recoveryKey, executeAfter: executeAfter, guardiansRequired: quorum});
+
+        _setLock(block.timestamp + lockPeriod);
     }
 }

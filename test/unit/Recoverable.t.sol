@@ -5,8 +5,10 @@ pragma solidity ^0.8.29;
 import {Base} from "test/Base.sol";
 import {Test, console2 as console} from "lib/forge-std/src/Test.sol";
 import {EfficientHashLib} from "lib/solady/src/utils/EfficientHashLib.sol";
+import {Math} from "lib/openzeppelin-contracts/contracts/utils/math/Math.sol";
 import {EntryPoint} from "lib/account-abstraction/contracts/core/EntryPoint.sol";
 import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
+import {SafeCast} from "lib/openzeppelin-contracts/contracts/utils/math/SafeCast.sol";
 import {IEntryPoint} from "lib/account-abstraction/contracts/interfaces/IEntryPoint.sol";
 
 import {OPF7702Recoverable as OPF7702} from "src/core/OPF7702Recoverable.sol";
@@ -35,6 +37,8 @@ contract Recoverable is Base {
     PubKey internal propose_PubKeyGuardianEOA;
     Key internal propose_keyGuardianWebAuthn;
     PubKey internal propose_pubKeyGuardianWebAuthn;
+    Key internal recovery_keyEOA;
+    PubKey internal recovery_pubKeyEOA;
 
     uint256 internal proposalTimestamp;
 
@@ -281,7 +285,8 @@ contract Recoverable is Base {
         _cancelGuardianRevocation();
 
         uint256 pendingEOA_After = account.getPendingStatusGuardians(propose_KeyGuardianEOA);
-        uint256 pendingWebAuthn_After = account.getPendingStatusGuardians(propose_keyGuardianWebAuthn);
+        uint256 pendingWebAuthn_After =
+            account.getPendingStatusGuardians(propose_keyGuardianWebAuthn);
 
         assertEq(pendingEOA_After, 0);
         assertEq(pendingWebAuthn_After, 0);
@@ -379,6 +384,21 @@ contract Recoverable is Base {
         console.log("/* --------------------------------- test_RevokeGuardian -------- */");
     }
 
+    function test_StartRecovery() external {
+        _confirmGuardian();
+        _startRecovery();
+
+        (Key memory k, uint64 executeAfter, uint32 guardiansRequired) = account.recoveryData();
+        console.log("r.key.eoaAddress", k.eoaAddress);
+        console.log("executeAfter", executeAfter);
+        console.log("guardiansRequired", guardiansRequired);
+
+        assertEq(k.eoaAddress, sender);
+        assertEq(SafeCast.toUint64(block.timestamp + RECOVERY_PERIOD), executeAfter);
+        assertEq(SafeCast.toUint32(Math.ceilDiv(account.guardianCount(), 2)), guardiansRequired);
+
+    }
+
     function _poroposeGuardian() internal {
         propose_PubKeyGuardianEOA = PubKey({
             x: 0x0000000000000000000000000000000000000000000000000000000000000000,
@@ -446,7 +466,6 @@ contract Recoverable is Base {
         vm.prank(address(entryPoint));
         account.confirmGuardianProposal(propose_keyGuardianWebAuthn);
     }
-
 
     function _revokeGuardian() internal {
         propose_PubKeyGuardianEOA = PubKey({
@@ -577,6 +596,25 @@ contract Recoverable is Base {
 
         vm.prank(address(entryPoint));
         account.cancelGuardianProposal(propose_keyGuardianWebAuthn);
+    }
+
+    function _startRecovery() internal {
+        recovery_pubKeyEOA = PubKey({
+            x: 0x0000000000000000000000000000000000000000000000000000000000000000,
+            y: 0x0000000000000000000000000000000000000000000000000000000000000000
+        });
+        recovery_keyEOA =
+            Key({pubKey: propose_PubKeyGuardianEOA, eoaAddress: sender, keyType: KeyType.EOA});
+
+        bytes memory code = abi.encodePacked(
+            bytes3(0xef0100),
+            address(implementation) // or your logic contract
+        );
+
+        vm.etch(owner, code);
+
+        vm.prank(address(entryPoint));
+        account.startRecovery(recovery_keyEOA, propose_keyGuardianWebAuthn);
     }
 
     function _register_SessionKeyEOA() internal {
