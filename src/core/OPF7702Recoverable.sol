@@ -52,6 +52,7 @@ contract OPF7702Recoverable is OPF7702, EIP712 layout at 57943590311362240630886
     error OPF7702Recoverable__PendingRevokeNotOver();
     error OPF7702Recoverable__PendingRevokeExpired();
     error OPF7702Recoverable__GuardianCannotBeOwner();
+    error OPF7702Recoverable__NoGuardiansSetOnWallet();
     error OPF7702Recoverable__PendingProposalExpired();
     error OPF7702Recoverable__InvalidSignatureAmount();
     error OPF7702Recoverable__PendingProposalNotOver();
@@ -378,9 +379,12 @@ contract OPF7702Recoverable is OPF7702, EIP712 layout at 57943590311362240630886
         // ----------------> WebAuthn Guardian                    ----> No  ----> Direct Engn.  ----> ?msg.sender? : A. msg.sender == EOA Guardian || B. WebAuthn Guardian???
         _requireRecovery(false);
         if (isLocked()) revert OPF7702Recoverable__AccountLocked();
+
         if (!isGuardian(_guardian)) revert OPF7702Recoverable__MustBeGuardian();
+
         _requireNonEmptyGuardian(_recoveryKey);
         if (isGuardian(_recoveryKey)) revert OPF7702Recoverable__GuardianCannotBeOwner();
+
         uint64 executeAfter = SafeCast.toUint64(block.timestamp + recoveryPeriod);
         uint32 quorum = SafeCast.toUint32(Math.ceilDiv(guardianCount(), 2));
 
@@ -392,15 +396,17 @@ contract OPF7702Recoverable is OPF7702, EIP712 layout at 57943590311362240630886
 
     function completeRecovery(bytes[] calldata _signatures) external virtual {
         _requireRecovery(true);
-        if (recoveryData.executeAfter > SafeCast.toUint32(block.timestamp)) {
+
+        RecoveryData memory r = recoveryData;
+
+        if (r.executeAfter > block.timestamp) {
             revert OPF7702Recoverable__OngoingRecovery();
         }
 
-        require(recoveryData.guardiansRequired > 0, "No guardians set on wallet");
-        if (recoveryData.guardiansRequired != _signatures.length) {
+        require(r.guardiansRequired > 0, OPF7702Recoverable__NoGuardiansSetOnWallet());
+        if (r.guardiansRequired != _signatures.length) {
             revert OPF7702Recoverable__InvalidSignatureAmount();
         }
-
         if (!_validateSignatures(_signatures)) {
             revert OPF7702Recoverable__InvalidRecoverySignatures();
         }
@@ -513,7 +519,6 @@ contract OPF7702Recoverable is OPF7702, EIP712 layout at 57943590311362240630886
         bytes32 s,
         PubKey memory pubKey
     ) external pure returns (bytes memory) {
-
         bytes memory payload = abi.encode(
             challenge,
             requireUserVerification,
