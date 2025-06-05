@@ -21,7 +21,8 @@ contract Base is Test, ISessionkey {
     address constant TOKEN = 0x9C0b94fb071Ed4066d7C18F4b68968e311A66209;
     address constant ETH_RECIVE = 0xCdB635ee58926769ee2789fA0942Ef04A4ae9d16;
     uint256 constant ETH_LIMIT = 1e18;
-
+    bytes32 constant RECOVER_TYPEHASH =
+        0x9f7aca777caf11405930359f601a4db01fad1b2d79ef3f2f9e93c835e9feffa5;
     uint256 constant RECOVERY_PERIOD = 2 days;
     uint256 constant LOCK_PERIOD = 5 days;
     uint256 constant SECURITY_PERIOD = 1.5 days;
@@ -66,7 +67,7 @@ contract Base is Test, ISessionkey {
     bytes32 constant MINT_VALID_PUBLIC_KEY_Y =
         hex"a1a3260ee81d1036cf9fea854c55f1d02cc869d365340d900a1191a9e32e7eee";
 
-    bytes public constant MINT_CHALLENGE =
+    bytes32 public constant MINT_CHALLENGE =
         hex"ba609dbeed0e0f8c94f3c69042c0a1b93aab17685eadcb2e45ad95e066062b68";
 
     bytes32 public constant MINT_VALID_SIGNATURE_R =

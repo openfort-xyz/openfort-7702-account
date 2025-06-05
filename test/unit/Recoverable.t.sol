@@ -9,6 +9,7 @@ import {Math} from "lib/openzeppelin-contracts/contracts/utils/math/Math.sol";
 import {EntryPoint} from "lib/account-abstraction/contracts/core/EntryPoint.sol";
 import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {SafeCast} from "lib/openzeppelin-contracts/contracts/utils/math/SafeCast.sol";
+import {ECDSA} from "lib/openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
 import {IEntryPoint} from "lib/account-abstraction/contracts/interfaces/IEntryPoint.sol";
 
 import {OPF7702Recoverable as OPF7702} from "src/core/OPF7702Recoverable.sol";
@@ -396,6 +397,47 @@ contract Recoverable is Base {
         assertEq(k.eoaAddress, sender);
         assertEq(SafeCast.toUint64(block.timestamp + RECOVERY_PERIOD), executeAfter);
         assertEq(SafeCast.toUint32(Math.ceilDiv(account.guardianCount(), 2)), guardiansRequired);
+    }
+
+    function test_CompleteRecovery() external {
+        _confirmGuardian();
+        _startRecovery();
+
+        (Key memory k, uint64 executeAfter, uint32 guardiansRequired) = account.recoveryData();
+        console.log("r.key.eoaAddress", k.eoaAddress);
+        console.log("executeAfter", executeAfter);
+        console.log("guardiansRequired", guardiansRequired);
+
+        assertEq(k.eoaAddress, sender);
+        assertEq(SafeCast.toUint64(block.timestamp + RECOVERY_PERIOD), executeAfter);
+        assertEq(SafeCast.toUint32(Math.ceilDiv(account.guardianCount(), 2)), guardiansRequired);
+
+        bytes[] memory sigs = new bytes[](2);
+
+        bytes32 digest = account.getDigestToSign();
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(sessionKeyPk, digest);
+
+        bytes memory sig = abi.encodePacked(r, s, v);
+        bytes memory encoded = account.encodeEOASignature(sig);
+        sigs[0] = encoded;
+
+        bytes memory sig_wAuthn = account.encodeWebAuthnSignatureGuardian(
+            MINT_CHALLENGE,
+            true,
+            MINT_AUTHENTICATOR_DATA,
+            MINT_CLIENT_DATA_JSON,
+            MINT_CHALLENGE_INDEX,
+            MINT_TYPE_INDEX,
+            MINT_VALID_SIGNATURE_R,
+            MINT_VALID_SIGNATURE_S,
+            propose_pubKeyGuardianWebAuthn
+        );
+        sigs[1] = sig_wAuthn;
+
+        vm.warp(block.timestamp + RECOVERY_PERIOD + 1);
+
+        vm.prank(address(entryPoint));
+        account.completeRecovery(sigs);
     }
 
     function _poroposeGuardian() internal {

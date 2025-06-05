@@ -405,7 +405,7 @@ contract OPF7702Recoverable is OPF7702, EIP712 layout at 57943590311362240630886
             revert OPF7702Recoverable__InvalidRecoverySignatures();
         }
 
-        Key memory recoveryOwner = recoveryData.key;
+        // Key memory recoveryOwner = recoveryData.key;
         delete recoveryData;
 
         // Todo: Change the Admin key of index 0 in the sessionKeys or sessionKeysEOA for new Master Key
@@ -413,7 +413,7 @@ contract OPF7702Recoverable is OPF7702, EIP712 layout at 57943590311362240630886
         _setLock(0);
     }
 
-    function _validateSignatures(bytes[] calldata _signatures) internal view returns (bool) {
+    function _validateSignatures(bytes[] calldata _signatures) internal returns (bool) {
         bytes32 digest = _hashTypedDataV4(
             keccak256(
                 abi.encode(
@@ -468,6 +468,12 @@ contract OPF7702Recoverable is OPF7702, EIP712 layout at 57943590311362240630886
                         )
                     ) return false;
 
+                    if (usedChallenges[challenge]) {
+                        return false;
+                    }
+
+                    usedChallenges[challenge] = true;
+
                     guardianHash = keccak256(abi.encodePacked(pubKey.x, pubKey.y));
                 } else {
                     return false;
@@ -496,8 +502,8 @@ contract OPF7702Recoverable is OPF7702, EIP712 layout at 57943590311362240630886
      * @param pubKey Public key used for signing
      * @return Encoded signature data
      */
-    function encodeWebAuthnSignature(
-        bytes memory challenge,
+    function encodeWebAuthnSignatureGuardian(
+        bytes32 challenge,
         bool requireUserVerification,
         bytes memory authenticatorData,
         string memory clientDataJSON,
@@ -507,8 +513,8 @@ contract OPF7702Recoverable is OPF7702, EIP712 layout at 57943590311362240630886
         bytes32 s,
         PubKey memory pubKey
     ) external pure returns (bytes memory) {
-        return abi.encode(
-            KeyType.WEBAUTHN,
+
+        bytes memory payload = abi.encode(
             challenge,
             requireUserVerification,
             authenticatorData,
@@ -519,5 +525,20 @@ contract OPF7702Recoverable is OPF7702, EIP712 layout at 57943590311362240630886
             s,
             pubKey
         );
+
+        return abi.encode(KeyType.WEBAUTHN, payload);
+    }
+
+    function getDigestToSign() external view returns (bytes32 digest) {
+        bytes32 structHash = keccak256(
+            abi.encode(
+                RECOVER_TYPEHASH,
+                recoveryData.key,
+                recoveryData.executeAfter,
+                recoveryData.guardiansRequired
+            )
+        );
+
+        digest = _hashTypedDataV4(structHash);
     }
 }
