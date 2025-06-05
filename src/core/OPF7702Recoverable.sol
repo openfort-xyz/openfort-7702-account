@@ -15,8 +15,9 @@ pragma solidity ^0.8.29;
 
 import {OPF7702} from "src/core/OPF7702.sol";
 import {Math} from "lib/openzeppelin-contracts/contracts/utils/math/Math.sol";
-import {EIP712} from "lib/openzeppelin-contracts/contracts/utils/cryptography/EIP712.sol";
 import {SafeCast} from "lib/openzeppelin-contracts/contracts/utils/math/SafeCast.sol";
+import {ECDSA} from "lib/openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
+import {EIP712} from "lib/openzeppelin-contracts/contracts/utils/cryptography/EIP712.sol";
 import {Test, console2 as console} from "lib/forge-std/src/Test.sol";
 
 /**
@@ -37,6 +38,8 @@ import {Test, console2 as console} from "lib/forge-std/src/Test.sol";
  *    == 57943590311362240630886240343495690972153947532773266946162183175043753177960
  */
 contract OPF7702Recoverable is OPF7702, EIP712 layout at 57943590311362240630886240343495690972153947532773266946162183175043753177960 {
+    using ECDSA for bytes32;
+
     error OPF7702Recoverable__AccountLocked();
     error OPF7702Recoverable__UnknownRevoke();
     error OPF7702Recoverable__MustBeGuardian();
@@ -50,7 +53,9 @@ contract OPF7702Recoverable is OPF7702, EIP712 layout at 57943590311362240630886
     error OPF7702Recoverable__PendingRevokeExpired();
     error OPF7702Recoverable__GuardianCannotBeOwner();
     error OPF7702Recoverable__PendingProposalExpired();
+    error OPF7702Recoverable__InvalidSignatureAmount();
     error OPF7702Recoverable__PendingProposalNotOver();
+    error OPF7702Recoverable__InvalidRecoverySignatures();
     error OPF7702Recoverable__AddressOrPubKeyCantBeZero();
     error OPF7702Recoverable__GuardianCannotBeAddressThis();
     error OPF7702Recoverable__GuardianCannotBeCurrentMasterKey();
@@ -383,5 +388,136 @@ contract OPF7702Recoverable is OPF7702, EIP712 layout at 57943590311362240630886
             RecoveryData({key: _recoveryKey, executeAfter: executeAfter, guardiansRequired: quorum});
 
         _setLock(block.timestamp + lockPeriod);
+    }
+
+    function completeRecovery(bytes[] calldata _signatures) external virtual {
+        _requireRecovery(true);
+        if (recoveryData.executeAfter > SafeCast.toUint32(block.timestamp)) {
+            revert OPF7702Recoverable__OngoingRecovery();
+        }
+
+        require(recoveryData.guardiansRequired > 0, "No guardians set on wallet");
+        if (recoveryData.guardiansRequired != _signatures.length) {
+            revert OPF7702Recoverable__InvalidSignatureAmount();
+        }
+
+        if (!_validateSignatures(_signatures)) {
+            revert OPF7702Recoverable__InvalidRecoverySignatures();
+        }
+
+        Key memory recoveryOwner = recoveryData.key;
+        delete recoveryData;
+
+        // Todo: Change the Admin key of index 0 in the sessionKeys or sessionKeysEOA for new Master Key
+        // _transferOwnership(recoveryOwner);
+        _setLock(0);
+    }
+
+    function _validateSignatures(bytes[] calldata _signatures) internal view returns (bool) {
+        bytes32 digest = _hashTypedDataV4(
+            keccak256(
+                abi.encode(
+                    RECOVER_TYPEHASH,
+                    recoveryData.key,
+                    recoveryData.executeAfter,
+                    recoveryData.guardiansRequired
+                )
+            )
+        );
+
+        bytes32 lastGuardianHash;
+
+        unchecked {
+            for (uint256 i; i < _signatures.length; ++i) {
+                (KeyType sigType, bytes memory sigData) =
+                    abi.decode(_signatures[i], (KeyType, bytes));
+
+                bytes32 guardianHash;
+
+                if (sigType == KeyType.EOA) {
+                    address signer = digest.recover(sigData);
+                    guardianHash = keccak256(abi.encodePacked(signer));
+                } else if (sigType == KeyType.WEBAUTHN) {
+                    (
+                        bytes32 challenge,
+                        bool requireUV,
+                        bytes memory authenticatorData,
+                        string memory clientDataJSON,
+                        uint256 challengeIndex,
+                        uint256 typeIndex,
+                        bytes32 r,
+                        bytes32 s,
+                        PubKey memory pubKey
+                    ) = abi.decode(
+                        sigData,
+                        (bytes32, bool, bytes, string, uint256, uint256, bytes32, bytes32, PubKey)
+                    );
+
+                    if (
+                        !verifySoladySignature(
+                            challenge,
+                            requireUV,
+                            authenticatorData,
+                            clientDataJSON,
+                            challengeIndex,
+                            typeIndex,
+                            r,
+                            s,
+                            pubKey.x,
+                            pubKey.y
+                        )
+                    ) return false;
+
+                    guardianHash = keccak256(abi.encodePacked(pubKey.x, pubKey.y));
+                } else {
+                    return false;
+                }
+
+                if (!guardiansData.data[guardianHash].isActive) return false;
+
+                if (guardianHash <= lastGuardianHash) return false;
+                lastGuardianHash = guardianHash;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * @notice Encodes WebAuthn signature data for use in transaction submission
+     * @param challenge Challenge that was signed
+     * @param requireUserVerification Whether user verification is required
+     * @param authenticatorData Authenticator data from WebAuthn
+     * @param clientDataJSON Client data JSON from WebAuthn
+     * @param challengeIndex Index of challenge in client data
+     * @param typeIndex Index of type in client data
+     * @param r R component of the signature
+     * @param s S component of the signature
+     * @param pubKey Public key used for signing
+     * @return Encoded signature data
+     */
+    function encodeWebAuthnSignature(
+        bytes memory challenge,
+        bool requireUserVerification,
+        bytes memory authenticatorData,
+        string memory clientDataJSON,
+        uint256 challengeIndex,
+        uint256 typeIndex,
+        bytes32 r,
+        bytes32 s,
+        PubKey memory pubKey
+    ) external pure returns (bytes memory) {
+        return abi.encode(
+            KeyType.WEBAUTHN,
+            challenge,
+            requireUserVerification,
+            authenticatorData,
+            clientDataJSON,
+            challengeIndex,
+            typeIndex,
+            r,
+            s,
+            pubKey
+        );
     }
 }

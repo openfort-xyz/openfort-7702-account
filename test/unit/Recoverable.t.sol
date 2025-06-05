@@ -396,7 +396,6 @@ contract Recoverable is Base {
         assertEq(k.eoaAddress, sender);
         assertEq(SafeCast.toUint64(block.timestamp + RECOVERY_PERIOD), executeAfter);
         assertEq(SafeCast.toUint32(Math.ceilDiv(account.guardianCount(), 2)), guardiansRequired);
-
     }
 
     function _poroposeGuardian() internal {
