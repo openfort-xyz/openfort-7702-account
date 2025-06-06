@@ -29,6 +29,8 @@ abstract contract KeysManager is BaseOPF7702, ISessionkey, SpendLimit {
 
     /// @notice Thrown when a timestamp provided for session key validity is invalid
     error SessionKeyManager__InvalidTimestamp();
+    /// @notice Thrown when registration does not include any usage or spend limits
+    error SessionKeyManager__MustIncludeLimits();
     /// @notice Thrown when an address parameter expected to be non-zero is zero
     error SessionKeyManager__AddressCantBeZero();
     /// @notice Thrown when attempting to revoke or query a session key that is already inactive
@@ -52,8 +54,10 @@ abstract contract KeysManager is BaseOPF7702, ISessionkey, SpendLimit {
     // =============================================================
 
     /// @notice Incremental ID for WebAuthn/P256/P256NONKEY session keys
+    /// @dev Id = 0 always saved for MasterKey (Admin)
     uint256 public id;
     /// @notice Incremental ID for EOA session keys
+    /// @dev idEOA = 0 always saved for MasterKey (Admin)
     uint256 public idEOA;
 
     /// @notice Mapping from session key ID to Key struct (WebAuthn/P256/P256NONKEY)
@@ -97,7 +101,7 @@ abstract contract KeysManager is BaseOPF7702, ISessionkey, SpendLimit {
      *                         • For EOA: `eoaAddress` must be non‐zero.
      * @param _validUntil      UNIX timestamp after which this session key is invalid.
      * @param _validAfter      UNIX timestamp before which this session key is not valid.
-     * @param _limit           Maximum number of transactions allowed (0 = unlimited/master).
+     * @param _limit           Maximum number of transactions allowed.
      * @param _whitelisting    If true, restrict calls to whitelisted contracts/tokens.
      * @param _contractAddress Initial contract to whitelist (ignored if !_whitelisting).
      * @param _spendTokenInfo  Struct specifying ERC‐20 token spending limit:
@@ -118,6 +122,8 @@ abstract contract KeysManager is BaseOPF7702, ISessionkey, SpendLimit {
         uint256 _ethLimit
     ) public {
         _requireForExecute();
+        // Must have limit checks to prevent register masterKey
+        if (_limit == 0) revert SessionKeyManager__MustIncludeLimits();
 
         // Validate timestamps
         if (_validUntil <= block.timestamp || _validAfter > _validUntil) {
@@ -227,9 +233,9 @@ abstract contract KeysManager is BaseOPF7702, ISessionkey, SpendLimit {
      */
     function revokeAllSessionKeys() external {
         _requireForExecute();
-
+        /// @dev i = 1 --> id = 0 always saved for MasterKey (Admin)
         // Revoke WebAuthn/P256/P256NONKEY keys
-        for (uint256 i = 0; i < id;) {
+        for (uint256 i = 1; i < id;) {
             Key memory k = idSessionKeys[i];
             KeyType kt = k.keyType;
             if (kt == KeyType.WEBAUTHN || kt == KeyType.P256 || kt == KeyType.P256NONKEY) {
@@ -243,8 +249,9 @@ abstract contract KeysManager is BaseOPF7702, ISessionkey, SpendLimit {
             }
         }
 
+        /// @dev i = j --> idEOA = 0 always saved for MasterKey (Admin)
         // Revoke EOA keys
-        for (uint256 j = 0; j < idEOA;) {
+        for (uint256 j = 1; j < idEOA;) {
             Key memory k = idSessionKeysEOA[j];
             if (k.keyType == KeyType.EOA && k.eoaAddress != address(0)) {
                 bytes32 eoaId = keccak256(abi.encodePacked(k.eoaAddress));
@@ -280,14 +287,14 @@ abstract contract KeysManager is BaseOPF7702, ISessionkey, SpendLimit {
      */
     function _addSessionKey(
         SessionKey storage sKey,
-        Key calldata _key,
+        Key memory _key,
         uint48 _validUntil,
         uint48 _validAfter,
         uint48 _limit,
         bool _whitelisting,
         address _contractAddress,
-        SpendTokenInfo calldata _spendTokenInfo,
-        bytes4[] calldata _allowedSelectors,
+        SpendTokenInfo memory _spendTokenInfo,
+        bytes4[] memory _allowedSelectors,
         uint256 _ethLimit
     ) internal {
         sKey.pubKey = _key.pubKey;

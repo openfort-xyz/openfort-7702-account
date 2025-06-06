@@ -28,5 +28,5 @@ RegistartionTest:test_ExecuteSKP256() (gas: 821108)
 RegistartionTest:test_ExecuteSKP256NonKey() (gas: 825960)
 RegistartionTest:test_getKeyById_zero() (gas: 55775)
 
-KeysTest:test_RevokeALL() (gas: 1722289))
+KeysTest:test_RevokeALL() (gas: 1722289)
 KeysTest:test_RevokeByID() (gas: 176438)
