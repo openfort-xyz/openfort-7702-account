@@ -404,6 +404,36 @@ contract Recoverable is Base {
         console.log("/* --------------------------------- test_StartRecovery -------- */");
     }
 
+    function test_CancelRecovery() external {
+        console.log("/* --------------------------------- test_CancelRecovery -------- */");
+
+        _confirmGuardian();
+        _startRecovery();
+
+        (Key memory k, uint64 executeAfter, uint32 guardiansRequired) = account.recoveryData();
+        console.log("r.key.eoaAddress", k.eoaAddress);
+        console.log("executeAfter", executeAfter);
+        console.log("guardiansRequired", guardiansRequired);
+
+        assertEq(k.eoaAddress, sender);
+        assertEq(SafeCast.toUint64(block.timestamp + RECOVERY_PERIOD), executeAfter);
+        assertEq(SafeCast.toUint32(Math.ceilDiv(account.guardianCount(), 2)), guardiansRequired);
+
+        vm.prank(address(entryPoint));
+        account.cancelRecovery();
+
+        (Key memory k_After, uint64 executeAfter_After, uint32 guardiansRequired_After) =
+            account.recoveryData();
+        console.log("r_After.key.eoaAddress", k_After.eoaAddress);
+        console.log("executeAfter_After", executeAfter_After);
+        console.log("guardiansRequired_After", guardiansRequired_After);
+
+        assertEq(k_After.eoaAddress, address(0));
+        assertEq(0, executeAfter_After);
+        assertEq(0, guardiansRequired_After);
+        console.log("/* --------------------------------- test_CancelRecovery -------- */");
+    }
+
     function test_CompleteRecoveryToEOA() external {
         console.log("/* --------------------------------- test_CompleteRecoveryToEOA -------- */");
 

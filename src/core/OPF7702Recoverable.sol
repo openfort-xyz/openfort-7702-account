@@ -149,8 +149,12 @@ contract OPF7702Recoverable is OPF7702, EIP712 layout at 57943590311362240630886
         // record new nonce
         nonce = _nonce;
 
+        bytes32 keyId = keccak256(abi.encodePacked(_key.pubKey.x, _key.pubKey.y));
+        SessionKey storage sKey = sessionKeys[keyId];
+        idSessionKeys[0] = _key;
         // register masterKey: never expires, no spending/whitelist restrictions
-        registerSessionKey(
+        _addSessionKey(
+            sKey,
             _key,
             type(uint48).max, // validUntil = max
             0, // validAfter = 0
@@ -161,8 +165,10 @@ contract OPF7702Recoverable is OPF7702, EIP712 layout at 57943590311362240630886
             _allowedSelectors, // selectors (ignored)
             0 // ethLimit = 0
         );
-
-        idEOA = 1;
+        unchecked {
+                    ++idEOA;
+        ++id;
+        }
 
         initializeGuardians(_initialGuardian);
 
@@ -560,6 +566,13 @@ contract OPF7702Recoverable is OPF7702, EIP712 layout at 57943590311362240630886
         }
 
         return true;
+    }
+
+    function cancelRecovery() external {
+        _requireForExecute();
+        _requireRecovery(true);
+        delete recoveryData;
+        _setLock(0);
     }
 
     /**
