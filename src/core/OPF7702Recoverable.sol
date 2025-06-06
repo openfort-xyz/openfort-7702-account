@@ -18,12 +18,11 @@ import {Math} from "lib/openzeppelin-contracts/contracts/utils/math/Math.sol";
 import {SafeCast} from "lib/openzeppelin-contracts/contracts/utils/math/SafeCast.sol";
 import {ECDSA} from "lib/openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
 import {EIP712} from "lib/openzeppelin-contracts/contracts/utils/cryptography/EIP712.sol";
-import {Test, console2 as console} from "lib/forge-std/src/Test.sol";
 
 /**
  * @title   Openfort Base Account 7702 with ERC-4337 Support
  * @author  Openfort — https://openfort.xyz
- * @notice  Smart contract wallet implementing EIP-7702 + ERC-4337 + multi-format session keys.
+ * @notice  Smart contract wallet implementing EIP-7702 + ERC-4337 with guardian-based recovery and multi-format session keys.
  * @dev
  *  • EIP-4337 integration via EntryPoint
  *  • EIP-7702 support (e.g., setCode)
@@ -40,41 +39,84 @@ import {Test, console2 as console} from "lib/forge-std/src/Test.sol";
 contract OPF7702Recoverable is OPF7702, EIP712 layout at 57943590311362240630886240343495690972153947532773266946162183175043753177960 {
     using ECDSA for bytes32;
 
+    // ──────────────────────────────────────────────────────────────────────────────
+    //                                 Errors
+    // ──────────────────────────────────────────────────────────────────────────────
+
+    /// @dev Thrown when the account is in a temporary locked state.
     error OPF7702Recoverable__AccountLocked();
+    /// @dev Thrown when a guardian revocation is unknown for the given guardian.
     error OPF7702Recoverable__UnknownRevoke();
+    /// @dev Thrown when the caller must be an active guardian but is not.
     error OPF7702Recoverable__MustBeGuardian();
+    /// @dev Thrown when a guardian addition proposal is unknown.
     error OPF7702Recoverable__UnknownProposal();
+    /// @dev Thrown when another recovery flow is already in progress.
     error OPF7702Recoverable__OngoingRecovery();
+    /// @dev Thrown when trying to revoke a guardian twice in the same security window.
     error OPF7702Recoverable__DuplicatedRevoke();
+    /// @dev Thrown when no recovery is currently active but one is required.
     error OPF7702Recoverable__NoOngoingRecovery();
+    /// @dev Thrown when a duplicate guardian proposal is submitted in the security window.
     error OPF7702Recoverable__DuplicatedProposal();
+    /// @dev Thrown when attempting to add a guardian that is already active.
     error OPF7702Recoverable__DuplicatedGuardian();
+    /// @dev Thrown when a key type different from EOA or WebAuthn is supplied where unsupported.
     error OPF7702Recoverable__UnsupportedKeyType();
+    /// @dev Thrown when the revoke window has not elapsed yet.
     error OPF7702Recoverable__PendingRevokeNotOver();
+    /// @dev Thrown when the revoke confirmation window has expired.
     error OPF7702Recoverable__PendingRevokeExpired();
+    /// @dev Thrown when the recovery key is already a guardian.
     error OPF7702Recoverable__GuardianCannotBeOwner();
+    /// @dev Thrown when no guardians are configured on the wallet.
     error OPF7702Recoverable__NoGuardiansSetOnWallet();
+    /// @dev Thrown when the proposal confirmation window has expired.
     error OPF7702Recoverable__PendingProposalExpired();
+    /// @dev Thrown when the amount of guardian signatures provided is incorrect.
     error OPF7702Recoverable__InvalidSignatureAmount();
+    /// @dev Thrown when attempting to confirm a proposal before the timelock elapses.
     error OPF7702Recoverable__PendingProposalNotOver();
+    /// @dev Thrown when guardian-supplied signatures are invalid.
     error OPF7702Recoverable__InvalidRecoverySignatures();
+    /// @dev Thrown when both address and public key in a guardian/key are zero values.
     error OPF7702Recoverable__AddressOrPubKeyCantBeZero();
+    /// @dev Thrown when guardian address equals the wallet itself.
     error OPF7702Recoverable__GuardianCannotBeAddressThis();
+    /// @dev Thrown when guardian equals the current master key.
     error OPF7702Recoverable__GuardianCannotBeCurrentMasterKey();
+    /// @dev Thrown when a new guardian has an unsupported key type (only EOA / WebAuthn allowed).
     error OPF7702Recoverable__NewGuardianCanBeOnlyEOAOrWebAuthn();
 
+    // ──────────────────────────────────────────────────────────────────────────────
+    //                                 Structs
+    // ──────────────────────────────────────────────────────────────────────────────
+
+    /// @notice Metadata kept for each guardian.
+    /// @param isActive    Whether the guardian is currently active.
+    /// @param index       Index of the guardian hash inside `guardians` array (for O(1) removal).
+    /// @param pending     Timestamp after which a proposal/revoke can be executed (0 = none).
+    /// @param keyType     Key scheme used by the guardian (EOA / WebAuthn).
     struct GuardianIdentity {
         bool isActive;
         uint256 index;
         uint256 pending;
         KeyType keyType;
     }
+    /// @notice Encapsulates guardian related state.
+    /// @param guardians  Array of guardian identifiers (hashes) in insertion order.
+    /// @param data       Mapping from guardian hash to metadata.
+    /// @param lock       Global lock timestamp – wallet is locked until this moment.
 
     struct GuardiansData {
         bytes32[] guardians;
         mapping(bytes32 hashKey => GuardianIdentity guardianIdentity) data;
         uint256 lock;
     }
+    /// @notice Recovery flow state variables.
+    /// @param key                The new master key proposed by guardians.
+    /// @param executeAfter       Timestamp after which recovery can be executed.
+    /// @param guardiansRequired  Number of guardian signatures required to complete recovery.
 
     struct RecoveryData {
         Key key;
@@ -82,17 +124,70 @@ contract OPF7702Recoverable is OPF7702, EIP712 layout at 57943590311362240630886
         uint32 guardiansRequired;
     }
 
+    // ──────────────────────────────────────────────────────────────────────────────
+    //                               Constants
+    // ──────────────────────────────────────────────────────────────────────────────
+
+    /// @dev EIP‑712 type hash for the Recovery struct.
     bytes32 private constant RECOVER_TYPEHASH =
         0x9f7aca777caf11405930359f601a4db01fad1b2d79ef3f2f9e93c835e9feffa5;
 
+    // ──────────────────────────────────────────────────────────────────────────────
+    //                              Immutable vars
+    // ──────────────────────────────────────────────────────────────────────────────
+
+    /// @notice Seconds a recovery proposal must wait before it can be executed.
     uint256 internal immutable recoveryPeriod;
+    /// @notice Seconds the wallet remains locked after a recovery proposal is submitted.
     uint256 internal immutable lockPeriod;
+    /// @notice Seconds that a guardian proposal/revoke must wait before it can be confirmed.
     uint256 internal immutable securityPeriod;
+    /// @notice Seconds after `securityPeriod` during which the proposal/revoke can be confirmed.
     uint256 internal immutable securityWindow;
+
+    // ──────────────────────────────────────────────────────────────────────────────
+    //                               Storage vars
+    // ──────────────────────────────────────────────────────────────────────────────
 
     GuardiansData internal guardiansData;
     RecoveryData public recoveryData;
 
+    // ──────────────────────────────────────────────────────────────────────────────
+    //                                 Events
+    // ──────────────────────────────────────────────────────────────────────────────
+
+    /// @notice Emitted when a new guardian proposal is created.
+    event GuardianProposed(bytes32 indexed guardianHash, uint256 executeAfter);
+    /// @notice Emitted when a guardian proposal is confirmed and guardian becomes active.
+    event GuardianAdded(bytes32 indexed guardianHash);
+    /// @notice Emitted when a guardian proposal is cancelled.
+    event GuardianProposalCancelled(bytes32 indexed guardianHash);
+    /// @notice Emitted when a guardian revocation is scheduled.
+    event GuardianRevocationScheduled(bytes32 indexed guardianHash, uint256 executeAfter);
+    /// @notice Emitted when guardian revocation is confirmed and guardian removed.
+    event GuardianRemoved(bytes32 indexed guardianHash);
+    /// @notice Emitted when a scheduled revocation is cancelled.
+    event GuardianRevocationCancelled(bytes32 indexed guardianHash);
+    /// @notice Emitted when guardians start the recovery process.
+    event RecoveryStarted(uint64 executeAfter, uint32 guardiansRequired);
+    /// @notice Emitted when recovery completes and a new master key is set.
+    event RecoveryCompleted();
+    /// @notice Emitted when an ongoing recovery is cancelled.
+    event RecoveryCancelled();
+    /// @notice Emitted when the wallet is locked.
+    event WalletLocked(bool isLocked);
+
+    // ──────────────────────────────────────────────────────────────────────────────
+    //                              Constructor
+    // ──────────────────────────────────────────────────────────────────────────────
+
+    /**
+     * @param _entryPoint      ERC‑4337 EntryPoint address.
+     * @param _recoveryPeriod  Delay (seconds) before guardians can execute recovery.
+     * @param _lockPeriod      Period (seconds) that the wallet stays locked after recovery starts.
+     * @param _securityPeriod  Timelock (seconds) for guardian add/remove actions.
+     * @param _securityWindow  Window (seconds) after the timelock where the action must be executed.
+     */
     constructor(
         address _entryPoint,
         uint256 _recoveryPeriod,
@@ -102,9 +197,13 @@ contract OPF7702Recoverable is OPF7702, EIP712 layout at 57943590311362240630886
     ) OPF7702(_entryPoint) EIP712("OPF7702Recoverable", "1") {
         recoveryPeriod = _recoveryPeriod;
         lockPeriod = _lockPeriod;
-        securityWindow = _securityWindow;
         securityPeriod = _securityPeriod;
+        securityWindow = _securityWindow;
     }
+
+    // ──────────────────────────────────────────────────────────────────────────────
+    //                          Public / External methods
+    // ──────────────────────────────────────────────────────────────────────────────
 
     /**
      * @notice Initializes the account with a “master” session key (no spending or whitelist restrictions).
@@ -152,6 +251,7 @@ contract OPF7702Recoverable is OPF7702, EIP712 layout at 57943590311362240630886
         bytes32 keyId = keccak256(abi.encodePacked(_key.pubKey.x, _key.pubKey.y));
         SessionKey storage sKey = sessionKeys[keyId];
         idSessionKeys[0] = _key;
+
         // register masterKey: never expires, no spending/whitelist restrictions
         _addSessionKey(
             sKey,
@@ -165,6 +265,7 @@ contract OPF7702Recoverable is OPF7702, EIP712 layout at 57943590311362240630886
             _allowedSelectors, // selectors (ignored)
             0 // ethLimit = 0
         );
+
         unchecked {
             ++idEOA;
             ++id;
@@ -175,82 +276,35 @@ contract OPF7702Recoverable is OPF7702, EIP712 layout at 57943590311362240630886
         emit Initialized(_key);
     }
 
+    // ──────────────────────────────────────────────────────────────────────────────
+    //                        Guardian management (internal)
+    // ──────────────────────────────────────────────────────────────────────────────
+
+    /// @dev Helper to configure the first guardian during `initialize`.
+    /// @param _initialGuardian Guardian key to register.
     function initializeGuardians(Key memory _initialGuardian) private {
         _requireNonEmptyGuardian(_initialGuardian);
         bytes32 gHash = _guardianHash(_initialGuardian);
 
         guardiansData.guardians.push(gHash);
         GuardianIdentity storage gi = guardiansData.data[gHash];
+
+        emit GuardianAdded(gHash);
+
         gi.isActive = true;
         gi.index = 0;
         gi.pending = 0;
         gi.keyType = _initialGuardian.keyType;
     }
 
-    function _guardianHash(Key memory _guardian) internal pure returns (bytes32) {
-        if (_guardian.keyType == KeyType.EOA) {
-            return keccak256(abi.encodePacked(_guardian.eoaAddress));
-        } else if (_guardian.keyType == KeyType.WEBAUTHN) {
-            return keccak256(abi.encodePacked(_guardian.pubKey.x, _guardian.pubKey.y));
-        }
-        revert OPF7702Recoverable__NewGuardianCanBeOnlyEOAOrWebAuthn();
-    }
+    // ──────────────────────────────────────────────────────────────────────────────
+    //                     Guardian add / revoke public interface
+    // ──────────────────────────────────────────────────────────────────────────────
 
-    function _requireNonEmptyGuardian(Key memory _guardian) internal pure {
-        bool hasAddress = _guardian.eoaAddress != address(0);
-        bool hasPubKey = _guardian.pubKey.x != bytes32(0) || _guardian.pubKey.y != bytes32(0);
-        if (!hasAddress && !hasPubKey) revert OPF7702Recoverable__AddressOrPubKeyCantBeZero();
-    }
-
-    function getGuardians() external view virtual returns (bytes32[] memory) {
-        bytes32[] memory guardians = new bytes32[](guardiansData.guardians.length);
-        uint256 i;
-        for (i; i < guardiansData.guardians.length;) {
-            guardians[i] = guardiansData.guardians[i];
-            unchecked {
-                ++i; // gas optimization
-            }
-        }
-
-        return guardians;
-    }
-
-    function getPendingStatusGuardians(Key memory _guardian) external view returns (uint256) {
-        bytes32 gHash = _guardianHash(_guardian);
-        return guardiansData.data[gHash].pending;
-    }
-
-    function isLocked() public view virtual returns (bool) {
-        return guardiansData.lock > block.timestamp;
-    }
-
-    function isGuardian(Key memory _guardian) public view returns (bool) {
-        bytes32 guradianHash;
-        if (_guardian.keyType == KeyType.EOA) {
-            guradianHash = keccak256(abi.encodePacked(_guardian.eoaAddress));
-        } else if (_guardian.keyType == KeyType.WEBAUTHN) {
-            guradianHash = keccak256(abi.encodePacked(_guardian.pubKey.x, _guardian.pubKey.y));
-        }
-        return guardiansData.data[guradianHash].isActive;
-    }
-
-    function guardianCount() public view virtual returns (uint256) {
-        return guardiansData.guardians.length;
-    }
-
-    function _requireRecovery(bool _isRecovery) internal view {
-        if (_isRecovery && recoveryData.executeAfter == 0) {
-            revert OPF7702Recoverable__NoOngoingRecovery();
-        }
-        if (!_isRecovery && recoveryData.executeAfter > 0) {
-            revert OPF7702Recoverable__OngoingRecovery();
-        }
-    }
-
-    function _setLock(uint256 _releaseAfter) internal {
-        guardiansData.lock = _releaseAfter;
-    }
-
+    /**
+     * @notice Proposes adding a new guardian. Must be confirmed after the security period.
+     * @param _guardian Guardian key to add.
+     */
     function proposeGuardian(Key memory _guardian) external {
         _requireForExecute();
         if (isLocked()) revert OPF7702Recoverable__AccountLocked();
@@ -259,33 +313,34 @@ contract OPF7702Recoverable is OPF7702, EIP712 layout at 57943590311362240630886
         bytes32 gHash = _guardianHash(_guardian);
         GuardianIdentity storage gi = guardiansData.data[gHash];
 
-        // 1. Self‑guardian check
         if (address(this) == _guardian.eoaAddress) {
             revert OPF7702Recoverable__GuardianCannotBeAddressThis();
         }
 
-        // 2. Not current master key
         Key memory mk = getKeyById(0, KeyType.P256);
         if (_guardian.pubKey.x == mk.pubKey.x && _guardian.pubKey.y == mk.pubKey.y) {
             revert OPF7702Recoverable__GuardianCannotBeCurrentMasterKey();
         }
 
-        // 3. Only EOA/WebAuthn
         if (_guardian.keyType != KeyType.EOA && _guardian.keyType != KeyType.WEBAUTHN) {
             revert OPF7702Recoverable__NewGuardianCanBeOnlyEOAOrWebAuthn();
         }
 
-        // 4. Already active?
         if (gi.isActive) revert OPF7702Recoverable__DuplicatedGuardian();
 
-        // 5. Already pending?
         if (gi.pending != 0 && block.timestamp <= gi.pending + securityWindow) {
             revert OPF7702Recoverable__DuplicatedProposal();
         }
 
         gi.pending = block.timestamp + securityPeriod;
+
+        emit GuardianProposed(gHash, gi.pending);
     }
 
+    /**
+     * @notice Finalizes a previously proposed guardian after the timelock.
+     * @param _guardian Guardian key to activate.
+     */
     function confirmGuardianProposal(Key memory _guardian) external {
         _requireForExecute();
         _requireRecovery(false);
@@ -303,12 +358,18 @@ contract OPF7702Recoverable is OPF7702, EIP712 layout at 57943590311362240630886
 
         if (gi.isActive) revert OPF7702Recoverable__DuplicatedGuardian();
 
+        emit GuardianAdded(gHash);
+
         gi.isActive = true;
         gi.pending = 0;
         gi.index = guardiansData.guardians.length;
         guardiansData.guardians.push(gHash);
     }
 
+    /**
+     * @notice Cancels a guardian addition proposal before it is confirmed.
+     * @param _guardian Guardian key whose proposal should be cancelled.
+     */
     function cancelGuardianProposal(Key memory _guardian) external {
         _requireForExecute();
         _requireRecovery(false);
@@ -321,9 +382,15 @@ contract OPF7702Recoverable is OPF7702, EIP712 layout at 57943590311362240630886
         if (gi.pending == 0) revert OPF7702Recoverable__UnknownProposal();
         if (gi.isActive) revert OPF7702Recoverable__DuplicatedGuardian();
 
+        emit GuardianProposalCancelled(gHash);
+
         gi.pending = 0;
     }
 
+    /**
+     * @notice Initiates guardian removal. Must be confirmed after the security period.
+     * @param _guardian Guardian key to revoke.
+     */
     function revokeGuardian(Key memory _guardian) external {
         _requireForExecute();
         if (isLocked()) revert OPF7702Recoverable__AccountLocked();
@@ -338,8 +405,14 @@ contract OPF7702Recoverable is OPF7702, EIP712 layout at 57943590311362240630886
         }
 
         gi.pending = block.timestamp + securityPeriod;
+
+        emit GuardianRevocationScheduled(gHash, gi.pending);
     }
 
+    /**
+     * @notice Confirms guardian removal after the timelock.
+     * @param _guardian Guardian key to remove permanently.
+     */
     function confirmGuardianRevocation(Key memory _guardian) external {
         _requireForExecute();
         if (isLocked()) revert OPF7702Recoverable__AccountLocked();
@@ -362,11 +435,18 @@ contract OPF7702Recoverable is OPF7702, EIP712 layout at 57943590311362240630886
             guardiansData.guardians[targetIndex] = lastHash;
             guardiansData.data[lastHash].index = targetIndex;
         }
+
+        emit GuardianRemoved(gHash);
+
         guardiansData.guardians.pop();
 
         delete guardiansData.data[gHash];
     }
 
+    /**
+     * @notice Cancels a pending guardian removal.
+     * @param _guardian Guardian key whose removal should be cancelled.
+     */
     function cancelGuardianRevocation(Key memory _guardian) external {
         _requireForExecute();
         if (isLocked()) revert OPF7702Recoverable__AccountLocked();
@@ -377,9 +457,21 @@ contract OPF7702Recoverable is OPF7702, EIP712 layout at 57943590311362240630886
         if (!gi.isActive) revert OPF7702Recoverable__MustBeGuardian();
         if (gi.pending == 0) revert OPF7702Recoverable__UnknownRevoke();
 
+        emit GuardianRevocationCancelled(gHash);
+
         guardiansData.data[gHash].pending = 0;
     }
 
+    // ──────────────────────────────────────────────────────────────────────────────
+    //                           Recovery flow (guardians)
+    // ──────────────────────────────────────────────────────────────────────────────
+
+    /**
+     * @notice Guardians initiate account recovery by proposing a new master key.
+     * @dev The caller must be an active guardian. Wallet enters locked state immediately.
+     * @param _recoveryKey New master key to set once recovery succeeds.
+     * @param _guardian    Guardian key of the caller (must match msg.sender rules externally).
+     */
     function startRecovery(Key memory _recoveryKey, Key memory _guardian) external virtual {
         // Todo: Must _requireForExecute(); ?? or  _requireForExecuteOrGuardian();
         // Many Options to run startRecovery() :
@@ -397,12 +489,18 @@ contract OPF7702Recoverable is OPF7702, EIP712 layout at 57943590311362240630886
         uint64 executeAfter = SafeCast.toUint64(block.timestamp + recoveryPeriod);
         uint32 quorum = SafeCast.toUint32(Math.ceilDiv(guardianCount(), 2));
 
+        emit RecoveryStarted(executeAfter, quorum);
+
         recoveryData =
             RecoveryData({key: _recoveryKey, executeAfter: executeAfter, guardiansRequired: quorum});
 
         _setLock(block.timestamp + lockPeriod);
     }
 
+    /**
+     * @notice Completes recovery after the timelock by providing the required guardian signatures.
+     * @param _signatures Encoded guardian signatures approving the recovery.
+     */
     function completeRecovery(bytes[] calldata _signatures) external virtual {
         _requireRecovery(true);
 
@@ -428,6 +526,7 @@ contract OPF7702Recoverable is OPF7702, EIP712 layout at 57943590311362240630886
         _setLock(0);
     }
 
+    /// @dev Deletes the old master key data structures (both WebAuthn and EOA variants).
     function _deleteOldKeys() private {
         // Todo: Change the Admin key of index 0 in the sessionKeys or sessionKeysEOA for new Master Key
         // _transferOwnership(recoveryOwner);
@@ -452,6 +551,8 @@ contract OPF7702Recoverable is OPF7702, EIP712 layout at 57943590311362240630886
         }
     }
 
+    /// @dev Registers the new master key after successful recovery.
+    /// @param recoveryOwner Key that becomes the new master key.
     function _setNewMasterKey(Key memory recoveryOwner) private {
         SessionKey storage sKey;
 
@@ -478,6 +579,8 @@ contract OPF7702Recoverable is OPF7702, EIP712 layout at 57943590311362240630886
         SpendTokenInfo memory _spendTokenInfo = SpendTokenInfo({token: DEAD_ADDRESS, limit: 0});
         bytes4[] memory _allowedSelectors = new bytes4[](3);
 
+        emit RecoveryCompleted();
+
         _addSessionKey(
             sKey,
             recoveryOwner,
@@ -492,6 +595,9 @@ contract OPF7702Recoverable is OPF7702, EIP712 layout at 57943590311362240630886
         );
     }
 
+    /// @dev Validates guardian signatures for recovery completion.
+    /// @param _signatures Encoded signatures supplied by guardians.
+    /// @return True if all signatures are valid and unique.
     function _validateSignatures(bytes[] calldata _signatures) internal returns (bool) {
         bytes32 digest = _hashTypedDataV4(
             keccak256(
@@ -568,12 +674,126 @@ contract OPF7702Recoverable is OPF7702, EIP712 layout at 57943590311362240630886
         return true;
     }
 
+    /**
+     * @notice Cancels an ongoing recovery and unlocks the wallet.
+     */
     function cancelRecovery() external {
         _requireForExecute();
         _requireRecovery(true);
+        emit RecoveryCancelled();
         delete recoveryData;
         _setLock(0);
     }
+
+    // ──────────────────────────────────────────────────────────────────────────────
+    //                             Internal helpers
+    // ──────────────────────────────────────────────────────────────────────────────
+
+    /// @dev Ensures recovery state matches the expectation.
+    /// @param _isRecovery True if function requires an ongoing recovery.
+    function _requireRecovery(bool _isRecovery) internal view {
+        if (_isRecovery && recoveryData.executeAfter == 0) {
+            revert OPF7702Recoverable__NoOngoingRecovery();
+        }
+        if (!_isRecovery && recoveryData.executeAfter > 0) {
+            revert OPF7702Recoverable__OngoingRecovery();
+        }
+    }
+
+    /// @dev Sets the global lock timestamp.
+    /// @param _releaseAfter Timestamp when the lock should be lifted (0 = unlock).
+    function _setLock(uint256 _releaseAfter) internal {
+        emit WalletLocked(_releaseAfter != 0);
+        guardiansData.lock = _releaseAfter;
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────────
+    //                               View helpers
+    // ──────────────────────────────────────────────────────────────────────────────
+
+    /**
+     * @notice Computes the storage hash for a guardian key.
+     * @dev Only EOA (address) and WebAuthn (pubkey) are supported.
+     * @param _guardian Guardian key to hash.
+     * @return Guardian identifier hash.
+     */
+    function _guardianHash(Key memory _guardian) internal pure returns (bytes32) {
+        if (_guardian.keyType == KeyType.EOA) {
+            return keccak256(abi.encodePacked(_guardian.eoaAddress));
+        } else if (_guardian.keyType == KeyType.WEBAUTHN) {
+            return keccak256(abi.encodePacked(_guardian.pubKey.x, _guardian.pubKey.y));
+        }
+        revert OPF7702Recoverable__NewGuardianCanBeOnlyEOAOrWebAuthn();
+    }
+
+    /// @dev Reverts if guardian key contains neither address nor pubkey.
+    /// @param _guardian Guardian key to validate.
+    function _requireNonEmptyGuardian(Key memory _guardian) internal pure {
+        bool hasAddress = _guardian.eoaAddress != address(0);
+        bool hasPubKey = _guardian.pubKey.x != bytes32(0) || _guardian.pubKey.y != bytes32(0);
+        if (!hasAddress && !hasPubKey) revert OPF7702Recoverable__AddressOrPubKeyCantBeZero();
+    }
+
+    /**
+     * @notice Returns all guardian hashes currently active.
+     * @return Array of guardian hashes.
+     */
+    function getGuardians() external view virtual returns (bytes32[] memory) {
+        bytes32[] memory guardians = new bytes32[](guardiansData.guardians.length);
+        uint256 i;
+        for (i; i < guardiansData.guardians.length;) {
+            guardians[i] = guardiansData.guardians[i];
+            unchecked {
+                ++i; // gas optimization
+            }
+        }
+
+        return guardians;
+    }
+
+    /**
+     * @notice Returns the pending timestamp (if any) for guardian proposal/revoke.
+     * @param _guardian Guardian key to query.
+     * @return Timestamp until which the action is pending (0 if none).
+     */
+    function getPendingStatusGuardians(Key memory _guardian) external view returns (uint256) {
+        bytes32 gHash = _guardianHash(_guardian);
+        return guardiansData.data[gHash].pending;
+    }
+
+    /**
+     * @notice Checks whether the wallet is currently locked due to recovery flow.
+     * @return True if locked, false otherwise.
+     */
+    function isLocked() public view virtual returns (bool) {
+        return guardiansData.lock > block.timestamp;
+    }
+
+    /**
+     * @notice Checks if a key is an active guardian.
+     * @param _guardian Guardian key to query.
+     * @return True if active guardian.
+     */
+    function isGuardian(Key memory _guardian) public view returns (bool) {
+        bytes32 guradianHash;
+        if (_guardian.keyType == KeyType.EOA) {
+            guradianHash = keccak256(abi.encodePacked(_guardian.eoaAddress));
+        } else if (_guardian.keyType == KeyType.WEBAUTHN) {
+            guradianHash = keccak256(abi.encodePacked(_guardian.pubKey.x, _guardian.pubKey.y));
+        }
+        return guardiansData.data[guradianHash].isActive;
+    }
+
+    /**
+     * @notice Returns the number of active guardians.
+     */
+    function guardianCount() public view virtual returns (uint256) {
+        return guardiansData.guardians.length;
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────────
+    //                           Utility view functions
+    // ──────────────────────────────────────────────────────────────────────────────
 
     /**
      * @notice Encodes WebAuthn signature data for use in transaction submission
@@ -614,6 +834,9 @@ contract OPF7702Recoverable is OPF7702, EIP712 layout at 57943590311362240630886
         return abi.encode(KeyType.WEBAUTHN, payload);
     }
 
+    /**
+     * @notice Returns the EIP‑712 digest guardians must sign to approve recovery.
+     */
     function getDigestToSign() external view returns (bytes32 digest) {
         bytes32 structHash = keccak256(
             abi.encode(

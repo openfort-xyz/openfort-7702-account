@@ -747,7 +747,7 @@ contract Recoverable is Base {
         vm.etch(owner, code);
         proposalTimestamp = block.timestamp;
 
-        vm.warp(proposalTimestamp + SECURITY_PERIOD + 1);
+        vm.warp(proposalTimestamp + SECURITY_PERIOD + SECURITY_WINDOW);
         vm.prank(address(entryPoint));
         account.confirmGuardianRevocation(propose_KeyGuardianEOA);
     }
@@ -762,9 +762,9 @@ contract Recoverable is Base {
             eoaAddress: address(0),
             keyType: KeyType.WEBAUTHN
         });
-        proposalTimestamp = block.timestamp;
+        // proposalTimestamp = block.timestamp;
 
-        vm.warp(proposalTimestamp + SECURITY_PERIOD + 1);
+        // vm.warp(proposalTimestamp + SECURITY_PERIOD + 1);
         vm.etch(owner, code);
 
         vm.prank(address(entryPoint));

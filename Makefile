@@ -30,6 +30,8 @@ test-registartion:
 test-execution:
 	node script/P256_Single_Mint.ts && node script/P256.ts && forge test --mp test/unit/Execution.t.sol -vv --rpc-url $(SEPOLIA_RPC_URL)
 
+test-recovery:
+	forge test --mp test/unit/Recoverable.t.sol --rpc-url $(SEPOLIA_RPC_URL) -vv 
 test-all:
 	node script/P256_Single_Mint.ts && node script/P256_ETH.ts && node script/P256.ts && forge test -vv --rpc-url $(SEPOLIA_RPC_URL)
 
@@ -38,6 +40,7 @@ coverage:
 
 gas:
 	forge test --gas-report --rpc-url $(SEPOLIA_RPC_URL)
+	
 storage:
 	forge clean && forge inspect src/core/OPF7702Recoverable.sol:OPF7702Recoverable storageLayout
 	

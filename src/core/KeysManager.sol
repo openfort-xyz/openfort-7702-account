@@ -29,7 +29,7 @@ abstract contract KeysManager is BaseOPF7702, ISessionkey, SpendLimit {
 
     /// @notice Thrown when a timestamp provided for session key validity is invalid
     error SessionKeyManager__InvalidTimestamp();
-
+    /// @notice Thrown when registration does not include any usage or spend limits
     error SessionKeyManager__MustIncludeLimits();
     /// @notice Thrown when an address parameter expected to be non-zero is zero
     error SessionKeyManager__AddressCantBeZero();
@@ -101,7 +101,7 @@ abstract contract KeysManager is BaseOPF7702, ISessionkey, SpendLimit {
      *                         • For EOA: `eoaAddress` must be non‐zero.
      * @param _validUntil      UNIX timestamp after which this session key is invalid.
      * @param _validAfter      UNIX timestamp before which this session key is not valid.
-     * @param _limit           Maximum number of transactions allowed (0 = unlimited/master).
+     * @param _limit           Maximum number of transactions allowed.
      * @param _whitelisting    If true, restrict calls to whitelisted contracts/tokens.
      * @param _contractAddress Initial contract to whitelist (ignored if !_whitelisting).
      * @param _spendTokenInfo  Struct specifying ERC‐20 token spending limit:
@@ -122,7 +122,7 @@ abstract contract KeysManager is BaseOPF7702, ISessionkey, SpendLimit {
         uint256 _ethLimit
     ) public {
         _requireForExecute();
-
+        // Must have limit checks to prevent register masterKey
         if (_limit == 0) revert SessionKeyManager__MustIncludeLimits();
 
         // Validate timestamps

@@ -44,8 +44,8 @@ We believe smart accounts should provide an excellent experience throughout a us
 - [x] **Batch Transactions**: Execute multiple calls in one operation  
 - [x] **ERC-4337 Support**: Works with bundlers and EntryPoint  
 - [x] **Gas Sponsorship**: Dapps or relayers can pay for user ops  
+- [x] **Enhanced Recovery Options**: Social recovery relies on guardians (EOA/WebAuthn)
 - [ ] **Multi-chain Support**: Coming soon  
-- [ ] **Enhanced Recovery Options**: Coming soon
 
 ---
 
@@ -64,13 +64,15 @@ We believe smart accounts should provide an excellent experience throughout a us
 
 - **`OPF7702.sol`**  
   Main smart account contract that combines execution and key management. Fully implements the Openfort EIP-7702 smart account and ERC-4337 compatibility.
+  
+- **`OPF7702Recoverable.sol`**
+Extension of the main smart account that adds advanced social recovery capabilities. Enables guardian-based recovery flows, lock/unlock mechanisms and guardian proposal/revocation lifecycle management with full event traceability.
 
 ### Supporting Interfaces
 
 - **`ISessionKey.sol`** – Session key storage/logic interface  
 - **`IWebAuthnVerifier.sol`** – Interface for WebAuthn verification  
 - **`IValidation.sol`** – Shared structs and validation types
-
 ---
 
 ## Getting Started
