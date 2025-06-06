@@ -29,7 +29,7 @@ abstract contract KeysManager is BaseOPF7702, ISessionkey, SpendLimit {
 
     /// @notice Thrown when a timestamp provided for session key validity is invalid
     error SessionKeyManager__InvalidTimestamp();
-    
+
     error SessionKeyManager__MustIncludeLimits();
     /// @notice Thrown when an address parameter expected to be non-zero is zero
     error SessionKeyManager__AddressCantBeZero();
@@ -122,7 +122,7 @@ abstract contract KeysManager is BaseOPF7702, ISessionkey, SpendLimit {
         uint256 _ethLimit
     ) public {
         _requireForExecute();
-        
+
         if (_limit == 0) revert SessionKeyManager__MustIncludeLimits();
 
         // Validate timestamps

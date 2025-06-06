@@ -166,8 +166,8 @@ contract OPF7702Recoverable is OPF7702, EIP712 layout at 57943590311362240630886
             0 // ethLimit = 0
         );
         unchecked {
-                    ++idEOA;
-        ++id;
+            ++idEOA;
+            ++id;
         }
 
         initializeGuardians(_initialGuardian);
