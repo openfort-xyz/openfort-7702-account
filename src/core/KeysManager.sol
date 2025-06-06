@@ -52,9 +52,11 @@ abstract contract KeysManager is BaseOPF7702, ISessionkey, SpendLimit {
     // =============================================================
 
     /// @notice Incremental ID for WebAuthn/P256/P256NONKEY session keys
+    /// @dev Id = 0 always saved for MasterKey (Admin)
     uint256 public id;
     /// @notice Incremental ID for EOA session keys
-    uint256 public idEOA;
+    /// @dev idEOA = 0 always saved for MasterKey (Admin)
+    uint256 public idEOA = 1;
 
     /// @notice Mapping from session key ID to Key struct (WebAuthn/P256/P256NONKEY)
     mapping(uint256 => Key) public idSessionKeys;
@@ -227,9 +229,9 @@ abstract contract KeysManager is BaseOPF7702, ISessionkey, SpendLimit {
      */
     function revokeAllSessionKeys() external {
         _requireForExecute();
-
+        /// @dev i = 1 --> id = 0 always saved for MasterKey (Admin)
         // Revoke WebAuthn/P256/P256NONKEY keys
-        for (uint256 i = 0; i < id;) {
+        for (uint256 i = 1; i < id;) {
             Key memory k = idSessionKeys[i];
             KeyType kt = k.keyType;
             if (kt == KeyType.WEBAUTHN || kt == KeyType.P256 || kt == KeyType.P256NONKEY) {
@@ -243,8 +245,9 @@ abstract contract KeysManager is BaseOPF7702, ISessionkey, SpendLimit {
             }
         }
 
+        /// @dev i = j --> idEOA = 0 always saved for MasterKey (Admin)
         // Revoke EOA keys
-        for (uint256 j = 0; j < idEOA;) {
+        for (uint256 j = 1; j < idEOA;) {
             Key memory k = idSessionKeysEOA[j];
             if (k.keyType == KeyType.EOA && k.eoaAddress != address(0)) {
                 bytes32 eoaId = keccak256(abi.encodePacked(k.eoaAddress));

@@ -115,7 +115,7 @@ contract KeysTest is Base {
         uint256 idLength = account.id();
         uint256 idLengthEOA = account.idEOA();
 
-        for (uint256 i = 0; i < idLengthEOA; i++) {
+        for (uint256 i = 1; i < idLengthEOA; i++) {
             Key memory k = account.getKeyById(i, KeyType.EOA);
             (bool _isActive, uint256 _validUntil,, uint256 _limit) =
                 account.getSessionKeyData(k.eoaAddress);
@@ -125,7 +125,7 @@ contract KeysTest is Base {
             assertEq(_limit, 0);
         }
 
-        for (uint256 i = 0; i < idLength; i++) {
+        for (uint256 i = 1; i < idLength; i++) {
             Key memory k = account.getKeyById(i, KeyType.P256);
             (bool _isActive, uint256 _validUntil,, uint256 _limit) =
                 account.getSessionKeyData(keccak256(abi.encodePacked(k.pubKey.x, k.pubKey.y)));

@@ -411,11 +411,23 @@ contract OPF7702Recoverable is OPF7702, EIP712 layout at 57943590311362240630886
             revert OPF7702Recoverable__InvalidRecoverySignatures();
         }
 
-        // Key memory recoveryOwner = recoveryData.key;
+        Key memory recoveryOwner = recoveryData.key;
         delete recoveryData;
 
         // Todo: Change the Admin key of index 0 in the sessionKeys or sessionKeysEOA for new Master Key
         // _transferOwnership(recoveryOwner);
+
+        // Todo: Need to Identify Master Key by Id or Any othewr flag
+        // MK WebAuthn will be always id = 0 because of Initalization func enforce to be `0`
+        SessionKey storage mk;
+        Key memory kWebAuthn = idSessionKeys[0];
+        Key memory kEOA = idSessionKeysEOA[0];
+
+        if (kWebAuthn.keyType == KeyType.WEBAUTHN) {
+            mk = sessionKeys[keccak256(abi.encodePacked(kWebAuthn.pubKey.x, kWebAuthn.pubKey.y))];
+        } else if (kEOA.keyType == KeyType.EOA) {
+            mk = sessionKeysEOA[kEOA.eoaAddress];
+        }
         _setLock(0);
     }
 
