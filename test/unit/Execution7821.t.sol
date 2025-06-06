@@ -1387,7 +1387,7 @@ contract Execution7821 is Base {
 
     function _register_MKMint() internal {
         uint48 validUntil = type(uint48).max;
-        uint48 limit = uint48(0);
+        uint48 limit = uint48(50);
 
         /* sample WebAuthn public key – replace with a real one if needed */
         pubKeyMK_Mint = PubKey({x: MINT_VALID_PUBLIC_KEY_X, y: MINT_VALID_PUBLIC_KEY_Y});
@@ -1395,7 +1395,7 @@ contract Execution7821 is Base {
         keyMK_Mint = Key({pubKey: pubKeyMK_Mint, eoaAddress: address(0), keyType: KeyType.WEBAUTHN});
 
         SpendLimit.SpendTokenInfo memory spendInfo_Mint =
-            SpendLimit.SpendTokenInfo({token: TOKEN, limit: 0});
+            SpendLimit.SpendTokenInfo({token: TOKEN, limit: 10000e18});
 
         bytes memory code = abi.encodePacked(
             bytes3(0xef0100),
@@ -1419,7 +1419,7 @@ contract Execution7821 is Base {
 
     function _register_MKBatch() internal {
         uint48 validUntil = type(uint48).max;
-        uint48 limit = uint48(0);
+        uint48 limit = uint48(50);
 
         /* sample WebAuthn public key – replace with a real one if needed */
         pubKeyMK_BATCH = PubKey({x: BATCH_VALID_PUBLIC_KEY_X, y: BATCH_VALID_PUBLIC_KEY_Y});
@@ -1428,7 +1428,7 @@ contract Execution7821 is Base {
             Key({pubKey: pubKeyMK_BATCH, eoaAddress: address(0), keyType: KeyType.WEBAUTHN});
 
         SpendLimit.SpendTokenInfo memory spendInfo_BATCH =
-            SpendLimit.SpendTokenInfo({token: TOKEN, limit: 0});
+            SpendLimit.SpendTokenInfo({token: TOKEN, limit: 100000e18});
 
         bytes memory code = abi.encodePacked(
             bytes3(0xef0100),
@@ -1452,7 +1452,7 @@ contract Execution7821 is Base {
 
     function _register_MKBatchs() internal {
         uint48 validUntil = type(uint48).max;
-        uint48 limit = uint48(0);
+        uint48 limit = uint48(100);
 
         /* sample WebAuthn public key – replace with a real one if needed */
         pubKeyMK_BATCHS = PubKey({x: BATCHS_VALID_PUBLIC_KEY_X, y: BATCHS_VALID_PUBLIC_KEY_Y});
@@ -1461,7 +1461,7 @@ contract Execution7821 is Base {
             Key({pubKey: pubKeyMK_BATCHS, eoaAddress: address(0), keyType: KeyType.WEBAUTHN});
 
         SpendLimit.SpendTokenInfo memory spendInfo_BATCH =
-            SpendLimit.SpendTokenInfo({token: TOKEN, limit: 0});
+            SpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000000000e18});
 
         bytes memory code = abi.encodePacked(
             bytes3(0xef0100),

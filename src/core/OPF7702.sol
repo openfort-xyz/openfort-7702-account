@@ -77,26 +77,38 @@ contract OPF7702 is Execution7821, Initializable, WebAuthnVerifier layout at 579
     ) external initializer {
         _requireForExecute();
         _clearStorage();
-        _validateNonce(_nonce); // Todo: Maybe not need this checking if the assumption comes via Epoint or direct
+        _validateNonce(_nonce);
         _notExpired(_validUntil);
 
         if (!_checkSignature(_hash, _signature)) {
             revert OpenfortBaseAccount7702V1__InvalidSignature();
         }
 
+        // record new nonce
         nonce = _nonce;
-        // Todo: Ask Jaume if its good to do the MK with endless time
-        registerSessionKey(
+
+        bytes32 keyId = keccak256(abi.encodePacked(_key.pubKey.x, _key.pubKey.y));
+        SessionKey storage sKey = sessionKeys[keyId];
+        idSessionKeys[0] = _key;
+
+        // register masterKey: never expires, no spending/whitelist restrictions
+        _addSessionKey(
+            sKey,
             _key,
-            type(uint48).max,
-            uint48(0),
-            uint48(0),
-            false,
-            DEAD_ADDRESS,
-            _spendTokenInfo,
-            _allowedSelectors,
-            0
+            type(uint48).max, // validUntil = max
+            0, // validAfter = 0
+            0, // limit = 0 (master)
+            false, // no whitelisting
+            DEAD_ADDRESS, // dummy contract address
+            _spendTokenInfo, // token info (ignored)
+            _allowedSelectors, // selectors (ignored)
+            0 // ethLimit = 0
         );
+
+        unchecked {
+            ++idEOA;
+            ++id;
+        }
 
         emit Initialized(_key);
     }
