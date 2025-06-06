@@ -165,7 +165,7 @@ contract OPF7702Recoverable is OPF7702, EIP712 layout at 57943590311362240630886
         idEOA = 1;
 
         initializeGuardians(_initialGuardian);
-        
+
         emit Initialized(_key);
     }
 
@@ -417,37 +417,42 @@ contract OPF7702Recoverable is OPF7702, EIP712 layout at 57943590311362240630886
         Key memory recoveryOwner = r.key;
         delete recoveryData;
 
+        _deleteOldKeys();
+        _setNewMasterKey(recoveryOwner);
+        _setLock(0);
+    }
+
+    function _deleteOldKeys() private {
         // Todo: Change the Admin key of index 0 in the sessionKeys or sessionKeysEOA for new Master Key
         // _transferOwnership(recoveryOwner);
 
         // Todo: Need to Identify Master Key by Id or Any othewr flag
         // MK WebAuthn will be always id = 0 because of Initalization func enforce to be `0`
-        Key storage oldWebAuthnMK  = idSessionKeys[0];
-        Key storage oldEOAMK       = idSessionKeysEOA[0];
+        Key storage oldWebAuthnMK = idSessionKeys[0];
+        Key storage oldEOAMK = idSessionKeysEOA[0];
 
         if (oldWebAuthnMK.eoaAddress == address(0)) {
-            bytes32 oldHash = keccak256(
-            abi.encodePacked(oldWebAuthnMK.pubKey.x, oldWebAuthnMK.pubKey.y)
-        );
+            bytes32 oldHash =
+                keccak256(abi.encodePacked(oldWebAuthnMK.pubKey.x, oldWebAuthnMK.pubKey.y));
             /// @dev Only the nested mapping in stract will not be cleared mapping(address => bool) whitelist
             /// @notice not providing security risk
             delete sessionKeys[oldHash];
             delete idSessionKeys[0];
-
         } else if (oldEOAMK.eoaAddress != address(0)) {
             delete sessionKeysEOA[oldEOAMK.eoaAddress];
             /// @dev Only the nested mapping in stract will not be cleared mapping(address => bool) whitelist
             /// @notice not providing security risk
             delete idSessionKeysEOA[0];
         }
+    }
 
+    function _setNewMasterKey(Key memory recoveryOwner) private {
         SessionKey storage sKey;
 
         if (recoveryOwner.keyType == KeyType.WEBAUTHN) {
             idSessionKeys[0] = recoveryOwner;
-            bytes32 newHash = keccak256(
-                abi.encodePacked(recoveryOwner.pubKey.x, recoveryOwner.pubKey.y)
-            );
+            bytes32 newHash =
+                keccak256(abi.encodePacked(recoveryOwner.pubKey.x, recoveryOwner.pubKey.y));
             sKey = sessionKeys[newHash];
 
             if (sKey.isActive) {
@@ -470,18 +475,15 @@ contract OPF7702Recoverable is OPF7702, EIP712 layout at 57943590311362240630886
         _addSessionKey(
             sKey,
             recoveryOwner,
-            type(uint48).max,  // validUntil = max
-            0,                 // validAfter = 0
-            0,                 // limit = 0 (master)
-            false,             // no whitelisting
-            DEAD_ADDRESS,      // dummy contract address
-            _spendTokenInfo,   // token info (ignored)
+            type(uint48).max, // validUntil = max
+            0, // validAfter = 0
+            0, // limit = 0 (master)
+            false, // no whitelisting
+            DEAD_ADDRESS, // dummy contract address
+            _spendTokenInfo, // token info (ignored)
             _allowedSelectors, // selectors (ignored)
-            0                  // ethLimit = 0
+            0 // ethLimit = 0
         );
-
-
-        _setLock(0);
     }
 
     function _validateSignatures(bytes[] calldata _signatures) internal returns (bool) {

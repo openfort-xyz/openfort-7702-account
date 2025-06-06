@@ -444,7 +444,8 @@ contract Recoverable is Base {
         vm.warp(block.timestamp + RECOVERY_PERIOD + 1);
 
         Key memory old_k = account.getKeyById(0, KeyType.WEBAUTHN);
-        (bool isActive, uint48 validUntil, uint48 validAfter, uint48 limit) = account.getSessionKeyData(keccak256(abi.encodePacked(old_k.pubKey.x, old_k.pubKey.y)));
+        (bool isActive, uint48 validUntil, uint48 validAfter, uint48 limit) =
+            account.getSessionKeyData(keccak256(abi.encodePacked(old_k.pubKey.x, old_k.pubKey.y)));
         assertTrue(isActive);
         assertEq(validUntil, type(uint48).max);
         assertEq(validAfter, 0);
@@ -453,11 +454,11 @@ contract Recoverable is Base {
         console.log("isActive", isActive);
         console.log("validUntil", validUntil);
 
-
         vm.prank(address(entryPoint));
         account.completeRecovery(sigs);
 
-        (bool isActive_After, uint48 validUntil_After, uint48 validAfter_After, uint48 limit_After) = account.getSessionKeyData(keccak256(abi.encodePacked(old_k.pubKey.x, old_k.pubKey.y)));
+        (bool isActive_After, uint48 validUntil_After, uint48 validAfter_After, uint48 limit_After)
+        = account.getSessionKeyData(keccak256(abi.encodePacked(old_k.pubKey.x, old_k.pubKey.y)));
         assertFalse(isActive_After);
         assertEq(validUntil_After, 0);
         assertEq(validAfter_After, 0);
@@ -471,7 +472,8 @@ contract Recoverable is Base {
         assertEq(uint256(old_k_After.keyType), uint256(0));
 
         Key memory new_k = account.getKeyById(0, KeyType.EOA);
-        (bool isActive_New, uint48 validUntil_New, uint48 validAfter_New, uint48 limit_New) = account.getSessionKeyData(new_k.eoaAddress);
+        (bool isActive_New, uint48 validUntil_New, uint48 validAfter_New, uint48 limit_New) =
+            account.getSessionKeyData(new_k.eoaAddress);
         assertEq(new_k.eoaAddress, k.eoaAddress);
         assertTrue(isActive_New);
         assertEq(validUntil_New, type(uint48).max);
@@ -483,8 +485,10 @@ contract Recoverable is Base {
         console.log("/* --------------------------------- test_CompleteRecoveryToEOA -------- */");
     }
 
-   function test_CompleteRecoveryToWebAuthn() external {
-        console.log("/* --------------------------------- test_CompleteRecoveryToWebAuthn -------- */");
+    function test_CompleteRecoveryToWebAuthn() external {
+        console.log(
+            "/* --------------------------------- test_CompleteRecoveryToWebAuthn -------- */"
+        );
 
         _confirmGuardian();
         _startRecoveryToWebAuthn();
@@ -527,7 +531,8 @@ contract Recoverable is Base {
         vm.warp(block.timestamp + RECOVERY_PERIOD + 1);
 
         Key memory old_k = account.getKeyById(0, KeyType.WEBAUTHN);
-        (bool isActive, uint48 validUntil, uint48 validAfter, uint48 limit) = account.getSessionKeyData(keccak256(abi.encodePacked(old_k.pubKey.x, old_k.pubKey.y)));
+        (bool isActive, uint48 validUntil, uint48 validAfter, uint48 limit) =
+            account.getSessionKeyData(keccak256(abi.encodePacked(old_k.pubKey.x, old_k.pubKey.y)));
         assertTrue(isActive);
         assertEq(validUntil, type(uint48).max);
         assertEq(validAfter, 0);
@@ -536,11 +541,11 @@ contract Recoverable is Base {
         console.log("isActive", isActive);
         console.log("validUntil", validUntil);
 
-
         vm.prank(address(entryPoint));
         account.completeRecovery(sigs);
 
-        (bool isActive_After, uint48 validUntil_After, uint48 validAfter_After, uint48 limit_After) = account.getSessionKeyData(keccak256(abi.encodePacked(old_k.pubKey.x, old_k.pubKey.y)));
+        (bool isActive_After, uint48 validUntil_After, uint48 validAfter_After, uint48 limit_After)
+        = account.getSessionKeyData(keccak256(abi.encodePacked(old_k.pubKey.x, old_k.pubKey.y)));
         assertFalse(isActive_After);
         assertEq(validUntil_After, 0);
         assertEq(validAfter_After, 0);
@@ -555,7 +560,8 @@ contract Recoverable is Base {
         assertEq(uint256(old_k_After.keyType), uint256(0));
 
         Key memory new_k = account.getKeyById(0, KeyType.WEBAUTHN);
-        (bool isActive_New, uint48 validUntil_New, uint48 validAfter_New, uint48 limit_New) = account.getSessionKeyData(keccak256(abi.encodePacked(new_k.pubKey.x, new_k.pubKey.y)));
+        (bool isActive_New, uint48 validUntil_New, uint48 validAfter_New, uint48 limit_New) =
+            account.getSessionKeyData(keccak256(abi.encodePacked(new_k.pubKey.x, new_k.pubKey.y)));
         assertEq(new_k.eoaAddress, address(0));
         assertEq(new_k.pubKey.x, k.pubKey.x);
         assertEq(new_k.pubKey.y, k.pubKey.y);
@@ -566,7 +572,9 @@ contract Recoverable is Base {
 
         console.log("isActive_New", isActive_New);
         console.log("validUntil_New", validUntil_New);
-        console.log("/* --------------------------------- test_CompleteRecoveryToWebAuthn -------- */");
+        console.log(
+            "/* --------------------------------- test_CompleteRecoveryToWebAuthn -------- */"
+        );
     }
 
     function _poroposeGuardian() internal {
@@ -788,12 +796,12 @@ contract Recoverable is Base {
     }
 
     function _startRecoveryToWebAuthn() internal {
-        recovery_pubKeyWebAuthn = PubKey({
-            x: BATCH_VALID_PUBLIC_KEY_X,
-            y: BATCH_VALID_PUBLIC_KEY_Y
+        recovery_pubKeyWebAuthn = PubKey({x: BATCH_VALID_PUBLIC_KEY_X, y: BATCH_VALID_PUBLIC_KEY_Y});
+        recovery_keyWebAuthn = Key({
+            pubKey: recovery_pubKeyWebAuthn,
+            eoaAddress: address(0),
+            keyType: KeyType.WEBAUTHN
         });
-        recovery_keyWebAuthn =
-            Key({pubKey: recovery_pubKeyWebAuthn, eoaAddress: address(0), keyType: KeyType.WEBAUTHN});
 
         bytes memory code = abi.encodePacked(
             bytes3(0xef0100),
