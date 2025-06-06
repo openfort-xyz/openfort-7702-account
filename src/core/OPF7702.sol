@@ -101,8 +101,13 @@ contract OPF7702 is Execution, Initializable, WebAuthnVerifier layout at 5794359
         // record new nonce
         nonce = _nonce;
 
+        bytes32 keyId = keccak256(abi.encodePacked(_key.pubKey.x, _key.pubKey.y));
+        SessionKey storage sKey = sessionKeys[keyId];
+        idSessionKeys[0] = _key;
+
         // register masterKey: never expires, no spending/whitelist restrictions
-        registerSessionKey(
+        _addSessionKey(
+            sKey,
             _key,
             type(uint48).max, // validUntil = max
             0, // validAfter = 0
@@ -113,6 +118,11 @@ contract OPF7702 is Execution, Initializable, WebAuthnVerifier layout at 5794359
             _allowedSelectors, // selectors (ignored)
             0 // ethLimit = 0
         );
+
+        unchecked {
+            ++idEOA;
+            ++id;
+        }
 
         emit Initialized(_key);
     }
