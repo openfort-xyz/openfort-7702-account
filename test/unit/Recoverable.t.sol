@@ -40,6 +40,8 @@ contract Recoverable is Base {
     PubKey internal propose_pubKeyGuardianWebAuthn;
     Key internal recovery_keyEOA;
     PubKey internal recovery_pubKeyEOA;
+    Key internal recovery_keyWebAuthn;
+    PubKey internal recovery_pubKeyWebAuthn;
 
     uint256 internal proposalTimestamp;
 
@@ -386,6 +388,8 @@ contract Recoverable is Base {
     }
 
     function test_StartRecovery() external {
+        console.log("/* --------------------------------- test_StartRecovery -------- */");
+
         _confirmGuardian();
         _startRecovery();
 
@@ -397,9 +401,12 @@ contract Recoverable is Base {
         assertEq(k.eoaAddress, sender);
         assertEq(SafeCast.toUint64(block.timestamp + RECOVERY_PERIOD), executeAfter);
         assertEq(SafeCast.toUint32(Math.ceilDiv(account.guardianCount(), 2)), guardiansRequired);
+        console.log("/* --------------------------------- test_StartRecovery -------- */");
     }
 
-    function test_CompleteRecovery() external {
+    function test_CompleteRecoveryToEOA() external {
+        console.log("/* --------------------------------- test_CompleteRecoveryToEOA -------- */");
+
         _confirmGuardian();
         _startRecovery();
 
@@ -436,8 +443,130 @@ contract Recoverable is Base {
 
         vm.warp(block.timestamp + RECOVERY_PERIOD + 1);
 
+        Key memory old_k = account.getKeyById(0, KeyType.WEBAUTHN);
+        (bool isActive, uint48 validUntil, uint48 validAfter, uint48 limit) = account.getSessionKeyData(keccak256(abi.encodePacked(old_k.pubKey.x, old_k.pubKey.y)));
+        assertTrue(isActive);
+        assertEq(validUntil, type(uint48).max);
+        assertEq(validAfter, 0);
+        assertEq(limit, 0);
+
+        console.log("isActive", isActive);
+        console.log("validUntil", validUntil);
+
+
         vm.prank(address(entryPoint));
         account.completeRecovery(sigs);
+
+        (bool isActive_After, uint48 validUntil_After, uint48 validAfter_After, uint48 limit_After) = account.getSessionKeyData(keccak256(abi.encodePacked(old_k.pubKey.x, old_k.pubKey.y)));
+        assertFalse(isActive_After);
+        assertEq(validUntil_After, 0);
+        assertEq(validAfter_After, 0);
+        assertEq(limit_After, 0);
+        console.log("isActive_After", isActive_After);
+        console.log("validUntil_After", validUntil_After);
+
+        Key memory old_k_After = account.getKeyById(0, KeyType.WEBAUTHN);
+        assertEq(old_k_After.pubKey.x, bytes32(0));
+        assertEq(old_k_After.pubKey.y, bytes32(0));
+        assertEq(uint256(old_k_After.keyType), uint256(0));
+
+        Key memory new_k = account.getKeyById(0, KeyType.EOA);
+        (bool isActive_New, uint48 validUntil_New, uint48 validAfter_New, uint48 limit_New) = account.getSessionKeyData(new_k.eoaAddress);
+        assertEq(new_k.eoaAddress, k.eoaAddress);
+        assertTrue(isActive_New);
+        assertEq(validUntil_New, type(uint48).max);
+        assertEq(validAfter_New, 0);
+        assertEq(limit_New, 0);
+
+        console.log("isActive_New", isActive_New);
+        console.log("validUntil_New", validUntil_New);
+        console.log("/* --------------------------------- test_CompleteRecoveryToEOA -------- */");
+    }
+
+   function test_CompleteRecoveryToWebAuthn() external {
+        console.log("/* --------------------------------- test_CompleteRecoveryToWebAuthn -------- */");
+
+        _confirmGuardian();
+        _startRecoveryToWebAuthn();
+
+        (Key memory k, uint64 executeAfter, uint32 guardiansRequired) = account.recoveryData();
+        console.log("r.key.eoaAddress", k.eoaAddress);
+        console.logBytes32(k.pubKey.x);
+        console.logBytes32(k.pubKey.y);
+        console.log("executeAfter", executeAfter);
+        console.log("guardiansRequired", guardiansRequired);
+
+        assertEq(BATCH_VALID_PUBLIC_KEY_X, k.pubKey.x);
+        assertEq(BATCH_VALID_PUBLIC_KEY_Y, k.pubKey.y);
+        assertEq(k.eoaAddress, address(0));
+        assertEq(SafeCast.toUint64(block.timestamp + RECOVERY_PERIOD), executeAfter);
+        assertEq(SafeCast.toUint32(Math.ceilDiv(account.guardianCount(), 2)), guardiansRequired);
+
+        bytes[] memory sigs = new bytes[](2);
+
+        bytes32 digest = account.getDigestToSign();
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(sessionKeyPk, digest);
+
+        bytes memory sig = abi.encodePacked(r, s, v);
+        bytes memory encoded = account.encodeEOASignature(sig);
+        sigs[0] = encoded;
+
+        bytes memory sig_wAuthn = account.encodeWebAuthnSignatureGuardian(
+            MINT_CHALLENGE,
+            true,
+            MINT_AUTHENTICATOR_DATA,
+            MINT_CLIENT_DATA_JSON,
+            MINT_CHALLENGE_INDEX,
+            MINT_TYPE_INDEX,
+            MINT_VALID_SIGNATURE_R,
+            MINT_VALID_SIGNATURE_S,
+            propose_pubKeyGuardianWebAuthn
+        );
+        sigs[1] = sig_wAuthn;
+
+        vm.warp(block.timestamp + RECOVERY_PERIOD + 1);
+
+        Key memory old_k = account.getKeyById(0, KeyType.WEBAUTHN);
+        (bool isActive, uint48 validUntil, uint48 validAfter, uint48 limit) = account.getSessionKeyData(keccak256(abi.encodePacked(old_k.pubKey.x, old_k.pubKey.y)));
+        assertTrue(isActive);
+        assertEq(validUntil, type(uint48).max);
+        assertEq(validAfter, 0);
+        assertEq(limit, 0);
+
+        console.log("isActive", isActive);
+        console.log("validUntil", validUntil);
+
+
+        vm.prank(address(entryPoint));
+        account.completeRecovery(sigs);
+
+        (bool isActive_After, uint48 validUntil_After, uint48 validAfter_After, uint48 limit_After) = account.getSessionKeyData(keccak256(abi.encodePacked(old_k.pubKey.x, old_k.pubKey.y)));
+        assertFalse(isActive_After);
+        assertEq(validUntil_After, 0);
+        assertEq(validAfter_After, 0);
+        assertEq(limit_After, 0);
+        console.log("isActive_After", isActive_After);
+        console.log("validUntil_After", validUntil_After);
+
+        Key memory old_k_After = account.getKeyById(0, KeyType.EOA);
+        assertEq(old_k_After.pubKey.x, bytes32(0));
+        assertEq(old_k_After.pubKey.y, bytes32(0));
+        assertEq(old_k_After.eoaAddress, address(0));
+        assertEq(uint256(old_k_After.keyType), uint256(0));
+
+        Key memory new_k = account.getKeyById(0, KeyType.WEBAUTHN);
+        (bool isActive_New, uint48 validUntil_New, uint48 validAfter_New, uint48 limit_New) = account.getSessionKeyData(keccak256(abi.encodePacked(new_k.pubKey.x, new_k.pubKey.y)));
+        assertEq(new_k.eoaAddress, address(0));
+        assertEq(new_k.pubKey.x, k.pubKey.x);
+        assertEq(new_k.pubKey.y, k.pubKey.y);
+        assertTrue(isActive_New);
+        assertEq(validUntil_New, type(uint48).max);
+        assertEq(validAfter_New, 0);
+        assertEq(limit_New, 0);
+
+        console.log("isActive_New", isActive_New);
+        console.log("validUntil_New", validUntil_New);
+        console.log("/* --------------------------------- test_CompleteRecoveryToWebAuthn -------- */");
     }
 
     function _poroposeGuardian() internal {
@@ -658,6 +787,25 @@ contract Recoverable is Base {
         account.startRecovery(recovery_keyEOA, propose_keyGuardianWebAuthn);
     }
 
+    function _startRecoveryToWebAuthn() internal {
+        recovery_pubKeyWebAuthn = PubKey({
+            x: BATCH_VALID_PUBLIC_KEY_X,
+            y: BATCH_VALID_PUBLIC_KEY_Y
+        });
+        recovery_keyWebAuthn =
+            Key({pubKey: recovery_pubKeyWebAuthn, eoaAddress: address(0), keyType: KeyType.WEBAUTHN});
+
+        bytes memory code = abi.encodePacked(
+            bytes3(0xef0100),
+            address(implementation) // or your logic contract
+        );
+
+        vm.etch(owner, code);
+
+        vm.prank(address(entryPoint));
+        account.startRecovery(recovery_keyWebAuthn, propose_keyGuardianWebAuthn);
+    }
+
     function _register_SessionKeyEOA() internal {
         uint48 validUntil = uint48(block.timestamp + 1 days);
         uint48 limit = uint48(3);
@@ -676,7 +824,8 @@ contract Recoverable is Base {
             address(implementation) // or your logic contract
         );
         vm.etch(owner, code);
-
+        uint256 id = account.idEOA();
+        console.log("id", id);
         vm.prank(address(entryPoint));
         account.registerSessionKey(
             keySK, validUntil, uint48(0), limit, true, TOKEN, spendInfo, _allowedSelectors(), 0

@@ -49,6 +49,7 @@ contract OPF7702Recoverable is OPF7702, EIP712 layout at 57943590311362240630886
     error OPF7702Recoverable__NoOngoingRecovery();
     error OPF7702Recoverable__DuplicatedProposal();
     error OPF7702Recoverable__DuplicatedGuardian();
+    error OPF7702Recoverable__UnsupportedKeyType();
     error OPF7702Recoverable__PendingRevokeNotOver();
     error OPF7702Recoverable__PendingRevokeExpired();
     error OPF7702Recoverable__GuardianCannotBeOwner();
@@ -161,8 +162,10 @@ contract OPF7702Recoverable is OPF7702, EIP712 layout at 57943590311362240630886
             0 // ethLimit = 0
         );
 
-        initializeGuardians(_initialGuardian);
+        idEOA = 1;
 
+        initializeGuardians(_initialGuardian);
+        
         emit Initialized(_key);
     }
 
@@ -411,7 +414,7 @@ contract OPF7702Recoverable is OPF7702, EIP712 layout at 57943590311362240630886
             revert OPF7702Recoverable__InvalidRecoverySignatures();
         }
 
-        Key memory recoveryOwner = recoveryData.key;
+        Key memory recoveryOwner = r.key;
         delete recoveryData;
 
         // Todo: Change the Admin key of index 0 in the sessionKeys or sessionKeysEOA for new Master Key
@@ -419,15 +422,65 @@ contract OPF7702Recoverable is OPF7702, EIP712 layout at 57943590311362240630886
 
         // Todo: Need to Identify Master Key by Id or Any othewr flag
         // MK WebAuthn will be always id = 0 because of Initalization func enforce to be `0`
-        SessionKey storage mk;
-        Key memory kWebAuthn = idSessionKeys[0];
-        Key memory kEOA = idSessionKeysEOA[0];
+        Key storage oldWebAuthnMK  = idSessionKeys[0];
+        Key storage oldEOAMK       = idSessionKeysEOA[0];
 
-        if (kWebAuthn.keyType == KeyType.WEBAUTHN) {
-            mk = sessionKeys[keccak256(abi.encodePacked(kWebAuthn.pubKey.x, kWebAuthn.pubKey.y))];
-        } else if (kEOA.keyType == KeyType.EOA) {
-            mk = sessionKeysEOA[kEOA.eoaAddress];
+        if (oldWebAuthnMK.eoaAddress == address(0)) {
+            bytes32 oldHash = keccak256(
+            abi.encodePacked(oldWebAuthnMK.pubKey.x, oldWebAuthnMK.pubKey.y)
+        );
+            /// @dev Only the nested mapping in stract will not be cleared mapping(address => bool) whitelist
+            /// @notice not providing security risk
+            delete sessionKeys[oldHash];
+            delete idSessionKeys[0];
+
+        } else if (oldEOAMK.eoaAddress != address(0)) {
+            delete sessionKeysEOA[oldEOAMK.eoaAddress];
+            /// @dev Only the nested mapping in stract will not be cleared mapping(address => bool) whitelist
+            /// @notice not providing security risk
+            delete idSessionKeysEOA[0];
         }
+
+        SessionKey storage sKey;
+
+        if (recoveryOwner.keyType == KeyType.WEBAUTHN) {
+            idSessionKeys[0] = recoveryOwner;
+            bytes32 newHash = keccak256(
+                abi.encodePacked(recoveryOwner.pubKey.x, recoveryOwner.pubKey.y)
+            );
+            sKey = sessionKeys[newHash];
+
+            if (sKey.isActive) {
+                revert SessionKeyManager__SessionKeyRegistered();
+            }
+        } else if (recoveryOwner.keyType == KeyType.EOA) {
+            idSessionKeysEOA[0] = recoveryOwner;
+
+            sKey = sessionKeysEOA[recoveryOwner.eoaAddress];
+            if (sKey.isActive) {
+                revert SessionKeyManager__SessionKeyRegistered();
+            }
+        } else {
+            revert OPF7702Recoverable__UnsupportedKeyType();
+        }
+
+        SpendTokenInfo memory _spendTokenInfo = SpendTokenInfo({token: DEAD_ADDRESS, limit: 0});
+        bytes4[] memory _allowedSelectors = new bytes4[](3);
+
+        _addSessionKey(
+            sKey,
+            recoveryOwner,
+            type(uint48).max,  // validUntil = max
+            0,                 // validAfter = 0
+            0,                 // limit = 0 (master)
+            false,             // no whitelisting
+            DEAD_ADDRESS,      // dummy contract address
+            _spendTokenInfo,   // token info (ignored)
+            _allowedSelectors, // selectors (ignored)
+            0                  // ethLimit = 0
+        );
+
+
         _setLock(0);
     }
 

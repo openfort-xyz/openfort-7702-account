@@ -56,7 +56,7 @@ abstract contract KeysManager is BaseOPF7702, ISessionkey, SpendLimit {
     uint256 public id;
     /// @notice Incremental ID for EOA session keys
     /// @dev idEOA = 0 always saved for MasterKey (Admin)
-    uint256 public idEOA = 1;
+    uint256 public idEOA;
 
     /// @notice Mapping from session key ID to Key struct (WebAuthn/P256/P256NONKEY)
     mapping(uint256 => Key) public idSessionKeys;
@@ -283,14 +283,14 @@ abstract contract KeysManager is BaseOPF7702, ISessionkey, SpendLimit {
      */
     function _addSessionKey(
         SessionKey storage sKey,
-        Key calldata _key,
+        Key memory _key,
         uint48 _validUntil,
         uint48 _validAfter,
         uint48 _limit,
         bool _whitelisting,
         address _contractAddress,
-        SpendTokenInfo calldata _spendTokenInfo,
-        bytes4[] calldata _allowedSelectors,
+        SpendTokenInfo memory _spendTokenInfo,
+        bytes4[] memory _allowedSelectors,
         uint256 _ethLimit
     ) internal {
         sKey.pubKey = _key.pubKey;
