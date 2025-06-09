@@ -206,6 +206,7 @@ abstract contract KeysManager is BaseOPF7702, ISessionkey, SpendLimit {
      *             • For EOA: uses `eoaAddress` (must be non‐zero).
      */
     function revokeSessionKey(Key calldata _key) external {
+        // Todo: if masterKey? revert()? or user have to be resposable for execution.
         _requireForExecute();
 
         KeyType kt = _key.keyType;
