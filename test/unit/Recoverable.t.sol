@@ -556,7 +556,7 @@ contract Recoverable is Base {
             G_VALID_SIGNATURE_S,
             propose_pubKeyGuardianWebAuthn
         );
-        
+
         sigs[1] = sig_wAuthn;
 
         vm.warp(block.timestamp + RECOVERY_PERIOD + 1);
@@ -627,8 +627,7 @@ contract Recoverable is Base {
         vm.prank(address(entryPoint));
         account.proposeGuardian(propose_KeyGuardianEOA);
 
-        propose_pubKeyGuardianWebAuthn =
-            PubKey({x: G_VALID_PUBLIC_KEY_X, y: G_VALID_PUBLIC_KEY_Y});
+        propose_pubKeyGuardianWebAuthn = PubKey({x: G_VALID_PUBLIC_KEY_X, y: G_VALID_PUBLIC_KEY_Y});
         propose_keyGuardianWebAuthn = Key({
             pubKey: propose_pubKeyGuardianWebAuthn,
             eoaAddress: address(0),
@@ -662,8 +661,7 @@ contract Recoverable is Base {
         vm.prank(address(entryPoint));
         account.confirmGuardianProposal(propose_KeyGuardianEOA);
 
-        propose_pubKeyGuardianWebAuthn =
-            PubKey({x: G_VALID_PUBLIC_KEY_X, y: G_VALID_PUBLIC_KEY_Y});
+        propose_pubKeyGuardianWebAuthn = PubKey({x: G_VALID_PUBLIC_KEY_X, y: G_VALID_PUBLIC_KEY_Y});
         propose_keyGuardianWebAuthn = Key({
             pubKey: propose_pubKeyGuardianWebAuthn,
             eoaAddress: address(0),
@@ -690,8 +688,7 @@ contract Recoverable is Base {
         vm.prank(address(entryPoint));
         account.revokeGuardian(propose_KeyGuardianEOA);
 
-        propose_pubKeyGuardianWebAuthn =
-            PubKey({x: G_VALID_PUBLIC_KEY_X, y: G_VALID_PUBLIC_KEY_Y});
+        propose_pubKeyGuardianWebAuthn = PubKey({x: G_VALID_PUBLIC_KEY_X, y: G_VALID_PUBLIC_KEY_Y});
         propose_keyGuardianWebAuthn = Key({
             pubKey: propose_pubKeyGuardianWebAuthn,
             eoaAddress: address(0),
@@ -722,8 +719,7 @@ contract Recoverable is Base {
         vm.prank(address(entryPoint));
         account.cancelGuardianRevocation(propose_KeyGuardianEOA);
 
-        propose_pubKeyGuardianWebAuthn =
-            PubKey({x: G_VALID_PUBLIC_KEY_X, y: G_VALID_PUBLIC_KEY_Y});
+        propose_pubKeyGuardianWebAuthn = PubKey({x: G_VALID_PUBLIC_KEY_X, y: G_VALID_PUBLIC_KEY_Y});
         propose_keyGuardianWebAuthn = Key({
             pubKey: propose_pubKeyGuardianWebAuthn,
             eoaAddress: address(0),
@@ -756,8 +752,7 @@ contract Recoverable is Base {
     function _confirmGuardianRevocationWebAuthn() internal {
         bytes memory code = abi.encodePacked(bytes3(0xef0100), address(implementation));
 
-        propose_pubKeyGuardianWebAuthn =
-            PubKey({x: G_VALID_PUBLIC_KEY_X, y: G_VALID_PUBLIC_KEY_Y});
+        propose_pubKeyGuardianWebAuthn = PubKey({x: G_VALID_PUBLIC_KEY_X, y: G_VALID_PUBLIC_KEY_Y});
         propose_keyGuardianWebAuthn = Key({
             pubKey: propose_pubKeyGuardianWebAuthn,
             eoaAddress: address(0),
@@ -793,8 +788,7 @@ contract Recoverable is Base {
         vm.prank(address(entryPoint));
         account.cancelGuardianProposal(propose_KeyGuardianEOA);
 
-        propose_pubKeyGuardianWebAuthn =
-            PubKey({x: G_VALID_PUBLIC_KEY_X, y: G_VALID_PUBLIC_KEY_Y});
+        propose_pubKeyGuardianWebAuthn = PubKey({x: G_VALID_PUBLIC_KEY_X, y: G_VALID_PUBLIC_KEY_Y});
         propose_keyGuardianWebAuthn = Key({
             pubKey: propose_pubKeyGuardianWebAuthn,
             eoaAddress: address(0),
