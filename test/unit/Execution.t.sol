@@ -17,7 +17,7 @@ import {WebAuthnVerifier} from "src/utils/WebAuthnVerifier.sol";
 import {PackedUserOperation} from
     "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
 
-contract RegistartionTest is Base {
+contract ExecutionTest is Base {
     /* ───────────────────────────────────────────────────────────── contracts ── */
     IEntryPoint public entryPoint;
     WebAuthnVerifier public webAuthn;
