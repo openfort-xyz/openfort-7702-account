@@ -19,6 +19,8 @@ import {SafeCast} from "lib/openzeppelin-contracts/contracts/utils/math/SafeCast
 import {ECDSA} from "lib/openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
 import {EIP712} from "lib/openzeppelin-contracts/contracts/utils/cryptography/EIP712.sol";
 
+import {Test, console2 as console} from "lib/forge-std/src/Test.sol";
+
 /**
  * @title   Openfort Base Account 7702 with ERC-4337 Support
  * @author  Openfort — https://openfort.xyz
@@ -637,7 +639,7 @@ contract OPF7702Recoverable is OPF7702, EIP712 layout at 57943590311362240630886
                         sigData,
                         (bytes32, bool, bytes, string, uint256, uint256, bytes32, bytes32, PubKey)
                     );
-
+        
                     if (
                         !verifySoladySignature(
                             challenge,
@@ -657,13 +659,17 @@ contract OPF7702Recoverable is OPF7702, EIP712 layout at 57943590311362240630886
                         return false;
                     }
 
-                    usedChallenges[challenge] = true;
-
+                    usedChallenges[challenge] = true;   
+                                    console.logBytes32(pubKey.x);
+                console.logBytes32(pubKey.y);
+                console.logBytes32(keccak256(abi.encodePacked(pubKey.x, pubKey.y)));
                     guardianHash = keccak256(abi.encodePacked(pubKey.x, pubKey.y));
                 } else {
                     return false;
                 }
 
+                console.logBytes32(guardianHash);
+                console.log("!guardiansData.data[guardianHash].isActive", !guardiansData.data[guardianHash].isActive);
                 if (!guardiansData.data[guardianHash].isActive) return false;
 
                 if (guardianHash <= lastGuardianHash) return false;

@@ -27,11 +27,15 @@ test-keys:
 test-registartion:
 	forge test --mp test/unit/Registartion.t.sol -vv --rpc-url $(SEPOLIA_RPC_URL)
 
+test-eth:
+	forge test --mp test/unit/DepositAndTransferETH.t.sol -vv --rpc-url $(SEPOLIA_RPC_URL)
+
 test-execution:
 	node script/P256_Single_Mint.ts && node script/P256.ts && forge test --mp test/unit/Execution.t.sol -vv --rpc-url $(SEPOLIA_RPC_URL)
 
 test-recovery:
 	forge test --mp test/unit/Recoverable.t.sol --rpc-url $(SEPOLIA_RPC_URL) -vv 
+	
 test-all:
 	node script/P256_Single_Mint.ts && node script/P256_ETH.ts && node script/P256.ts && forge test -vv --rpc-url $(SEPOLIA_RPC_URL)
 

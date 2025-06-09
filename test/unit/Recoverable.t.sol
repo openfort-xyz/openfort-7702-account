@@ -459,14 +459,14 @@ contract Recoverable is Base {
         sigs[0] = encoded;
 
         bytes memory sig_wAuthn = account.encodeWebAuthnSignatureGuardian(
-            MINT_CHALLENGE,
+            G_CHALLENGE,
             true,
-            MINT_AUTHENTICATOR_DATA,
-            MINT_CLIENT_DATA_JSON,
-            MINT_CHALLENGE_INDEX,
-            MINT_TYPE_INDEX,
-            MINT_VALID_SIGNATURE_R,
-            MINT_VALID_SIGNATURE_S,
+            G_AUTHENTICATOR_DATA,
+            G_CLIENT_DATA_JSON,
+            G_CHALLENGE_INDEX,
+            G_TYPE_INDEX,
+            G_VALID_SIGNATURE_R,
+            G_VALID_SIGNATURE_S,
             propose_pubKeyGuardianWebAuthn
         );
         sigs[1] = sig_wAuthn;
@@ -546,16 +546,17 @@ contract Recoverable is Base {
         sigs[0] = encoded;
 
         bytes memory sig_wAuthn = account.encodeWebAuthnSignatureGuardian(
-            MINT_CHALLENGE,
+            G_CHALLENGE,
             true,
-            MINT_AUTHENTICATOR_DATA,
-            MINT_CLIENT_DATA_JSON,
-            MINT_CHALLENGE_INDEX,
-            MINT_TYPE_INDEX,
-            MINT_VALID_SIGNATURE_R,
-            MINT_VALID_SIGNATURE_S,
+            G_AUTHENTICATOR_DATA,
+            G_CLIENT_DATA_JSON,
+            G_CHALLENGE_INDEX,
+            G_TYPE_INDEX,
+            G_VALID_SIGNATURE_R,
+            G_VALID_SIGNATURE_S,
             propose_pubKeyGuardianWebAuthn
         );
+        
         sigs[1] = sig_wAuthn;
 
         vm.warp(block.timestamp + RECOVERY_PERIOD + 1);
@@ -627,7 +628,7 @@ contract Recoverable is Base {
         account.proposeGuardian(propose_KeyGuardianEOA);
 
         propose_pubKeyGuardianWebAuthn =
-            PubKey({x: MINT_VALID_PUBLIC_KEY_X, y: MINT_VALID_PUBLIC_KEY_Y});
+            PubKey({x: G_VALID_PUBLIC_KEY_X, y: G_VALID_PUBLIC_KEY_Y});
         propose_keyGuardianWebAuthn = Key({
             pubKey: propose_pubKeyGuardianWebAuthn,
             eoaAddress: address(0),
@@ -662,7 +663,7 @@ contract Recoverable is Base {
         account.confirmGuardianProposal(propose_KeyGuardianEOA);
 
         propose_pubKeyGuardianWebAuthn =
-            PubKey({x: MINT_VALID_PUBLIC_KEY_X, y: MINT_VALID_PUBLIC_KEY_Y});
+            PubKey({x: G_VALID_PUBLIC_KEY_X, y: G_VALID_PUBLIC_KEY_Y});
         propose_keyGuardianWebAuthn = Key({
             pubKey: propose_pubKeyGuardianWebAuthn,
             eoaAddress: address(0),
@@ -690,7 +691,7 @@ contract Recoverable is Base {
         account.revokeGuardian(propose_KeyGuardianEOA);
 
         propose_pubKeyGuardianWebAuthn =
-            PubKey({x: MINT_VALID_PUBLIC_KEY_X, y: MINT_VALID_PUBLIC_KEY_Y});
+            PubKey({x: G_VALID_PUBLIC_KEY_X, y: G_VALID_PUBLIC_KEY_Y});
         propose_keyGuardianWebAuthn = Key({
             pubKey: propose_pubKeyGuardianWebAuthn,
             eoaAddress: address(0),
@@ -722,7 +723,7 @@ contract Recoverable is Base {
         account.cancelGuardianRevocation(propose_KeyGuardianEOA);
 
         propose_pubKeyGuardianWebAuthn =
-            PubKey({x: MINT_VALID_PUBLIC_KEY_X, y: MINT_VALID_PUBLIC_KEY_Y});
+            PubKey({x: G_VALID_PUBLIC_KEY_X, y: G_VALID_PUBLIC_KEY_Y});
         propose_keyGuardianWebAuthn = Key({
             pubKey: propose_pubKeyGuardianWebAuthn,
             eoaAddress: address(0),
@@ -756,7 +757,7 @@ contract Recoverable is Base {
         bytes memory code = abi.encodePacked(bytes3(0xef0100), address(implementation));
 
         propose_pubKeyGuardianWebAuthn =
-            PubKey({x: MINT_VALID_PUBLIC_KEY_X, y: MINT_VALID_PUBLIC_KEY_Y});
+            PubKey({x: G_VALID_PUBLIC_KEY_X, y: G_VALID_PUBLIC_KEY_Y});
         propose_keyGuardianWebAuthn = Key({
             pubKey: propose_pubKeyGuardianWebAuthn,
             eoaAddress: address(0),
@@ -793,7 +794,7 @@ contract Recoverable is Base {
         account.cancelGuardianProposal(propose_KeyGuardianEOA);
 
         propose_pubKeyGuardianWebAuthn =
-            PubKey({x: MINT_VALID_PUBLIC_KEY_X, y: MINT_VALID_PUBLIC_KEY_Y});
+            PubKey({x: G_VALID_PUBLIC_KEY_X, y: G_VALID_PUBLIC_KEY_Y});
         propose_keyGuardianWebAuthn = Key({
             pubKey: propose_pubKeyGuardianWebAuthn,
             eoaAddress: address(0),
