@@ -16,11 +16,11 @@ interface IOPF7702 is IExecution, IKeysManager, IERC1271, IERC165 {
     // =============================================================
 
     /**
-     * @notice Initializes the account with a “master” session key (no spending or whitelist restrictions).
+     * @notice Initializes the account with a “master” key (no spending or whitelist restrictions).
      * @dev
      *  • Callable only via EntryPoint or a self-call.
      *  • Clears previous storage, checks nonce & expiration, verifies signature.
-     *  • Registers the provided `_key` as a master session key:
+     *  • Registers the provided `_key` as a master key:
      *     - validUntil = max (never expires)
      *     - validAfter  = 0
      *     - limit       = 0  (master)
@@ -28,7 +28,7 @@ interface IOPF7702 is IExecution, IKeysManager, IERC1271, IERC165 {
      *     - DEAD_ADDRESS placeholder in whitelistedContracts
      *  • Emits `Initialized(_key)`.
      *
-     * @param _key              The `Key` struct (master session key).
+     * @param _key              The `Key` struct (master key).
      * @param _spendTokenInfo   Token limit info (ignored for master).
      * @param _allowedSelectors Unused selectors (ignored for master).
      * @param _hash             Hash to sign (EIP-712 or UserOp hash).
