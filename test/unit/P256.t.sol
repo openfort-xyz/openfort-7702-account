@@ -10,7 +10,7 @@ import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.so
 import {OPF7702 as OPF7702} from "src/core/OPF7702.sol";
 import {MockERC20} from "src/mocks/MockERC20.sol";
 import {SpendLimit} from "src/utils/SpendLimit.sol";
-import {ISessionkey} from "src/interfaces/ISessionkey.sol";
+import {IKey} from "src/interfaces/IKey.sol";
 import {WebAuthnVerifier} from "src/utils/WebAuthnVerifier.sol";
 import {PackedUserOperation} from
     "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
@@ -42,7 +42,7 @@ contract P256Test is Base {
         vm.stopPrank();
 
         _initializeAccount();
-        _register_SessionKeyP256();
+        _register_KeyP256();
 
         vm.prank(sender);
         entryPoint.depositTo{value: 0.11 ether}(owner);
@@ -86,8 +86,8 @@ contract P256Test is Base {
         console.log("userOpHash:");
         console.logBytes32(userOpHash);
 
-        ISessionkey.PubKey memory pubKey =
-            ISessionkey.PubKey({x: P256_PUBLIC_KEY_X, y: P256_PUBLIC_KEY_Y});
+        IKey.PubKey memory pubKey =
+            IKey.PubKey({x: P256_PUBLIC_KEY_X, y: P256_PUBLIC_KEY_Y});
 
         bytes memory _signature =
             account.encodeP256Signature(P256_SIGNATURE_R, P256_SIGNATURE_S, pubKey);
@@ -115,7 +115,7 @@ contract P256Test is Base {
         console.log("/* ------------- test_ExecuteBatchSKP256 ------------- */");
     }
 
-    function _register_SessionKeyP256() internal {
+    function _register_KeyP256() internal {
         uint48 validUntil = uint48(block.timestamp + 1 days);
         uint48 limit = 3;
 
@@ -130,7 +130,7 @@ contract P256Test is Base {
         vm.etch(owner, code);
 
         vm.prank(address(entryPoint));
-        account.registerSessionKey(
+        account.registerKey(
             keySK, validUntil, 0, limit, true, TOKEN, spendInfo, _allowedSelectors(), 0
         );
     }

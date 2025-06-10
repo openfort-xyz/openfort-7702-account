@@ -11,7 +11,7 @@ import {IEntryPoint} from "lib/account-abstraction/contracts/interfaces/IEntryPo
 import {OPF7702 as OPF7702} from "src/core/OPF7702.sol";
 import {MockERC20} from "src/mocks/MockERC20.sol";
 import {SpendLimit} from "src/utils/SpendLimit.sol";
-import {ISessionkey} from "src/interfaces/ISessionkey.sol";
+import {IKey} from "src/interfaces/IKey.sol";
 import {WebAuthnVerifier} from "src/utils/WebAuthnVerifier.sol";
 import {PackedUserOperation} from
     "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
@@ -48,9 +48,9 @@ contract KeysTest is Base {
         vm.stopPrank();
 
         _initializeAccount();
-        _register_SessionKeyEOA();
-        _register_SessionKeyP256();
-        _register_SessionKeyP256NonKey();
+        _register_KeyEOA();
+        _register_KeyP256();
+        _register_KeyP256NonKey();
 
         vm.prank(sender);
         entryPoint.depositTo{value: 0.11e18}(owner);
@@ -77,19 +77,19 @@ contract KeysTest is Base {
 
         vm.startPrank(owner);
 
-        account.revokeSessionKey(k1);
-        account.revokeSessionKey(k2);
-        account.revokeSessionKey(mk);
+        account.revokeKey(k1);
+        account.revokeKey(k2);
+        account.revokeKey(mk);
 
         vm.stopPrank();
         (bool _isActivek1, uint256 _validUntilk1,, uint256 _limitk1) =
-            account.getSessionKeyData(k1.eoaAddress);
+            account.getKeyData(k1.eoaAddress);
 
         (bool _isActivek2, uint256 _validUntilk2,, uint256 _limitk2) =
-            account.getSessionKeyData(keccak256(abi.encodePacked(k2.pubKey.x, k2.pubKey.y)));
+            account.getKeyData(keccak256(abi.encodePacked(k2.pubKey.x, k2.pubKey.y)));
 
         (bool _isActivemk, uint256 _validUntilmk,, uint256 _limitmk) =
-            account.getSessionKeyData(keccak256(abi.encodePacked(mk.pubKey.x, mk.pubKey.y)));
+            account.getKeyData(keccak256(abi.encodePacked(mk.pubKey.x, mk.pubKey.y)));
 
         assertFalse(_isActivek1);
         assertFalse(_isActivek2);
@@ -107,7 +107,7 @@ contract KeysTest is Base {
     function test_RevokeALL() public {
         vm.prank(owner);
 
-        account.revokeAllSessionKeys();
+        account.revokeAllKeys();
 
         uint256 idLength = account.id();
         uint256 idLengthEOA = account.idEOA();
@@ -115,7 +115,7 @@ contract KeysTest is Base {
         for (uint256 i = 0; i < idLengthEOA; i++) {
             Key memory k = account.getKeyById(i, KeyType.EOA);
             (bool _isActive, uint256 _validUntil,, uint256 _limit) =
-                account.getSessionKeyData(k.eoaAddress);
+                account.getKeyData(k.eoaAddress);
 
             assertFalse(_isActive);
             assertEq(_validUntil, 0);
@@ -125,7 +125,7 @@ contract KeysTest is Base {
         for (uint256 i = 1; i < idLength; i++) {
             Key memory k = account.getKeyById(i, KeyType.P256);
             (bool _isActive, uint256 _validUntil,, uint256 _limit) =
-                account.getSessionKeyData(keccak256(abi.encodePacked(k.pubKey.x, k.pubKey.y)));
+                account.getKeyData(keccak256(abi.encodePacked(k.pubKey.x, k.pubKey.y)));
 
             assertFalse(_isActive);
             assertEq(_validUntil, 0);
@@ -134,7 +134,7 @@ contract KeysTest is Base {
     }
 
     /* ─────────────────────────────────────────────────────────────── tests ──── */
-    function _register_SessionKeyEOA() internal {
+    function _register_KeyEOA() internal {
         uint256 count = 15;
 
         for (uint256 i; i < count; i++) {
@@ -160,13 +160,13 @@ contract KeysTest is Base {
             vm.etch(owner, code);
 
             vm.prank(address(entryPoint));
-            account.registerSessionKey(
+            account.registerKey(
                 keySK, validUntil, uint48(0), limit, true, TOKEN, spendInfo, _allowedSelectors(), 0
             );
         }
     }
 
-    function _register_SessionKeyP256() internal {
+    function _register_KeyP256() internal {
         uint256 count = 15;
 
         for (uint256 i; i < count; i++) {
@@ -192,13 +192,13 @@ contract KeysTest is Base {
             vm.etch(owner, code);
 
             vm.prank(address(entryPoint));
-            account.registerSessionKey(
+            account.registerKey(
                 keySK, validUntil, uint48(0), limit, true, TOKEN, spendInfo, _allowedSelectors(), 0
             );
         }
     }
 
-    function _register_SessionKeyP256NonKey() internal {
+    function _register_KeyP256NonKey() internal {
         uint256 count = 10;
 
         for (uint256 i; i < count; i++) {
@@ -224,7 +224,7 @@ contract KeysTest is Base {
             vm.etch(owner, code);
 
             vm.prank(address(entryPoint));
-            account.registerSessionKey(
+            account.registerKey(
                 keySK, validUntil, uint48(0), limit, true, TOKEN, spendInfo, _allowedSelectors(), 0
             );
         }

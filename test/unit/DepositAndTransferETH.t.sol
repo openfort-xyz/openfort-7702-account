@@ -12,7 +12,7 @@ import {IEntryPoint} from "lib/account-abstraction/contracts/interfaces/IEntryPo
 import {OPF7702 as OPF7702} from "src/core/OPF7702.sol";
 import {MockERC20} from "src/mocks/MockERC20.sol";
 import {SpendLimit} from "src/utils/SpendLimit.sol";
-import {ISessionkey} from "src/interfaces/ISessionkey.sol";
+import {IKey} from "src/interfaces/IKey.sol";
 import {WebAuthnVerifier} from "src/utils/WebAuthnVerifier.sol";
 import {PackedUserOperation} from
     "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
@@ -50,9 +50,9 @@ contract DepositAndTransferETH is Base {
 
         _deal();
         _initializeAccount();
-        _register_SessionKeyEOA();
-        _register_SessionKeyP256();
-        _register_SessionKeyP256NonKey();
+        _register_KeyEOA();
+        _register_KeyP256();
+        _register_KeyP256NonKey();
 
         vm.prank(sender);
         entryPoint.depositTo{value: 0.11e18}(owner);
@@ -231,8 +231,8 @@ contract DepositAndTransferETH is Base {
         bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
         console.logBytes32(userOpHash);
 
-        ISessionkey.PubKey memory pubKeyExecuteBatch =
-            ISessionkey.PubKey({x: ETH_PUBLIC_KEY_X, y: ETH_PUBLIC_KEY_Y});
+        IKey.PubKey memory pubKeyExecuteBatch =
+            IKey.PubKey({x: ETH_PUBLIC_KEY_X, y: ETH_PUBLIC_KEY_Y});
 
         bytes memory _signature = account.encodeWebAuthnSignature(
             true,
@@ -403,8 +403,8 @@ contract DepositAndTransferETH is Base {
         bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
         console.logBytes32(userOpHash);
 
-        ISessionkey.PubKey memory pubKeyExecuteBatch =
-            ISessionkey.PubKey({x: ETH_P256_PUBLIC_KEY_X, y: ETH_P256_PUBLIC_KEY_Y});
+        IKey.PubKey memory pubKeyExecuteBatch =
+            IKey.PubKey({x: ETH_P256_PUBLIC_KEY_X, y: ETH_P256_PUBLIC_KEY_Y});
 
         bytes memory _signature = account.encodeP256Signature(
             ETH_P256_SIGNATURE_R, ETH_P256_SIGNATURE_S, pubKeyExecuteBatch
@@ -490,8 +490,8 @@ contract DepositAndTransferETH is Base {
         bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
         console.logBytes32(userOpHash);
 
-        ISessionkey.PubKey memory pubKeyExecuteBatch =
-            ISessionkey.PubKey({x: ETH_P256NOKEY_PUBLIC_KEY_X, y: ETH_P256NOKEY_PUBLIC_KEY_Y});
+        IKey.PubKey memory pubKeyExecuteBatch =
+            IKey.PubKey({x: ETH_P256NOKEY_PUBLIC_KEY_X, y: ETH_P256NOKEY_PUBLIC_KEY_Y});
 
         bytes memory _signature = account.encodeP256NonKeySignature(
             ETH_P256NOKEY_SIGNATURE_R, ETH_P256NOKEY_SIGNATURE_S, pubKeyExecuteBatch
@@ -541,7 +541,7 @@ contract DepositAndTransferETH is Base {
         );
     }
 
-    function _register_SessionKeyEOA() internal {
+    function _register_KeyEOA() internal {
         uint48 validUntil = uint48(block.timestamp + 1 days);
         uint48 limit = uint48(3);
         pubKeySK = PubKey({
@@ -561,7 +561,7 @@ contract DepositAndTransferETH is Base {
         vm.etch(owner, code);
 
         vm.prank(address(entryPoint));
-        account.registerSessionKey(
+        account.registerKey(
             keySK,
             validUntil,
             uint48(0),
@@ -574,7 +574,7 @@ contract DepositAndTransferETH is Base {
         );
     }
 
-    function _register_SessionKeyP256() internal {
+    function _register_KeyP256() internal {
         uint48 validUntil = uint48(block.timestamp + 1 days);
         uint48 limit = uint48(3);
         pubKeySK = PubKey({x: ETH_P256_PUBLIC_KEY_X, y: ETH_P256_PUBLIC_KEY_Y});
@@ -591,7 +591,7 @@ contract DepositAndTransferETH is Base {
         vm.etch(owner, code);
 
         vm.prank(address(entryPoint));
-        account.registerSessionKey(
+        account.registerKey(
             keySK,
             validUntil,
             uint48(0),
@@ -604,7 +604,7 @@ contract DepositAndTransferETH is Base {
         );
     }
 
-    function _register_SessionKeyP256NonKey() internal {
+    function _register_KeyP256NonKey() internal {
         uint48 validUntil = uint48(block.timestamp + 1 days);
         uint48 limit = uint48(3);
         pubKeySK = PubKey({x: ETH_P256NOKEY_PUBLIC_KEY_X, y: ETH_P256NOKEY_PUBLIC_KEY_Y});
@@ -621,7 +621,7 @@ contract DepositAndTransferETH is Base {
         vm.etch(owner, code);
 
         vm.prank(address(entryPoint));
-        account.registerSessionKey(
+        account.registerKey(
             keySK,
             validUntil,
             uint48(0),

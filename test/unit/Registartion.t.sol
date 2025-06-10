@@ -13,7 +13,7 @@ import {OPF7702 as OPF7702} from "src/core/OPF7702.sol";
 import {MockERC20} from "src/mocks/MockERC20.sol";
 import {KeysManager} from "src/core/KeysManager.sol";
 import {SpendLimit} from "src/utils/SpendLimit.sol";
-import {ISessionkey} from "src/interfaces/ISessionkey.sol";
+import {IKey} from "src/interfaces/IKey.sol";
 import {WebAuthnVerifier} from "src/utils/WebAuthnVerifier.sol";
 import {PackedUserOperation} from
     "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
@@ -50,9 +50,9 @@ contract RegistartionTest is Base {
         vm.stopPrank();
 
         _initializeAccount();
-        _register_SessionKeyEOA();
-        _register_SessionKeyP256();
-        _register_SessionKeyP256NonKey();
+        _register_KeyEOA();
+        _register_KeyP256();
+        _register_KeyP256NonKey();
 
         vm.prank(sender);
         entryPoint.depositTo{value: 0.11e18}(owner);
@@ -76,8 +76,8 @@ contract RegistartionTest is Base {
         console.log("/* --------------------------------- test_getKeyById_zero -------- */");
     }
 
-    function test_RegisterSessionKeyEOAWithMK() public {
-        console.log("/* ------------------------- test_RegisterSessionKeyWithMK -------- */");
+    function test_RegisterKeyEOAWithMK() public {
+        console.log("/* ------------------------- test_RegisterKeyWithMK -------- */");
         uint48 validUntil = uint48(1795096759);
         uint48 limit = uint48(3);
         pubKeySK = PubKey({
@@ -92,7 +92,7 @@ contract RegistartionTest is Base {
             SpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000e18});
 
         bytes memory callData = abi.encodeWithSelector(
-            KeysManager.registerSessionKey.selector,
+            KeysManager.registerKey.selector,
             validUntil,
             uint48(0),
             limit,
@@ -120,17 +120,17 @@ contract RegistartionTest is Base {
         bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
         console.logBytes32(userOpHash);
 
-        ISessionkey.PubKey memory pubKeyExecuteBatch =
-            ISessionkey.PubKey({x: VALID_PUBLIC_KEY_X, y: VALID_PUBLIC_KEY_Y});
+        IKey.PubKey memory pubKeyExecuteBatch =
+            IKey.PubKey({x: REG_PUBLIC_KEY_X, y: REG_PUBLIC_KEY_Y});
 
         bytes memory _signature = account.encodeWebAuthnSignature(
             true,
-            AUTHENTICATOR_DATA,
-            CLIENT_DATA_JSON,
-            CHALLENGE_INDEX,
-            TYPE_INDEX,
-            VALID_SIGNATURE_R,
-            VALID_SIGNATURE_S,
+            REG_AUTHENTICATOR_DATA,
+            REG_CLIENT_DATA_JSON,
+            REG_CHALLENGE_INDEX,
+            REG_TYPE_INDEX,
+            REG_SIGNATURE_R,
+            REG_SIGNATURE_S,
             pubKeyExecuteBatch
         );
 
@@ -143,13 +143,13 @@ contract RegistartionTest is Base {
             userOpHash,
             true,
             AUTHENTICATOR_DATA,
-            CLIENT_DATA_JSON,
-            CHALLENGE_INDEX,
-            TYPE_INDEX,
-            VALID_SIGNATURE_R,
-            VALID_SIGNATURE_S,
-            VALID_PUBLIC_KEY_X,
-            VALID_PUBLIC_KEY_Y
+            REG_CLIENT_DATA_JSON,
+            REG_CHALLENGE_INDEX,
+            REG_TYPE_INDEX,
+            REG_SIGNATURE_R,
+            REG_SIGNATURE_S,
+            REG_PUBLIC_KEY_X,
+            REG_PUBLIC_KEY_Y
         );
         console.log("isValid", isValid);
 
@@ -172,8 +172,8 @@ contract RegistartionTest is Base {
         console.logBytes32(k.pubKey.y);
     }
 
-    function test_RegisterSessionKeyP256WithMK() public {
-        console.log("/* ----------------------- test_RegisterSessionKeyP256WithMK -------- */");
+    function test_RegisterKeyP256WithMK() public {
+        console.log("/* ----------------------- test_RegisterKeyP256WithMK -------- */");
         uint48 validUntil = uint48(1795096759);
         uint48 limit = uint48(3);
         pubKeySK = PubKey({x: P256_PUBLIC_KEY_X, y: P256_PUBLIC_KEY_Y});
@@ -184,7 +184,7 @@ contract RegistartionTest is Base {
             SpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000e18});
 
         bytes memory callData = abi.encodeWithSelector(
-            KeysManager.registerSessionKey.selector,
+            KeysManager.registerKey.selector,
             validUntil,
             uint48(0),
             limit,
@@ -212,17 +212,17 @@ contract RegistartionTest is Base {
         bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
         console.logBytes32(userOpHash);
 
-        ISessionkey.PubKey memory pubKeyExecuteBatch =
-            ISessionkey.PubKey({x: VALID_PUBLIC_KEY_X, y: VALID_PUBLIC_KEY_Y});
+        IKey.PubKey memory pubKeyExecuteBatch =
+            IKey.PubKey({x: REG_PUBLIC_KEY_X, y: REG_PUBLIC_KEY_Y});
 
         bytes memory _signature = account.encodeWebAuthnSignature(
             true,
             AUTHENTICATOR_DATA,
-            CLIENT_DATA_JSON,
-            CHALLENGE_INDEX,
-            TYPE_INDEX,
-            VALID_SIGNATURE_R,
-            VALID_SIGNATURE_S,
+            REG_CLIENT_DATA_JSON,
+            REG_CHALLENGE_INDEX,
+            REG_TYPE_INDEX,
+            REG_SIGNATURE_R,
+            REG_SIGNATURE_S,
             pubKeyExecuteBatch
         );
 
@@ -235,13 +235,13 @@ contract RegistartionTest is Base {
             userOpHash,
             true,
             AUTHENTICATOR_DATA,
-            CLIENT_DATA_JSON,
-            CHALLENGE_INDEX,
-            TYPE_INDEX,
-            VALID_SIGNATURE_R,
-            VALID_SIGNATURE_S,
-            VALID_PUBLIC_KEY_X,
-            VALID_PUBLIC_KEY_Y
+            REG_CLIENT_DATA_JSON,
+            REG_CHALLENGE_INDEX,
+            REG_TYPE_INDEX,
+            REG_SIGNATURE_R,
+            REG_SIGNATURE_S,
+            REG_PUBLIC_KEY_X,
+            REG_PUBLIC_KEY_Y
         );
         console.log("isValid", isValid);
 
@@ -262,12 +262,12 @@ contract RegistartionTest is Base {
         Key memory k = account.getKeyById(0, KeyType.WEBAUTHN);
         console.logBytes32(k.pubKey.x);
         console.logBytes32(k.pubKey.y);
-        console.log("/* ----------------------- test_RegisterSessionKeyP256WithMK -------- */");
+        console.log("/* ----------------------- test_RegisterKeyP256WithMK -------- */");
     }
 
-    function test_RegisterSessionKeyP256NonKeyWithMK() public {
+    function test_RegisterKeyP256NonKeyWithMK() public {
         console.log(
-            "/* ----------------------- test_RegisterSessionKeyP256NonKeyWithMK -------- */"
+            "/* ----------------------- test_RegisterKeyP256NonKeyWithMK -------- */"
         );
         uint48 validUntil = uint48(1795096759);
         uint48 limit = uint48(3);
@@ -279,7 +279,7 @@ contract RegistartionTest is Base {
             SpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000e18});
 
         bytes memory callData = abi.encodeWithSelector(
-            KeysManager.registerSessionKey.selector,
+            KeysManager.registerKey.selector,
             validUntil,
             uint48(0),
             limit,
@@ -307,17 +307,17 @@ contract RegistartionTest is Base {
         bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
         console.logBytes32(userOpHash);
 
-        ISessionkey.PubKey memory pubKeyExecuteBatch =
-            ISessionkey.PubKey({x: VALID_PUBLIC_KEY_X, y: VALID_PUBLIC_KEY_Y});
+        IKey.PubKey memory pubKeyExecuteBatch =
+            IKey.PubKey({x: REG_PUBLIC_KEY_X, y: REG_PUBLIC_KEY_Y});
 
         bytes memory _signature = account.encodeWebAuthnSignature(
             true,
             AUTHENTICATOR_DATA,
-            CLIENT_DATA_JSON,
-            CHALLENGE_INDEX,
-            TYPE_INDEX,
-            VALID_SIGNATURE_R,
-            VALID_SIGNATURE_S,
+            REG_CLIENT_DATA_JSON,
+            REG_CHALLENGE_INDEX,
+            REG_TYPE_INDEX,
+            REG_SIGNATURE_R,
+            REG_SIGNATURE_S,
             pubKeyExecuteBatch
         );
 
@@ -330,13 +330,13 @@ contract RegistartionTest is Base {
             userOpHash,
             true,
             AUTHENTICATOR_DATA,
-            CLIENT_DATA_JSON,
-            CHALLENGE_INDEX,
-            TYPE_INDEX,
-            VALID_SIGNATURE_R,
-            VALID_SIGNATURE_S,
-            VALID_PUBLIC_KEY_X,
-            VALID_PUBLIC_KEY_Y
+            REG_CLIENT_DATA_JSON,
+            REG_CHALLENGE_INDEX,
+            REG_TYPE_INDEX,
+            REG_SIGNATURE_R,
+            REG_SIGNATURE_S,
+            REG_PUBLIC_KEY_X,
+            REG_PUBLIC_KEY_Y
         );
         console.log("isValid", isValid);
 
@@ -358,11 +358,11 @@ contract RegistartionTest is Base {
         console.logBytes32(k.pubKey.x);
         console.logBytes32(k.pubKey.y);
         console.log(
-            "/* ----------------------- test_RegisterSessionKeyP256NonKeyWithMK -------- */"
+            "/* ----------------------- test_RegisterKeyP256NonKeyWithMK -------- */"
         );
     }
 
-    function _register_SessionKeyEOA() internal {
+    function _register_KeyEOA() internal {
         uint48 validUntil = uint48(block.timestamp + 1 days);
         uint48 limit = uint48(3);
         pubKeySK = PubKey({
@@ -382,12 +382,12 @@ contract RegistartionTest is Base {
         vm.etch(owner, code);
 
         vm.prank(address(entryPoint));
-        account.registerSessionKey(
+        account.registerKey(
             keySK, validUntil, uint48(0), limit, true, TOKEN, spendInfo, _allowedSelectors(), 0
         );
     }
 
-    function _register_SessionKeyP256() internal {
+    function _register_KeyP256() internal {
         uint48 validUntil = uint48(block.timestamp + 1 days);
         uint48 limit = uint48(3);
         pubKeySK = PubKey({x: P256_PUBLIC_KEY_X, y: P256_PUBLIC_KEY_Y});
@@ -404,12 +404,12 @@ contract RegistartionTest is Base {
         vm.etch(owner, code);
 
         vm.prank(address(entryPoint));
-        account.registerSessionKey(
+        account.registerKey(
             keySK, validUntil, uint48(0), limit, true, TOKEN, spendInfo, _allowedSelectors(), 0
         );
     }
 
-    function _register_SessionKeyP256NonKey() internal {
+    function _register_KeyP256NonKey() internal {
         uint48 validUntil = uint48(block.timestamp + 1 days);
         uint48 limit = uint48(3);
         pubKeySK = PubKey({x: P256NOKEY_PUBLIC_KEY_X, y: P256NOKEY_PUBLIC_KEY_Y});
@@ -426,7 +426,7 @@ contract RegistartionTest is Base {
         vm.etch(owner, code);
 
         vm.prank(address(entryPoint));
-        account.registerSessionKey(
+        account.registerKey(
             keySK, validUntil, uint48(0), limit, true, TOKEN, spendInfo, _allowedSelectors(), 0
         );
     }
@@ -434,7 +434,7 @@ contract RegistartionTest is Base {
     /* ─────────────────────────────────────────────────────────── helpers ──── */
     function _initializeAccount() internal {
         /* sample WebAuthn public key – replace with a real one if needed */
-        pubKeyMK = PubKey({x: VALID_PUBLIC_KEY_X, y: VALID_PUBLIC_KEY_Y});
+        pubKeyMK = PubKey({x: REG_PUBLIC_KEY_X, y: REG_PUBLIC_KEY_Y});
 
         keyMK = Key({pubKey: pubKeyMK, eoaAddress: address(0), keyType: KeyType.WEBAUTHN});
 

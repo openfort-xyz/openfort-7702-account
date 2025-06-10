@@ -4,11 +4,11 @@ pragma solidity ^0.8.29;
 
 /* ───────────────────────────────────────────────────────────── imports ──── */
 import "lib/forge-std/src/StdJson.sol";
-import {ISessionkey} from "src/interfaces/ISessionkey.sol";
+import {IKey} from "src/interfaces/IKey.sol";
 import {Test, console2 as console} from "lib/forge-std/src/Test.sol";
 
 /* ──────────────────────────────────────────────────────────────── base ──── */
-contract Base is Test, ISessionkey {
+contract Base is Test, IKey {
     struct Call {
         address target;
         uint256 value;
@@ -54,6 +54,29 @@ contract Base is Test, ISessionkey {
 
     uint256 public constant CHALLENGE_INDEX = 23;
     uint256 public constant TYPE_INDEX = 1;
+
+    /* ───────────────────────────────────────────────────────────── master key ── */
+    bytes32 constant REG_PUBLIC_KEY_X =
+        hex"501fb34eb6c1abf6cc1bed2ca17583ffdcc6f5960a6e911ca4216ac079e8b2e5";
+    bytes32 constant REG_PUBLIC_KEY_Y =
+        hex"be9b21a967fddcdfbccedcca22776a7ceccd41d69a07babd03e9d8beb07e8acb";
+
+    bytes public constant REG_CHALLENGE =
+        hex"e4cfc8abe9df9aeb5263940761f875c535592beb2077cc8d5cc71b3fb3678410";
+
+    bytes32 public constant REG_SIGNATURE_R =
+        hex"f0869b1d903d9ee4143bcfea6f59397dcd358041ce223448893ec1654d4da940";
+    bytes32 public constant REG_SIGNATURE_S =
+        hex"629f6e0a70c674928bc41627bf598ee929668195910101c01d339c22cb900c94";
+
+    bytes public constant REG_AUTHENTICATOR_DATA =
+        hex"49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d97631d00000000";
+
+    string public constant REG_CLIENT_DATA_JSON =
+        "{\"type\":\"webauthn.get\",\"challenge\":\"5M_Iq-nfmutSY5QHYfh1xTVZK-sgd8yNXMcbP7NnhBA\",\"origin\":\"http://localhost:5173\",\"crossOrigin\":false}";
+
+    uint256 public constant REG_CHALLENGE_INDEX = 23;
+    uint256 public constant REG_TYPE_INDEX = 1;
 
     /* ───────────────────────────────────────────────────────────── master key ── */
     bytes32 constant MINT_VALID_PUBLIC_KEY_X =

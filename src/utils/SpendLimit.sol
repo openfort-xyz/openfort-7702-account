@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.0;
 
-import {ISessionkey} from "src/interfaces/ISessionkey.sol";
+import {IKey} from "src/interfaces/IKey.sol";
 
 abstract contract SpendLimit {
     /**
@@ -17,11 +17,11 @@ abstract contract SpendLimit {
 
     /**
      * @notice Validates token spending against limits
-     * @param sessionKey Session key data
+     * @param key Key data
      * @param innerData Call data containing token transfer details
      * @return True if the token spend is valid, false otherwise
      */
-    function _validateTokenSpend(ISessionkey.SessionKey storage sessionKey, bytes memory innerData)
+    function _validateTokenSpend(IKey.KeyData storage key, bytes memory innerData)
         internal
         virtual
         returns (bool)
@@ -32,10 +32,10 @@ abstract contract SpendLimit {
             value := mload(add(add(innerData, 0x20), startPos))
         }
 
-        if (uint256(value) > sessionKey.spendTokenInfo.limit) return false;
+        if (uint256(value) > key.spendTokenInfo.limit) return false;
 
         if (uint256(value) > 0) {
-            sessionKey.spendTokenInfo.limit = sessionKey.spendTokenInfo.limit - uint256(value);
+            key.spendTokenInfo.limit = key.spendTokenInfo.limit - uint256(value);
         }
 
         return true;
