@@ -266,9 +266,7 @@ contract RegistartionTest is Base {
     }
 
     function test_RegisterKeyP256NonKeyWithMK() public {
-        console.log(
-            "/* ----------------------- test_RegisterKeyP256NonKeyWithMK -------- */"
-        );
+        console.log("/* ----------------------- test_RegisterKeyP256NonKeyWithMK -------- */");
         uint48 validUntil = uint48(1795096759);
         uint48 limit = uint48(3);
         pubKeySK = PubKey({x: P256NOKEY_PUBLIC_KEY_X, y: P256NOKEY_PUBLIC_KEY_Y});
@@ -357,9 +355,7 @@ contract RegistartionTest is Base {
         Key memory k = account.getKeyById(0, KeyType.WEBAUTHN);
         console.logBytes32(k.pubKey.x);
         console.logBytes32(k.pubKey.y);
-        console.log(
-            "/* ----------------------- test_RegisterKeyP256NonKeyWithMK -------- */"
-        );
+        console.log("/* ----------------------- test_RegisterKeyP256NonKeyWithMK -------- */");
     }
 
     function _register_KeyEOA() internal {
