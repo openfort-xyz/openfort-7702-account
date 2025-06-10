@@ -30,11 +30,11 @@ import {
 /**
  * @title   Openfort Base Account 7702 with ERC-4337 Support
  * @author  Openfort — https://openfort.xyz
- * @notice  Smart contract wallet implementing EIP-7702 + ERC-4337 + multi-format session keys.
+ * @notice  Smart contract wallet implementing EIP-7702 + ERC-4337 + multi-format keys.
  * @dev
  *  • EIP-4337 integration via EntryPoint
  *  • EIP-7702 support (e.g., setCode)
- *  • Multi-scheme session keys: EOA (ECDSA), WebAuthn, P256/P256NONKEY
+ *  • Multi-scheme keys: EOA (ECDSA), WebAuthn, P256/P256NONKEY
  *  • ETH/token spending limits + selector whitelists
  *  • ERC-1271 on-chain signature support
  *  • Reentrancy protection & explicit nonce replay prevention
@@ -60,11 +60,11 @@ contract OPF7702 is Execution, Initializable, WebAuthnVerifier layout at 5794359
     }
 
     /**
-     * @notice Initializes the account with a “master” session key (no spending or whitelist restrictions).
+     * @notice Initializes the account with a “master” key (no spending or whitelist restrictions).
      * @dev
      *  • Callable only via EntryPoint or a self-call.
      *  • Clears previous storage, checks nonce & expiration, verifies signature.
-     *  • Registers the provided `_key` as a master session key:
+     *  • Registers the provided `_key` as a master key:
      *     - validUntil = max (never expires)
      *     - validAfter  = 0
      *     - limit       = 0  (master)
@@ -72,7 +72,7 @@ contract OPF7702 is Execution, Initializable, WebAuthnVerifier layout at 5794359
      *     - DEAD_ADDRESS placeholder in whitelistedContracts
      *  • Emits `Initialized(_key)`.
      *
-     * @param _key              The Key struct (master session key).
+     * @param _key              The Key struct (master key).
      * @param _spendTokenInfo   Token limit info (ignored for master).
      * @param _allowedSelectors Unused selectors (ignored for master).
      * @param _hash             Hash to sign (EIP-712 or UserOp hash).
@@ -102,11 +102,11 @@ contract OPF7702 is Execution, Initializable, WebAuthnVerifier layout at 5794359
         nonce = _nonce;
 
         bytes32 keyId = keccak256(abi.encodePacked(_key.pubKey.x, _key.pubKey.y));
-        SessionKey storage sKey = sessionKeys[keyId];
-        idSessionKeys[0] = _key;
+        KeyData storage sKey = keys[keyId];
+        idKeys[0] = _key;
 
         // register masterKey: never expires, no spending/whitelist restrictions
-        _addSessionKey(
+        _addKey(
             sKey,
             _key,
             type(uint48).max, // validUntil = max
@@ -162,7 +162,7 @@ contract OPF7702 is Execution, Initializable, WebAuthnVerifier layout at 5794359
     }
 
     /**
-     * @notice Validates an EOA (ECDSA) session key signature.
+     * @notice Validates an EOA (ECDSA) key signature.
      * @param sigData     Raw signature bytes (64 or 65 bytes).
      * @param userOpHash  The user operation hash.
      * @param callData    The calldata to be executed if approved.
@@ -181,21 +181,21 @@ contract OPF7702 is Execution, Initializable, WebAuthnVerifier layout at 5794359
             return SIG_VALIDATION_SUCCESS;
         }
 
-        // load the sessionKey for this EOA
-        SessionKey storage sKey = sessionKeysEOA[signer];
-        // if no active sessionKey, reject
+        // load the key for this EOA
+        KeyData storage sKey = keysEOA[signer];
+        // if no active Key, reject
         if (sKey.validUntil == 0 || sKey.whoRegistrated != address(this) || !sKey.isActive) {
             return SIG_VALIDATION_FAILED;
         }
 
-        // build a minimal Key struct to call isValidSessionKey
+        // build a minimal Key struct to call isValidKey
         Key memory composedKey = Key({
             pubKey: PubKey({x: sKey.pubKey.x, y: sKey.pubKey.y}),
             eoaAddress: signer,
             keyType: KeyType.EOA
         });
 
-        if (isValidSessionKey(composedKey, callData)) {
+        if (isValidKey(composedKey, callData)) {
             return _packValidationData(false, sKey.validUntil, sKey.validAfter);
         }
         return SIG_VALIDATION_FAILED;
@@ -206,8 +206,8 @@ contract OPF7702 is Execution, Initializable, WebAuthnVerifier layout at 5794359
      * @dev
      *  • Reject reused challenges.
      *  • Verify with `verifySoladySignature`.
-     *  • If master sessionKey, immediate success.
-     *  • Otherwise, call `isValidSessionKey(...)`.
+     *  • If master Key, immediate success.
+     *  • Otherwise, call `isValidKey(...)`.
      *
      * @param userOpHash  The userOp hash (served as challenge).
      * @param signature   ABI-encoded payload: (KeyType, bool requireUV, bytes authData, string clientDataJSON, uint256 challengeIdx, uint256 typeIdx, bytes32 r, bytes32 s, PubKey pubKey).
@@ -255,13 +255,13 @@ contract OPF7702 is Execution, Initializable, WebAuthnVerifier layout at 5794359
         }
 
         bytes32 keyHash = keccak256(abi.encodePacked(pubKey.x, pubKey.y));
-        SessionKey storage sKey = sessionKeys[keyHash];
+        KeyData storage sKey = keys[keyHash];
         if (sKey.whoRegistrated != address(this) || !sKey.isActive || sKey.validUntil == 0) {
             return SIG_VALIDATION_FAILED;
         }
 
-        // master session key → immediate success
-        if (sKey.masterSessionKey) {
+        // master key → immediate success
+        if (sKey.masterKey) {
             return SIG_VALIDATION_SUCCESS;
         }
 
@@ -272,7 +272,7 @@ contract OPF7702 is Execution, Initializable, WebAuthnVerifier layout at 5794359
             keyType: KeyType.WEBAUTHN
         });
 
-        if (isValidSessionKey(composedKey, callData)) {
+        if (isValidKey(composedKey, callData)) {
             usedChallenges[userOpHash] = true; // mark challenge as used
             return _packValidationData(false, sKey.validUntil, sKey.validAfter);
         }
@@ -284,8 +284,8 @@ contract OPF7702 is Execution, Initializable, WebAuthnVerifier layout at 5794359
      * @dev
      *  • For P256NONKEY, first SHA-256 the hash.
      *  • Then `verifyP256Signature(...)`.
-     *  • If master sessionKey, immediate success.
-     *  • Otherwise, call `isValidSessionKey(...)`.
+     *  • If master Key, immediate success.
+     *  • Otherwise, call `isValidKey(...)`.
      *
      * @param sigData     Encoded bytes: (r, s, PubKey).
      * @param userOpHash  The original userOp hash.
@@ -315,13 +315,13 @@ contract OPF7702 is Execution, Initializable, WebAuthnVerifier layout at 5794359
         }
 
         bytes32 keyHash = keccak256(abi.encodePacked(pubKey.x, pubKey.y));
-        SessionKey storage sKey = sessionKeys[keyHash];
+        KeyData storage sKey = keys[keyHash];
         if (sKey.whoRegistrated != address(this) || !sKey.isActive || sKey.validUntil == 0) {
             return SIG_VALIDATION_FAILED;
         }
 
-        // master session → immediate success
-        if (sKey.masterSessionKey) {
+        // master key → immediate success
+        if (sKey.masterKey) {
             return SIG_VALIDATION_SUCCESS;
         }
 
@@ -331,7 +331,7 @@ contract OPF7702 is Execution, Initializable, WebAuthnVerifier layout at 5794359
             keyType: KeyType.P256
         });
 
-        if (isValidSessionKey(composedKey, callData)) {
+        if (isValidKey(composedKey, callData)) {
             usedChallenges[userOpHash] = true;
             return _packValidationData(false, sKey.validUntil, sKey.validAfter);
         }
@@ -339,11 +339,11 @@ contract OPF7702 is Execution, Initializable, WebAuthnVerifier layout at 5794359
     }
 
     /**
-     * @notice Determines if a given session key may perform `execute` or `executeBatch`.
+     * @notice Determines if a given key may perform `execute` or `executeBatch`.
      * @dev
-     *  • Loads the correct `SessionKey` based on `KeyType`:
-     *      – WEBAUTHN/P256/P256NONKEY → `sessionKeys[keccak(pubKey.x,pubKey.y)]`
-     *      – EOA                 → `sessionKeysEOA[eoaAddress]`
+     *  • Loads the correct `KeyData` based on `KeyType`:
+     *      – WEBAUTHN/P256/P256NONKEY → `keys[keccak(pubKey.x,pubKey.y)]`
+     *      – EOA                 → `keysEOA[eoaAddress]`
      *  • Checks: validUntil != 0, isActive, whoRegistrated == address(this).
      *  • Extracts the first 4 bytes of `_callData` and calls:
      *      – `_validateExecuteCall(...)`
@@ -353,20 +353,20 @@ contract OPF7702 is Execution, Initializable, WebAuthnVerifier layout at 5794359
      * @param _callData  The calldata (starting with selector).
      * @return True if permitted, false otherwise.
      */
-    function isValidSessionKey(Key memory _key, bytes calldata _callData)
+    function isValidKey(Key memory _key, bytes calldata _callData)
         internal
         virtual
         returns (bool)
     {
-        SessionKey storage sKey;
+        KeyData storage sKey;
         if (_key.keyType == KeyType.EOA) {
             address eoaAddr = _key.eoaAddress;
             if (eoaAddr == address(0)) return false;
-            sKey = sessionKeysEOA[eoaAddr];
+            sKey = keysEOA[eoaAddr];
         } else {
             // WEBAUTHN/P256/P256NONKEY share same load path
             bytes32 keyHash = keccak256(abi.encodePacked(_key.pubKey.x, _key.pubKey.y));
-            sKey = sessionKeys[keyHash];
+            sKey = keys[keyHash];
         }
         // Basic checks:
         if (sKey.validUntil == 0 || !sKey.isActive || sKey.whoRegistrated != address(this)) {
@@ -388,7 +388,7 @@ contract OPF7702 is Execution, Initializable, WebAuthnVerifier layout at 5794359
      * @dev
      *  • Decode `(address toContract, uint256 amount, bytes innerData)`.
      *  • If `toContract == address(this)`, revert.
-     *  • If `masterSessionKey`, immediate true.
+     *  • If `masterKey`, immediate true.
      *  • Else enforce:
      *      - limit > 0
      *      - ethLimit ≥ amount
@@ -397,11 +397,11 @@ contract OPF7702 is Execution, Initializable, WebAuthnVerifier layout at 5794359
      *      - If `spendTokenInfo.token == toContract`, call `_validateTokenSpend(...)`
      *      - If `whitelisting`, ensure `toContract` ∈ `whitelist`
      *
-     * @param sKey       Storage reference of the SessionKey
+     * @param sKey       Storage reference of the KeyData
      * @param _callData  Encoded as: `execute(address,uint256,bytes)`
      * @return True if allowed, false otherwise.
      */
-    function _validateExecuteCall(SessionKey storage sKey, bytes calldata _callData)
+    function _validateExecuteCall(KeyData storage sKey, bytes calldata _callData)
         internal
         returns (bool)
     {
@@ -411,7 +411,7 @@ contract OPF7702 is Execution, Initializable, WebAuthnVerifier layout at 5794359
         if (toContract == address(this)) {
             return false;
         }
-        if (sKey.masterSessionKey) {
+        if (sKey.masterKey) {
             return true;
         }
         if (sKey.limit == 0 || sKey.ethLimit < amount) {
@@ -445,22 +445,22 @@ contract OPF7702 is Execution, Initializable, WebAuthnVerifier layout at 5794359
      * @dev
      *  • Decode `(address[] toContracts, uint256[] amounts, bytes[] innerDataArray)`.
      *  • If length = 0 or > 9, reject.
-     *  • If not `masterSessionKey` then:
+     *  • If not `masterKey` then:
      *      - `limit ≥ length`
      *      - Subtract `length` from `limit`
      *  • For each index `i`:
      *      - if `toContracts[i] == address(this)`, reject
-     *      - If not `masterSessionKey`:
+     *      - If not `masterKey`:
      *          * `ethLimit ≥ amounts[i]` then subtract
      *          * `bytes4(innerDataArray[i]) ∈ allowedSelectors`
      *          * If `spendTokenInfo.token == toContracts[i]`, call `_validateTokenSpend(...)`
      *          * If `whitelisting`, ensure `toContracts[i] ∈ whitelist`
      *
-     * @param sKey       Storage reference of the SessionKey
+     * @param sKey       Storage reference of the KeyData
      * @param _callData  Encoded as: `executeBatch(address[],uint256[],bytes[])`
      * @return True if all calls allowed, false otherwise.
      */
-    function _validateExecuteBatchCall(SessionKey storage sKey, bytes calldata _callData)
+    function _validateExecuteBatchCall(KeyData storage sKey, bytes calldata _callData)
         internal
         returns (bool)
     {
@@ -472,7 +472,7 @@ contract OPF7702 is Execution, Initializable, WebAuthnVerifier layout at 5794359
             return false;
         }
 
-        if (!sKey.masterSessionKey) {
+        if (!sKey.masterKey) {
             if (sKey.limit < n) {
                 return false;
             }
@@ -487,7 +487,7 @@ contract OPF7702 is Execution, Initializable, WebAuthnVerifier layout at 5794359
                 return false;
             }
 
-            if (!sKey.masterSessionKey) {
+            if (!sKey.masterKey) {
                 uint256 amt = amounts[i];
                 if (sKey.ethLimit < amt) {
                     return false;
@@ -517,13 +517,13 @@ contract OPF7702 is Execution, Initializable, WebAuthnVerifier layout at 5794359
     }
 
     /**
-     * @notice Validates a token transfer against the sessionKey’s token spend limit.
+     * @notice Validates a token transfer against the key’s token spend limit.
      * @dev Loads `value` from the last 32 bytes of `innerData` (standard ERC-20 `_transfer(address,uint256)` signature).
-     * @param sKey      Storage reference of the SessionKey
+     * @param sKey      Storage reference of the KeyData
      * @param innerData The full encoded call data to the token contract.
      * @return True if `value ≤ sKey.spendTokenInfo.limit`; false if it exceeds or is invalid.
      */
-    function _validateTokenSpend(SessionKey storage sKey, bytes memory innerData)
+    function _validateTokenSpend(KeyData storage sKey, bytes memory innerData)
         internal
         override
         returns (bool)
@@ -572,9 +572,9 @@ contract OPF7702 is Execution, Initializable, WebAuthnVerifier layout at 5794359
      *  • Read the first 32 bytes of `_signature` to detect `KeyType`.
      *  • Dispatch to `_validateWebAuthnSignature` or `_validateP256Signature`, or ECDSA path.
      *  • EOA (ECDSA) path recovers `signer`. If `signer == this`, return `isValidSignature.selector`.
-     *    Else, load `sessionKey = sessionKeysEOA[signer]` and enforce:
+     *    Else, load `key = keysEOA[signer]` and enforce:
      *      - validUntil > now ≥ validAfter
-     *      - (masterSessionKey or limit≥1)
+     *      - (masterKey or limit≥1)
      *      - whoRegistrated == address(this)
      * @param _hash       The hash that was signed.
      * @param _signature  The signature blob to verify.
@@ -603,32 +603,49 @@ contract OPF7702 is Execution, Initializable, WebAuthnVerifier layout at 5794359
         }
         // otherwise, assume ECDSA
         if (_signature.length == 64 || _signature.length == 65) {
-            address signer = ECDSA.recover(_hash, _signature);
-            if (signer == address(0)) {
-                return bytes4(0xffffffff);
-            }
-            if (signer == address(this)) {
-                return this.isValidSignature.selector;
-            }
-
-            SessionKey storage sKey = sessionKeysEOA[signer];
-            // validity window
-            if (
-                sKey.validUntil == 0 || sKey.validAfter > block.timestamp
-                    || sKey.validUntil < block.timestamp
-            ) {
-                return bytes4(0xffffffff);
-            }
-            // spend limit check
-            if (!sKey.masterSessionKey && sKey.limit < 1) {
-                return bytes4(0xffffffff);
-            }
-            if (sKey.whoRegistrated != address(this)) {
-                return bytes4(0xffffffff);
-            }
-            return this.isValidSignature.selector;
+            return _validateEOASignature(_signature, _hash);
         }
         return bytes4(0xffffffff);
+    }
+
+    /**
+     * @notice Validate a EOA signature on-chain via ERC-1271.
+     * @param _signature  v,r,s components of signature
+     * @param _hash       The hash to verify.
+     * @return `this.isValidSignature.selector` if valid; otherwise `0xffffffff`.
+     */
+    function _validateEOASignature(bytes memory _signature, bytes32 _hash)
+        internal
+        view
+        returns (bytes4)
+    {
+        address signer = ECDSA.recover(_hash, _signature);
+        if (signer == address(0)) {
+            return bytes4(0xffffffff);
+        }
+        if (signer == address(this)) {
+            return this.isValidSignature.selector;
+        }
+
+        KeyData storage sKey = keysEOA[signer];
+
+        if (sKey.masterKey) return this.isValidSignature.selector;
+
+        // validity window
+        if (
+            sKey.validUntil == 0 || sKey.validAfter > block.timestamp
+                || sKey.validUntil < block.timestamp
+        ) {
+            return bytes4(0xffffffff);
+        }
+        // spend limit check
+        if (!sKey.masterKey && sKey.limit < 1) {
+            return bytes4(0xffffffff);
+        }
+        if (sKey.whoRegistrated != address(this)) {
+            return bytes4(0xffffffff);
+        }
+        return this.isValidSignature.selector;
     }
 
     /**
@@ -676,14 +693,17 @@ contract OPF7702 is Execution, Initializable, WebAuthnVerifier layout at 5794359
         }
 
         bytes32 keyHash = keccak256(abi.encodePacked(pubKey.x, pubKey.y));
-        SessionKey storage sKey = sessionKeys[keyHash];
+        KeyData storage sKey = keys[keyHash];
+
+        if (sKey.masterKey) return this.isValidSignature.selector;
+
         if (
             sKey.validUntil == 0 || sKey.validAfter > block.timestamp
                 || sKey.validUntil < block.timestamp
         ) {
             return bytes4(0xffffffff);
         }
-        if (!sKey.masterSessionKey && sKey.limit < 1) {
+        if (!sKey.masterKey && sKey.limit < 1) {
             return bytes4(0xffffffff);
         }
         if (sKey.whoRegistrated != address(this)) {
@@ -722,14 +742,14 @@ contract OPF7702 is Execution, Initializable, WebAuthnVerifier layout at 5794359
         }
 
         bytes32 keyHash = keccak256(abi.encodePacked(pubKey.x, pubKey.y));
-        SessionKey storage sKey = sessionKeys[keyHash];
+        KeyData storage sKey = keys[keyHash];
         if (
             sKey.validUntil == 0 || sKey.validAfter > block.timestamp
                 || sKey.validUntil < block.timestamp
         ) {
             return bytes4(0xffffffff);
         }
-        if (!sKey.masterSessionKey && sKey.limit < 1) {
+        if (!sKey.masterKey && sKey.limit < 1) {
             return bytes4(0xffffffff);
         }
         if (sKey.whoRegistrated != address(this)) {

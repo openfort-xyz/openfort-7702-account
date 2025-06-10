@@ -4,9 +4,9 @@ pragma solidity ^0.8.29;
 
 import {SpendLimit} from "src/utils/SpendLimit.sol";
 
-interface ISessionkey {
+interface IKey {
     /**
-     * @notice Types of session keys supported by the contract
+     * @notice Types of keys supported by the contract
      * @param EOA Standard Ethereum account key
      * @param WEBAUTHN WebAuthn-based key (using P256 curve)
      */
@@ -40,27 +40,27 @@ interface ISessionkey {
     }
 
     /**
-     * @notice Session key data structure containing permissions and limits
+     * @notice Key data structure containing permissions and limits
      * @param pubKey Public key information
-     * @param isActive Whether the session key is currently active
+     * @param isActive Whether the key is currently active
      * @param validUntil Timestamp until which the key is valid
      * @param validAfter Timestamp after which the key becomes valid
      * @param limit Number of transactions allowed (0 for unlimited/master key)
-     * @param masterSessionKey Whether this is a master session key with unlimited permissions
+     * @param masterKey Whether this is a master key with unlimited permissions
      * @param whitelisting Whether contract address whitelisting is enabled
      * @param whitelist Mapping of whitelisted contract addresses
      * @param spendTokenInfo Token spending limit information
      * @param allowedSelectors List of allowed function selectors
      * @param ethLimit Maximum amount of ETH that can be spent
-     * @param whoRegistrated Address that registered this session key
+     * @param whoRegistrated Address that registered this key
      */
-    struct SessionKey {
+    struct KeyData {
         PubKey pubKey;
         bool isActive;
         uint48 validUntil;
         uint48 validAfter;
         uint48 limit;
-        bool masterSessionKey;
+        bool masterKey;
         bool whitelisting;
         mapping(address contractAddress => bool allowed) whitelist;
         SpendLimit.SpendTokenInfo spendTokenInfo;

@@ -75,4 +75,4 @@ simple-mainnet:
 	--constructor-args 0x4337084D9E255Ff0702461CF8895CE9E3b5Ff108 
 
 push:
-	git push -u origin OPF7702_FUll_Suit
+	git push -u origin OPF7702_FUll_Suit_Master_Key_Edits
