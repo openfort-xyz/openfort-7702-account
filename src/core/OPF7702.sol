@@ -603,32 +603,49 @@ contract OPF7702 is Execution, Initializable, WebAuthnVerifier layout at 5794359
         }
         // otherwise, assume ECDSA
         if (_signature.length == 64 || _signature.length == 65) {
-            address signer = ECDSA.recover(_hash, _signature);
-            if (signer == address(0)) {
-                return bytes4(0xffffffff);
-            }
-            if (signer == address(this)) {
-                return this.isValidSignature.selector;
-            }
-
-            SessionKey storage sKey = sessionKeysEOA[signer];
-            // validity window
-            if (
-                sKey.validUntil == 0 || sKey.validAfter > block.timestamp
-                    || sKey.validUntil < block.timestamp
-            ) {
-                return bytes4(0xffffffff);
-            }
-            // spend limit check
-            if (!sKey.masterSessionKey && sKey.limit < 1) {
-                return bytes4(0xffffffff);
-            }
-            if (sKey.whoRegistrated != address(this)) {
-                return bytes4(0xffffffff);
-            }
-            return this.isValidSignature.selector;
+            return _validateEOASignature(_signature, _hash);
         }
         return bytes4(0xffffffff);
+    }
+
+    /**
+     * @notice Validate a EOA signature on-chain via ERC-1271.
+     * @param _signature  v,r,s components of signature
+     * @param _hash       The hash to verify.
+     * @return `this.isValidSignature.selector` if valid; otherwise `0xffffffff`.
+     */
+    function _validateEOASignature(bytes memory _signature, bytes32 _hash)
+        internal
+        view
+        returns (bytes4)
+    {
+        address signer = ECDSA.recover(_hash, _signature);
+        if (signer == address(0)) {
+            return bytes4(0xffffffff);
+        }
+        if (signer == address(this)) {
+            return this.isValidSignature.selector;
+        }
+
+        SessionKey storage sKey = sessionKeysEOA[signer];
+
+        if (sKey.masterSessionKey) return this.isValidSignature.selector;
+
+        // validity window
+        if (
+            sKey.validUntil == 0 || sKey.validAfter > block.timestamp
+                || sKey.validUntil < block.timestamp
+        ) {
+            return bytes4(0xffffffff);
+        }
+        // spend limit check
+        if (!sKey.masterSessionKey && sKey.limit < 1) {
+            return bytes4(0xffffffff);
+        }
+        if (sKey.whoRegistrated != address(this)) {
+            return bytes4(0xffffffff);
+        }
+        return this.isValidSignature.selector;
     }
 
     /**
@@ -677,6 +694,9 @@ contract OPF7702 is Execution, Initializable, WebAuthnVerifier layout at 5794359
 
         bytes32 keyHash = keccak256(abi.encodePacked(pubKey.x, pubKey.y));
         SessionKey storage sKey = sessionKeys[keyHash];
+
+        if (sKey.masterSessionKey) return this.isValidSignature.selector;
+
         if (
             sKey.validUntil == 0 || sKey.validAfter > block.timestamp
                 || sKey.validUntil < block.timestamp
