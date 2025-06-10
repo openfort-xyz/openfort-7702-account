@@ -470,18 +470,22 @@ contract OPF7702Recoverable is OPF7702, EIP712 layout at 57943590311362240630886
      * @notice Guardians initiate account recovery by proposing a new master key.
      * @dev The caller must be an active guardian. Wallet enters locked state immediately.
      * @param _recoveryKey New master key to set once recovery succeeds.
-     * @param _guardian    Guardian key of the caller (must match msg.sender rules externally).
+     * param _guardian    Guardian key of the caller (must match msg.sender rules externally).
      */
-    function startRecovery(Key memory _recoveryKey, Key memory _guardian) external virtual {
+    function startRecovery(Key memory _recoveryKey/*, Key memory _guardian*/) external virtual {
         // Todo: Must _requireForExecute(); ?? or  _requireForExecuteOrGuardian();
         // Many Options to run startRecovery() :
         // ---------------->    EOA Guardian                      ----> Yes ----> Epoint/Relay  ----> msg.sender  ----> _requireForExecute();
         //                                      ----> If Sponsored
         // ----------------> WebAuthn Guardian                    ----> No  ----> Direct Engn.  ----> ?msg.sender? : A. msg.sender == EOA Guardian || B. WebAuthn Guardian???
+        bytes32 guradianHash = keccak256(abi.encodePacked(msg.sender));
+        bool isActive = guardiansData.data[guradianHash].isActive;
+        if (!isActive) revert OPF7702Recoverable__MustBeGuardian();
+
         _requireRecovery(false);
         if (isLocked()) revert OPF7702Recoverable__AccountLocked();
 
-        if (!isGuardian(_guardian)) revert OPF7702Recoverable__MustBeGuardian();
+        // if (!isGuardian(_guardian)) revert OPF7702Recoverable__MustBeGuardian();
 
         _requireNonEmptyGuardian(_recoveryKey);
         if (isGuardian(_recoveryKey)) revert OPF7702Recoverable__GuardianCannotBeOwner();

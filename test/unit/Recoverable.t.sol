@@ -816,8 +816,8 @@ contract Recoverable is Base {
 
         vm.etch(owner, code);
 
-        vm.prank(address(entryPoint));
-        account.startRecovery(recovery_keyEOA, propose_keyGuardianWebAuthn);
+        vm.prank(sessionKey);
+        account.startRecovery(recovery_keyEOA/*, propose_keyGuardianWebAuthn*/);
     }
 
     function _startRecoveryToWebAuthn() internal {
@@ -835,8 +835,8 @@ contract Recoverable is Base {
 
         vm.etch(owner, code);
 
-        vm.prank(address(entryPoint));
-        account.startRecovery(recovery_keyWebAuthn, propose_keyGuardianWebAuthn);
+        vm.prank(sessionKey);
+        account.startRecovery(recovery_keyWebAuthn/*, propose_keyGuardianWebAuthn*/);
     }
 
     function _register_KeyEOA() internal {
