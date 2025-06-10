@@ -16,7 +16,7 @@ import {OPF7702Recoverable as OPF7702} from "src/core/OPF7702Recoverable.sol";
 import {MockERC20} from "src/mocks/MockERC20.sol";
 import {KeysManager} from "src/core/KeysManager.sol";
 import {SpendLimit} from "src/utils/SpendLimit.sol";
-import {ISessionkey} from "src/interfaces/ISessionkey.sol";
+import {IKey} from "src/interfaces/IKey.sol";
 import {WebAuthnVerifier} from "src/utils/WebAuthnVerifier.sol";
 import {PackedUserOperation} from
     "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
@@ -67,9 +67,9 @@ contract Recoverable is Base {
         vm.stopPrank();
 
         _initializeAccount();
-        _register_SessionKeyEOA();
-        _register_SessionKeyP256();
-        _register_SessionKeyP256NonKey();
+        _register_KeyEOA();
+        _register_KeyP256();
+        _register_KeyP256NonKey();
         _poroposeGuardian();
 
         vm.prank(sender);
@@ -475,7 +475,7 @@ contract Recoverable is Base {
 
         Key memory old_k = account.getKeyById(0, KeyType.WEBAUTHN);
         (bool isActive, uint48 validUntil, uint48 validAfter, uint48 limit) =
-            account.getSessionKeyData(keccak256(abi.encodePacked(old_k.pubKey.x, old_k.pubKey.y)));
+            account.getKeyData(keccak256(abi.encodePacked(old_k.pubKey.x, old_k.pubKey.y)));
         assertTrue(isActive);
         assertEq(validUntil, type(uint48).max);
         assertEq(validAfter, 0);
@@ -488,7 +488,7 @@ contract Recoverable is Base {
         account.completeRecovery(sigs);
 
         (bool isActive_After, uint48 validUntil_After, uint48 validAfter_After, uint48 limit_After)
-        = account.getSessionKeyData(keccak256(abi.encodePacked(old_k.pubKey.x, old_k.pubKey.y)));
+        = account.getKeyData(keccak256(abi.encodePacked(old_k.pubKey.x, old_k.pubKey.y)));
         assertFalse(isActive_After);
         assertEq(validUntil_After, 0);
         assertEq(validAfter_After, 0);
@@ -503,7 +503,7 @@ contract Recoverable is Base {
 
         Key memory new_k = account.getKeyById(0, KeyType.EOA);
         (bool isActive_New, uint48 validUntil_New, uint48 validAfter_New, uint48 limit_New) =
-            account.getSessionKeyData(new_k.eoaAddress);
+            account.getKeyData(new_k.eoaAddress);
         assertEq(new_k.eoaAddress, k.eoaAddress);
         assertTrue(isActive_New);
         assertEq(validUntil_New, type(uint48).max);
@@ -563,7 +563,7 @@ contract Recoverable is Base {
 
         Key memory old_k = account.getKeyById(0, KeyType.WEBAUTHN);
         (bool isActive, uint48 validUntil, uint48 validAfter, uint48 limit) =
-            account.getSessionKeyData(keccak256(abi.encodePacked(old_k.pubKey.x, old_k.pubKey.y)));
+            account.getKeyData(keccak256(abi.encodePacked(old_k.pubKey.x, old_k.pubKey.y)));
         assertTrue(isActive);
         assertEq(validUntil, type(uint48).max);
         assertEq(validAfter, 0);
@@ -576,7 +576,7 @@ contract Recoverable is Base {
         account.completeRecovery(sigs);
 
         (bool isActive_After, uint48 validUntil_After, uint48 validAfter_After, uint48 limit_After)
-        = account.getSessionKeyData(keccak256(abi.encodePacked(old_k.pubKey.x, old_k.pubKey.y)));
+        = account.getKeyData(keccak256(abi.encodePacked(old_k.pubKey.x, old_k.pubKey.y)));
         assertFalse(isActive_After);
         assertEq(validUntil_After, 0);
         assertEq(validAfter_After, 0);
@@ -592,7 +592,7 @@ contract Recoverable is Base {
 
         Key memory new_k = account.getKeyById(0, KeyType.WEBAUTHN);
         (bool isActive_New, uint48 validUntil_New, uint48 validAfter_New, uint48 limit_New) =
-            account.getSessionKeyData(keccak256(abi.encodePacked(new_k.pubKey.x, new_k.pubKey.y)));
+            account.getKeyData(keccak256(abi.encodePacked(new_k.pubKey.x, new_k.pubKey.y)));
         assertEq(new_k.eoaAddress, address(0));
         assertEq(new_k.pubKey.x, k.pubKey.x);
         assertEq(new_k.pubKey.y, k.pubKey.y);
@@ -839,7 +839,7 @@ contract Recoverable is Base {
         account.startRecovery(recovery_keyWebAuthn, propose_keyGuardianWebAuthn);
     }
 
-    function _register_SessionKeyEOA() internal {
+    function _register_KeyEOA() internal {
         uint48 validUntil = uint48(block.timestamp + 1 days);
         uint48 limit = uint48(3);
         pubKeySK = PubKey({
@@ -860,12 +860,12 @@ contract Recoverable is Base {
         uint256 id = account.idEOA();
         console.log("id", id);
         vm.prank(address(entryPoint));
-        account.registerSessionKey(
+        account.registerKey(
             keySK, validUntil, uint48(0), limit, true, TOKEN, spendInfo, _allowedSelectors(), 0
         );
     }
 
-    function _register_SessionKeyP256() internal {
+    function _register_KeyP256() internal {
         uint48 validUntil = uint48(block.timestamp + 1 days);
         uint48 limit = uint48(3);
         pubKeySK = PubKey({x: P256_PUBLIC_KEY_X, y: P256_PUBLIC_KEY_Y});
@@ -882,12 +882,12 @@ contract Recoverable is Base {
         vm.etch(owner, code);
 
         vm.prank(address(entryPoint));
-        account.registerSessionKey(
+        account.registerKey(
             keySK, validUntil, uint48(0), limit, true, TOKEN, spendInfo, _allowedSelectors(), 0
         );
     }
 
-    function _register_SessionKeyP256NonKey() internal {
+    function _register_KeyP256NonKey() internal {
         uint48 validUntil = uint48(block.timestamp + 1 days);
         uint48 limit = uint48(3);
         pubKeySK = PubKey({x: P256NOKEY_PUBLIC_KEY_X, y: P256NOKEY_PUBLIC_KEY_Y});
@@ -904,7 +904,7 @@ contract Recoverable is Base {
         vm.etch(owner, code);
 
         vm.prank(address(entryPoint));
-        account.registerSessionKey(
+        account.registerKey(
             keySK, validUntil, uint48(0), limit, true, TOKEN, spendInfo, _allowedSelectors(), 0
         );
     }

@@ -22,11 +22,11 @@ import {EIP712} from "lib/openzeppelin-contracts/contracts/utils/cryptography/EI
 /**
  * @title   Openfort Base Account 7702 with ERC-4337 Support
  * @author  Openfort — https://openfort.xyz
- * @notice  Smart contract wallet implementing EIP-7702 + ERC-4337 with guardian-based recovery and multi-format session keys.
+ * @notice  Smart contract wallet implementing EIP-7702 + ERC-4337 with guardian-based recovery and multi-format keys.
  * @dev
  *  • EIP-4337 integration via EntryPoint
  *  • EIP-7702 support (e.g., setCode)
- *  • Multi-scheme session keys: EOA (ECDSA), WebAuthn, P256/P256NONKEY
+ *  • Multi-scheme keys: EOA (ECDSA), WebAuthn, P256/P256NONKEY
  *  • ETH/token spending limits + selector whitelists
  *  • ERC-1271 on-chain signature support
  *  • Reentrancy protection & explicit nonce replay prevention
@@ -206,11 +206,11 @@ contract OPF7702Recoverable is OPF7702, EIP712 layout at 57943590311362240630886
     // ──────────────────────────────────────────────────────────────────────────────
 
     /**
-     * @notice Initializes the account with a “master” session key (no spending or whitelist restrictions).
+     * @notice Initializes the account with a “master” key (no spending or whitelist restrictions).
      * @dev
      *  • Callable only via EntryPoint or a self-call.
      *  • Clears previous storage, checks nonce & expiration, verifies signature.
-     *  • Registers the provided `_key` as a master session key:
+     *  • Registers the provided `_key` as a master key:
      *     - validUntil = max (never expires)
      *     - validAfter  = 0
      *     - limit       = 0  (master)
@@ -218,7 +218,7 @@ contract OPF7702Recoverable is OPF7702, EIP712 layout at 57943590311362240630886
      *     - DEAD_ADDRESS placeholder in whitelistedContracts
      *  • Emits `Initialized(_key)`.
      *
-     * @param _key              The Key struct (master session key).
+     * @param _key              The Key struct (master key).
      * @param _spendTokenInfo   Token limit info (ignored for master).
      * @param _allowedSelectors Unused selectors (ignored for master).
      * @param _hash             Hash to sign (EIP-712 or UserOp hash).
@@ -249,11 +249,11 @@ contract OPF7702Recoverable is OPF7702, EIP712 layout at 57943590311362240630886
         nonce = _nonce;
 
         bytes32 keyId = keccak256(abi.encodePacked(_key.pubKey.x, _key.pubKey.y));
-        SessionKey storage sKey = sessionKeys[keyId];
-        idSessionKeys[0] = _key;
+        KeyData storage sKey = keys[keyId];
+        idKeys[0] = _key;
 
         // register masterKey: never expires, no spending/whitelist restrictions
-        _addSessionKey(
+        _addKey(
             sKey,
             _key,
             type(uint48).max, // validUntil = max
@@ -528,49 +528,49 @@ contract OPF7702Recoverable is OPF7702, EIP712 layout at 57943590311362240630886
 
     /// @dev Deletes the old master key data structures (both WebAuthn and EOA variants).
     function _deleteOldKeys() private {
-        // Todo: Change the Admin key of index 0 in the sessionKeys or sessionKeysEOA for new Master Key
+        // Todo: Change the Admin key of index 0 in the keys or keysEOA for new Master Key
         // _transferOwnership(recoveryOwner);
 
         // Todo: Need to Identify Master Key by Id or Any othewr flag
         // MK WebAuthn will be always id = 0 because of Initalization func enforce to be `0`
-        Key storage oldWebAuthnMK = idSessionKeys[0];
-        Key storage oldEOAMK = idSessionKeysEOA[0];
+        Key storage oldWebAuthnMK = idKeys[0];
+        Key storage oldEOAMK = idKeysEOA[0];
 
         if (oldWebAuthnMK.eoaAddress == address(0)) {
             bytes32 oldHash =
                 keccak256(abi.encodePacked(oldWebAuthnMK.pubKey.x, oldWebAuthnMK.pubKey.y));
             /// @dev Only the nested mapping in stract will not be cleared mapping(address => bool) whitelist
             /// @notice not providing security risk
-            delete sessionKeys[oldHash];
-            delete idSessionKeys[0];
+            delete keys[oldHash];
+            delete idKeys[0];
         } else if (oldEOAMK.eoaAddress != address(0)) {
-            delete sessionKeysEOA[oldEOAMK.eoaAddress];
+            delete keysEOA[oldEOAMK.eoaAddress];
             /// @dev Only the nested mapping in stract will not be cleared mapping(address => bool) whitelist
             /// @notice not providing security risk
-            delete idSessionKeysEOA[0];
+            delete idKeysEOA[0];
         }
     }
 
     /// @dev Registers the new master key after successful recovery.
     /// @param recoveryOwner Key that becomes the new master key.
     function _setNewMasterKey(Key memory recoveryOwner) private {
-        SessionKey storage sKey;
+        KeyData storage sKey;
 
         if (recoveryOwner.keyType == KeyType.WEBAUTHN) {
-            idSessionKeys[0] = recoveryOwner;
+            idKeys[0] = recoveryOwner;
             bytes32 newHash =
                 keccak256(abi.encodePacked(recoveryOwner.pubKey.x, recoveryOwner.pubKey.y));
-            sKey = sessionKeys[newHash];
+            sKey = keys[newHash];
 
             if (sKey.isActive) {
-                revert SessionKeyManager__SessionKeyRegistered();
+                revert KeyManager__KeyRegistered();
             }
         } else if (recoveryOwner.keyType == KeyType.EOA) {
-            idSessionKeysEOA[0] = recoveryOwner;
+            idKeysEOA[0] = recoveryOwner;
 
-            sKey = sessionKeysEOA[recoveryOwner.eoaAddress];
+            sKey = keysEOA[recoveryOwner.eoaAddress];
             if (sKey.isActive) {
-                revert SessionKeyManager__SessionKeyRegistered();
+                revert KeyManager__KeyRegistered();
             }
         } else {
             revert OPF7702Recoverable__UnsupportedKeyType();
@@ -581,7 +581,7 @@ contract OPF7702Recoverable is OPF7702, EIP712 layout at 57943590311362240630886
 
         emit RecoveryCompleted();
 
-        _addSessionKey(
+        _addKey(
             sKey,
             recoveryOwner,
             type(uint48).max, // validUntil = max
@@ -663,7 +663,7 @@ contract OPF7702Recoverable is OPF7702, EIP712 layout at 57943590311362240630886
                 } else {
                     return false;
                 }
-                
+
                 if (!guardiansData.data[guardianHash].isActive) return false;
 
                 if (guardianHash <= lastGuardianHash) return false;

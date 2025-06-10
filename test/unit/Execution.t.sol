@@ -12,12 +12,12 @@ import {IEntryPoint} from "lib/account-abstraction/contracts/interfaces/IEntryPo
 import {OPF7702Recoverable as OPF7702} from "src/core/OPF7702Recoverable.sol";
 import {MockERC20} from "src/mocks/MockERC20.sol";
 import {SpendLimit} from "src/utils/SpendLimit.sol";
-import {ISessionkey} from "src/interfaces/ISessionkey.sol";
+import {IKey} from "src/interfaces/IKey.sol";
 import {WebAuthnVerifier} from "src/utils/WebAuthnVerifier.sol";
 import {PackedUserOperation} from
     "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
 
-contract RegistartionTest is Base {
+contract Execution is Base {
     /* ───────────────────────────────────────────────────────────── contracts ── */
     IEntryPoint public entryPoint;
     WebAuthnVerifier public webAuthn;
@@ -58,9 +58,9 @@ contract RegistartionTest is Base {
         _initializeAccount();
         _register_MKMint();
         _register_MKBatch();
-        _register_SessionKeyEOA();
-        _register_SessionKeyP256();
-        _register_SessionKeyP256NonKey();
+        _register_KeyEOA();
+        _register_KeyP256();
+        _register_KeyP256NonKey();
 
         vm.prank(sender);
         entryPoint.depositTo{value: 0.11e18}(owner);
@@ -345,8 +345,8 @@ contract RegistartionTest is Base {
         bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
         console.logBytes32(userOpHash);
 
-        ISessionkey.PubKey memory pubKeyExecuteBatch =
-            ISessionkey.PubKey({x: MINT_VALID_PUBLIC_KEY_X, y: MINT_VALID_PUBLIC_KEY_Y});
+        IKey.PubKey memory pubKeyExecuteBatch =
+            IKey.PubKey({x: MINT_VALID_PUBLIC_KEY_X, y: MINT_VALID_PUBLIC_KEY_Y});
 
         bytes memory _signature = account.encodeWebAuthnSignature(
             true,
@@ -436,8 +436,8 @@ contract RegistartionTest is Base {
         bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
         console.logBytes32(userOpHash);
 
-        ISessionkey.PubKey memory pubKeyExecuteBatch =
-            ISessionkey.PubKey({x: BATCH_VALID_PUBLIC_KEY_X, y: BATCH_VALID_PUBLIC_KEY_Y});
+        IKey.PubKey memory pubKeyExecuteBatch =
+            IKey.PubKey({x: BATCH_VALID_PUBLIC_KEY_X, y: BATCH_VALID_PUBLIC_KEY_Y});
 
         bytes memory _signature = account.encodeWebAuthnSignature(
             true,
@@ -627,8 +627,8 @@ contract RegistartionTest is Base {
         bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
         console.logBytes32(userOpHash);
 
-        ISessionkey.PubKey memory pubKeyExecuteBatch =
-            ISessionkey.PubKey({x: MINT_P256_PUBLIC_KEY_X, y: MINT_P256_PUBLIC_KEY_Y});
+        IKey.PubKey memory pubKeyExecuteBatch =
+            IKey.PubKey({x: MINT_P256_PUBLIC_KEY_X, y: MINT_P256_PUBLIC_KEY_Y});
 
         bytes memory _signature = account.encodeP256Signature(
             MINT_P256_SIGNATURE_R, MINT_P256_SIGNATURE_S, pubKeyExecuteBatch
@@ -706,8 +706,8 @@ contract RegistartionTest is Base {
         bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
         console.logBytes32(userOpHash);
 
-        ISessionkey.PubKey memory pubKeyExecuteBatch =
-            ISessionkey.PubKey({x: P256_PUBLIC_KEY_X, y: P256_PUBLIC_KEY_Y});
+        IKey.PubKey memory pubKeyExecuteBatch =
+            IKey.PubKey({x: P256_PUBLIC_KEY_X, y: P256_PUBLIC_KEY_Y});
 
         bytes memory _signature =
             account.encodeP256Signature(P256_SIGNATURE_R, P256_SIGNATURE_S, pubKeyExecuteBatch);
@@ -765,8 +765,8 @@ contract RegistartionTest is Base {
         bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
         console.logBytes32(userOpHash);
 
-        ISessionkey.PubKey memory pubKeyExecuteBatch =
-            ISessionkey.PubKey({x: MINT_P256NOKEY_PUBLIC_KEY_X, y: MINT_P256NOKEY_PUBLIC_KEY_Y});
+        IKey.PubKey memory pubKeyExecuteBatch =
+            IKey.PubKey({x: MINT_P256NOKEY_PUBLIC_KEY_X, y: MINT_P256NOKEY_PUBLIC_KEY_Y});
 
         bytes memory _signature = account.encodeP256NonKeySignature(
             MINT_P256NOKEY_SIGNATURE_R, MINT_P256NOKEY_SIGNATURE_S, pubKeyExecuteBatch
@@ -848,8 +848,8 @@ contract RegistartionTest is Base {
         bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
         console.logBytes32(userOpHash);
 
-        ISessionkey.PubKey memory pubKeyExecuteBatch =
-            ISessionkey.PubKey({x: P256NOKEY_PUBLIC_KEY_X, y: P256NOKEY_PUBLIC_KEY_Y});
+        IKey.PubKey memory pubKeyExecuteBatch =
+            IKey.PubKey({x: P256NOKEY_PUBLIC_KEY_X, y: P256NOKEY_PUBLIC_KEY_Y});
 
         bytes memory _signature = account.encodeP256NonKeySignature(
             P256NOKEY_SIGNATURE_R, P256NOKEY_SIGNATURE_S, pubKeyExecuteBatch
@@ -892,7 +892,7 @@ contract RegistartionTest is Base {
         );
     }
 
-    function _register_SessionKeyEOA() internal {
+    function _register_KeyEOA() internal {
         uint48 validUntil = uint48(block.timestamp + 1 days);
         uint48 limit = uint48(3);
         pubKeySK = PubKey({
@@ -912,12 +912,12 @@ contract RegistartionTest is Base {
         vm.etch(owner, code);
 
         vm.prank(address(entryPoint));
-        account.registerSessionKey(
+        account.registerKey(
             keySK, validUntil, uint48(0), limit, true, TOKEN, spendInfo, _allowedSelectors(), 0
         );
     }
 
-    function _register_SessionKeyP256() internal {
+    function _register_KeyP256() internal {
         uint48 validUntil = uint48(block.timestamp + 1 days);
         uint48 limit = uint48(3);
         pubKeySK = PubKey({x: P256_PUBLIC_KEY_X, y: P256_PUBLIC_KEY_Y});
@@ -934,7 +934,7 @@ contract RegistartionTest is Base {
         vm.etch(owner, code);
 
         vm.prank(address(entryPoint));
-        account.registerSessionKey(
+        account.registerKey(
             keySK, validUntil, uint48(0), limit, true, TOKEN, spendInfo, _allowedSelectors(), 0
         );
 
@@ -945,12 +945,12 @@ contract RegistartionTest is Base {
         vm.etch(owner, code);
 
         vm.prank(address(entryPoint));
-        account.registerSessionKey(
+        account.registerKey(
             keySK, validUntil, uint48(0), limit, true, TOKEN, spendInfo, _allowedSelectors(), 0
         );
     }
 
-    function _register_SessionKeyP256NonKey() internal {
+    function _register_KeyP256NonKey() internal {
         uint48 validUntil = uint48(block.timestamp + 1 days);
         uint48 limit = uint48(3);
         pubKeySK = PubKey({x: P256NOKEY_PUBLIC_KEY_X, y: P256NOKEY_PUBLIC_KEY_Y});
@@ -967,7 +967,7 @@ contract RegistartionTest is Base {
         vm.etch(owner, code);
 
         vm.prank(address(entryPoint));
-        account.registerSessionKey(
+        account.registerKey(
             keySK, validUntil, uint48(0), limit, true, TOKEN, spendInfo, _allowedSelectors(), 0
         );
 
@@ -978,7 +978,7 @@ contract RegistartionTest is Base {
         vm.etch(owner, code);
 
         vm.prank(address(entryPoint));
-        account.registerSessionKey(
+        account.registerKey(
             keySK, validUntil, uint48(0), limit, true, TOKEN, spendInfo, _allowedSelectors(), 0
         );
     }
@@ -1002,7 +1002,7 @@ contract RegistartionTest is Base {
         vm.etch(owner, code);
 
         vm.prank(address(entryPoint));
-        account.registerSessionKey(
+        account.registerKey(
             keyMK_Mint,
             validUntil,
             uint48(0),
@@ -1026,7 +1026,7 @@ contract RegistartionTest is Base {
             Key({pubKey: pubKeyMK_BATCH, eoaAddress: address(0), keyType: KeyType.WEBAUTHN});
 
         SpendLimit.SpendTokenInfo memory spendInfo_BATCH =
-            SpendLimit.SpendTokenInfo({token: TOKEN, limit: 100000e18});
+            SpendLimit.SpendTokenInfo({token: TOKEN, limit: 10000e18});
 
         bytes memory code = abi.encodePacked(
             bytes3(0xef0100),
@@ -1035,7 +1035,7 @@ contract RegistartionTest is Base {
         vm.etch(owner, code);
 
         vm.prank(address(entryPoint));
-        account.registerSessionKey(
+        account.registerKey(
             keyMK_BATCH,
             validUntil,
             uint48(0),

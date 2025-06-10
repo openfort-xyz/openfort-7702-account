@@ -2,59 +2,59 @@
 pragma solidity ^0.8.29;
 
 import {SpendLimit} from "src/utils/SpendLimit.sol";
-import {ISessionkey} from "src/interfaces/ISessionkey.sol";
+import {IKey} from "src/interfaces/IKey.sol";
 
 /// @title IKeysManager
-/// @notice Interface for `KeysManager`, which handles registration, revocation, and querying of session keys (WebAuthn/P256/EOA) with spending limits and whitelisting support.
+/// @notice Interface for `KeysManager`, which handles registration, revocation, and querying of keys (WebAuthn/P256/EOA) with spending limits and whitelisting support.
 /// @dev Declares all externally‐visible functions, events, state getters, constants, and errors.
-///      Note: SessionKey structs contain mappings, so individual field getters or composite “getSessionKeyData” functions are exposed instead of returning the full struct.
-interface IKeysManager is ISessionkey {
+///      Note: KeyData structs contain mappings, so individual field getters or composite “getKeyData” functions are exposed instead of returning the full struct.
+interface IKeysManager is IKey {
     // =============================================================
     //                          STATE GETTERS
     // =============================================================
 
-    /// @notice Incremental ID for WebAuthn/P256/P256NONKEY session keys.
+    /// @notice Incremental ID for WebAuthn/P256/P256NONKEY keys.
     function id() external view returns (uint256);
 
-    /// @notice Incremental ID for EOA session keys.
+    /// @notice Incremental ID for EOA  keys.
     function idEOA() external view returns (uint256);
 
-    /// @notice Retrieves the `Key` struct for a given WebAuthn/P256/P256NONKEY session key ID.
+    /// @notice Retrieves the `Key` struct for a given WebAuthn/P256/P256NONKEY key ID.
     /// @param _id Identifier of the key.
     /// @return The stored `Key` (keyType, pubKey, eoaAddress).
-    function idSessionKeys(uint256 _id) external view returns (ISessionkey.Key memory);
+    function idKeys(uint256 _id) external view returns (IKey.Key memory);
 
     /// @notice Checks whether a given WebAuthn challenge (by hash) has been used already.
     /// @param _challengeHash Keccak256 hash of a WebAuthn challenge.
     /// @return `true` if the challenge has been used; `false` otherwise.
     function usedChallenges(bytes32 _challengeHash) external view returns (bool);
 
-    /// @notice Retrieves the `Key` struct for a given EOA session key ID.
+    /// @notice Retrieves the `Key` struct for a given EOA key ID.
     /// @param _idEOA Identifier of the EOA key.
     /// @return The stored `Key` (keyType, pubKey, eoaAddress).
-    function idSessionKeysEOA(uint256 _idEOA) external view returns (ISessionkey.Key memory);
+    function idKeysEOA(uint256 _idEOA) external view returns (IKey.Key memory);
 
     // =============================================================
     //                 EXTERNAL / PUBLIC FUNCTIONS
     // =============================================================
 
     /**
-     * @notice Registers a new session key with specified permissions and limits.
+     * @notice Registers a new key with specified permissions and limits.
      * @dev
      *   - Only callable by ADMIN_ROLE via `_requireForExecute()`.
      *   - Supports both WebAuthn/P256/P256NONKEY and EOA key types.
      *   - For WebAuthn/P256/P256NONKEY: computes `keyId = keccak256(pubKey.x, pubKey.y)`.
      *   - For EOA: uses `eoaAddress` as `keyId`.
      *   - Requires `_validUntil > block.timestamp` and `_validAfter ≤ _validUntil`.
-     *   - Reverts with `SessionKeyManager__InvalidTimestamp` or `SessionKeyManager__SessionKeyRegistered` on failure.
-     *   - Emits `SessionKeyRegistrated(keyId)` on success.
+     *   - Reverts with `KeyManager__InvalidTimestamp` or `KeyManager__KeyRegistered` on failure.
+     *   - Emits `KeyRegistrated(keyId)` on success.
      *
      * @param _key             Struct containing key information:
      *                         • `keyType`: one of {WEBAUTHN, P256, P256NONKEY, EOA}.
      *                         • For WebAuthn/P256/P256NONKEY: `pubKey` must be set.
      *                         • For EOA: `eoaAddress` must be non-zero.
-     * @param _validUntil      UNIX timestamp after which this session key is invalid.
-     * @param _validAfter      UNIX timestamp before which this session key is not valid.
+     * @param _validUntil      UNIX timestamp after which this key is invalid.
+     * @param _validAfter      UNIX timestamp before which this key is not valid.
      * @param _limit           Maximum number of transactions allowed (0 = unlimited/master).
      * @param _whitelisting    If true, restrict calls to whitelisted contracts/tokens.
      * @param _contractAddress Initial contract to whitelist (ignored if !_whitelisting).
@@ -62,10 +62,10 @@ interface IKeysManager is ISessionkey {
      *                         • `token`: ERC-20 address (non-zero if `_limit > 0`).
      *                         • `limit`: token amount allowed.
      * @param _allowedSelectors Array of allowed function selectors (length ≤ MAX_SELECTORS).
-     * @param _ethLimit        Maximum ETH (wei) this session key can spend.
+     * @param _ethLimit        Maximum ETH (wei) this key can spend.
      */
-    function registerSessionKey(
-        ISessionkey.Key calldata _key,
+    function registerKey(
+        IKey.Key calldata _key,
         uint48 _validUntil,
         uint48 _validAfter,
         uint48 _limit,
@@ -77,25 +77,25 @@ interface IKeysManager is ISessionkey {
     ) external;
 
     /**
-     * @notice Revokes a specific session key, marking it inactive and clearing its parameters.
+     * @notice Revokes a specific key, marking it inactive and clearing its parameters.
      * @dev
      *   - Only callable by ADMIN_ROLE via `_requireForExecute()`.
      *   - Works for both WebAuthn/P256/P256NONKEY and EOA keys.
-     *   - Emits `SessionKeyRevoked(keyId)` on success.
+     *   - Emits `KeyRevoked(keyId)` on success.
      *
      * @param _key Struct containing key information to revoke:
      *             • For WebAuthn/P256/P256NONKEY: uses `pubKey` to compute `keyId`.
      *             • For EOA: uses `eoaAddress` (must be non-zero).
      */
-    function revokeSessionKey(ISessionkey.Key calldata _key) external;
+    function revokeKey(IKey.Key calldata _key) external;
 
     /**
-     * @notice Revokes all registered session keys (WebAuthn/P256/P256NONKEY and EOA).
+     * @notice Revokes all registered keys (WebAuthn/P256/P256NONKEY and EOA).
      * @dev
      *   - Only callable by ADMIN_ROLE via `_requireForExecute()`.
-     *   - Iterates through all IDs and revokes each, emitting `SessionKeyRevoked(keyId)` per key.
+     *   - Iterates through all IDs and revokes each, emitting `KeyRevoked(keyId)` per key.
      */
-    function revokeAllSessionKeys() external;
+    function revokeAllKeys() external;
 
     /**
      * @notice Retrieves registration info for a given key ID.
@@ -105,10 +105,10 @@ interface IKeysManager is ISessionkey {
      * @return registeredBy  Address that performed the registration (should be this contract).
      * @return isActive      Whether the key is currently active.
      */
-    function getKeyRegistrationInfo(uint256 _id, ISessionkey.KeyType _keyType)
+    function getKeyRegistrationInfo(uint256 _id, IKey.KeyType _keyType)
         external
         view
-        returns (ISessionkey.KeyType keyType, address registeredBy, bool isActive);
+        returns (IKey.KeyType keyType, address registeredBy, bool isActive);
 
     /**
      * @notice Retrieves the `Key` struct stored at a given ID.
@@ -116,50 +116,50 @@ interface IKeysManager is ISessionkey {
      * @param _keyType  Enum indicating which mapping to use (WEBAUTHN/P256/P256NONKEY vs. EOA).
      * @return The `Key` struct containing key type, public key, or EOA address.
      */
-    function getKeyById(uint256 _id, ISessionkey.KeyType _keyType)
+    function getKeyById(uint256 _id, IKey.KeyType _keyType)
         external
         view
-        returns (ISessionkey.Key memory);
+        returns (IKey.Key memory);
 
     /**
-     * @notice Retrieves session key metadata for a WebAuthn/P256/P256NONKEY key by its hash.
+     * @notice Retrieves key metadata for a WebAuthn/P256/P256NONKEY key by its hash.
      * @param _keyHash  Keccak256 hash of public key coordinates (x, y).
-     * @return isActive   Whether the session key is active.
+     * @return isActive   Whether the key is active.
      * @return validUntil UNIX timestamp until which the key is valid.
      * @return validAfter UNIX timestamp after which the key is valid.
      * @return limit      Remaining number of transactions allowed.
      */
-    function getSessionKeyData(bytes32 _keyHash)
+    function getKeyData(bytes32 _keyHash)
         external
         view
         returns (bool isActive, uint48 validUntil, uint48 validAfter, uint48 limit);
 
     /**
-     * @notice Retrieves session key metadata for an EOA key by its address.
-     * @param _key  EOA address corresponding to the session key.
-     * @return isActive   Whether the session key is active.
+     * @notice Retrieves key metadata for an EOA key by its address.
+     * @param _key  EOA address corresponding to the key.
+     * @return isActive   Whether the key is active.
      * @return validUntil UNIX timestamp until which the key is valid.
      * @return validAfter UNIX timestamp after which the key is valid.
      * @return limit      Remaining number of transactions allowed.
      */
-    function getSessionKeyData(address _key)
+    function getKeyData(address _key)
         external
         view
         returns (bool isActive, uint48 validUntil, uint48 validAfter, uint48 limit);
 
     /**
-     * @notice Checks if an EOA session key is active.
+     * @notice Checks if an EOA key is active.
      * @param eoaKey  EOA address to check.
-     * @return True if the session key is active; false otherwise.
+     * @return True if the key is active; false otherwise.
      */
-    function isSessionKeyActive(address eoaKey) external view returns (bool);
+    function isKeyActive(address eoaKey) external view returns (bool);
 
     /**
-     * @notice Checks if a WebAuthn/P256/P256NONKEY session key is active.
+     * @notice Checks if a WebAuthn/P256/P256NONKEY key is active.
      * @param keyHash  Keccak256 hash of public key coordinates (x, y).
-     * @return True if the session key is active; false otherwise.
+     * @return True if the key is active; false otherwise.
      */
-    function isSessionKeyActive(bytes32 keyHash) external view returns (bool);
+    function isKeyActive(bytes32 keyHash) external view returns (bool);
 
     /**
      * @notice Encodes WebAuthn signature parameters into a bytes payload for submission.
@@ -183,7 +183,7 @@ interface IKeysManager is ISessionkey {
         uint256 typeIndex,
         bytes32 r,
         bytes32 s,
-        ISessionkey.PubKey memory pubKey
+        IKey.PubKey memory pubKey
     ) external pure returns (bytes memory);
 
     /**
@@ -193,7 +193,7 @@ interface IKeysManager is ISessionkey {
      * @param pubKey  Public key (x, y) used for signing.
      * @return ABI‐encoded payload as: KeyType.P256, abi.encode(r, s, pubKey).
      */
-    function encodeP256Signature(bytes32 r, bytes32 s, ISessionkey.PubKey memory pubKey)
+    function encodeP256Signature(bytes32 r, bytes32 s, IKey.PubKey memory pubKey)
         external
         pure
         returns (bytes memory);
@@ -205,7 +205,7 @@ interface IKeysManager is ISessionkey {
      * @param pubKey  Public key (x, y) used for signing.
      * @return ABI‐encoded payload as: KeyType.P256NONKEY, abi.encode(r, s, pubKey).
      */
-    function encodeP256NonKeySignature(bytes32 r, bytes32 s, ISessionkey.PubKey memory pubKey)
+    function encodeP256NonKeySignature(bytes32 r, bytes32 s, IKey.PubKey memory pubKey)
         external
         pure
         returns (bytes memory);
