@@ -39,9 +39,6 @@ abstract contract BaseOPF7702 is
     //                            ERRORS
     // =============================================================
 
-    /// @notice Thrown when the provided nonce equals the current nonce (replay protection).
-    error OpenfortBaseAccount7702V1__InvalidNonce();
-    /// @notice Thrown when a signature fails verification.
     error OpenfortBaseAccount7702V1__InvalidSignature();
     /// @notice Thrown when the signature or transaction validity has expired.
     error OpenfortBaseAccount7702V1__ValidationExpired();
@@ -68,9 +65,6 @@ abstract contract BaseOPF7702 is
 
     /// @notice The EntryPoint singleton contract used to dispatch user operations.
     address internal immutable ENTRY_POINT;
-
-    /// @notice Current transaction nonce, used to prevent replay attacks.
-    uint256 public nonce;
 
     // =============================================================
     //                             EVENTS
@@ -125,17 +119,6 @@ abstract contract BaseOPF7702 is
     function _notExpired(uint256 _validUntil) internal view {
         if (block.timestamp > _validUntil) {
             revert OpenfortBaseAccount7702V1__ValidationExpired();
-        }
-    }
-
-    /**
-     * @notice Validates that the provided nonce differs from the stored nonce.
-     * @param _nonce The nonce from the user operation to compare.
-     * @dev Reverts with `InvalidNonce` if `_nonce` equals the current `nonce`. Overrides `IAccount._validateNonce`.
-     */
-    function _validateNonce(uint256 _nonce) internal view override {
-        if (_nonce == nonce) {
-            revert OpenfortBaseAccount7702V1__InvalidNonce();
         }
     }
 

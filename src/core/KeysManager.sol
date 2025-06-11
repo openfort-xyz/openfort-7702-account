@@ -69,11 +69,11 @@ abstract contract KeysManager is BaseOPF7702, IKey, SpendLimit {
     // =============================================================
 
     /// @notice Emitted when a key is revoked
-    /// @param Key The identifier (hash or address‐derived hash) of the revoked key
-    event KeyRevoked(bytes32 indexed Key);
+    /// @param key The identifier (hash or address‐derived hash) of the revoked key
+    event KeyRevoked(bytes32 indexed key);
     /// @notice Emitted when a new key is registered
-    /// @param Key The identifier (hash or address‐derived hash) of the newly registered key
-    event KeyRegistrated(bytes32 indexed Key);
+    /// @param key The identifier (hash or address‐derived hash) of the newly registered key
+    event KeyRegistrated(bytes32 indexed key);
 
     // =============================================================
     //                 PUBLIC / EXTERNAL FUNCTIONS
@@ -176,9 +176,6 @@ abstract contract KeysManager is BaseOPF7702, IKey, SpendLimit {
         if (kt == KeyType.WEBAUTHN || kt == KeyType.P256 || kt == KeyType.P256NONKEY) {
             keyId = keccak256(abi.encodePacked(_key.pubKey.x, _key.pubKey.y));
         } else if (kt == KeyType.EOA) {
-            if (_key.eoaAddress == DEAD_ADDRESS || _key.eoaAddress == address(0)) {
-                revert KeyManager__AddressCantBeZero();
-            }
             keyId = keccak256(abi.encodePacked(_key.eoaAddress));
         }
 
@@ -338,7 +335,6 @@ abstract contract KeysManager is BaseOPF7702, IKey, SpendLimit {
         returns (KeyType keyType, address registeredBy, bool isActive)
     {
         bytes32 keyId;
-
         Key memory k = idKeys[_id];
 
         if (

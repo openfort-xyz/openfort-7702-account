@@ -116,17 +116,15 @@ contract OPF7702 is Execution, Initializable, WebAuthnVerifier {
         bytes32 keyId = keccak256(abi.encodePacked(signer));
         // load the key for this EOA
         KeyData storage sKey = keys[keyId];
-        // if no active Key, reject
-        if (sKey.validUntil == 0 || sKey.whoRegistrated != address(this) || !sKey.isActive) {
-            return SIG_VALIDATION_FAILED;
-        }
 
-        // build a minimal Key struct to call isValidKey
-        Key memory composedKey = Key({
-            pubKey: PubKey({x: sKey.pubKey.x, y: sKey.pubKey.y}),
-            eoaAddress: signer,
-            keyType: KeyType.EOA
-        });
+        (Key memory composedKey, bool isValid) = _keyValidation(sKey, signer, KeyType.EOA);
+
+        if (!isValid) return SIG_VALIDATION_FAILED;
+
+        // master key → immediate success
+        if (sKey.masterKey) {
+            return SIG_VALIDATION_SUCCESS;
+        }
 
         if (isValidKey(composedKey, callData)) {
             return _packValidationData(false, sKey.validUntil, sKey.validAfter);
@@ -189,21 +187,16 @@ contract OPF7702 is Execution, Initializable, WebAuthnVerifier {
 
         bytes32 keyHash = keccak256(abi.encodePacked(pubKey.x, pubKey.y));
         KeyData storage sKey = keys[keyHash];
-        if (sKey.whoRegistrated != address(this) || !sKey.isActive || sKey.validUntil == 0) {
-            return SIG_VALIDATION_FAILED;
-        }
+
+        (Key memory composedKey, bool isValid) =
+            _keyValidation(sKey, DEAD_ADDRESS, KeyType.WEBAUTHN);
+
+        if (!isValid) return SIG_VALIDATION_FAILED;
 
         // master key → immediate success
         if (sKey.masterKey) {
             return SIG_VALIDATION_SUCCESS;
         }
-
-        // build minimal Key
-        Key memory composedKey = Key({
-            pubKey: PubKey({x: sKey.pubKey.x, y: sKey.pubKey.y}),
-            eoaAddress: address(0),
-            keyType: KeyType.WEBAUTHN
-        });
 
         if (isValidKey(composedKey, callData)) {
             usedChallenges[userOpHash] = true; // mark challenge as used
@@ -249,26 +242,37 @@ contract OPF7702 is Execution, Initializable, WebAuthnVerifier {
 
         bytes32 keyHash = keccak256(abi.encodePacked(pubKey.x, pubKey.y));
         KeyData storage sKey = keys[keyHash];
-        if (sKey.whoRegistrated != address(this) || !sKey.isActive || sKey.validUntil == 0) {
-            return SIG_VALIDATION_FAILED;
-        }
 
-        // master key → immediate success
-        if (sKey.masterKey) {
-            return SIG_VALIDATION_SUCCESS;
-        }
+        (Key memory composedKey, bool isValid) =
+            _keyValidation(sKey, DEAD_ADDRESS, KeyType.WEBAUTHN);
 
-        Key memory composedKey = Key({
-            pubKey: PubKey({x: sKey.pubKey.x, y: sKey.pubKey.y}),
-            eoaAddress: address(0),
-            keyType: KeyType.P256
-        });
+        if (!isValid) return SIG_VALIDATION_FAILED;
 
         if (isValidKey(composedKey, callData)) {
             usedChallenges[userOpHash] = true;
             return _packValidationData(false, sKey.validUntil, sKey.validAfter);
         }
         return SIG_VALIDATION_FAILED;
+    }
+
+    function _keyValidation(KeyData storage sKey, address signer, KeyType keyType)
+        internal
+        view
+        returns (Key memory composedKey, bool isValid)
+    {
+        // Check if key is valid and active
+        if (sKey.validUntil == 0 || sKey.whoRegistrated != address(this) || !sKey.isActive) {
+            return (composedKey, false); // Early return for invalid key
+        }
+
+        // Build the composed key
+        composedKey = Key({
+            pubKey: PubKey({x: sKey.pubKey.x, y: sKey.pubKey.y}),
+            eoaAddress: signer,
+            keyType: keyType
+        });
+
+        return (composedKey, true);
     }
 
     /**

@@ -656,7 +656,7 @@ contract DepositAndTransferETH is Base {
 
         vm.prank(address(entryPoint));
         account.initialize(
-            keyMK, spendInfo, _allowedSelectors(), msgHash, sig, validUntil, 1, initialGuardian
+            keyMK, spendInfo, _allowedSelectors(), msgHash, sig, validUntil, initialGuardian
         );
     }
 }

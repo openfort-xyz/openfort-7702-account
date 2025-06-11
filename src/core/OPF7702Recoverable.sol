@@ -220,7 +220,6 @@ contract OPF7702Recoverable is OPF7702, EIP712 layout at 57943590311362240630886
      * @param _hash             Hash to sign (EIP-712 or UserOp hash).
      * @param _signature        Signature over `_hash` by this contract.
      * @param _validUntil       Expiration timestamp for this initialization.
-     * @param _nonce            Nonce to prevent replay.
      */
     function initialize(
         Key calldata _key,
@@ -229,20 +228,15 @@ contract OPF7702Recoverable is OPF7702, EIP712 layout at 57943590311362240630886
         bytes32 _hash,
         bytes memory _signature,
         uint256 _validUntil,
-        uint256 _nonce,
         address _initialGuardian
     ) external initializer {
         _requireForExecute();
         _clearStorage();
-        _validateNonce(_nonce);
         _notExpired(_validUntil);
 
         if (!_checkSignature(_hash, _signature)) {
             revert OpenfortBaseAccount7702V1__InvalidSignature();
         }
-
-        // record new nonce
-        nonce = _nonce;
 
         bytes32 keyId = keccak256(abi.encodePacked(_key.pubKey.x, _key.pubKey.y));
         KeyData storage sKey = keys[keyId];
