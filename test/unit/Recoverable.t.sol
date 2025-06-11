@@ -34,10 +34,6 @@ contract Recoverable is Base {
     Key internal keySK;
     PubKey internal pubKeySK;
 
-    Key internal propose_KeyGuardianEOA;
-    PubKey internal propose_PubKeyGuardianEOA;
-    Key internal propose_keyGuardianWebAuthn;
-    PubKey internal propose_pubKeyGuardianWebAuthn;
     Key internal recovery_keyEOA;
     PubKey internal recovery_pubKeyEOA;
     Key internal recovery_keyWebAuthn;
@@ -91,12 +87,12 @@ contract Recoverable is Base {
                 ++i;
             }
         }
-        bool isActive = account.isGuardian(keyGuardianEOA);
+        bool isActive = account.isGuardian(initialGuardian);
         console.log("isActive", isActive);
 
         assertTrue(isActive);
 
-        assertEq(guardians[0], keccak256(abi.encodePacked(GUARDIAN_EOA_ADDRESS)));
+        assertEq(guardians[0], keccak256(abi.encodePacked(initialGuardian)));
 
         console.log("/* --------------------------------- test_AfterConstructor -------- */");
     }
@@ -104,55 +100,54 @@ contract Recoverable is Base {
     function test_AfterProposal() external view {
         console.log("/* --------------------------------- test_AfterProposal -------- */");
 
-        bool isActiveEOA = account.isGuardian(propose_KeyGuardianEOA);
+        bool isActiveEOA = account.isGuardian(sessionKey);
         console.log("isActiveEOA", isActiveEOA);
 
-        bool isActiveWebAuthn = account.isGuardian(propose_keyGuardianWebAuthn);
-        console.log("isActiveWebAuthn", isActiveWebAuthn);
+        bool isActiveB = account.isGuardian(guardianB);
+        console.log("isActiveB", isActiveB);
 
         assertFalse(isActiveEOA);
-        assertFalse(isActiveWebAuthn);
+        assertFalse(isActiveB);
 
-        uint256 pendingEOA = account.getPendingStatusGuardians(propose_KeyGuardianEOA);
-        uint256 pendingWebAuthn = account.getPendingStatusGuardians(propose_keyGuardianWebAuthn);
+        uint256 pendingEOA = account.getPendingStatusGuardians(sessionKey);
+        uint256 pendingEOAB = account.getPendingStatusGuardians(guardianB);
         console.log("pendingEOA", pendingEOA);
-        console.log("pendingWebAuthn", pendingWebAuthn);
+        console.log("pendingEOAB", pendingEOAB);
 
         assertEq(pendingEOA, proposalTimestamp + SECURITY_PERIOD);
-        assertEq(pendingWebAuthn, proposalTimestamp + SECURITY_PERIOD);
+        assertEq(pendingEOAB, proposalTimestamp + SECURITY_PERIOD);
         console.log("/* --------------------------------- test_AfterProposal -------- */");
     }
 
     function test_AfterCancellation() external {
         console.log("/* --------------------------------- test_AfterCancellation -------- */");
 
-        bool isActiveEOA = account.isGuardian(propose_KeyGuardianEOA);
+        bool isActiveEOA = account.isGuardian(sessionKey);
         console.log("isActiveEOA", isActiveEOA);
 
-        bool isActiveWebAuthn = account.isGuardian(propose_keyGuardianWebAuthn);
-        console.log("isActiveWebAuthn", isActiveWebAuthn);
+        bool isActiveB = account.isGuardian(guardianB);
+        console.log("isActiveB", isActiveB);
 
         assertFalse(isActiveEOA);
-        assertFalse(isActiveWebAuthn);
+        assertFalse(isActiveB);
 
-        uint256 pendingEOA = account.getPendingStatusGuardians(propose_KeyGuardianEOA);
-        uint256 pendingWebAuthn = account.getPendingStatusGuardians(propose_keyGuardianWebAuthn);
+        uint256 pendingEOA = account.getPendingStatusGuardians(sessionKey);
+        uint256 pendingEOAB = account.getPendingStatusGuardians(guardianB);
         console.log("pendingEOA", pendingEOA);
-        console.log("pendingWebAuthn", pendingWebAuthn);
+        console.log("pendingEOAB", pendingEOAB);
 
         assertEq(pendingEOA, proposalTimestamp + SECURITY_PERIOD);
-        assertEq(pendingWebAuthn, proposalTimestamp + SECURITY_PERIOD);
+        assertEq(pendingEOAB, proposalTimestamp + SECURITY_PERIOD);
 
         _cancelGuardian();
 
-        uint256 pendingEOA_After = account.getPendingStatusGuardians(propose_KeyGuardianEOA);
-        uint256 pendingWebAuthn_After =
-            account.getPendingStatusGuardians(propose_keyGuardianWebAuthn);
+        uint256 pendingEOA_After = account.getPendingStatusGuardians(sessionKey);
+        uint256 pendingEOAB_After = account.getPendingStatusGuardians(guardianB);
         console.log("pendingEOA_After", pendingEOA_After);
-        console.log("pendingWebAuthn_After", pendingWebAuthn_After);
+        console.log("pendingEOAB_After", pendingEOAB_After);
 
         assertEq(pendingEOA_After, 0);
-        assertEq(pendingWebAuthn_After, 0);
+        assertEq(pendingEOAB_After, 0);
         console.log("/* --------------------------------- test_AfterCancellation -------- */");
     }
 
@@ -170,25 +165,20 @@ contract Recoverable is Base {
                 ++i;
             }
         }
-        bool isActive = account.isGuardian(keyGuardianEOA);
+        bool isActive = account.isGuardian(initialGuardian);
         console.log("isActive", isActive);
-        bool isActiveEOA = account.isGuardian(propose_KeyGuardianEOA);
+        bool isActiveEOA = account.isGuardian(sessionKey);
         console.log("isActiveEOA", isActiveEOA);
-        bool isActiveWebAuthn = account.isGuardian(propose_keyGuardianWebAuthn);
-        console.log("isActiveWebAuthn", isActiveWebAuthn);
+        bool isActiveB = account.isGuardian(guardianB);
+        console.log("isActiveB", isActiveB);
 
         assertTrue(isActive);
         assertTrue(isActiveEOA);
-        assertTrue(isActiveWebAuthn);
+        assertTrue(isActiveB);
 
-        assertEq(guardians[0], keccak256(abi.encodePacked(GUARDIAN_EOA_ADDRESS)));
+        assertEq(guardians[0], keccak256(abi.encodePacked(initialGuardian)));
         assertEq(guardians[1], keccak256(abi.encodePacked(sessionKey)));
-        assertEq(
-            guardians[2],
-            keccak256(
-                abi.encodePacked(propose_pubKeyGuardianWebAuthn.x, propose_pubKeyGuardianWebAuthn.y)
-            )
-        );
+        assertEq(guardians[2], keccak256(abi.encodePacked(guardianB)));
 
         console.log("/* --------------------------------- test_AfterConfirmation -------- */");
     }
@@ -207,36 +197,31 @@ contract Recoverable is Base {
                 ++i;
             }
         }
-        bool isActive = account.isGuardian(keyGuardianEOA);
+        bool isActive = account.isGuardian(initialGuardian);
         console.log("isActive", isActive);
-        bool isActiveEOA = account.isGuardian(propose_KeyGuardianEOA);
+        bool isActiveEOA = account.isGuardian(sessionKey);
         console.log("isActiveEOA", isActiveEOA);
-        bool isActiveWebAuthn = account.isGuardian(propose_keyGuardianWebAuthn);
-        console.log("isActiveWebAuthn", isActiveWebAuthn);
+        bool isActiveB = account.isGuardian(guardianB);
+        console.log("isActiveB", isActiveB);
 
         assertTrue(isActive);
         assertTrue(isActiveEOA);
-        assertTrue(isActiveWebAuthn);
+        assertTrue(isActiveB);
 
-        assertEq(guardians[0], keccak256(abi.encodePacked(GUARDIAN_EOA_ADDRESS)));
+        assertEq(guardians[0], keccak256(abi.encodePacked(initialGuardian)));
         assertEq(guardians[1], keccak256(abi.encodePacked(sessionKey)));
-        assertEq(
-            guardians[2],
-            keccak256(
-                abi.encodePacked(propose_pubKeyGuardianWebAuthn.x, propose_pubKeyGuardianWebAuthn.y)
-            )
-        );
+        assertEq(guardians[2], keccak256(abi.encodePacked(guardianB)));
         _revokeGuardian();
 
-        uint256 pendingEOA = account.getPendingStatusGuardians(propose_KeyGuardianEOA);
-        uint256 pendingWebAuthn = account.getPendingStatusGuardians(propose_keyGuardianWebAuthn);
+        uint256 pendingEOA = account.getPendingStatusGuardians(sessionKey);
+        uint256 pendingEOAB = account.getPendingStatusGuardians(guardianB);
 
         console.log("pendingEOA", pendingEOA);
-        console.log("pendingWebAuthn", pendingWebAuthn);
+        console.log("pendingEOAB", pendingEOAB);
         console.log("block.timestamp + SECURITY_PERIOD", block.timestamp + SECURITY_PERIOD);
 
         assertEq(pendingEOA, block.timestamp + SECURITY_PERIOD);
-        assertEq(pendingWebAuthn, block.timestamp + SECURITY_PERIOD);
+        assertEq(pendingEOAB, block.timestamp + SECURITY_PERIOD);
         console.log("/* --------------------------------- test_RevokeGuardian -------- */");
     }
 
@@ -254,45 +239,39 @@ contract Recoverable is Base {
                 ++i;
             }
         }
-        bool isActive = account.isGuardian(keyGuardianEOA);
+        bool isActive = account.isGuardian(initialGuardian);
         console.log("isActive", isActive);
-        bool isActiveEOA = account.isGuardian(propose_KeyGuardianEOA);
+        bool isActiveEOA = account.isGuardian(sessionKey);
         console.log("isActiveEOA", isActiveEOA);
-        bool isActiveWebAuthn = account.isGuardian(propose_keyGuardianWebAuthn);
-        console.log("isActiveWebAuthn", isActiveWebAuthn);
+        bool isActiveB = account.isGuardian(guardianB);
+        console.log("isActiveB", isActiveB);
 
         assertTrue(isActive);
         assertTrue(isActiveEOA);
-        assertTrue(isActiveWebAuthn);
+        assertTrue(isActiveB);
 
-        assertEq(guardians[0], keccak256(abi.encodePacked(GUARDIAN_EOA_ADDRESS)));
+        assertEq(guardians[0], keccak256(abi.encodePacked(initialGuardian)));
         assertEq(guardians[1], keccak256(abi.encodePacked(sessionKey)));
-        assertEq(
-            guardians[2],
-            keccak256(
-                abi.encodePacked(propose_pubKeyGuardianWebAuthn.x, propose_pubKeyGuardianWebAuthn.y)
-            )
-        );
+        assertEq(guardians[2], keccak256(abi.encodePacked(guardianB)));
         _revokeGuardian();
 
-        uint256 pendingEOA = account.getPendingStatusGuardians(propose_KeyGuardianEOA);
-        uint256 pendingWebAuthn = account.getPendingStatusGuardians(propose_keyGuardianWebAuthn);
+        uint256 pendingEOA = account.getPendingStatusGuardians(sessionKey);
+        uint256 pendingEOAB = account.getPendingStatusGuardians(guardianB);
 
         console.log("pendingEOA", pendingEOA);
-        console.log("pendingWebAuthn", pendingWebAuthn);
+        console.log("pendingEOAB", pendingEOAB);
         console.log("block.timestamp + SECURITY_PERIOD", block.timestamp + SECURITY_PERIOD);
 
         assertEq(pendingEOA, block.timestamp + SECURITY_PERIOD);
-        assertEq(pendingWebAuthn, block.timestamp + SECURITY_PERIOD);
+        assertEq(pendingEOAB, block.timestamp + SECURITY_PERIOD);
 
         _cancelGuardianRevocation();
 
-        uint256 pendingEOA_After = account.getPendingStatusGuardians(propose_KeyGuardianEOA);
-        uint256 pendingWebAuthn_After =
-            account.getPendingStatusGuardians(propose_keyGuardianWebAuthn);
+        uint256 pendingEOA_After = account.getPendingStatusGuardians(sessionKey);
+        uint256 pendingEOAB_After = account.getPendingStatusGuardians(guardianB);
 
         assertEq(pendingEOA_After, 0);
-        assertEq(pendingWebAuthn_After, 0);
+        assertEq(pendingEOAB_After, 0);
         console.log("/* --------------------------------- test_RevokeGuardian -------- */");
     }
 
@@ -310,36 +289,31 @@ contract Recoverable is Base {
                 ++i;
             }
         }
-        bool isActive = account.isGuardian(keyGuardianEOA);
+        bool isActive = account.isGuardian(initialGuardian);
         console.log("isActive", isActive);
-        bool isActiveEOA = account.isGuardian(propose_KeyGuardianEOA);
+        bool isActiveEOA = account.isGuardian(sessionKey);
         console.log("isActiveEOA", isActiveEOA);
-        bool isActiveWebAuthn = account.isGuardian(propose_keyGuardianWebAuthn);
-        console.log("isActiveWebAuthn", isActiveWebAuthn);
+        bool isActiveB = account.isGuardian(guardianB);
+        console.log("isActiveB", isActiveB);
 
         assertTrue(isActive);
         assertTrue(isActiveEOA);
-        assertTrue(isActiveWebAuthn);
+        assertTrue(isActiveB);
 
-        assertEq(guardians[0], keccak256(abi.encodePacked(GUARDIAN_EOA_ADDRESS)));
+        assertEq(guardians[0], keccak256(abi.encodePacked(initialGuardian)));
         assertEq(guardians[1], keccak256(abi.encodePacked(sessionKey)));
-        assertEq(
-            guardians[2],
-            keccak256(
-                abi.encodePacked(propose_pubKeyGuardianWebAuthn.x, propose_pubKeyGuardianWebAuthn.y)
-            )
-        );
+        assertEq(guardians[2], keccak256(abi.encodePacked(guardianB)));
 
         _revokeGuardian();
-        uint256 pendingEOA = account.getPendingStatusGuardians(propose_KeyGuardianEOA);
-        uint256 pendingWebAuthn = account.getPendingStatusGuardians(propose_keyGuardianWebAuthn);
+        uint256 pendingEOA = account.getPendingStatusGuardians(sessionKey);
+        uint256 pendingEOAB = account.getPendingStatusGuardians(guardianB);
 
         console.log("pendingEOA", pendingEOA);
-        console.log("pendingWebAuthn", pendingWebAuthn);
+        console.log("pendingEOAB", pendingEOAB);
         console.log("block.timestamp + SECURITY_PERIOD", block.timestamp + SECURITY_PERIOD);
 
         assertEq(pendingEOA, block.timestamp + SECURITY_PERIOD);
-        assertEq(pendingWebAuthn, block.timestamp + SECURITY_PERIOD);
+        assertEq(pendingEOAB, block.timestamp + SECURITY_PERIOD);
 
         _confirmGuardianRevocationEOA();
 
@@ -354,17 +328,12 @@ contract Recoverable is Base {
             }
         }
 
-        bool isActiveEOA_After = account.isGuardian(propose_KeyGuardianEOA);
+        bool isActiveEOA_After = account.isGuardian(sessionKey);
         console.log("isActiveEOA_After", isActiveEOA_After);
         assertTrue(!isActiveEOA_After);
 
-        assertEq(guardians[0], keccak256(abi.encodePacked(GUARDIAN_EOA_ADDRESS)));
-        assertEq(
-            guardians[1],
-            keccak256(
-                abi.encodePacked(propose_pubKeyGuardianWebAuthn.x, propose_pubKeyGuardianWebAuthn.y)
-            )
-        );
+        assertEq(guardians[0], keccak256(abi.encodePacked(initialGuardian)));
+        assertEq(guardians[1], keccak256(abi.encodePacked(guardianB)));
 
         _confirmGuardianRevocationWebAuthn();
 
@@ -379,10 +348,10 @@ contract Recoverable is Base {
             }
         }
 
-        bool isActiveWebAuthn_After = account.isGuardian(propose_keyGuardianWebAuthn);
-        console.log("isActiveWebAuthn_After", isActiveWebAuthn_After);
-        assertTrue(!isActiveWebAuthn_After);
-        assertEq(guardians[0], keccak256(abi.encodePacked(GUARDIAN_EOA_ADDRESS)));
+        bool isActiveB_After = account.isGuardian(guardianB);
+        console.log("isActiveB_After", isActiveB_After);
+        assertTrue(!isActiveB_After);
+        assertEq(guardians[0], keccak256(abi.encodePacked(initialGuardian)));
 
         console.log("/* --------------------------------- test_RevokeGuardian -------- */");
     }
@@ -455,21 +424,14 @@ contract Recoverable is Base {
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(sessionKeyPk, digest);
 
         bytes memory sig = abi.encodePacked(r, s, v);
-        bytes memory encoded = account.encodeEOASignature(sig);
-        sigs[0] = encoded;
 
-        bytes memory sig_wAuthn = account.encodeWebAuthnSignatureGuardian(
-            G_CHALLENGE,
-            true,
-            G_AUTHENTICATOR_DATA,
-            G_CLIENT_DATA_JSON,
-            G_CHALLENGE_INDEX,
-            G_TYPE_INDEX,
-            G_VALID_SIGNATURE_R,
-            G_VALID_SIGNATURE_S,
-            propose_pubKeyGuardianWebAuthn
-        );
-        sigs[1] = sig_wAuthn;
+        sigs[0] = sig;
+
+        (uint8 v_B, bytes32 r_B, bytes32 s_B) = vm.sign(guardianB_PK, digest);
+
+        bytes memory sig_B = abi.encodePacked(r_B, s_B, v_B);
+
+        sigs[1] = sig_B;
 
         vm.warp(block.timestamp + RECOVERY_PERIOD + 1);
 
@@ -542,22 +504,14 @@ contract Recoverable is Base {
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(sessionKeyPk, digest);
 
         bytes memory sig = abi.encodePacked(r, s, v);
-        bytes memory encoded = account.encodeEOASignature(sig);
-        sigs[0] = encoded;
 
-        bytes memory sig_wAuthn = account.encodeWebAuthnSignatureGuardian(
-            G_CHALLENGE,
-            true,
-            G_AUTHENTICATOR_DATA,
-            G_CLIENT_DATA_JSON,
-            G_CHALLENGE_INDEX,
-            G_TYPE_INDEX,
-            G_VALID_SIGNATURE_R,
-            G_VALID_SIGNATURE_S,
-            propose_pubKeyGuardianWebAuthn
-        );
+        sigs[0] = sig;
 
-        sigs[1] = sig_wAuthn;
+        (uint8 v_B, bytes32 r_B, bytes32 s_B) = vm.sign(guardianB_PK, digest);
+
+        bytes memory sig_B = abi.encodePacked(r_B, s_B, v_B);
+
+        sigs[1] = sig_B;
 
         vm.warp(block.timestamp + RECOVERY_PERIOD + 1);
 
@@ -609,13 +563,6 @@ contract Recoverable is Base {
     }
 
     function _poroposeGuardian() internal {
-        propose_PubKeyGuardianEOA = PubKey({
-            x: 0x0000000000000000000000000000000000000000000000000000000000000000,
-            y: 0x0000000000000000000000000000000000000000000000000000000000000000
-        });
-        propose_KeyGuardianEOA =
-            Key({pubKey: propose_PubKeyGuardianEOA, eoaAddress: sessionKey, keyType: KeyType.EOA});
-
         bytes memory code = abi.encodePacked(
             bytes3(0xef0100),
             address(implementation) // or your logic contract
@@ -625,29 +572,15 @@ contract Recoverable is Base {
         proposalTimestamp = block.timestamp;
 
         vm.prank(address(entryPoint));
-        account.proposeGuardian(propose_KeyGuardianEOA);
-
-        propose_pubKeyGuardianWebAuthn = PubKey({x: G_VALID_PUBLIC_KEY_X, y: G_VALID_PUBLIC_KEY_Y});
-        propose_keyGuardianWebAuthn = Key({
-            pubKey: propose_pubKeyGuardianWebAuthn,
-            eoaAddress: address(0),
-            keyType: KeyType.WEBAUTHN
-        });
+        account.proposeGuardian(sessionKey);
 
         vm.etch(owner, code);
 
         vm.prank(address(entryPoint));
-        account.proposeGuardian(propose_keyGuardianWebAuthn);
+        account.proposeGuardian(guardianB);
     }
 
     function _confirmGuardian() internal {
-        propose_PubKeyGuardianEOA = PubKey({
-            x: 0x0000000000000000000000000000000000000000000000000000000000000000,
-            y: 0x0000000000000000000000000000000000000000000000000000000000000000
-        });
-        propose_KeyGuardianEOA =
-            Key({pubKey: propose_PubKeyGuardianEOA, eoaAddress: sessionKey, keyType: KeyType.EOA});
-
         bytes memory code = abi.encodePacked(
             bytes3(0xef0100),
             address(implementation) // or your logic contract
@@ -659,56 +592,28 @@ contract Recoverable is Base {
         vm.warp(proposalTimestamp + SECURITY_PERIOD + 1);
 
         vm.prank(address(entryPoint));
-        account.confirmGuardianProposal(propose_KeyGuardianEOA);
-
-        propose_pubKeyGuardianWebAuthn = PubKey({x: G_VALID_PUBLIC_KEY_X, y: G_VALID_PUBLIC_KEY_Y});
-        propose_keyGuardianWebAuthn = Key({
-            pubKey: propose_pubKeyGuardianWebAuthn,
-            eoaAddress: address(0),
-            keyType: KeyType.WEBAUTHN
-        });
+        account.confirmGuardianProposal(sessionKey);
 
         vm.etch(owner, code);
 
         vm.prank(address(entryPoint));
-        account.confirmGuardianProposal(propose_keyGuardianWebAuthn);
+        account.confirmGuardianProposal(guardianB);
     }
 
     function _revokeGuardian() internal {
-        propose_PubKeyGuardianEOA = PubKey({
-            x: 0x0000000000000000000000000000000000000000000000000000000000000000,
-            y: 0x0000000000000000000000000000000000000000000000000000000000000000
-        });
-        propose_KeyGuardianEOA =
-            Key({pubKey: propose_PubKeyGuardianEOA, eoaAddress: sessionKey, keyType: KeyType.EOA});
-
         bytes memory code = abi.encodePacked(bytes3(0xef0100), address(implementation));
         vm.etch(owner, code);
 
         vm.prank(address(entryPoint));
-        account.revokeGuardian(propose_KeyGuardianEOA);
-
-        propose_pubKeyGuardianWebAuthn = PubKey({x: G_VALID_PUBLIC_KEY_X, y: G_VALID_PUBLIC_KEY_Y});
-        propose_keyGuardianWebAuthn = Key({
-            pubKey: propose_pubKeyGuardianWebAuthn,
-            eoaAddress: address(0),
-            keyType: KeyType.WEBAUTHN
-        });
+        account.revokeGuardian(sessionKey);
 
         vm.etch(owner, code);
 
         vm.prank(address(entryPoint));
-        account.revokeGuardian(propose_keyGuardianWebAuthn);
+        account.revokeGuardian(guardianB);
     }
 
     function _cancelGuardianRevocation() internal {
-        propose_PubKeyGuardianEOA = PubKey({
-            x: 0x0000000000000000000000000000000000000000000000000000000000000000,
-            y: 0x0000000000000000000000000000000000000000000000000000000000000000
-        });
-        propose_KeyGuardianEOA =
-            Key({pubKey: propose_PubKeyGuardianEOA, eoaAddress: sessionKey, keyType: KeyType.EOA});
-
         bytes memory code = abi.encodePacked(bytes3(0xef0100), address(implementation));
         vm.etch(owner, code);
 
@@ -717,64 +622,34 @@ contract Recoverable is Base {
         vm.warp(proposalTimestamp + SECURITY_PERIOD + 1);
 
         vm.prank(address(entryPoint));
-        account.cancelGuardianRevocation(propose_KeyGuardianEOA);
-
-        propose_pubKeyGuardianWebAuthn = PubKey({x: G_VALID_PUBLIC_KEY_X, y: G_VALID_PUBLIC_KEY_Y});
-        propose_keyGuardianWebAuthn = Key({
-            pubKey: propose_pubKeyGuardianWebAuthn,
-            eoaAddress: address(0),
-            keyType: KeyType.WEBAUTHN
-        });
+        account.cancelGuardianRevocation(sessionKey);
 
         vm.etch(owner, code);
 
         vm.prank(address(entryPoint));
-        account.cancelGuardianRevocation(propose_keyGuardianWebAuthn);
+        account.cancelGuardianRevocation(guardianB);
     }
 
     function _confirmGuardianRevocationEOA() internal {
-        propose_PubKeyGuardianEOA = PubKey({
-            x: 0x0000000000000000000000000000000000000000000000000000000000000000,
-            y: 0x0000000000000000000000000000000000000000000000000000000000000000
-        });
-        propose_KeyGuardianEOA =
-            Key({pubKey: propose_PubKeyGuardianEOA, eoaAddress: sessionKey, keyType: KeyType.EOA});
-
         bytes memory code = abi.encodePacked(bytes3(0xef0100), address(implementation));
         vm.etch(owner, code);
         proposalTimestamp = block.timestamp;
 
         vm.warp(proposalTimestamp + SECURITY_PERIOD + SECURITY_WINDOW);
         vm.prank(address(entryPoint));
-        account.confirmGuardianRevocation(propose_KeyGuardianEOA);
+        account.confirmGuardianRevocation(sessionKey);
     }
 
     function _confirmGuardianRevocationWebAuthn() internal {
         bytes memory code = abi.encodePacked(bytes3(0xef0100), address(implementation));
 
-        propose_pubKeyGuardianWebAuthn = PubKey({x: G_VALID_PUBLIC_KEY_X, y: G_VALID_PUBLIC_KEY_Y});
-        propose_keyGuardianWebAuthn = Key({
-            pubKey: propose_pubKeyGuardianWebAuthn,
-            eoaAddress: address(0),
-            keyType: KeyType.WEBAUTHN
-        });
-        // proposalTimestamp = block.timestamp;
-
-        // vm.warp(proposalTimestamp + SECURITY_PERIOD + 1);
         vm.etch(owner, code);
 
         vm.prank(address(entryPoint));
-        account.confirmGuardianRevocation(propose_keyGuardianWebAuthn);
+        account.confirmGuardianRevocation(guardianB);
     }
 
     function _cancelGuardian() internal {
-        propose_PubKeyGuardianEOA = PubKey({
-            x: 0x0000000000000000000000000000000000000000000000000000000000000000,
-            y: 0x0000000000000000000000000000000000000000000000000000000000000000
-        });
-        propose_KeyGuardianEOA =
-            Key({pubKey: propose_PubKeyGuardianEOA, eoaAddress: sessionKey, keyType: KeyType.EOA});
-
         bytes memory code = abi.encodePacked(
             bytes3(0xef0100),
             address(implementation) // or your logic contract
@@ -786,19 +661,12 @@ contract Recoverable is Base {
         vm.warp(proposalTimestamp + SECURITY_PERIOD + 1);
 
         vm.prank(address(entryPoint));
-        account.cancelGuardianProposal(propose_KeyGuardianEOA);
-
-        propose_pubKeyGuardianWebAuthn = PubKey({x: G_VALID_PUBLIC_KEY_X, y: G_VALID_PUBLIC_KEY_Y});
-        propose_keyGuardianWebAuthn = Key({
-            pubKey: propose_pubKeyGuardianWebAuthn,
-            eoaAddress: address(0),
-            keyType: KeyType.WEBAUTHN
-        });
+        account.cancelGuardianProposal(sessionKey);
 
         vm.etch(owner, code);
 
         vm.prank(address(entryPoint));
-        account.cancelGuardianProposal(propose_keyGuardianWebAuthn);
+        account.cancelGuardianProposal(guardianB);
     }
 
     function _startRecovery() internal {
@@ -807,7 +675,7 @@ contract Recoverable is Base {
             y: 0x0000000000000000000000000000000000000000000000000000000000000000
         });
         recovery_keyEOA =
-            Key({pubKey: propose_PubKeyGuardianEOA, eoaAddress: sender, keyType: KeyType.EOA});
+            Key({pubKey: recovery_pubKeyEOA, eoaAddress: sender, keyType: KeyType.EOA});
 
         bytes memory code = abi.encodePacked(
             bytes3(0xef0100),
@@ -817,7 +685,7 @@ contract Recoverable is Base {
         vm.etch(owner, code);
 
         vm.prank(sessionKey);
-        account.startRecovery(recovery_keyEOA/*, propose_keyGuardianWebAuthn*/);
+        account.startRecovery(recovery_keyEOA);
     }
 
     function _startRecoveryToWebAuthn() internal {
@@ -836,7 +704,7 @@ contract Recoverable is Base {
         vm.etch(owner, code);
 
         vm.prank(sessionKey);
-        account.startRecovery(recovery_keyWebAuthn/*, propose_keyGuardianWebAuthn*/);
+        account.startRecovery(recovery_keyWebAuthn /*, guardianB*/ );
     }
 
     function _register_KeyEOA() internal {
@@ -928,7 +796,7 @@ contract Recoverable is Base {
 
         vm.prank(address(entryPoint));
         account.initialize(
-            keyMK, spendInfo, _allowedSelectors(), msgHash, sig, validUntil, 1, keyGuardianEOA
+            keyMK, spendInfo, _allowedSelectors(), msgHash, sig, validUntil, 1, initialGuardian
         );
     }
 }
