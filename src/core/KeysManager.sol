@@ -365,12 +365,9 @@ abstract contract KeysManager is BaseOPF7702, IKey, SpendLimit {
         sKey.limit = 0;
         sKey.masterKey = false;
         sKey.ethLimit = 0;
-        sKey.whoRegistrated = address(0);
-
-        sKey.spendTokenInfo.limit = 0;
-        sKey.spendTokenInfo.token = address(0);
 
         delete sKey.allowedSelectors;
+        delete sKey.spendTokenInfo;
     }
 
     // =============================================================
