@@ -263,7 +263,6 @@ contract OPF7702Recoverable is OPF7702, EIP712 layout at 57943590311362240630886
         );
 
         unchecked {
-            ++idEOA;
             ++id;
         }
 
@@ -312,7 +311,7 @@ contract OPF7702Recoverable is OPF7702, EIP712 layout at 57943590311362240630886
             revert OPF7702Recoverable__GuardianCannotBeAddressThis();
         }
 
-        Key memory mk = getKeyById(0, KeyType.EOA);
+        Key memory mk = getKeyById(0);
         if (mk.eoaAddress == _guardian) {
             revert OPF7702Recoverable__GuardianCannotBeCurrentMasterKey();
         }
@@ -517,52 +516,46 @@ contract OPF7702Recoverable is OPF7702, EIP712 layout at 57943590311362240630886
 
     /// @dev Deletes the old master key data structures (both WebAuthn and EOA variants).
     function _deleteOldKeys() private {
-        // Todo: Change the Admin key of index 0 in the keys or keysEOA for new Master Key
+        // Todo: Change the Admin key of index 0 in the keys for new Master Key
         // _transferOwnership(recoveryOwner);
 
         // Todo: Need to Identify Master Key by Id or Any othewr flag
         // MK WebAuthn will be always id = 0 because of Initalization func enforce to be `0`
-        Key storage oldWebAuthnMK = idKeys[0];
-        Key storage oldEOAMK = idKeysEOA[0];
+        Key storage oldMK = idKeys[0];
+        bytes32 oldHash;
 
-        if (oldWebAuthnMK.eoaAddress == address(0)) {
-            bytes32 oldHash =
-                keccak256(abi.encodePacked(oldWebAuthnMK.pubKey.x, oldWebAuthnMK.pubKey.y));
-            /// @dev Only the nested mapping in stract will not be cleared mapping(address => bool) whitelist
-            /// @notice not providing security risk
-            delete keys[oldHash];
-            delete idKeys[0];
-        } else if (oldEOAMK.eoaAddress != address(0)) {
-            delete keysEOA[oldEOAMK.eoaAddress];
-            /// @dev Only the nested mapping in stract will not be cleared mapping(address => bool) whitelist
-            /// @notice not providing security risk
-            delete idKeysEOA[0];
+        if (oldMK.eoaAddress == address(0) || oldMK.eoaAddress == DEAD_ADDRESS) {
+            oldHash = keccak256(abi.encodePacked(oldMK.pubKey.x, oldMK.pubKey.y));
+        } else if (oldMK.eoaAddress != address(0)) {
+            oldHash = keccak256(abi.encodePacked(oldMK.eoaAddress));
         }
+
+        /// @dev Only the nested mapping in stract will not be cleared mapping(address => bool) whitelist
+        /// @notice not providing security risk
+        delete keys[oldHash];
+        delete idKeys[0];
     }
 
     /// @dev Registers the new master key after successful recovery.
     /// @param recoveryOwner Key that becomes the new master key.
     function _setNewMasterKey(Key memory recoveryOwner) private {
         KeyData storage sKey;
+        bytes32 newHash;
 
         if (recoveryOwner.keyType == KeyType.WEBAUTHN) {
-            idKeys[0] = recoveryOwner;
-            bytes32 newHash =
-                keccak256(abi.encodePacked(recoveryOwner.pubKey.x, recoveryOwner.pubKey.y));
-            sKey = keys[newHash];
-
-            if (sKey.isActive) {
-                revert KeyManager__KeyRegistered();
-            }
+            newHash = keccak256(abi.encodePacked(recoveryOwner.pubKey.x, recoveryOwner.pubKey.y));
         } else if (recoveryOwner.keyType == KeyType.EOA) {
-            idKeysEOA[0] = recoveryOwner;
-
-            sKey = keysEOA[recoveryOwner.eoaAddress];
-            if (sKey.isActive) {
-                revert KeyManager__KeyRegistered();
-            }
+            newHash = keccak256(abi.encodePacked(recoveryOwner.eoaAddress));
         } else {
             revert OPF7702Recoverable__UnsupportedKeyType();
+        }
+
+        idKeys[0] = recoveryOwner;
+
+        sKey = keys[newHash];
+
+        if (sKey.isActive) {
+            revert KeyManager__KeyRegistered();
         }
 
         SpendTokenInfo memory _spendTokenInfo = SpendTokenInfo({token: DEAD_ADDRESS, limit: 0});

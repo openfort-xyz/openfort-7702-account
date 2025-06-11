@@ -68,17 +68,17 @@ contract Execution is Base {
 
     /* ─────────────────────────────────────────────────────────────── tests ──── */
     function test_getKeyById_zero() external view {
-        Key memory k = account.getKeyById(0, KeyType.WEBAUTHN);
+        Key memory k = account.getKeyById(0);
         console.log("/* --------------------------------- test_getKeyById_zero -------- */");
 
         console.logBytes32(k.pubKey.x);
         console.logBytes32(k.pubKey.y);
 
-        Key memory kSk = account.getKeyById(1, KeyType.P256);
+        Key memory kSk = account.getKeyById(1);
         console.logBytes32(kSk.pubKey.x);
         console.logBytes32(kSk.pubKey.y);
 
-        Key memory kSkNonKey = account.getKeyById(1, KeyType.P256NONKEY);
+        Key memory kSkNonKey = account.getKeyById(1);
         console.logBytes32(kSkNonKey.pubKey.x);
         console.logBytes32(kSkNonKey.pubKey.y);
         console.log("/* --------------------------------- test_getKeyById_zero -------- */");

@@ -16,9 +16,6 @@ interface IKeysManager is IKey {
     /// @notice Incremental ID for WebAuthn/P256/P256NONKEY keys.
     function id() external view returns (uint256);
 
-    /// @notice Incremental ID for EOA  keys.
-    function idEOA() external view returns (uint256);
-
     /// @notice Retrieves the `Key` struct for a given WebAuthn/P256/P256NONKEY key ID.
     /// @param _id Identifier of the key.
     /// @return The stored `Key` (keyType, pubKey, eoaAddress).
@@ -28,11 +25,6 @@ interface IKeysManager is IKey {
     /// @param _challengeHash Keccak256 hash of a WebAuthn challenge.
     /// @return `true` if the challenge has been used; `false` otherwise.
     function usedChallenges(bytes32 _challengeHash) external view returns (bool);
-
-    /// @notice Retrieves the `Key` struct for a given EOA key ID.
-    /// @param _idEOA Identifier of the EOA key.
-    /// @return The stored `Key` (keyType, pubKey, eoaAddress).
-    function idKeysEOA(uint256 _idEOA) external view returns (IKey.Key memory);
 
     // =============================================================
     //                 EXTERNAL / PUBLIC FUNCTIONS

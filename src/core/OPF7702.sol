@@ -113,8 +113,9 @@ contract OPF7702 is Execution, Initializable, WebAuthnVerifier {
             return SIG_VALIDATION_SUCCESS;
         }
 
+        bytes32 keyId = keccak256(abi.encodePacked(signer));
         // load the key for this EOA
-        KeyData storage sKey = keysEOA[signer];
+        KeyData storage sKey = keys[keyId];
         // if no active Key, reject
         if (sKey.validUntil == 0 || sKey.whoRegistrated != address(this) || !sKey.isActive) {
             return SIG_VALIDATION_FAILED;
@@ -274,8 +275,7 @@ contract OPF7702 is Execution, Initializable, WebAuthnVerifier {
      * @notice Determines if a given key may perform `execute` or `executeBatch`.
      * @dev
      *  • Loads the correct `KeyData` based on `KeyType`:
-     *      – WEBAUTHN/P256/P256NONKEY → `keys[keccak(pubKey.x,pubKey.y)]`
-     *      – EOA                 → `keysEOA[eoaAddress]`
+     *      – WEBAUTHN/P256/P256NONKEY/EOA → `keys[keccak(pubKey.x,pubKey.y)]`
      *  • Checks: validUntil != 0, isActive, whoRegistrated == address(this).
      *  • Extracts the first 4 bytes of `_callData` and calls:
      *      – `_validateExecuteCall(...)`
@@ -291,13 +291,15 @@ contract OPF7702 is Execution, Initializable, WebAuthnVerifier {
         returns (bool)
     {
         KeyData storage sKey;
+        bytes32 keyHash;
+
         if (_key.keyType == KeyType.EOA) {
-            address eoaAddr = _key.eoaAddress;
-            if (eoaAddr == address(0)) return false;
-            sKey = keysEOA[eoaAddr];
+            if (_key.eoaAddress == address(0)) return false;
+            keyHash = keccak256(abi.encodePacked(_key.eoaAddress));
+            sKey = keys[keyHash];
         } else {
             // WEBAUTHN/P256/P256NONKEY share same load path
-            bytes32 keyHash = keccak256(abi.encodePacked(_key.pubKey.x, _key.pubKey.y));
+            keyHash = keccak256(abi.encodePacked(_key.pubKey.x, _key.pubKey.y));
             sKey = keys[keyHash];
         }
         // Basic checks:
@@ -504,7 +506,7 @@ contract OPF7702 is Execution, Initializable, WebAuthnVerifier {
      *  • Read the first 32 bytes of `_signature` to detect `KeyType`.
      *  • Dispatch to `_validateWebAuthnSignature` or `_validateP256Signature`, or ECDSA path.
      *  • EOA (ECDSA) path recovers `signer`. If `signer == this`, return `isValidSignature.selector`.
-     *    Else, load `key = keysEOA[signer]` and enforce:
+     *    Else, load `key = keys[keyHash]` and enforce:
      *      - validUntil > now ≥ validAfter
      *      - (masterKey or limit≥1)
      *      - whoRegistrated == address(this)
@@ -559,7 +561,8 @@ contract OPF7702 is Execution, Initializable, WebAuthnVerifier {
             return this.isValidSignature.selector;
         }
 
-        KeyData storage sKey = keysEOA[signer];
+        bytes32 keyHash = keccak256(abi.encodePacked(signer));
+        KeyData storage sKey = keys[keyHash];
 
         if (sKey.masterKey) return this.isValidSignature.selector;
 
