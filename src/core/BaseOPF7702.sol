@@ -52,6 +52,8 @@ abstract contract BaseOPF7702 is
     /// @notice Thrown when a low-level call within a transaction fails.
     /// @param returnData The data returned by the failing call.
     error OpenfortBaseAccount7702V1__TransactionFailed(bytes returnData);
+    /// @notice msg.sender not from address(this) and nit from Entry Point
+    error OpenfortBaseAccount7702V1_UnauthorizedCaller();
 
     // =============================================================
     //                          CONSTANTS
@@ -145,7 +147,7 @@ abstract contract BaseOPF7702 is
     function _requireForExecute() internal view virtual override {
         require(
             msg.sender == address(this) || msg.sender == address(entryPoint()),
-            "BaseOPF7702: unauthorized caller"
+            OpenfortBaseAccount7702V1_UnauthorizedCaller()
         );
     }
 
