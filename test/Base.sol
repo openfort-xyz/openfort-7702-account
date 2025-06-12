@@ -64,23 +64,23 @@ contract Base is Test, IKey {
 
     /* ───────────────────────────────────────────────────────────── master key ── */
     bytes32 constant REG_PUBLIC_KEY_X =
-        hex"501fb34eb6c1abf6cc1bed2ca17583ffdcc6f5960a6e911ca4216ac079e8b2e5";
+        hex"d281ad3bf98116d96c52605a88b66c6b93d7a5a89fe7485736f104e72ba43420";
     bytes32 constant REG_PUBLIC_KEY_Y =
-        hex"be9b21a967fddcdfbccedcca22776a7ceccd41d69a07babd03e9d8beb07e8acb";
+        hex"68aec9820ae616bb585cbf959f7626b77c1e464f7d8543cedd6ec3a3b54634bf";
 
     bytes public constant REG_CHALLENGE =
-        hex"e4cfc8abe9df9aeb5263940761f875c535592beb2077cc8d5cc71b3fb3678410";
+        hex"6e35e960ff62629060deb8e6920f65b6ae2a239ad7485dca6a2c3949a8a946d3";
 
     bytes32 public constant REG_SIGNATURE_R =
-        hex"f0869b1d903d9ee4143bcfea6f59397dcd358041ce223448893ec1654d4da940";
+        hex"b560c1a2051393eef66ea7ff6c8d1eaa1e2049eef709c12151e744fda13dc15c";
     bytes32 public constant REG_SIGNATURE_S =
-        hex"629f6e0a70c674928bc41627bf598ee929668195910101c01d339c22cb900c94";
+        hex"6e72637c162a88ad90ac532c0e5e33d10c41eb36d37b21515c36ec5080c6ba65";
 
     bytes public constant REG_AUTHENTICATOR_DATA =
         hex"49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d97631d00000000";
 
     string public constant REG_CLIENT_DATA_JSON =
-        "{\"type\":\"webauthn.get\",\"challenge\":\"5M_Iq-nfmutSY5QHYfh1xTVZK-sgd8yNXMcbP7NnhBA\",\"origin\":\"http://localhost:5173\",\"crossOrigin\":false}";
+        "{\"type\":\"webauthn.get\",\"challenge\":\"bjXpYP9iYpBg3rjmkg9ltq4qI5rXSF3Kaiw5SaipRtM\",\"origin\":\"http://localhost:5173\",\"crossOrigin\":false}";
 
     uint256 public constant REG_CHALLENGE_INDEX = 23;
     uint256 public constant REG_TYPE_INDEX = 1;
@@ -110,43 +110,43 @@ contract Base is Test, IKey {
 
     /* ───────────────────────────────────────────────────────────── master key ── */
     bytes32 constant BATCH_VALID_PUBLIC_KEY_X =
-        hex"7d3a11f8bb4621e5cee93578281af39f29f664cecdf112148bdd0521edf6f1a5";
+        hex"c721ebad9b39bcc05e499f5be082d2b1682cf294d7f6b69315a96dda466177de";
     bytes32 constant BATCH_VALID_PUBLIC_KEY_Y =
-        hex"1ee216c4fa03c5a4c7f8734c269f207ef69ca680b8526e8760dfde65aed62a9d";
+        hex"b7d93ee328e25fed31b8ba4016890fdc9bc5a3448b85e81176a516882d401b9e";
 
     bytes public constant BATCH_CHALLENGE =
-        hex"eb0fa64591728fbf1936d19425a78380d7bd7f9db785379b1574a01f6522aeeb";
+        hex"614efcfe88f851e03bdd2511d2f7454b54e0596549f1a720649d16e45118c9e0";
 
     bytes32 public constant BATCH_VALID_SIGNATURE_R =
-        hex"c4a08c123ab658fa677586e9eb9db44d8eb28f3536c9f64a06460e9d4672531f";
+        hex"7a04d81d4ec765c0fde5aa552d017d456cab594690b3750a58debcd93e20c862";
     bytes32 public constant BATCH_VALID_SIGNATURE_S =
-        hex"7f98fe4c0b6b49ae8d1f78f3a50a382b350ed5aef0a0181831fe4ab24f2b809e";
+        hex"2386940257d4e97e3b249288ba813e182b02b5eed822fe4e61223de30a54ec36";
 
     bytes public constant BATCH_AUTHENTICATOR_DATA =
         hex"49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d97631d00000000";
 
     string public constant BATCH_CLIENT_DATA_JSON =
-        "{\"type\":\"webauthn.get\",\"challenge\":\"6w-mRZFyj78ZNtGUJaeDgNe9f523hTebFXSgH2Uirus\",\"origin\":\"http://localhost:5173\",\"crossOrigin\":false}";
+        "{\"type\":\"webauthn.get\",\"challenge\":\"YU78_oj4UeA73SUR0vdFS1TgWWVJ8acgZJ0W5FEYyeA\",\"origin\":\"http://localhost:5173\",\"crossOrigin\":false}";
 
     uint256 public constant BATCH_CHALLENGE_INDEX = 23;
     uint256 public constant BATCH_TYPE_INDEX = 1;
 
     /* ───────────────────────────────────────────────────────────── master key ── */
     bytes32 constant ETH_PUBLIC_KEY_X =
-        hex"ec65a65c8cbec46650e4f008065d6fa8c93f6156fc2990f5ebe7b27088ed2fda";
+        hex"f4b87261d616beb66c680c1581db6ce24f547ef271da6d1f4879c31f663d15e2";
     bytes32 constant ETH_PUBLIC_KEY_Y =
-        hex"1ea4b778a2667647bd12fbe1cbbbac82e40f00c0490b89a6f46c4ebf997f0b49";
+        hex"2d39a025daeb5ca67f4d51bed48f9f589da09ab484b7bb540122fce9fac26efa";
 
     bytes public constant ETH_CHALLENGE =
-        hex"928c4b45b52c0798324822fe98769e84d2c7fdba555f1012b2b47aa7b9e624ce";
+        hex"724437f04606b4e030032c8f083962987d92473a471e16cdda50b0f5c2d97f7d";
 
     bytes32 public constant ETH_SIGNATURE_R =
-        hex"63918c9a2d7994c4fece2995758e901bf0de9c8c2cb069451e699f220e1c07c0";
+        hex"6e0bf59cc1224db65954f1733bb8b5b375b01bf7cf65daba8b1da92e7ab1f562";
     bytes32 public constant ETH_SIGNATURE_S =
-        hex"79defe5f59ec65eb65cc43c8f1e5e18fa2be12193548b56d30ccd8b05305a498";
+        hex"6b93ce22358e97226abb21252db0631f4d4829475328967901af080ea5de8b39";
 
     string public constant ETH_CLIENT_DATA_JSON =
-        "{\"type\":\"webauthn.get\",\"challenge\":\"koxLRbUsB5gySCL-mHaehNLH_bpVXxASsrR6p7nmJM4\",\"origin\":\"http://localhost:5173\",\"crossOrigin\":false}";
+        "{\"type\":\"webauthn.get\",\"challenge\":\"ckQ38EYGtOAwAyyPCDlimH2SRzpHHhbN2lCw9cLZf30\",\"origin\":\"http://localhost:5173\",\"crossOrigin\":false,\"other_keys_can_be_added_here\":\"do not compare clientDataJSON against a template. See https://goo.gl/yabPex\"}";
 
     /* ──────────────────────────────────────────────────────────────── P256 ──── */
     string public json = vm.readFile("test/data/p256.json");
@@ -262,23 +262,23 @@ contract Base is Test, IKey {
 
     /* ───────────────────────────────────────────────────────────── master key ── */
     bytes32 constant BATCHS_VALID_PUBLIC_KEY_X =
-        hex"0a41735f134021741ba97d2d9d4221191ecceae36625b7a3de56f473f666b594";
+        hex"3e23236366a3f14504a7380492b91a46ac65377e0f1c59d2668f7e28807c7f3c";
     bytes32 constant BATCHS_VALID_PUBLIC_KEY_Y =
-        hex"f0895ae3805aff3f01b2f2b1290ef1ea1b5da9b555258823d1d74c1d2f2f174d";
+        hex"9360cfeec35459e71743b95b3de979e4e0f0ce652d431ac6e5725665284806e2";
 
     bytes public constant BATCHS_CHALLENGE =
-        hex"333435f6f7baa44d7514bbab494707ec257a29bd254a6598d79869c68b226122";
+        hex"ac2f11b7c5e40c13fa91640d14783ea0b95f6a23693a73bdaf71d5a5da4034bc";
 
     bytes32 public constant BATCHS_VALID_SIGNATURE_R =
-        hex"8def964ff2ecbac75dfd5e8673e6638447875170ff0a138d1449d022fd3c3fa5";
+        hex"b3efd20bbfe675145b1e8367cedac086b12ad8fdea6a6aea9e77dc2614e8f21d";
     bytes32 public constant BATCHS_VALID_SIGNATURE_S =
-        hex"0165baa2f550110f284695aa1d2c3c68f4579d7d1348eceb3795015e5a14f219";
+        hex"252ab569a95f58320c3a9cad534a99d2703127aafec4c64c6bfdc28a7f6c4365";
 
     bytes public constant BATCHS_AUTHENTICATOR_DATA =
         hex"49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d97631d00000000";
 
     string public constant BATCHS_CLIENT_DATA_JSON =
-        "{\"type\":\"webauthn.get\",\"challenge\":\"MzQ19ve6pE11FLurSUcH7CV6Kb0lSmWY15hpxosiYSI\",\"origin\":\"http://localhost:5173\",\"crossOrigin\":false}";
+        "{\"type\":\"webauthn.get\",\"challenge\":\"rC8Rt8XkDBP6kWQNFHg-oLlfaiNpOnO9r3HVpdpANLw\",\"origin\":\"http://localhost:5173\",\"crossOrigin\":false}";
 
     uint256 public constant BATCHS_CHALLENGE_INDEX = 23;
     uint256 public constant BATCHS_TYPE_INDEX = 1;

@@ -25,7 +25,7 @@ test-keys:
 	forge test --mp test/unit/Keys.t.sol -vv --rpc-url $(SEPOLIA_RPC_URL)
 
 test-P256:
-	forge test --mp test/unit/P256.t.sol -vv --rpc-url $(SEPOLIA_RPC_URL)
+	node script/P256_Single_Mint.ts && forge test --mp test/unit/P256.t.sol -vv --rpc-url $(SEPOLIA_RPC_URL)
 
 test-registartion:
 	forge test --mp test/unit/Registartion.t.sol -vv --rpc-url $(SEPOLIA_RPC_URL)
