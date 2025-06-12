@@ -110,23 +110,23 @@ contract Base is Test, IKey {
 
     /* ───────────────────────────────────────────────────────────── master key ── */
     bytes32 constant BATCH_VALID_PUBLIC_KEY_X =
-        hex"542fcd9d956e7606b44fdc04f4c4bed80242241a72cbc45373d1853964e9e41c";
+        hex"7d3a11f8bb4621e5cee93578281af39f29f664cecdf112148bdd0521edf6f1a5";
     bytes32 constant BATCH_VALID_PUBLIC_KEY_Y =
-        hex"e8372aa28abb123a734e6947ab3ab8734606c8868065f25c63de755928eba332";
+        hex"1ee216c4fa03c5a4c7f8734c269f207ef69ca680b8526e8760dfde65aed62a9d";
 
     bytes public constant BATCH_CHALLENGE =
-        hex"d209d8f817b01a59e92fd4a68adf97d6952e0aeef9cab2db07ce23a84588d27a";
+        hex"eb0fa64591728fbf1936d19425a78380d7bd7f9db785379b1574a01f6522aeeb";
 
     bytes32 public constant BATCH_VALID_SIGNATURE_R =
-        hex"d17c8f3c0d662a35f3ef6e7ce7359e0a49834b38d01814255f348557cb8ae66e";
+        hex"c4a08c123ab658fa677586e9eb9db44d8eb28f3536c9f64a06460e9d4672531f";
     bytes32 public constant BATCH_VALID_SIGNATURE_S =
-        hex"0ec703a1cf21b7556945a789b748c307bba5700a6f6571b7b55c2cf3945920bb";
+        hex"7f98fe4c0b6b49ae8d1f78f3a50a382b350ed5aef0a0181831fe4ab24f2b809e";
 
     bytes public constant BATCH_AUTHENTICATOR_DATA =
         hex"49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d97631d00000000";
 
     string public constant BATCH_CLIENT_DATA_JSON =
-        "{\"type\":\"webauthn.get\",\"challenge\":\"0gnY-BewGlnpL9Smit-X1pUuCu75yrLbB84jqEWI0no\",\"origin\":\"http://localhost:5173\",\"crossOrigin\":false}";
+        "{\"type\":\"webauthn.get\",\"challenge\":\"6w-mRZFyj78ZNtGUJaeDgNe9f523hTebFXSgH2Uirus\",\"origin\":\"http://localhost:5173\",\"crossOrigin\":false}";
 
     uint256 public constant BATCH_CHALLENGE_INDEX = 23;
     uint256 public constant BATCH_TYPE_INDEX = 1;
@@ -259,6 +259,30 @@ contract Base is Test, IKey {
 
     uint256 public constant G_CHALLENGE_INDEX = 23;
     uint256 public constant G_TYPE_INDEX = 1;
+    
+    /* ───────────────────────────────────────────────────────────── master key ── */
+    bytes32 constant BATCHS_VALID_PUBLIC_KEY_X =
+        hex"0a41735f134021741ba97d2d9d4221191ecceae36625b7a3de56f473f666b594";
+    bytes32 constant BATCHS_VALID_PUBLIC_KEY_Y =
+        hex"f0895ae3805aff3f01b2f2b1290ef1ea1b5da9b555258823d1d74c1d2f2f174d";
+
+    bytes public constant BATCHS_CHALLENGE =
+        hex"333435f6f7baa44d7514bbab494707ec257a29bd254a6598d79869c68b226122";
+
+    bytes32 public constant BATCHS_VALID_SIGNATURE_R =
+        hex"8def964ff2ecbac75dfd5e8673e6638447875170ff0a138d1449d022fd3c3fa5";
+    bytes32 public constant BATCHS_VALID_SIGNATURE_S =
+        hex"0165baa2f550110f284695aa1d2c3c68f4579d7d1348eceb3795015e5a14f219";
+
+    bytes public constant BATCHS_AUTHENTICATOR_DATA =
+        hex"49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d97631d00000000";
+
+    string public constant BATCHS_CLIENT_DATA_JSON =
+        "{\"type\":\"webauthn.get\",\"challenge\":\"MzQ19ve6pE11FLurSUcH7CV6Kb0lSmWY15hpxosiYSI\",\"origin\":\"http://localhost:5173\",\"crossOrigin\":false}";
+
+    uint256 public constant BATCHS_CHALLENGE_INDEX = 23;
+    uint256 public constant BATCHS_TYPE_INDEX = 1;
+
 
     function _allowedSelectors() internal pure returns (bytes4[] memory sel) {
         sel = new bytes4[](3);

@@ -316,12 +316,11 @@ contract OPF7702 is Execution, Initializable {
             return false;
         }
 
-        bytes4 selector = bytes4(_callData[:4]);
-        if (selector == EXECUTE_SELECTOR) {
+        // Extract function selector from callData
+        bytes4 funcSelector = bytes4(_callData[:4]);
+
+        if (funcSelector == 0xe9ae5c53) {
             return _validateExecuteCall(sKey, _callData);
-        }
-        if (selector == EXECUTEBATCH_SELECTOR) {
-            return _validateExecuteBatchCall(sKey, _callData);
         }
         return false;
     }
@@ -348,113 +347,72 @@ contract OPF7702 is Execution, Initializable {
         internal
         returns (bool)
     {
-        (address toContract, uint256 amount, bytes memory innerData) =
-            abi.decode(_callData[4:], (address, uint256, bytes));
+        bytes32 mode;
+        bytes memory executionData;
+        (mode, executionData) = abi.decode(_callData[4:], (bytes32, bytes));
 
-        if (toContract == address(this)) {
-            return false;
-        }
-        if (sKey.masterKey) {
+        if (mode == mode_1) {
+            Call[] memory calls = abi.decode(executionData, (Call[]));
+            for (uint256 i = 0; i < calls.length; i++) {
+                if (!_validateCall(sKey, calls[i])) {
+                    return false;
+                }
+            }
             return true;
         }
-        if (sKey.limit == 0 || sKey.ethLimit < amount) {
-            return false;
+
+        if (mode == mode_3) {
+            bytes[] memory batches = abi.decode(executionData, (bytes[]));
+            for (uint256 i = 0; i < batches.length; i++) {
+                Call[] memory calls = abi.decode(batches[i], (Call[]));
+                for (uint256 j = 0; j < calls.length; j++) {
+                    if (!_validateCall(sKey, calls[j])) {
+                        return false;
+                    }
+                }
+            }
+            return true;
         }
 
-        bytes4 innerSel = bytes4(innerData);
-        if (!_isAllowedSelector(sKey.allowedSelectors, innerSel)) {
+        return false;
+    }
+
+    function _validateCall(KeyData storage sKey, Call memory call)
+        private
+        returns (bool)
+    {
+        if (call.target == address(this)) return false;
+        if (sKey.limit == 0) return false;
+        if (sKey.ethLimit < call.value) return false;
+
+        bytes memory innerData = call.data;
+        bytes4 innerSelector;
+        assembly {
+            innerSelector := mload(add(innerData, 0x20))
+        }
+
+        if (!_isAllowedSelector(sKey.allowedSelectors, innerSelector)) {
             return false;
         }
 
         unchecked {
             sKey.limit--;
         }
-        if (amount > 0) {
-            sKey.ethLimit -= amount;
+        if (call.value > 0) {
+            sKey.ethLimit -= call.value;
         }
 
-        if (sKey.spendTokenInfo.token == toContract) {
-            if (!_validateTokenSpend(sKey, innerData)) {
-                return false;
-            }
+        if (sKey.spendTokenInfo.token == call.target) {
+            bool validSpend = _validateTokenSpend(sKey, innerData);
+            if (!validSpend) return false;
         }
-
-        // if not whitelisting, or toContract is whitelisted, OK
-        return !sKey.whitelisting || sKey.whitelist[toContract];
-    }
-
-    /**
-     * @notice Validates a batch of `executeBatch(targets[], values[], data[])` calls.
-     * @dev
-     *  • Decode `(address[] toContracts, uint256[] amounts, bytes[] innerDataArray)`.
-     *  • If length = 0 or > 9, reject.
-     *  • If not `masterKey` then:
-     *      - `limit ≥ length`
-     *      - Subtract `length` from `limit`
-     *  • For each index `i`:
-     *      - if `toContracts[i] == address(this)`, reject
-     *      - If not `masterKey`:
-     *          * `ethLimit ≥ amounts[i]` then subtract
-     *          * `bytes4(innerDataArray[i]) ∈ allowedSelectors`
-     *          * If `spendTokenInfo.token == toContracts[i]`, call `_validateTokenSpend(...)`
-     *          * If `whitelisting`, ensure `toContracts[i] ∈ whitelist`
-     *
-     * @param sKey       Storage reference of the KeyData
-     * @param _callData  Encoded as: `executeBatch(address[],uint256[],bytes[])`
-     * @return True if all calls allowed, false otherwise.
-     */
-    function _validateExecuteBatchCall(KeyData storage sKey, bytes calldata _callData)
-        internal
-        returns (bool)
-    {
-        (address[] memory targets, uint256[] memory amounts, bytes[] memory dataArr) =
-            abi.decode(_callData[4:], (address[], uint256[], bytes[]));
-
-        uint256 n = targets.length;
-        if (n == 0 || n > MAX_TX) {
+        /// Todo: Check all possibilities to fails on this line
+        // // Check whitelisting
+        // if (!sessionKey.whitelisting || sessionKey.whitelist[calls[i].target]) {
+        //     return true;
+        // } else {return false;}
+        if (!sKey.whitelisting || !sKey.whitelist[call.target]) {
             return false;
-        }
-
-        if (!sKey.masterKey) {
-            if (sKey.limit < n) {
-                return false;
-            }
-            unchecked {
-                sKey.limit -= SafeCast.toUint48(n);
-            }
-        }
-
-        for (uint256 i = 0; i < n;) {
-            address toContract = targets[i];
-            if (toContract == address(this)) {
-                return false;
-            }
-
-            if (!sKey.masterKey) {
-                uint256 amt = amounts[i];
-                if (sKey.ethLimit < amt) {
-                    return false;
-                }
-                sKey.ethLimit -= amt;
-
-                bytes4 innerSel = bytes4(dataArr[i]);
-                if (!_isAllowedSelector(sKey.allowedSelectors, innerSel)) {
-                    return false;
-                }
-
-                if (sKey.spendTokenInfo.token == toContract) {
-                    if (!_validateTokenSpend(sKey, dataArr[i])) {
-                        return false;
-                    }
-                }
-
-                if (sKey.whitelisting && !sKey.whitelist[toContract]) {
-                    return false;
-                }
-            }
-            unchecked {
-                ++i;
-            }
         }
         return true;
     }
@@ -524,7 +482,7 @@ contract OPF7702 is Execution, Initializable {
      * @return `this.isValidSignature.selector` if valid; otherwise `0xffffffff`.
      */
     function isValidSignature(bytes32 _hash, bytes memory _signature)
-        public
+        external
         view
         returns (bytes4)
     {

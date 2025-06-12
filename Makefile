@@ -85,4 +85,4 @@ simple-mainnet:
 	--constructor-args 0x4337084D9E255Ff0702461CF8895CE9E3b5Ff108 
 
 push:
-	git push -u origin OPF7702_Recoverable_Reduce_Size
+	git push -u origin OPF7702_Recoverable_7821
