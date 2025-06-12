@@ -23,14 +23,20 @@ import {ReentrancyGuard} from "lib/openzeppelin-contracts/contracts/utils/Reentr
 /// @notice Support ERC 7821 A minimal batch executor interface for delegations.
 /// @dev Inherits from KeysManager (for key-based access control) and ReentrancyGuard (to prevent reentrant calls).
 abstract contract Execution is KeysManager, ReentrancyGuard {
-    bytes4 internal constant EXECUTE_SELECTOR = 0xb61d27f6;
-    bytes4 internal constant EXECUTEBATCH_SELECTOR = 0x47e1da2a;
+    // =============================================================
+    //                          CONSTANTS
+    // =============================================================
+
+    /// @notice Maximum number of transactions allowed in one batch
+    uint8 internal constant MAX_TX = 9;
 
     bytes32 internal constant mode_1 = bytes32(uint256(0x01000000000000000000) << (22 * 8));
     bytes32 internal constant mode_3 = bytes32(uint256(0x01000000000078210002) << (22 * 8));
 
     /// @dev The execution mode is not supported.
     error UnsupportedExecutionMode();
+    /// @notice Thrown when the provided transaction length is invalid.
+    error OpenfortBaseAccount7702V1__InvalidTransactionLength();
 
     /// @dev Executes the calls in `executionData`.
     /// Reverts and bubbles up error if any call fails.
@@ -39,6 +45,8 @@ abstract contract Execution is KeysManager, ReentrancyGuard {
         if (id == 3) {
             mode ^= bytes32(uint256(3 << (22 * 8)));
             bytes[] memory batches = abi.decode(executionData, (bytes[]));
+
+            _checkLength(batches.length);
             for (uint256 i; i < batches.length; ++i) {
                 execute(mode, batches[i]);
             }
@@ -88,6 +96,7 @@ abstract contract Execution is KeysManager, ReentrancyGuard {
     /// @dev Executes the calls.
     /// Reverts and bubbles up error if any call fails.
     function _execute(Call[] memory calls) internal virtual {
+        _checkLength(calls.length);
         for (uint256 i; i < calls.length; ++i) {
             Call memory c = calls[i];
             address to = c.target == address(0) ? address(this) : c.target;
@@ -104,6 +113,12 @@ abstract contract Execution is KeysManager, ReentrancyGuard {
         assembly {
             // Bubble up the revert if the call reverts.
             revert(add(result, 0x20), mload(result))
+        }
+    }
+
+    function _checkLength(uint256 txCount) internal {
+        if (txCount == 0 || txCount > MAX_TX) {
+            revert OpenfortBaseAccount7702V1__InvalidTransactionLength();
         }
     }
 }
