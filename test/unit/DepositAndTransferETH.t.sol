@@ -69,15 +69,23 @@ contract DepositAndTransferETH is Base {
     function test_ExecuteOwnerCall() public {
         console.log("/* -------------------------------- test_ExecuteOwnerCall -------- */");
 
-        Call[] memory txs = new Call[](1);
+        Call[] memory calls = new Call[](1);
 
         bytes memory dataHex = hex"";
 
-        txs[0] = Call({target: sender, value: 2e18, data: dataHex});
+        calls[0] = Call({target: sessionKey, value: 2e18, data: dataHex});
+
+        // ERC-7821 mode for single execution (mode ID = 1)
+        // The mode value should have the pattern at position 22*8 bits
+        bytes32 mode = bytes32(uint256(0x01000000000000000000) << (22 * 8));
+
+        // Encode the execution data as Call[] array
+        bytes memory executionData = abi.encode(calls);
 
         bytes memory callData =
-            abi.encodeWithSelector(bytes4(keccak256("execute((address,uint256,bytes)[])")), txs);
+            abi.encodeWithSelector(bytes4(keccak256("execute(bytes32,bytes)")), mode, executionData);
 
+        
         uint256 nonce = entryPoint.getNonce(owner, 1);
 
         PackedUserOperation memory userOp = PackedUserOperation({
@@ -124,15 +132,24 @@ contract DepositAndTransferETH is Base {
     function test_ExecuteBatchOwnerCall() public {
         console.log("/* -------------------------------- test_ExecuteBatchOwnerCall -------- */");
 
-        Call[] memory txs = new Call[](2);
+        // Create the Call array with multiple transactions
+        Call[] memory calls = new Call[](2);
 
         bytes memory dataHex = hex"";
+        bytes memory dataHex2 = hex"";
 
-        txs[0] = Call({target: sender, value: 2e18, data: dataHex});
-        txs[1] = Call({target: sender, value: 2e18, data: dataHex});
+        calls[0] = Call({target: sessionKey, value: 2e18, data: dataHex});
+        calls[1] = Call({target: sessionKey, value: 2e18, data: dataHex2});
 
+        // ERC-7821 mode for batch execution (still mode ID = 1)
+        bytes32 mode = bytes32(uint256(0x01000000000000000000) << (22 * 8));
+
+        // Encode the execution data as Call[] array
+        bytes memory executionData = abi.encode(calls);
+
+        // Create the callData for the ERC-7821 execute function
         bytes memory callData =
-            abi.encodeWithSelector(bytes4(keccak256("execute((address,uint256,bytes)[])")), txs);
+            abi.encodeWithSelector(bytes4(keccak256("execute(bytes32,bytes)")), mode, executionData);
 
         uint256 nonce = entryPoint.getNonce(owner, 1);
 
@@ -216,11 +233,23 @@ contract DepositAndTransferETH is Base {
 
     function test_ExecuteMasterKey() public {
         console.log("/* -------------------------------- test_ExecuteMasterKey -------- */");
+        uint256 value = 1e18;
+        Call[] memory calls = new Call[](1);
 
-        uint256 value = 0.1e18;
-        bytes memory data = hex"";
+        bytes memory dataHex = hex"";
 
-        bytes memory callData = abi.encodeWithSelector(0xb61d27f6, sender, value, data);
+        calls[0] = Call({target: sessionKey, value: value, data: dataHex});
+
+        // ERC-7821 mode for single execution (mode ID = 1)
+        // The mode value should have the pattern at position 22*8 bits
+        bytes32 mode = bytes32(uint256(0x01000000000000000000) << (22 * 8));
+
+        // Encode the execution data as Call[] array
+        bytes memory executionData = abi.encode(calls);
+
+        bytes memory callData =
+            abi.encodeWithSelector(bytes4(keccak256("execute(bytes32,bytes)")), mode, executionData);
+
 
         uint256 nonce = entryPoint.getNonce(owner, 1);
 
@@ -303,24 +332,26 @@ contract DepositAndTransferETH is Base {
 
     function test_ExecuteBatchSKEOA() public {
         console.log("/* -------------------------------- test_ExecuteBatchSKEOA -------- */");
+        // Create the Call array with multiple transactions
+        Call[] memory calls = new Call[](2);
+
+        bytes memory dataHex = hex"";
+        bytes memory dataHex2 = hex"";
+
         uint256 value = 0.1e18;
 
-        bytes memory callData1 = hex"";
-        bytes memory callData2 = hex"";
+        calls[0] = Call({target: ETH_RECIVE, value: value, data: dataHex});
+        calls[1] = Call({target: ETH_RECIVE, value: value, data: dataHex2});
 
-        address[] memory targets = new address[](2);
-        uint256[] memory values = new uint256[](2);
-        bytes[] memory datas = new bytes[](2);
+        // ERC-7821 mode for batch execution (still mode ID = 1)
+        bytes32 mode = bytes32(uint256(0x01000000000000000000) << (22 * 8));
 
-        for (uint256 i = 0; i < 2; i++) {
-            targets[i] = ETH_RECIVE;
-            values[i] = value;
-        }
+        // Encode the execution data as Call[] array
+        bytes memory executionData = abi.encode(calls);
 
-        datas[0] = callData1;
-        datas[1] = callData2;
-
-        bytes memory callData = abi.encodeWithSelector(0x47e1da2a, targets, values, datas);
+        // Create the callData for the ERC-7821 execute function
+        bytes memory callData =
+            abi.encodeWithSelector(bytes4(keccak256("execute(bytes32,bytes)")), mode, executionData);
 
         uint256 nonce = entryPoint.getNonce(owner, 1);
 
@@ -375,24 +406,24 @@ contract DepositAndTransferETH is Base {
     function test_ExecuteBatchSKP256() public {
         console.log("/* ---------------------------------- test_ExecuteBatchSKP256 -------- */");
 
+        // Create the Call array with multiple transactions
+        Call[] memory calls = new Call[](2);
+
+        bytes memory dataHex = hex"";
+        bytes memory dataHex2 = hex"";
         uint256 value = 0.1e18;
+        calls[0] = Call({target: ETH_RECIVE, value: value, data: dataHex});
+        calls[1] = Call({target: ETH_RECIVE, value: value, data: dataHex2});
 
-        bytes memory callData1 = hex"";
-        bytes memory callData2 = hex"";
+        // ERC-7821 mode for batch execution (still mode ID = 1)
+        bytes32 mode = bytes32(uint256(0x01000000000000000000) << (22 * 8));
 
-        address[] memory targets = new address[](2);
-        uint256[] memory values = new uint256[](2);
-        bytes[] memory datas = new bytes[](2);
+        // Encode the execution data as Call[] array
+        bytes memory executionData = abi.encode(calls);
 
-        for (uint256 i = 0; i < 2; i++) {
-            targets[i] = ETH_RECIVE;
-            values[i] = value;
-        }
-
-        datas[0] = callData1;
-        datas[1] = callData2;
-
-        bytes memory callData = abi.encodeWithSelector(0x47e1da2a, targets, values, datas);
+        // Create the callData for the ERC-7821 execute function
+        bytes memory callData =
+            abi.encodeWithSelector(bytes4(keccak256("execute(bytes32,bytes)")), mode, executionData);
 
         uint256 nonce = entryPoint.getNonce(owner, 1);
 
@@ -462,24 +493,25 @@ contract DepositAndTransferETH is Base {
             "/* ---------------------------------- test_ExecuteBatchSKP256NonKey -------- */"
         );
 
+        // Create the Call array with multiple transactions
+        Call[] memory calls = new Call[](2);
+
+        bytes memory dataHex = hex"";
+        bytes memory dataHex2 = hex"";
         uint256 value = 0.1e18;
 
-        bytes memory callData1 = hex"";
-        bytes memory callData2 = hex"";
+        calls[0] = Call({target: ETH_RECIVE, value: value, data: dataHex});
+        calls[1] = Call({target: ETH_RECIVE, value: value, data: dataHex2});
 
-        address[] memory targets = new address[](2);
-        uint256[] memory values = new uint256[](2);
-        bytes[] memory datas = new bytes[](2);
+        // ERC-7821 mode for batch execution (still mode ID = 1)
+        bytes32 mode = bytes32(uint256(0x01000000000000000000) << (22 * 8));
 
-        for (uint256 i = 0; i < 2; i++) {
-            targets[i] = ETH_RECIVE;
-            values[i] = value;
-        }
+        // Encode the execution data as Call[] array
+        bytes memory executionData = abi.encode(calls);
 
-        datas[0] = callData1;
-        datas[1] = callData2;
-
-        bytes memory callData = abi.encodeWithSelector(0x47e1da2a, targets, values, datas);
+        // Create the callData for the ERC-7821 execute function
+        bytes memory callData =
+            abi.encodeWithSelector(bytes4(keccak256("execute(bytes32,bytes)")), mode, executionData);
 
         uint256 nonce = entryPoint.getNonce(owner, 1);
 

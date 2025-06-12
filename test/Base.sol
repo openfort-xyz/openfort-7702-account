@@ -133,20 +133,20 @@ contract Base is Test, IKey {
 
     /* ───────────────────────────────────────────────────────────── master key ── */
     bytes32 constant ETH_PUBLIC_KEY_X =
-        hex"19b1ff0e3454500e742c787ee88dcf7d941e2a2912c6ee079de0a0bc204d704c";
+        hex"ec65a65c8cbec46650e4f008065d6fa8c93f6156fc2990f5ebe7b27088ed2fda";
     bytes32 constant ETH_PUBLIC_KEY_Y =
-        hex"ac91f829b0ce6be1500c7642017a7eea1973e35fbb5b4e0cb1f449d3be5db301";
+        hex"1ea4b778a2667647bd12fbe1cbbbac82e40f00c0490b89a6f46c4ebf997f0b49";
 
     bytes public constant ETH_CHALLENGE =
-        hex"cf7991c9fe3d4c592d6c7f32855b04a4460351ddadc93968c786b61ea39a0326";
+        hex"928c4b45b52c0798324822fe98769e84d2c7fdba555f1012b2b47aa7b9e624ce";
 
     bytes32 public constant ETH_SIGNATURE_R =
-        hex"e277ac875a6dd1248216bf8d225fa53c4bbe767a3f302376ff7a29505f65c2fe";
+        hex"63918c9a2d7994c4fece2995758e901bf0de9c8c2cb069451e699f220e1c07c0";
     bytes32 public constant ETH_SIGNATURE_S =
-        hex"31b7918daca1431197de7ffdac001679fc9de9d9cbe9f636a70f68a450fb00bd";
+        hex"79defe5f59ec65eb65cc43c8f1e5e18fa2be12193548b56d30ccd8b05305a498";
 
     string public constant ETH_CLIENT_DATA_JSON =
-        "{\"type\":\"webauthn.get\",\"challenge\":\"z3mRyf49TFktbH8yhVsEpEYDUd2tyTlox4a2HqOaAyY\",\"origin\":\"http://localhost:5173\",\"crossOrigin\":false}";
+        "{\"type\":\"webauthn.get\",\"challenge\":\"koxLRbUsB5gySCL-mHaehNLH_bpVXxASsrR6p7nmJM4\",\"origin\":\"http://localhost:5173\",\"crossOrigin\":false}";
 
     /* ──────────────────────────────────────────────────────────────── P256 ──── */
     string public json = vm.readFile("test/data/p256.json");
