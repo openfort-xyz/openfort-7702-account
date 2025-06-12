@@ -82,6 +82,7 @@ contract Base is Test, IKey {
     string public constant REG_CLIENT_DATA_JSON =
         "{\"type\":\"webauthn.get\",\"challenge\":\"bjXpYP9iYpBg3rjmkg9ltq4qI5rXSF3Kaiw5SaipRtM\",\"origin\":\"http://localhost:5173\",\"crossOrigin\":false}";
 
+
     uint256 public constant REG_CHALLENGE_INDEX = 23;
     uint256 public constant REG_TYPE_INDEX = 1;
 
@@ -127,6 +128,7 @@ contract Base is Test, IKey {
 
     string public constant BATCH_CLIENT_DATA_JSON =
         "{\"type\":\"webauthn.get\",\"challenge\":\"YU78_oj4UeA73SUR0vdFS1TgWWVJ8acgZJ0W5FEYyeA\",\"origin\":\"http://localhost:5173\",\"crossOrigin\":false}";
+
 
     uint256 public constant BATCH_CHALLENGE_INDEX = 23;
     uint256 public constant BATCH_TYPE_INDEX = 1;
