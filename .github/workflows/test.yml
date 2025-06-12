@@ -2,7 +2,8 @@ name: CI
 
 # Global environment variables
 env:
-  FOUNDRY_PROFILE: ci
+  # Remove or comment this line to use default profile
+  # FOUNDRY_PROFILE: ci
   ETHERSCAN_KEY: ${{ secrets.ETHERSCAN_KEY }}
   SEPOLIA_RPC_URL: ${{ secrets.SEPOLIA_RPC_URL }}
   ETHERSCAN_KEY_BASE: ${{ secrets.ETHERSCAN_KEY_BASE }}
@@ -53,5 +54,5 @@ jobs:
 
       - name: Run Forge tests
         run: |
-              forge test -vvv --rpc-url "$SEPOLIA_RPC_URL"
+          forge test -vvv --rpc-url "$SEPOLIA_RPC_URL"
         id: test
