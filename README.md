@@ -45,6 +45,7 @@ We believe smart accounts should provide an excellent experience throughout a us
 - [x] **ERC-4337 Support**: Works with bundlers and EntryPoint  
 - [x] **Gas Sponsorship**: Dapps or relayers can pay for user ops  
 - [x] **Enhanced Recovery Options**: Social recovery relies on guardians (EOA/WebAuthn)
+- [x] **ERC-7821: Minimal Batch Executor Interface**: A minimal batch executor interface for delegations
 - [ ] **Multi-chain Support**: Coming soon  
 
 ---
