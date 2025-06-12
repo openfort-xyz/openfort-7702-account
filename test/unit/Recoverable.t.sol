@@ -794,11 +794,7 @@ contract Recoverable is Base {
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPk, msgHash);
         bytes memory sig = abi.encodePacked(r, s, v);
 
-        uint256 validUntil = block.timestamp + 1 days;
-
         vm.prank(address(entryPoint));
-        account.initialize(
-            keyMK, spendInfo, _allowedSelectors(), msgHash, sig, validUntil, initialGuardian
-        );
+        account.initialize(keyMK, spendInfo, _allowedSelectors(), msgHash, sig, initialGuardian);
     }
 }

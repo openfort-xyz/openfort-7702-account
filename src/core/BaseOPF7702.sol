@@ -112,17 +112,6 @@ abstract contract BaseOPF7702 is
     }
 
     /**
-     * @notice Verifies that the validation deadline has not passed.
-     * @param _validUntil The UNIX timestamp until which the validation signatures remain valid.
-     * @dev If the current block timestamp exceeds `_validUntil`, reverts with `ValidationExpired`.
-     */
-    function _notExpired(uint256 _validUntil) internal view {
-        if (block.timestamp > _validUntil) {
-            revert OpenfortBaseAccount7702V1__ValidationExpired();
-        }
-    }
-
-    /**
      * @notice Ensures that only authorized callers can forward calls to this account.
      * @dev Overrides `BaseAccount._requireForExecute`. Only `address(this)` (self-call) or the designated `entryPoint()` can execute.
      *      Reverts with a generic require message if the caller is unauthorized.

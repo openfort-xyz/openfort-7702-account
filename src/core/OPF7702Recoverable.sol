@@ -220,7 +220,7 @@ contract OPF7702Recoverable is OPF7702, EIP712 layout at 57943590311362240630886
      * @param _allowedSelectors Unused selectors (ignored for master).
      * @param _hash             Hash to sign (EIP-712 or UserOp hash).
      * @param _signature        Signature over `_hash` by this contract.
-     * @param _validUntil       Expiration timestamp for this initialization.
+     * @param _initialGuardian  Initialize Guardian. Must be at least one guardian!
      */
     function initialize(
         Key calldata _key,
@@ -228,13 +228,12 @@ contract OPF7702Recoverable is OPF7702, EIP712 layout at 57943590311362240630886
         bytes4[] calldata _allowedSelectors,
         bytes32 _hash,
         bytes memory _signature,
-        uint256 _validUntil,
         address _initialGuardian
     ) external initializer {
         _requireForExecute();
         _clearStorage();
-        _notExpired(_validUntil);
 
+        // Todo: Use EIP712 to initialize account
         if (!_checkSignature(_hash, _signature)) {
             revert OpenfortBaseAccount7702V1__InvalidSignature();
         }
