@@ -1,0 +1,58 @@
+name: CI
+
+# Global environment variables
+env:
+  # Remove or comment this line to use default profile
+  # FOUNDRY_PROFILE: ci
+  ETHERSCAN_KEY: ${{ secrets.ETHERSCAN_KEY }}
+  SEPOLIA_RPC_URL: ${{ secrets.SEPOLIA_RPC_URL }}
+  ETHERSCAN_KEY_BASE: ${{ secrets.ETHERSCAN_KEY_BASE }}
+  SEPOLIA_BASE_RPC_URL: ${{ secrets.SEPOLIA_BASE_RPC_URL }}
+  ADDRESS_OPENFORT_USER_ADDRESS_7702: ${{ secrets.ADDRESS_OPENFORT_USER_ADDRESS_7702 }}
+  PRIVATE_KEY_OPENFORT_USER_7702: ${{ secrets.PRIVATE_KEY_OPENFORT_USER_7702 }}
+  IMPLEMENTATION_CONTRACT: ${{ secrets.IMPLEMENTATION_CONTRACT }}
+  ERC20_ADDRESS: ${{ secrets.ERC20_ADDRESS }}
+  ENTRY_POINT_ADDRESS_V8: ${{ secrets.ENTRY_POINT_ADDRESS_V8 }}
+  PIMLICO_API_KEY: ${{ secrets.PIMLICO_API_KEY }}
+  PRIVATE_KEY_SENDER: ${{ secrets.PRIVATE_KEY_SENDER }}
+  PRIVATE_KEY_SESSIONKEY: ${{ secrets.PRIVATE_KEY_SESSIONKEY }}
+  GUARDIAN_EOA_PRIVATE_KEY: ${{ secrets.GUARDIAN_EOA_PRIVATE_KEY }}
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  check:
+    strategy:
+      fail-fast: true
+
+    name: Foundry project
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+
+      - name: Show Forge version
+        run: |
+          forge --version
+
+      - name: Run Forge fmt
+        run: |
+          forge fmt --check
+        id: fmt
+
+      - name: Run Forge build
+        run: |
+          forge build --sizes
+        id: build
+
+      - name: Run Forge tests
+        run: |
+          forge test -vvv --rpc-url "$SEPOLIA_RPC_URL"
+        id: test

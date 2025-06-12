@@ -1,0 +1,16 @@
+{
+  "name": "7702-helper",
+  "version": "1.0.0",
+  "main": "index.js",
+  "author": "0xkoiner <alexgray.bcn.esp@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^16.5.0",
+    "viem": "^2.29.4"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.18",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3"
+  }
+}
