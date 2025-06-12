@@ -69,9 +69,9 @@ contract Execution7821 is Base {
         _register_MKMint();
         _register_MKBatch();
         _register_MKBatchs();
-        _register_SessionKeyEOA();
-        _register_SessionKeyP256();
-        _register_SessionKeyP256NonKey();
+        _register_KeyEOA();
+        _register_KeyP256();
+        _register_KeyP256NonKey();
 
         vm.prank(sender);
         entryPoint.depositTo{value: 0.11e18}(owner);
