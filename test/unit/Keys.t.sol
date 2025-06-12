@@ -8,7 +8,7 @@ import {EntryPoint} from "lib/account-abstraction/contracts/core/EntryPoint.sol"
 import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {IEntryPoint} from "lib/account-abstraction/contracts/interfaces/IEntryPoint.sol";
 
-import {OPF7702 as OPF7702} from "src/core/OPF7702.sol";
+import {OPF7702Recoverable as OPF7702} from "src/core/OPF7702Recoverable.sol";
 import {MockERC20} from "src/mocks/MockERC20.sol";
 import {SpendLimit} from "src/utils/SpendLimit.sol";
 import {IKey} from "src/interfaces/IKey.sol";
@@ -40,8 +40,16 @@ contract KeysTest is Base {
         entryPoint = IEntryPoint(payable(SEPOLIA_ENTRYPOINT));
         webAuthn = WebAuthnVerifier(payable(SEPOLIA_WEBAUTHN));
 
+        _createInitialGuradian();
         /* deploy implementation & bake it into `owner` address */
-        implementation = new OPF7702(address(entryPoint));
+        implementation = new OPF7702(
+            address(entryPoint),
+            WEBAUTHN_VERIFIER,
+            RECOVERY_PERIOD,
+            LOCK_PERIOD,
+            SECURITY_PERIOD,
+            SECURITY_WINDOW
+        );
         vm.etch(owner, address(implementation).code);
         account = OPF7702(payable(owner));
 
@@ -58,16 +66,14 @@ contract KeysTest is Base {
 
     function test_RevokeByID() public {
         uint256 idLength = account.id();
-        uint256 idLengthEOA = account.idEOA();
 
         console.log("idLength", idLength);
-        console.log("idLengthEOA", idLengthEOA);
 
         uint256 id = 5;
 
-        Key memory k1 = account.getKeyById(id, KeyType.EOA);
-        Key memory k2 = account.getKeyById(id, KeyType.P256);
-        Key memory mk = account.getKeyById(0, KeyType.P256);
+        Key memory k1 = account.getKeyById(id);
+        Key memory k2 = account.getKeyById(id + 20);
+        Key memory mk = account.getKeyById(0);
 
         bytes memory code = abi.encodePacked(
             bytes3(0xef0100),
@@ -83,8 +89,7 @@ contract KeysTest is Base {
 
         vm.stopPrank();
         (bool _isActivek1, uint256 _validUntilk1,, uint256 _limitk1) =
-            account.getKeyData(k1.eoaAddress);
-
+            account.getKeyData(keccak256(abi.encodePacked(k1.eoaAddress)));
         (bool _isActivek2, uint256 _validUntilk2,, uint256 _limitk2) =
             account.getKeyData(keccak256(abi.encodePacked(k2.pubKey.x, k2.pubKey.y)));
 
@@ -110,23 +115,24 @@ contract KeysTest is Base {
         account.revokeAllKeys();
 
         uint256 idLength = account.id();
-        uint256 idLengthEOA = account.idEOA();
-
-        for (uint256 i = 0; i < idLengthEOA; i++) {
-            Key memory k = account.getKeyById(i, KeyType.EOA);
-            (bool _isActive, uint256 _validUntil,, uint256 _limit) =
-                account.getKeyData(k.eoaAddress);
-
-            assertFalse(_isActive);
-            assertEq(_validUntil, 0);
-            assertEq(_limit, 0);
-        }
 
         for (uint256 i = 1; i < idLength; i++) {
-            Key memory k = account.getKeyById(i, KeyType.P256);
-            (bool _isActive, uint256 _validUntil,, uint256 _limit) =
-                account.getKeyData(keccak256(abi.encodePacked(k.pubKey.x, k.pubKey.y)));
+            Key memory k = account.getKeyById(i);
 
+            // Declare variables outside the if/else blocks
+            bool _isActive;
+            uint256 _validUntil;
+            uint256 _limit;
+
+            if (k.keyType == KeyType.WEBAUTHN) {
+                (_isActive, _validUntil,, _limit) =
+                    account.getKeyData(keccak256(abi.encodePacked(k.pubKey.x, k.pubKey.y)));
+            } else {
+                (_isActive, _validUntil,, _limit) =
+                    account.getKeyData(keccak256(abi.encodePacked(k.eoaAddress)));
+            }
+
+            // Now the variables are accessible here
             assertFalse(_isActive);
             assertEq(_validUntil, 0);
             assertEq(_limit, 0);
@@ -241,13 +247,11 @@ contract KeysTest is Base {
             SpendLimit.SpendTokenInfo({token: TOKEN, limit: 0});
 
         /* sign arbitrary message so initialise() passes sig check */
-        bytes32 msgHash = keccak256(abi.encode("Hello OPF7702"));
+        bytes32 msgHash = account.getDigestToSign();
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPk, msgHash);
         bytes memory sig = abi.encodePacked(r, s, v);
 
-        uint256 validUntil = block.timestamp + 1 days;
-
         vm.prank(address(entryPoint));
-        account.initialize(keyMK, spendInfo, _allowedSelectors(), msgHash, sig, validUntil, 1);
+        account.initialize(keyMK, spendInfo, _allowedSelectors(), sig, initialGuardian);
     }
 }

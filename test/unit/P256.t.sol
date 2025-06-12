@@ -7,7 +7,7 @@ import {IEntryPoint} from "lib/account-abstraction/contracts/interfaces/IEntryPo
 import {EntryPoint} from "lib/account-abstraction/contracts/core/EntryPoint.sol";
 import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 
-import {OPF7702 as OPF7702} from "src/core/OPF7702.sol";
+import {OPF7702Recoverable as OPF7702} from "src/core/OPF7702Recoverable.sol";
 import {MockERC20} from "src/mocks/MockERC20.sol";
 import {SpendLimit} from "src/utils/SpendLimit.sol";
 import {IKey} from "src/interfaces/IKey.sol";
@@ -35,7 +35,15 @@ contract P256Test is Base {
         entryPoint = IEntryPoint(payable(SEPOLIA_ENTRYPOINT));
         webAuthn = WebAuthnVerifier(payable(SEPOLIA_WEBAUTHN));
 
-        implementation = new OPF7702(address(entryPoint));
+        _createInitialGuradian();
+        implementation = new OPF7702(
+            address(entryPoint),
+            WEBAUTHN_VERIFIER,
+            RECOVERY_PERIOD,
+            LOCK_PERIOD,
+            SECURITY_PERIOD,
+            SECURITY_WINDOW
+        );
         vm.etch(owner, address(implementation).code);
         account = OPF7702(payable(owner));
 
@@ -51,23 +59,26 @@ contract P256Test is Base {
     function test_ExecuteBatchSKP256() public {
         console.log("/* ------------- test_ExecuteBatchSKP256 ------------- */");
 
-        bytes memory callData1 = abi.encodeWithSelector(MockERC20.mint.selector, owner, 10e18);
-        bytes memory callData2 =
+        // Create the Call array with multiple transactions
+        Call[] memory calls = new Call[](2);
+
+        bytes memory dataHex = abi.encodeWithSelector(MockERC20.mint.selector, owner, 10e18);
+        bytes memory dataHex2 =
             abi.encodeWithSelector(IERC20(TOKEN).transfer.selector, sender, 5e18);
 
-        address[] memory targets = new address[](2);
-        uint256[] memory values = new uint256[](2);
-        bytes[] memory datas = new bytes[](2);
+        calls[0] = Call({target: TOKEN, value: 0, data: dataHex});
+        calls[1] = Call({target: TOKEN, value: 0, data: dataHex2});
 
-        for (uint256 i = 0; i < 2; i++) {
-            targets[i] = TOKEN;
-            values[i] = 0;
-        }
+        // ERC-7821 mode for batch execution (still mode ID = 1)
+        bytes32 mode = bytes32(uint256(0x01000000000000000000) << (22 * 8));
 
-        datas[0] = callData1;
-        datas[1] = callData2;
+        // Encode the execution data as Call[] array
+        bytes memory executionData = abi.encode(calls);
 
-        bytes memory callData = abi.encodeWithSelector(0x47e1da2a, targets, values, datas);
+        // Create the callData for the ERC-7821 execute function
+        bytes memory callData =
+            abi.encodeWithSelector(bytes4(keccak256("execute(bytes32,bytes)")), mode, executionData);
+
         uint256 nonce = entryPoint.getNonce(owner, 1);
 
         PackedUserOperation memory userOp = PackedUserOperation({
@@ -86,10 +97,11 @@ contract P256Test is Base {
         console.log("userOpHash:");
         console.logBytes32(userOpHash);
 
-        IKey.PubKey memory pubKey = IKey.PubKey({x: P256_PUBLIC_KEY_X, y: P256_PUBLIC_KEY_Y});
+        IKey.PubKey memory pubKey =
+            IKey.PubKey({x: MINT_P256_PUBLIC_KEY_X, y: MINT_P256_PUBLIC_KEY_Y});
 
         bytes memory _signature =
-            account.encodeP256Signature(P256_SIGNATURE_R, P256_SIGNATURE_S, pubKey);
+            account.encodeP256Signature(MINT_P256_SIGNATURE_R, MINT_P256_SIGNATURE_S, pubKey);
         console.log("isValidSignature:");
         console.logBytes4(account.isValidSignature(userOpHash, _signature));
 
@@ -118,7 +130,7 @@ contract P256Test is Base {
         uint48 validUntil = uint48(block.timestamp + 1 days);
         uint48 limit = 3;
 
-        pubKeySK = PubKey({x: P256_PUBLIC_KEY_X, y: P256_PUBLIC_KEY_Y});
+        pubKeySK = PubKey({x: MINT_P256_PUBLIC_KEY_X, y: MINT_P256_PUBLIC_KEY_Y});
 
         keySK = Key({pubKey: pubKeySK, eoaAddress: address(0), keyType: KeyType.P256});
 
@@ -142,13 +154,11 @@ contract P256Test is Base {
         SpendLimit.SpendTokenInfo memory spendInfo =
             SpendLimit.SpendTokenInfo({token: TOKEN, limit: 0});
 
-        bytes32 msgHash = keccak256(abi.encode("Hello OPF7702"));
+        bytes32 msgHash = account.getDigestToSign();
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPk, msgHash);
         bytes memory sig = abi.encodePacked(r, s, v);
 
-        uint256 validUntil = block.timestamp + 1 days;
-
         vm.prank(address(entryPoint));
-        account.initialize(keyMK, spendInfo, _allowedSelectors(), msgHash, sig, validUntil, 1);
+        account.initialize(keyMK, spendInfo, _allowedSelectors(), sig, initialGuardian);
     }
 }

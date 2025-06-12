@@ -9,7 +9,7 @@ import {EntryPoint} from "lib/account-abstraction/contracts/core/EntryPoint.sol"
 import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {IEntryPoint} from "lib/account-abstraction/contracts/interfaces/IEntryPoint.sol";
 
-import {OPF7702 as OPF7702} from "src/core/OPF7702.sol";
+import {OPF7702Recoverable as OPF7702} from "src/core/OPF7702Recoverable.sol";
 import {MockERC20} from "src/mocks/MockERC20.sol";
 import {KeysManager} from "src/core/KeysManager.sol";
 import {SpendLimit} from "src/utils/SpendLimit.sol";
@@ -42,8 +42,16 @@ contract RegistartionTest is Base {
         entryPoint = IEntryPoint(payable(SEPOLIA_ENTRYPOINT));
         webAuthn = WebAuthnVerifier(payable(SEPOLIA_WEBAUTHN));
 
+        _createInitialGuradian();
         /* deploy implementation & bake it into `owner` address */
-        implementation = new OPF7702(address(entryPoint));
+        implementation = new OPF7702(
+            address(entryPoint),
+            WEBAUTHN_VERIFIER,
+            RECOVERY_PERIOD,
+            LOCK_PERIOD,
+            SECURITY_PERIOD,
+            SECURITY_WINDOW
+        );
         vm.etch(owner, address(implementation).code);
         account = OPF7702(payable(owner));
 
@@ -60,17 +68,17 @@ contract RegistartionTest is Base {
 
     /* ─────────────────────────────────────────────────────────────── tests ──── */
     function test_getKeyById_zero() external view {
-        Key memory k = account.getKeyById(0, KeyType.WEBAUTHN);
+        Key memory k = account.getKeyById(0);
         console.log("/* --------------------------------- test_getKeyById_zero -------- */");
 
         console.logBytes32(k.pubKey.x);
         console.logBytes32(k.pubKey.y);
 
-        Key memory kSk = account.getKeyById(1, KeyType.P256);
+        Key memory kSk = account.getKeyById(1);
         console.logBytes32(kSk.pubKey.x);
         console.logBytes32(kSk.pubKey.y);
 
-        Key memory kSkNonKey = account.getKeyById(1, KeyType.P256NONKEY);
+        Key memory kSkNonKey = account.getKeyById(1);
         console.logBytes32(kSkNonKey.pubKey.x);
         console.logBytes32(kSkNonKey.pubKey.y);
         console.log("/* --------------------------------- test_getKeyById_zero -------- */");
@@ -167,7 +175,7 @@ contract RegistartionTest is Base {
         vm.prank(sender);
         entryPoint.handleOps(ops, payable(sender));
 
-        Key memory k = account.getKeyById(0, KeyType.WEBAUTHN);
+        Key memory k = account.getKeyById(0);
         console.logBytes32(k.pubKey.x);
         console.logBytes32(k.pubKey.y);
     }
@@ -259,7 +267,7 @@ contract RegistartionTest is Base {
         vm.prank(sender);
         entryPoint.handleOps(ops, payable(sender));
 
-        Key memory k = account.getKeyById(0, KeyType.WEBAUTHN);
+        Key memory k = account.getKeyById(0);
         console.logBytes32(k.pubKey.x);
         console.logBytes32(k.pubKey.y);
         console.log("/* ----------------------- test_RegisterKeyP256WithMK -------- */");
@@ -352,7 +360,7 @@ contract RegistartionTest is Base {
         vm.prank(sender);
         entryPoint.handleOps(ops, payable(sender));
 
-        Key memory k = account.getKeyById(0, KeyType.WEBAUTHN);
+        Key memory k = account.getKeyById(0);
         console.logBytes32(k.pubKey.x);
         console.logBytes32(k.pubKey.y);
         console.log("/* ----------------------- test_RegisterKeyP256NonKeyWithMK -------- */");
@@ -438,13 +446,11 @@ contract RegistartionTest is Base {
             SpendLimit.SpendTokenInfo({token: TOKEN, limit: 0});
 
         /* sign arbitrary message so initialise() passes sig check */
-        bytes32 msgHash = keccak256(abi.encode("Hello OPF7702"));
+        bytes32 msgHash = account.getDigestToSign();
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPk, msgHash);
         bytes memory sig = abi.encodePacked(r, s, v);
 
-        uint256 validUntil = block.timestamp + 1 days;
-
         vm.prank(address(entryPoint));
-        account.initialize(keyMK, spendInfo, _allowedSelectors(), msgHash, sig, validUntil, 1);
+        account.initialize(keyMK, spendInfo, _allowedSelectors(), sig, initialGuardian);
     }
 }

@@ -20,6 +20,7 @@ import {ReentrancyGuard} from "lib/openzeppelin-contracts/contracts/utils/Reentr
 /// @title Execution
 /// @author Openfort@0xkoiner
 /// @notice Provides functionality to execute single or batched transactions from this account.
+/// @notice Support ERC 7821 A minimal batch executor interface for delegations.
 /// @dev Inherits from KeysManager (for key-based access control) and ReentrancyGuard (to prevent reentrant calls).
 abstract contract Execution is KeysManager, ReentrancyGuard {
     // =============================================================
@@ -29,113 +30,95 @@ abstract contract Execution is KeysManager, ReentrancyGuard {
     /// @notice Maximum number of transactions allowed in one batch
     uint8 internal constant MAX_TX = 9;
 
-    /// @notice Function selector for `execute(address,uint256,bytes)`
-    bytes4 internal constant EXECUTE_SELECTOR = 0xb61d27f6;
-    /// @notice Function selector for `executeBatch(address[],uint256[],bytes[])`
-    bytes4 internal constant EXECUTEBATCH_SELECTOR = 0x47e1da2a;
+    bytes32 internal constant mode_1 = bytes32(uint256(0x01000000000000000000) << (22 * 8));
+    bytes32 internal constant mode_3 = bytes32(uint256(0x01000000000078210002) << (22 * 8));
 
-    // =============================================================
-    //                             EVENTS
-    // =============================================================
+    /// @dev The execution mode is not supported.
+    error UnsupportedExecutionMode();
+    /// @notice Thrown when the provided transaction length is invalid.
+    error OpenfortBaseAccount7702V1__InvalidTransactionLength();
 
-    /// @notice Emitted whenever a transaction is successfully executed.
-    /// @param target The address of the contract or account being called.
-    /// @param value The amount of Ether (in wei) sent with the call.
-    /// @param data The calldata for the call.
-    event TransactionExecuted(address indexed target, uint256 value, bytes data);
+    /// @dev Executes the calls in `executionData`.
+    /// Reverts and bubbles up error if any call fails.
+    function execute(bytes32 mode, bytes memory executionData) public payable virtual {
+        uint256 id = _executionModeId(mode);
+        if (id == 3) {
+            mode ^= bytes32(uint256(3 << (22 * 8)));
+            bytes[] memory batches = abi.decode(executionData, (bytes[]));
 
-    // =============================================================
-    //                         PUBLIC FUNCTIONS
-    // =============================================================
+            _checkLength(batches.length);
+            for (uint256 i; i < batches.length; ++i) {
+                execute(mode, batches[i]);
+            }
+            return;
+        }
+        if (id == uint256(0)) revert UnsupportedExecutionMode();
+        bool tryWithOpData;
+        /// @solidity memory-safe-assembly
+        assembly {
+            let t := gt(mload(add(executionData, 0x20)), 0x3f)
+            let executionDataLength := mload(executionData)
+            tryWithOpData := and(eq(id, 2), and(gt(executionDataLength, 0x3f), t))
+        }
+        Call[] memory calls;
+        bytes memory opData;
+        if (tryWithOpData) {
+            (calls, opData) = abi.decode(executionData, (Call[], bytes));
+        } else {
+            calls = abi.decode(executionData, (Call[]));
+        }
+        _execute(calls, opData);
+    }
 
-    /// @notice Executes a batch of transactions in a single call.
-    /// @dev Can only be called by this contract itself (e.g., via EntryPoint) or an authorized signer in KeysManager.
-    ///      Reverts if the number of transactions is zero or exceeds `MAX_TX`.
-    /// @param _transactions An array of `Call` structs, each specifying:
-    ///        - `target`: the address to call,
-    ///        - `value`: the Ether (in wei) to send,
-    ///        - `data`: the calldata to execute.
-    function execute(Call[] calldata _transactions) external payable virtual nonReentrant {
-        _requireForExecute();
+    /// @dev Provided for execution mode support detection.
+    function supportsExecutionMode(bytes32 mode) public view virtual returns (bool result) {
+        return _executionModeId(mode) != 0;
+    }
 
-        uint256 txCount = _transactions.length;
+    /// @dev 0: invalid mode, 1: no `opData` support, 2: with `opData` support, 3: batch of batches.
+    function _executionModeId(bytes32 mode) internal view virtual returns (uint256 id) {
+        uint256 m = (uint256(mode) >> (22 * 8)) & 0xffff00000000ffffffff;
+        if (m == 0x01000000000078210002) id = 3;
+        if (m == 0x01000000000078210001) id = 2;
+        if (m == 0x01000000000000000000) id = 1;
+    }
+
+    /// @dev Executes the calls and returns the results.
+    /// Reverts and bubbles up error if any call fails.
+    function _execute(Call[] memory calls, bytes memory opData) internal virtual {
+        if (opData.length == uint256(0)) {
+            _requireForExecute();
+            return _execute(calls);
+        }
+        revert();
+    }
+
+    /// @dev Executes the calls.
+    /// Reverts and bubbles up error if any call fails.
+    function _execute(Call[] memory calls) internal virtual {
+        _checkLength(calls.length);
+        for (uint256 i; i < calls.length; ++i) {
+            Call memory c = calls[i];
+            address to = c.target == address(0) ? address(this) : c.target;
+            _execute(to, c.value, c.data);
+        }
+    }
+
+    /// @dev Executes the call.
+    /// Reverts and bubbles up error if the call fails.
+    function _execute(address to, uint256 value, bytes memory data) internal virtual {
+        (bool success, bytes memory result) = to.call{value: value}(data);
+        if (success) return;
+        /// @solidity memory-safe-assembly
+        assembly {
+            // Bubble up the revert if the call reverts.
+            revert(add(result, 0x20), mload(result))
+        }
+    }
+
+    function _checkLength(uint256 txCount) internal {
         if (txCount == 0 || txCount > MAX_TX) {
             revert OpenfortBaseAccount7702V1__InvalidTransactionLength();
-        }
-
-        for (uint256 i = 0; i < txCount;) {
-            Call calldata callItem = _transactions[i];
-            _executeCall(callItem.target, callItem.value, callItem.data);
-            unchecked {
-                ++i;
-            }
-        }
-    }
-
-    /// @notice Executes a single transaction.
-    /// @dev Can only be called by this contract itself (e.g., via EntryPoint) or an authorized signer in KeysManager.
-    ///      Delegates to internal `_executeCall`, which reverts on failure and emits `TransactionExecuted`.
-    /// @param _target The address to call.
-    /// @param _value  The amount of Ether (in wei) to send with the call.
-    /// @param _data   The calldata payload to send to `_target`.
-    function execute(address _target, uint256 _value, bytes calldata _data)
-        public
-        virtual
-        override
-        nonReentrant
-    {
-        _requireForExecute();
-        _executeCall(_target, _value, _data);
-    }
-
-    /// @notice Executes a sequence of transactions given by parallel arrays.
-    /// @dev Can only be called by this contract itself (e.g., via EntryPoint) or an authorized signer in KeysManager.
-    ///      Requires that all input arrays (`_target`, `_value`, `_data`) have the same non-zero length ≤ `MAX_TX`.
-    ///      Reverts with `InvalidTransactionLength` if conditions are not met.
-    /// @param _target Array of addresses to call.
-    /// @param _value  Array of Ether amounts (in wei) to send with each call.
-    /// @param _data   Array of calldata payloads corresponding to each target.
-    function executeBatch(
-        address[] calldata _target,
-        uint256[] calldata _value,
-        bytes[] calldata _data
-    ) public payable virtual nonReentrant {
-        _requireForExecute();
-
-        uint256 batchLength = _target.length;
-        if (
-            batchLength == 0 || batchLength > MAX_TX || batchLength != _value.length
-                || batchLength != _data.length
-        ) {
-            revert OpenfortBaseAccount7702V1__InvalidTransactionLength();
-        }
-
-        for (uint256 i = 0; i < batchLength;) {
-            _executeCall(_target[i], _value[i], _data[i]);
-            unchecked {
-                ++i;
-            }
-        }
-    }
-
-    // =============================================================
-    //                        INTERNAL FUNCTIONS
-    // =============================================================
-
-    /// @notice Internal helper to perform a low-level call to `_target`.
-    /// @dev Emits `TransactionExecuted`, checks that `_target` is not this contract, and bubbles up revert reason on failure.
-    /// @param _target The address to call.
-    /// @param _value  The Ether (in wei) amount to send.
-    /// @param _data   The calldata payload for the call.
-    function _executeCall(address _target, uint256 _value, bytes calldata _data) internal virtual {
-        if (_target == address(this)) {
-            revert OpenfortBaseAccount7702V1__InvalidTransactionTarget();
-        }
-
-        emit TransactionExecuted(_target, _value, _data);
-        (bool success, bytes memory returnData) = _target.call{value: _value}(_data);
-        if (!success) {
-            revert OpenfortBaseAccount7702V1__TransactionFailed(returnData);
         }
     }
 }

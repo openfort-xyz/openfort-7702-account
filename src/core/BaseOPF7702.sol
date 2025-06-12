@@ -18,6 +18,7 @@ import {IAccount} from "lib/account-abstraction/contracts/interfaces/IAccount.so
 import {BaseAccount} from "lib/account-abstraction/contracts/core/BaseAccount.sol";
 import {IEntryPoint} from "lib/account-abstraction/contracts/interfaces/IEntryPoint.sol";
 
+import "src/interfaces/IERC7821.sol";
 import "lib/openzeppelin-contracts/contracts/interfaces/IERC1271.sol";
 import "lib/openzeppelin-contracts/contracts/utils/introspection/ERC165.sol";
 import "lib/openzeppelin-contracts/contracts/token/ERC721/utils/ERC721Holder.sol";
@@ -31,6 +32,7 @@ abstract contract BaseOPF7702 is
     IAccount,
     BaseAccount,
     IERC165,
+    IERC7821,
     IERC1271,
     ERC721Holder,
     ERC1155Holder
@@ -39,19 +41,9 @@ abstract contract BaseOPF7702 is
     //                            ERRORS
     // =============================================================
 
-    /// @notice Thrown when the provided nonce equals the current nonce (replay protection).
-    error OpenfortBaseAccount7702V1__InvalidNonce();
-    /// @notice Thrown when a signature fails verification.
     error OpenfortBaseAccount7702V1__InvalidSignature();
-    /// @notice Thrown when the signature or transaction validity has expired.
-    error OpenfortBaseAccount7702V1__ValidationExpired();
-    /// @notice Thrown when the provided transaction length is invalid.
-    error OpenfortBaseAccount7702V1__InvalidTransactionLength();
-    /// @notice Thrown when the transaction target address is invalid.
-    error OpenfortBaseAccount7702V1__InvalidTransactionTarget();
-    /// @notice Thrown when a low-level call within a transaction fails.
-    /// @param returnData The data returned by the failing call.
-    error OpenfortBaseAccount7702V1__TransactionFailed(bytes returnData);
+    /// @notice msg.sender not from address(this) and nit from Entry Point
+    error OpenfortBaseAccount7702V1_UnauthorizedCaller();
 
     // =============================================================
     //                          CONSTANTS
@@ -66,9 +58,6 @@ abstract contract BaseOPF7702 is
 
     /// @notice The EntryPoint singleton contract used to dispatch user operations.
     address internal immutable ENTRY_POINT;
-
-    /// @notice Current transaction nonce, used to prevent replay attacks.
-    uint256 public nonce;
 
     // =============================================================
     //                             EVENTS
@@ -116,28 +105,6 @@ abstract contract BaseOPF7702 is
     }
 
     /**
-     * @notice Verifies that the validation deadline has not passed.
-     * @param _validUntil The UNIX timestamp until which the validation signatures remain valid.
-     * @dev If the current block timestamp exceeds `_validUntil`, reverts with `ValidationExpired`.
-     */
-    function _notExpired(uint256 _validUntil) internal view {
-        if (block.timestamp > _validUntil) {
-            revert OpenfortBaseAccount7702V1__ValidationExpired();
-        }
-    }
-
-    /**
-     * @notice Validates that the provided nonce differs from the stored nonce.
-     * @param _nonce The nonce from the user operation to compare.
-     * @dev Reverts with `InvalidNonce` if `_nonce` equals the current `nonce`. Overrides `IAccount._validateNonce`.
-     */
-    function _validateNonce(uint256 _nonce) internal view override {
-        if (_nonce == nonce) {
-            revert OpenfortBaseAccount7702V1__InvalidNonce();
-        }
-    }
-
-    /**
      * @notice Ensures that only authorized callers can forward calls to this account.
      * @dev Overrides `BaseAccount._requireForExecute`. Only `address(this)` (self-call) or the designated `entryPoint()` can execute.
      *      Reverts with a generic require message if the caller is unauthorized.
@@ -145,7 +112,7 @@ abstract contract BaseOPF7702 is
     function _requireForExecute() internal view virtual override {
         require(
             msg.sender == address(this) || msg.sender == address(entryPoint()),
-            "BaseOPF7702: unauthorized caller"
+            OpenfortBaseAccount7702V1_UnauthorizedCaller()
         );
     }
 
@@ -175,6 +142,7 @@ abstract contract BaseOPF7702 is
         return _interfaceId == type(IERC165).interfaceId
             || _interfaceId == type(IAccount).interfaceId || _interfaceId == type(IERC1271).interfaceId
             || _interfaceId == type(IERC1155Receiver).interfaceId
-            || _interfaceId == type(IERC721Receiver).interfaceId;
+            || _interfaceId == type(IERC721Receiver).interfaceId
+            || _interfaceId == type(IERC7821).interfaceId;
     }
 }

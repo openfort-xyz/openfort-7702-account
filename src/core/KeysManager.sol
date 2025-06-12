@@ -45,9 +45,10 @@ abstract contract KeysManager is BaseOPF7702, IKey, SpendLimit {
     // =============================================================
 
     /// @notice Maximum number of allowed function selectors per key
-    uint256 public constant MAX_SELECTORS = 10;
+    uint256 internal constant MAX_SELECTORS = 10;
+
     /// @notice “Burn” address used as placeholder
-    address public constant DEAD_ADDRESS = 0xDeaDbeefdEAdbeefdEadbEEFdeadbeEFdEaDbeeF;
+    address internal constant DEAD_ADDRESS = 0xDeaDbeefdEAdbeefdEadbEEFdeadbeEFdEaDbeeF;
 
     // =============================================================
     //                          STATE VARIABLES
@@ -56,9 +57,6 @@ abstract contract KeysManager is BaseOPF7702, IKey, SpendLimit {
     /// @notice Incremental ID for WebAuthn/P256/P256NONKEY keys
     /// @dev Id = 0 always saved for MasterKey (Admin)
     uint256 public id;
-    /// @notice Incremental ID for EOA keys
-    /// @dev idEOA = 0 always saved for MasterKey (Admin)
-    uint256 public idEOA;
 
     /// @notice Mapping from key ID to Key struct (WebAuthn/P256/P256NONKEY)
     mapping(uint256 => Key) public idKeys;
@@ -67,21 +65,16 @@ abstract contract KeysManager is BaseOPF7702, IKey, SpendLimit {
     /// @notice Tracks used challenges (to prevent replay) in WebAuthn
     mapping(bytes32 => bool) public usedChallenges;
 
-    /// @notice Mapping from EOA key ID to Key struct
-    mapping(uint256 => Key) public idKeysEOA;
-    /// @notice Mapping from EOA address to Key struct
-    mapping(address => KeyData) public keysEOA;
-
     // =============================================================
     //                             EVENTS
     // =============================================================
 
     /// @notice Emitted when a key is revoked
-    /// @param Key The identifier (hash or address‐derived hash) of the revoked key
-    event KeyRevoked(bytes32 indexed Key);
+    /// @param key The identifier (hash or address‐derived hash) of the revoked key
+    event KeyRevoked(bytes32 indexed key);
     /// @notice Emitted when a new key is registered
-    /// @param Key The identifier (hash or address‐derived hash) of the newly registered key
-    event KeyRegistrated(bytes32 indexed Key);
+    /// @param key The identifier (hash or address‐derived hash) of the newly registered key
+    event KeyRegistrated(bytes32 indexed key);
 
     // =============================================================
     //                 PUBLIC / EXTERNAL FUNCTIONS
@@ -131,69 +124,40 @@ abstract contract KeysManager is BaseOPF7702, IKey, SpendLimit {
         }
 
         KeyType kt = _key.keyType;
+        bytes32 keyId;
 
-        // WebAuthn / P256 / P256NONKEY path
         if (kt == KeyType.WEBAUTHN || kt == KeyType.P256 || kt == KeyType.P256NONKEY) {
-            bytes32 keyId = keccak256(abi.encodePacked(_key.pubKey.x, _key.pubKey.y));
-            KeyData storage sKey = keys[keyId];
-
-            if (sKey.isActive) {
-                revert KeyManager__KeyRegistered();
-            }
-
-            _addKey(
-                sKey,
-                _key,
-                _validUntil,
-                _validAfter,
-                _limit,
-                _whitelisting,
-                _contractAddress,
-                _spendTokenInfo,
-                _allowedSelectors,
-                _ethLimit
-            );
-
-            // Store Key struct by ID and increment
-            idKeys[id] = _key;
-            unchecked {
-                id++;
-            }
-
-            emit KeyRegistrated(keyId);
-
-            // EOA path
-        } else if (kt == KeyType.EOA) {
-            address eoa = _key.eoaAddress;
-            if (eoa == address(0)) {
-                revert KeyManager__AddressCantBeZero();
-            }
-            KeyData storage sKey = keysEOA[eoa];
-
-            if (sKey.isActive) {
-                revert KeyManager__KeyRegistered();
-            }
-
-            _addKey(
-                sKey,
-                _key,
-                _validUntil,
-                _validAfter,
-                _limit,
-                _whitelisting,
-                _contractAddress,
-                _spendTokenInfo,
-                _allowedSelectors,
-                _ethLimit
-            );
-
-            idKeysEOA[idEOA] = _key;
-            unchecked {
-                idEOA++;
-            }
-
-            emit KeyRegistrated(keccak256(abi.encodePacked(eoa)));
+            keyId = keccak256(abi.encodePacked(_key.pubKey.x, _key.pubKey.y));
+        } else {
+            keyId = keccak256(abi.encodePacked(_key.eoaAddress));
         }
+        KeyData storage sKey = keys[keyId];
+
+        if (sKey.isActive) {
+            revert KeyManager__KeyRegistered();
+        }
+
+        _addKey(
+            sKey,
+            _key,
+            _validUntil,
+            _validAfter,
+            _limit,
+            _whitelisting,
+            _contractAddress,
+            _spendTokenInfo,
+            _allowedSelectors,
+            _ethLimit
+        );
+
+        // Store Key struct by ID and increment
+        idKeys[id] = _key;
+        unchecked {
+            id++;
+
+        }
+
+        emit KeyRegistrated(keyId);
     }
 
     /**
@@ -206,25 +170,20 @@ abstract contract KeysManager is BaseOPF7702, IKey, SpendLimit {
      *             • For EOA: uses `eoaAddress` (must be non‐zero).
      */
     function revokeKey(Key calldata _key) external {
-        // Todo: if masterKey? revert()? or user have to be resposable for execution.
         _requireForExecute();
 
         KeyType kt = _key.keyType;
+        bytes32 keyId;
 
         if (kt == KeyType.WEBAUTHN || kt == KeyType.P256 || kt == KeyType.P256NONKEY) {
-            bytes32 keyId = keccak256(abi.encodePacked(_key.pubKey.x, _key.pubKey.y));
-            KeyData storage sKey = keys[keyId];
-            _revokeKey(sKey);
-            emit KeyRevoked(keyId);
+            keyId = keccak256(abi.encodePacked(_key.pubKey.x, _key.pubKey.y));
         } else if (kt == KeyType.EOA) {
-            address eoa = _key.eoaAddress;
-            if (eoa == address(0)) {
-                revert KeyManager__AddressCantBeZero();
-            }
-            KeyData storage sKey = keysEOA[eoa];
-            _revokeKey(sKey);
-            emit KeyRevoked(keccak256(abi.encodePacked(eoa)));
+            keyId = keccak256(abi.encodePacked(_key.eoaAddress));
         }
+
+        KeyData storage sKey = keys[keyId];
+        _revokeKey(sKey);
+        emit KeyRevoked(keyId);
     }
 
     /**
@@ -235,33 +194,25 @@ abstract contract KeysManager is BaseOPF7702, IKey, SpendLimit {
     function revokeAllKeys() external {
         _requireForExecute();
         /// @dev i = 1 --> id = 0 always saved for MasterKey (Admin)
-        // Revoke WebAuthn/P256/P256NONKEY keys
+        
+        // Revoke WebAuthn/P256/P256NONKEY/EOA keys
         for (uint256 i = 1; i < id;) {
             Key memory k = idKeys[i];
             KeyType kt = k.keyType;
+            bytes32 keyId;
+
             if (kt == KeyType.WEBAUTHN || kt == KeyType.P256 || kt == KeyType.P256NONKEY) {
-                bytes32 keyId = keccak256(abi.encodePacked(k.pubKey.x, k.pubKey.y));
-                KeyData storage sKey = keys[keyId];
-                _revokeKey(sKey);
-                emit KeyRevoked(keyId);
+                keyId = keccak256(abi.encodePacked(k.pubKey.x, k.pubKey.y));
+            } else if (k.keyType == KeyType.EOA && k.eoaAddress != address(0)) {
+                keyId = keccak256(abi.encodePacked(k.eoaAddress));
             }
+
+            KeyData storage sKey = keys[keyId];
+            _revokeKey(sKey);
+            emit KeyRevoked(keyId);
+            
             unchecked {
                 ++i;
-            }
-        }
-
-        /// @dev i = j --> idEOA = 0 always saved for MasterKey (Admin)
-        // Revoke EOA keys
-        for (uint256 j = 1; j < idEOA;) {
-            Key memory k = idKeysEOA[j];
-            if (k.keyType == KeyType.EOA && k.eoaAddress != address(0)) {
-                bytes32 eoaId = keccak256(abi.encodePacked(k.eoaAddress));
-                KeyData storage sKey = keysEOA[k.eoaAddress];
-                _revokeKey(sKey);
-                emit KeyRevoked(eoaId);
-            }
-            unchecked {
-                ++j;
             }
         }
     }
@@ -365,12 +316,9 @@ abstract contract KeysManager is BaseOPF7702, IKey, SpendLimit {
         sKey.limit = 0;
         sKey.masterKey = false;
         sKey.ethLimit = 0;
-        sKey.whoRegistrated = address(0);
-
-        sKey.spendTokenInfo.limit = 0;
-        sKey.spendTokenInfo.token = address(0);
 
         delete sKey.allowedSelectors;
+        delete sKey.spendTokenInfo;
     }
 
     // =============================================================
@@ -390,36 +338,30 @@ abstract contract KeysManager is BaseOPF7702, IKey, SpendLimit {
         view
         returns (KeyType keyType, address registeredBy, bool isActive)
     {
+        bytes32 keyId;
+        Key memory k = idKeys[_id];
+
         if (
             _keyType == KeyType.WEBAUTHN || _keyType == KeyType.P256
                 || _keyType == KeyType.P256NONKEY
         ) {
-            Key memory k = idKeys[_id];
-            bytes32 keyId = keccak256(abi.encodePacked(k.pubKey.x, k.pubKey.y));
-            KeyData storage sKey = keys[keyId];
-            return (k.keyType, sKey.whoRegistrated, sKey.isActive);
+            keyId = keccak256(abi.encodePacked(k.pubKey.x, k.pubKey.y));
         } else {
-            Key memory k = idKeysEOA[_id];
-            KeyData storage sKey = keysEOA[k.eoaAddress];
-            return (k.keyType, sKey.whoRegistrated, sKey.isActive);
+            keyId = keccak256(abi.encodePacked(k.eoaAddress));
         }
+
+        KeyData storage sKey = keys[keyId];
+
+        return (k.keyType, sKey.whoRegistrated, sKey.isActive);
     }
 
     /**
      * @notice Retrieves the `KeyData` struct stored at a given ID.
      * @param _id       Identifier index for the key to retrieve.
-     * @param _keyType  Enum indicating which mapping to use (WEBAUTHN/P256/P256NONKEY vs. EOA).
      * @return A `KeyData` struct containing key type and relevant public key or EOA address.
      */
-    function getKeyById(uint256 _id, KeyType _keyType) public view returns (Key memory) {
-        if (
-            _keyType == KeyType.WEBAUTHN || _keyType == KeyType.P256
-                || _keyType == KeyType.P256NONKEY
-        ) {
-            return idKeys[_id];
-        } else {
-            return idKeysEOA[_id];
-        }
+    function getKeyById(uint256 _id) public view returns (Key memory) {
+        return idKeys[_id];
     }
 
     /**
@@ -436,33 +378,7 @@ abstract contract KeysManager is BaseOPF7702, IKey, SpendLimit {
         returns (bool isActive, uint48 validUntil, uint48 validAfter, uint48 limit)
     {
         KeyData storage sKey = keys[_keyHash];
-        return (sKey.isActive, sKey.validUntil, sKey.validAfter, sKey.limit);
-    }
 
-    /**
-     * @notice Retrieves key metadata for an EOA key by its address.
-     * @param _key  EOA address corresponding to the key.
-     * @return isActive   Whether the key is active.
-     * @return validUntil UNIX timestamp until which the key is valid.
-     * @return validAfter UNIX timestamp after which the key is valid.
-     * @return limit      Remaining number of transactions allowed.
-     */
-    function getKeyData(address _key)
-        external
-        view
-        returns (bool isActive, uint48 validUntil, uint48 validAfter, uint48 limit)
-    {
-        KeyData storage sKey = keysEOA[_key];
-        return (sKey.isActive, sKey.validUntil, sKey.validAfter, sKey.limit);
-    }
-
-    /**
-     * @notice Checks if an EOA key is active.
-     * @param eoaKey  EOA address to check.
-     * @return True if the key is active; false otherwise.
-     */
-    function isKeyActive(address eoaKey) external view returns (bool) {
-        return keysEOA[eoaKey].isActive;
     }
 
     /**
