@@ -18,7 +18,6 @@ import {Math} from "lib/openzeppelin-contracts/contracts/utils/math/Math.sol";
 import {SafeCast} from "lib/openzeppelin-contracts/contracts/utils/math/SafeCast.sol";
 import {ECDSA} from "lib/openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
 import {EIP712} from "lib/openzeppelin-contracts/contracts/utils/cryptography/EIP712.sol";
-import {Test, console2 as console} from "lib/forge-std/src/Test.sol";
 
 /**
  * @title   Openfort Base Account 7702 with ERC-4337 Support
