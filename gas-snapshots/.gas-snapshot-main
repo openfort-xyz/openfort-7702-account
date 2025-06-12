@@ -42,3 +42,4 @@ Recoverable:test_CompleteRecoveryToEOA() (gas: 837035)
 Recoverable:test_CompleteRecoveryToWebAuthn() (gas: 979815)
 Recoverable:test_RevokeGuardian() (gas: 498490)
 Recoverable:test_StartRecovery() (gas: 424112)
+
