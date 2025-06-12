@@ -4,7 +4,7 @@ out = "out"
 libs = ["lib"]
 via-ir = true
 optimizer = true
-optimizer_runs = 2000
+optimizer_runs = 500
 dotenv = ".env.p256"
 
 fs_permissions = [

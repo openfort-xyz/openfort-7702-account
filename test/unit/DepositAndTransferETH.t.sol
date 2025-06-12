@@ -85,7 +85,6 @@ contract DepositAndTransferETH is Base {
         bytes memory callData =
             abi.encodeWithSelector(bytes4(keccak256("execute(bytes32,bytes)")), mode, executionData);
 
-        
         uint256 nonce = entryPoint.getNonce(owner, 1);
 
         PackedUserOperation memory userOp = PackedUserOperation({
@@ -249,7 +248,6 @@ contract DepositAndTransferETH is Base {
 
         bytes memory callData =
             abi.encodeWithSelector(bytes4(keccak256("execute(bytes32,bytes)")), mode, executionData);
-
 
         uint256 nonce = entryPoint.getNonce(owner, 1);
 

@@ -377,10 +377,7 @@ contract OPF7702 is Execution, Initializable {
         return false;
     }
 
-    function _validateCall(KeyData storage sKey, Call memory call)
-        private
-        returns (bool)
-    {
+    function _validateCall(KeyData storage sKey, Call memory call) private returns (bool) {
         if (call.target == address(this)) return false;
         if (sKey.limit == 0) return false;
         if (sKey.ethLimit < call.value) return false;

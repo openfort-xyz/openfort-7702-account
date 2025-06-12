@@ -259,7 +259,7 @@ contract Base is Test, IKey {
 
     uint256 public constant G_CHALLENGE_INDEX = 23;
     uint256 public constant G_TYPE_INDEX = 1;
-    
+
     /* ───────────────────────────────────────────────────────────── master key ── */
     bytes32 constant BATCHS_VALID_PUBLIC_KEY_X =
         hex"0a41735f134021741ba97d2d9d4221191ecceae36625b7a3de56f473f666b594";
@@ -282,7 +282,6 @@ contract Base is Test, IKey {
 
     uint256 public constant BATCHS_CHALLENGE_INDEX = 23;
     uint256 public constant BATCHS_TYPE_INDEX = 1;
-
 
     function _allowedSelectors() internal pure returns (bytes4[] memory sel) {
         sel = new bytes4[](3);

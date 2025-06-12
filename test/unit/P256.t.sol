@@ -97,7 +97,8 @@ contract P256Test is Base {
         console.log("userOpHash:");
         console.logBytes32(userOpHash);
 
-        IKey.PubKey memory pubKey = IKey.PubKey({x: MINT_P256_PUBLIC_KEY_X, y: MINT_P256_PUBLIC_KEY_Y});
+        IKey.PubKey memory pubKey =
+            IKey.PubKey({x: MINT_P256_PUBLIC_KEY_X, y: MINT_P256_PUBLIC_KEY_Y});
 
         bytes memory _signature =
             account.encodeP256Signature(MINT_P256_SIGNATURE_R, MINT_P256_SIGNATURE_S, pubKey);
