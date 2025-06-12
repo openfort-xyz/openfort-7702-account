@@ -68,13 +68,13 @@ deploy-7702-base:
 	--broadcast \
 	--constructor-args 0x4337084D9E255Ff0702461CF8895CE9E3b5Ff108 0xeD43b3a3D00d791BC0B353666b5780B0F9245CC1 172800 604800 129600 43200
 
-
+# 0x9cab09f5b22e6C7812cEeAEF081BEF62b91BF8F2
 deploy-7702-mainnet:
 	forge create src/core/OPF7702Recoverable.sol:OPF7702Recoverable \
 	--rpc-url $(SEPOLIA_RPC_URL) \
 	--account BURNER_KEY \
 	--verify \
-	--etherscan-api-key $(SEPOLIA_RPC_URL) \
+	--etherscan-api-key $(ETHERSCAN_KEY) \
 	--broadcast \
 	--constructor-args 0x4337084D9E255Ff0702461CF8895CE9E3b5Ff108 0xeD43b3a3D00d791BC0B353666b5780B0F9245CC1 172800 604800 129600 43200
 

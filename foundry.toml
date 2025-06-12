@@ -18,7 +18,7 @@ out = "out"
 libs = ["lib"]
 via-ir = true
 optimizer = true
-optimizer_runs = 500
+optimizer_runs = 200
 
 fs_permissions = [
   { access = "read", path = "./test/data" }
