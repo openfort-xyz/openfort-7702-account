@@ -4,7 +4,7 @@ pragma solidity ^0.8.29;
 
 interface IWebAuthnVerifier {
     function verifySoladySignature(
-        bytes memory challenge,
+        bytes32 challenge,
         bool requireUserVerification,
         bytes memory authenticatorData,
         string memory clientDataJSON,

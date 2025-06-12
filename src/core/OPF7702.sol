@@ -14,7 +14,7 @@
 pragma solidity ^0.8.29;
 
 import {Execution} from "src/core/Execution.sol";
-import {WebAuthnVerifier} from "src/utils/WebAuthnVerifier.sol";
+import {IWebAuthnVerifier} from "src/interfaces/IWebAuthnVerifier.sol";
 import {EfficientHashLib} from "lib/solady/src/utils/EfficientHashLib.sol";
 import {SafeCast} from "lib/openzeppelin-contracts/contracts/utils/math/SafeCast.sol";
 import {ECDSA} from "lib/openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
@@ -44,17 +44,20 @@ import {
  *    0x801ae8efc2175d3d963e799b27e0e948b9a3fa84e2ce105a370245c8c127f368
  *    == 57943590311362240630886240343495690972153947532773266946162183175043753177960
  */
-contract OPF7702 is Execution, Initializable, WebAuthnVerifier {
+contract OPF7702 is Execution, Initializable {
     using ECDSA for bytes32;
 
     /// @notice Address of this implementation contract
     address public immutable _OPENFORT_CONTRACT_ADDRESS;
 
+    address public immutable WEBAUTHN_VERIFIER;
+
     /// @notice Emitted when the account is initialized with a masterKey
     event Initialized(Key indexed masterKey);
 
-    constructor(address _entryPoint) {
+    constructor(address _entryPoint, address _webAuthnVerifier) {
         ENTRY_POINT = _entryPoint;
+        WEBAUTHN_VERIFIER = _webAuthnVerifier;
         _OPENFORT_CONTRACT_ADDRESS = address(this);
         _disableInitializers();
     }
@@ -169,7 +172,7 @@ contract OPF7702 is Execution, Initializable, WebAuthnVerifier {
             return SIG_VALIDATION_FAILED;
         }
 
-        bool sigOk = verifySoladySignature(
+        bool sigOk = IWebAuthnVerifier(WEBAUTHN_VERIFIER).verifySoladySignature(
             userOpHash,
             requireUV,
             authenticatorData,
@@ -235,7 +238,9 @@ contract OPF7702 is Execution, Initializable, WebAuthnVerifier {
             userOpHash = EfficientHashLib.sha2(userOpHash);
         }
 
-        bool sigOk = verifyP256Signature(userOpHash, r, sSig, pubKey.x, pubKey.y);
+        bool sigOk = IWebAuthnVerifier(WEBAUTHN_VERIFIER).verifyP256Signature(
+            userOpHash, r, sSig, pubKey.x, pubKey.y
+        );
         if (!sigOk) {
             return SIG_VALIDATION_FAILED;
         }
@@ -615,7 +620,7 @@ contract OPF7702 is Execution, Initializable, WebAuthnVerifier {
         if (usedChallenges[_hash]) {
             return bytes4(0xffffffff);
         }
-        bool sigOk = verifySoladySignature(
+        bool sigOk = IWebAuthnVerifier(WEBAUTHN_VERIFIER).verifySoladySignature(
             _hash,
             requireUV,
             authenticatorData,
@@ -675,7 +680,9 @@ contract OPF7702 is Execution, Initializable, WebAuthnVerifier {
             hashToCheck = EfficientHashLib.sha2(_hash);
         }
 
-        bool sigOk = verifyP256Signature(hashToCheck, r, sSig, pubKey.x, pubKey.y);
+        bool sigOk = IWebAuthnVerifier(WEBAUTHN_VERIFIER).verifyP256Signature(
+            hashToCheck, r, sSig, pubKey.x, pubKey.y
+        );
         if (!sigOk) {
             return bytes4(0xffffffff);
         }

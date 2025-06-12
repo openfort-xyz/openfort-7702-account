@@ -186,11 +186,12 @@ contract OPF7702Recoverable is OPF7702, EIP712 layout at 57943590311362240630886
      */
     constructor(
         address _entryPoint,
+        address _webAuthnVerifier,
         uint256 _recoveryPeriod,
         uint256 _lockPeriod,
         uint256 _securityPeriod,
         uint256 _securityWindow
-    ) OPF7702(_entryPoint) EIP712("OPF7702Recoverable", "1") {
+    ) OPF7702(_entryPoint, _webAuthnVerifier) EIP712("OPF7702Recoverable", "1") {
         recoveryPeriod = _recoveryPeriod;
         lockPeriod = _lockPeriod;
         securityPeriod = _securityPeriod;

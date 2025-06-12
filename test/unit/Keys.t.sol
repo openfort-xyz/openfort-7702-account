@@ -43,7 +43,12 @@ contract KeysTest is Base {
         _createInitialGuradian();
         /* deploy implementation & bake it into `owner` address */
         implementation = new OPF7702(
-            address(entryPoint), RECOVERY_PERIOD, LOCK_PERIOD, SECURITY_PERIOD, SECURITY_WINDOW
+            address(entryPoint),
+            WEBAUTHN_VERIFIER,
+            RECOVERY_PERIOD,
+            LOCK_PERIOD,
+            SECURITY_PERIOD,
+            SECURITY_WINDOW
         );
         vm.etch(owner, address(implementation).code);
         account = OPF7702(payable(owner));
