@@ -12,6 +12,7 @@
 
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.29;
+import {Test, console2 as console} from "lib/forge-std/src/Test.sol";
 
 import {Execution} from "src/core/Execution.sol";
 import {IWebAuthnVerifier} from "src/interfaces/IWebAuthnVerifier.sol";
@@ -403,6 +404,7 @@ contract OPF7702 is Execution, Initializable {
             bool validSpend = _validateTokenSpend(sKey, innerData);
             if (!validSpend) return false;
         }
+
         /// Todo: Check all possibilities to fails on this line
         // // Check whitelisting
         // if (!sessionKey.whitelisting || sessionKey.whitelist[calls[i].target]) {

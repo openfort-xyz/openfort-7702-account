@@ -35,7 +35,8 @@ contract Execution7821 is Base {
     PubKey internal pubKeyMK_BATCHS;
     Key internal keySK;
     PubKey internal pubKeySK;
-
+    Key internal keySK_B;
+    PubKey internal pubKeySK_B;
     /* ─────────────────────────────────────────────────────────────── setup ──── */
     function setUp() public {
         vm.startPrank(sender);
@@ -458,6 +459,73 @@ contract Execution7821 is Base {
         bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
 
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(sessionKeyPk, userOpHash);
+        bytes memory signature = abi.encodePacked(r, s, v);
+
+        bytes memory _signature = account.encodeEOASignature(signature);
+
+        bytes4 magicValue = account.isValidSignature(userOpHash, signature);
+        console.logBytes4(magicValue);
+
+        userOp.signature = _signature;
+
+        uint256 balanceOfBefore = IERC20(TOKEN).balanceOf(sender);
+
+        PackedUserOperation[] memory ops = new PackedUserOperation[](1);
+        ops[0] = userOp;
+
+        bytes memory code = abi.encodePacked(bytes3(0xef0100), address(implementation));
+        vm.etch(owner, code);
+
+        vm.prank(sender);
+        entryPoint.handleOps(ops, payable(sender));
+
+        uint256 balanceOfAfter = IERC20(TOKEN).balanceOf(sender);
+        console.log("balanceOf", balanceOfAfter);
+        assertEq(balanceOfBefore + 5e18, balanceOfAfter);
+        console.log("/* -------------------------------- test_ExecuteBatchSKEOA7821 -------- */");
+    }
+
+    function test_ExecuteBatchSKEOA7821ApproveSendETH() public {
+        console.log("/* -------------------------------- test_ExecuteBatchSKEOA7821 -------- */");
+
+        // Create the Call array with multiple transactions
+        Call[] memory calls = new Call[](3);
+
+        bytes memory dataHex = abi.encodeWithSelector(MockERC20.mint.selector, owner, 10e18);
+        bytes memory dataHex2 =
+            abi.encodeWithSelector(IERC20(TOKEN).transfer.selector, sender, 5e18);
+
+        calls[0] = Call({target: TOKEN, value: 0, data: dataHex});
+        calls[1] = Call({target: ETH_RECIVE, value: 0.1e18, data: hex""});
+        calls[2] = Call({target: TOKEN, value: 0, data: dataHex2});
+
+        // ERC-7821 mode for batch execution (still mode ID = 1)
+        bytes32 mode = bytes32(uint256(0x01000000000000000000) << (22 * 8));
+
+        // Encode the execution data as Call[] array
+        bytes memory executionData = abi.encode(calls);
+
+        // Create the callData for the ERC-7821 execute function
+        bytes memory callData =
+            abi.encodeWithSelector(bytes4(keccak256("execute(bytes32,bytes)")), mode, executionData);
+
+        uint256 nonce = entryPoint.getNonce(owner, 1);
+
+        PackedUserOperation memory userOp = PackedUserOperation({
+            sender: owner,
+            nonce: nonce,
+            initCode: hex"7702",
+            callData: callData,
+            accountGasLimits: _packAccountGasLimits(400000, 300000),
+            preVerificationGas: 800000,
+            gasFees: _packGasFees(80 gwei, 15 gwei),
+            paymasterAndData: hex"",
+            signature: hex""
+        });
+
+        bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(guardianB_PK, userOpHash);
         bytes memory signature = abi.encodePacked(r, s, v);
 
         bytes memory _signature = account.encodeEOASignature(signature);
@@ -1326,6 +1394,16 @@ contract Execution7821 is Base {
         account.registerKey(
             keySK, validUntil, uint48(0), limit, true, TOKEN, spendInfo, _allowedSelectors(), 0
         );
+
+        keySK_B = Key({pubKey: pubKeySK, eoaAddress: guardianB, keyType: KeyType.EOA});
+
+        vm.etch(owner, code);
+
+        vm.prank(address(entryPoint));
+        account.registerKey(
+            keySK_B, validUntil, uint48(0), limit, true, ETH_RECIVE, spendInfo, _allowedSelectors(), ETH_LIMIT
+        );
+
     }
 
     function _register_SessionKeyP256() internal {
