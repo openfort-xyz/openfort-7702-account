@@ -90,6 +90,7 @@ contract KeysTest is Base {
         vm.stopPrank();
         (bool _isActivek1, uint256 _validUntilk1,, uint256 _limitk1) =
             account.getKeyData(keccak256(abi.encodePacked(k1.eoaAddress)));
+
         (bool _isActivek2, uint256 _validUntilk2,, uint256 _limitk2) =
             account.getKeyData(keccak256(abi.encodePacked(k2.pubKey.x, k2.pubKey.y)));
 

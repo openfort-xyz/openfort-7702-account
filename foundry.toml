@@ -1,13 +1,29 @@
 [profile.default]
-solc_version = '0.8.29'
-solc = '0.8.29'
-src = 'contracts'
+src = "src"
 out = "out"
 libs = ["lib"]
+via-ir = true
+optimizer = true
+optimizer_runs = 500
+dotenv = ".env.p256"
 
-odyssey = true
-evm_version = "prague"
+fs_permissions = [
+  { access = "read", path = "./test/data" }
+]
 
-remappings = ["@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts"]
+# Add CI profile with same settings
+[profile.ci]
+src = "src"
+out = "out"
+libs = ["lib"]
+via-ir = true
+optimizer = true
+optimizer_runs = 200
 
-# See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
+fs_permissions = [
+  { access = "read", path = "./test/data" }
+]
+
+[fmt]
+line_length = 100
+bracket_spacing = false

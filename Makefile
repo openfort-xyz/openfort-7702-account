@@ -89,4 +89,3 @@ simple-mainnet:
 
 push:
 	git push -u origin OPF7702_Recoverable_7821
-

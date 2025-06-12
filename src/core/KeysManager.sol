@@ -46,7 +46,6 @@ abstract contract KeysManager is BaseOPF7702, IKey, SpendLimit {
 
     /// @notice Maximum number of allowed function selectors per key
     uint256 internal constant MAX_SELECTORS = 10;
-
     /// @notice “Burn” address used as placeholder
     address internal constant DEAD_ADDRESS = 0xDeaDbeefdEAdbeefdEadbEEFdeadbeEFdEaDbeeF;
 
@@ -154,7 +153,6 @@ abstract contract KeysManager is BaseOPF7702, IKey, SpendLimit {
         idKeys[id] = _key;
         unchecked {
             id++;
-
         }
 
         emit KeyRegistrated(keyId);
@@ -194,7 +192,6 @@ abstract contract KeysManager is BaseOPF7702, IKey, SpendLimit {
     function revokeAllKeys() external {
         _requireForExecute();
         /// @dev i = 1 --> id = 0 always saved for MasterKey (Admin)
-        
         // Revoke WebAuthn/P256/P256NONKEY/EOA keys
         for (uint256 i = 1; i < id;) {
             Key memory k = idKeys[i];
@@ -210,7 +207,6 @@ abstract contract KeysManager is BaseOPF7702, IKey, SpendLimit {
             KeyData storage sKey = keys[keyId];
             _revokeKey(sKey);
             emit KeyRevoked(keyId);
-            
             unchecked {
                 ++i;
             }
@@ -378,7 +374,7 @@ abstract contract KeysManager is BaseOPF7702, IKey, SpendLimit {
         returns (bool isActive, uint48 validUntil, uint48 validAfter, uint48 limit)
     {
         KeyData storage sKey = keys[_keyHash];
-
+        return (sKey.isActive, sKey.validUntil, sKey.validAfter, sKey.limit);
     }
 
     /**

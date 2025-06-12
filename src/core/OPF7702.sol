@@ -249,6 +249,7 @@ contract OPF7702 is Execution, Initializable {
 
         (Key memory composedKey, bool isValid) =
             _keyValidation(sKey, DEAD_ADDRESS, KeyType.WEBAUTHN);
+
         if (!isValid) return SIG_VALIDATION_FAILED;
 
         if (isValidKey(composedKey, callData)) {
@@ -369,7 +370,6 @@ contract OPF7702 is Execution, Initializable {
                     }
                 }
             }
-
             return true;
         }
 
@@ -411,7 +411,6 @@ contract OPF7702 is Execution, Initializable {
         if (!sKey.whitelisting || !sKey.whitelist[call.target]) {
             return false;
         }
-
         return true;
     }
 

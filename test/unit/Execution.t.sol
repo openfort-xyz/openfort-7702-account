@@ -69,9 +69,9 @@ contract Execution7821 is Base {
         _register_MKMint();
         _register_MKBatch();
         _register_MKBatchs();
-        _register_KeyEOA();
-        _register_KeyP256();
-        _register_KeyP256NonKey();
+        _register_SessionKeyEOA();
+        _register_SessionKeyP256();
+        _register_SessionKeyP256NonKey();
 
         vm.prank(sender);
         entryPoint.depositTo{value: 0.11e18}(owner);
@@ -528,7 +528,6 @@ contract Execution7821 is Base {
 
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(guardianB_PK, userOpHash);
         bytes memory signature = abi.encodePacked(r, s, v);
-
 
         bytes memory _signature = account.encodeEOASignature(signature);
 
@@ -1373,7 +1372,7 @@ contract Execution7821 is Base {
         );
     }
 
-    function _register_KeyEOA() internal {
+    function _register_SessionKeyEOA() internal {
         uint48 validUntil = uint48(block.timestamp + 1 days);
         uint48 limit = uint48(10);
         pubKeySK = PubKey({
@@ -1415,7 +1414,7 @@ contract Execution7821 is Base {
         );
     }
 
-    function _register_KeyP256() internal {
+    function _register_SessionKeyP256() internal {
         uint48 validUntil = uint48(block.timestamp + 1 days);
         uint48 limit = uint48(10);
         pubKeySK = PubKey({x: P256_PUBLIC_KEY_X, y: P256_PUBLIC_KEY_Y});
@@ -1448,7 +1447,7 @@ contract Execution7821 is Base {
         );
     }
 
-    function _register_KeyP256NonKey() internal {
+    function _register_SessionKeyP256NonKey() internal {
         uint48 validUntil = uint48(block.timestamp + 1 days);
         uint48 limit = uint48(10);
         pubKeySK = PubKey({x: P256NOKEY_PUBLIC_KEY_X, y: P256NOKEY_PUBLIC_KEY_Y});
