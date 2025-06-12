@@ -790,11 +790,11 @@ contract Recoverable is Base {
             SpendLimit.SpendTokenInfo({token: TOKEN, limit: 0});
 
         /* sign arbitrary message so initialise() passes sig check */
-        bytes32 msgHash = keccak256(abi.encode("Hello OPF7702"));
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPk, msgHash);
+        bytes32 digest = account.getDigestToSign();
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPk, digest);
         bytes memory sig = abi.encodePacked(r, s, v);
 
         vm.prank(address(entryPoint));
-        account.initialize(keyMK, spendInfo, _allowedSelectors(), msgHash, sig, initialGuardian);
+        account.initialize(keyMK, spendInfo, _allowedSelectors(), sig, initialGuardian);
     }
 }

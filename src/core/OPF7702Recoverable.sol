@@ -18,6 +18,7 @@ import {Math} from "lib/openzeppelin-contracts/contracts/utils/math/Math.sol";
 import {SafeCast} from "lib/openzeppelin-contracts/contracts/utils/math/SafeCast.sol";
 import {ECDSA} from "lib/openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
 import {EIP712} from "lib/openzeppelin-contracts/contracts/utils/cryptography/EIP712.sol";
+import {Test, console2 as console} from "lib/forge-std/src/Test.sol";
 
 /**
  * @title   Openfort Base Account 7702 with ERC-4337 Support
@@ -218,7 +219,6 @@ contract OPF7702Recoverable is OPF7702, EIP712 layout at 57943590311362240630886
      * @param _key              The Key struct (master key).
      * @param _spendTokenInfo   Token limit info (ignored for master).
      * @param _allowedSelectors Unused selectors (ignored for master).
-     * @param _hash             Hash to sign (EIP-712 or UserOp hash).
      * @param _signature        Signature over `_hash` by this contract.
      * @param _initialGuardian  Initialize Guardian. Must be at least one guardian!
      */
@@ -226,15 +226,16 @@ contract OPF7702Recoverable is OPF7702, EIP712 layout at 57943590311362240630886
         Key calldata _key,
         SpendTokenInfo calldata _spendTokenInfo,
         bytes4[] calldata _allowedSelectors,
-        bytes32 _hash,
         bytes memory _signature,
         address _initialGuardian
     ) external initializer {
         _requireForExecute();
         _clearStorage();
 
+        bytes32 digest = getDigestToSign();
+
         // Todo: Use EIP712 to initialize account
-        if (!_checkSignature(_hash, _signature)) {
+        if (!_checkSignature(digest, _signature)) {
             revert OpenfortBaseAccount7702V1__InvalidSignature();
         }
 
@@ -575,17 +576,7 @@ contract OPF7702Recoverable is OPF7702, EIP712 layout at 57943590311362240630886
     /// @param _signatures Encoded signatures supplied by guardians.
     /// @return True if all signatures are valid and unique.
     function _validateSignatures(bytes[] calldata _signatures) internal view returns (bool) {
-        bytes32 digest = _hashTypedDataV4(
-            keccak256(
-                abi.encode(
-                    RECOVER_TYPEHASH,
-                    recoveryData.key,
-                    recoveryData.executeAfter,
-                    recoveryData.guardiansRequired
-                )
-            )
-        );
-
+        bytes32 digest = getDigestToSign();
         bytes32 lastGuardianHash;
 
         unchecked {
@@ -713,7 +704,7 @@ contract OPF7702Recoverable is OPF7702, EIP712 layout at 57943590311362240630886
     /**
      * @notice Returns the EIP‑712 digest guardians must sign to approve recovery.
      */
-    function getDigestToSign() external view returns (bytes32 digest) {
+    function getDigestToSign() public view returns (bytes32 digest) {
         bytes32 structHash = keccak256(
             abi.encode(
                 RECOVER_TYPEHASH,
