@@ -38,6 +38,7 @@ contract Execution7821 is Base {
     Key internal keySK_B;
     PubKey internal pubKeySK_B;
     /* ─────────────────────────────────────────────────────────────── setup ──── */
+
     function setUp() public {
         vm.startPrank(sender);
 
@@ -1401,9 +1402,16 @@ contract Execution7821 is Base {
 
         vm.prank(address(entryPoint));
         account.registerKey(
-            keySK_B, validUntil, uint48(0), limit, true, ETH_RECIVE, spendInfo, _allowedSelectors(), ETH_LIMIT
+            keySK_B,
+            validUntil,
+            uint48(0),
+            limit,
+            true,
+            ETH_RECIVE,
+            spendInfo,
+            _allowedSelectors(),
+            ETH_LIMIT
         );
-
     }
 
     function _register_SessionKeyP256() internal {
