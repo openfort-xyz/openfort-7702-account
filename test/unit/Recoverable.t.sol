@@ -12,7 +12,7 @@ import {SafeCast} from "lib/openzeppelin-contracts/contracts/utils/math/SafeCast
 import {ECDSA} from "lib/openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
 import {IEntryPoint} from "lib/account-abstraction/contracts/interfaces/IEntryPoint.sol";
 
-import {OPF7702Recoverable as OPF7702} from "src/core/OPF7702Recoverable.sol";
+import {OPFMain as OPF7702} from "src/core/OPFMain.sol";
 import {MockERC20} from "src/mocks/MockERC20.sol";
 import {KeysManager} from "src/core/KeysManager.sol";
 import {SpendLimit} from "src/utils/SpendLimit.sol";

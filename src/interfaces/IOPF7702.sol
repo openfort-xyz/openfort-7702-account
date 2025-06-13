@@ -12,6 +12,13 @@ import {IERC165} from "lib/openzeppelin-contracts/contracts/utils/introspection/
 /// @dev Extends `IExecution`, `IKeysManager`, `IERC1271`, and `IERC165`. Declares all externally‐callable members.
 interface IOPF7702 is IExecution, IKeysManager, IERC1271, IERC165 {
     // =============================================================
+    //                             EVENTS
+    // =============================================================
+
+    /// @notice Emitted when the account is initialized with a masterKey
+    event Initialized(Key indexed masterKey);
+
+    // =============================================================
     //                         EXTERNAL FUNCTIONS
     // =============================================================
 

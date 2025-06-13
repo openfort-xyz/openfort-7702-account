@@ -8,7 +8,7 @@ import {EntryPoint} from "lib/account-abstraction/contracts/core/EntryPoint.sol"
 import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {IEntryPoint} from "lib/account-abstraction/contracts/interfaces/IEntryPoint.sol";
 
-import {OPF7702Recoverable as OPF7702} from "src/core/OPF7702Recoverable.sol";
+import {OPFMain as OPF7702} from "src/core/OPFMain.sol";
 import {MockERC20} from "src/mocks/MockERC20.sol";
 import {SpendLimit} from "src/utils/SpendLimit.sol";
 import {IKey} from "src/interfaces/IKey.sol";

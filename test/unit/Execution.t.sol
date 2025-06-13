@@ -13,7 +13,7 @@ import {IKey} from "src/interfaces/IKey.sol";
 import {MockERC20} from "src/mocks/MockERC20.sol";
 import {SpendLimit} from "src/utils/SpendLimit.sol";
 import {WebAuthnVerifier} from "src/utils/WebAuthnVerifier.sol";
-import {OPF7702Recoverable as OPF7702} from "src/core/OPF7702Recoverable.sol";
+import {OPFMain as OPF7702} from "src/core/OPFMain.sol";
 import {PackedUserOperation} from
     "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
 

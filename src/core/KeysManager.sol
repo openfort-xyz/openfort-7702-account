@@ -12,34 +12,18 @@
 
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.29;
+pragma solidity 0.8.29;
 
+import {IKey} from "src/interfaces/IKey.sol";
 import {SpendLimit} from "src/utils/SpendLimit.sol";
 import {BaseOPF7702} from "src/core/BaseOPF7702.sol";
-import {IKey} from "src/interfaces/IKey.sol";
+import {IKeysManager} from "src/interfaces/IKeysManager.sol";
 
 /// @title KeysManager
 /// @author Openfort@0xkoiner
 /// @notice Manages registration, revocation, and querying of keys (WebAuthn/P256/EOA) with spending limits and whitelisting support.
 /// @dev Inherits BaseOPF7702 for account abstraction, IKey interface, and SpendLimit for token/ETH limits.
 abstract contract KeysManager is BaseOPF7702, IKey, SpendLimit {
-    // =============================================================
-    //                            ERRORS
-    // =============================================================
-
-    /// @notice Thrown when a timestamp provided for key validity is invalid
-    error KeyManager__InvalidTimestamp();
-    /// @notice Thrown when registration does not include any usage or spend limits
-    error KeyManager__MustIncludeLimits();
-    /// @notice Thrown when an address parameter expected to be non-zero is zero
-    error KeyManager__AddressCantBeZero();
-    /// @notice Thrown when attempting to revoke or query a key that is already inactive
-    error KeyManager__KeyInactive();
-    /// @notice Thrown when the provided selectors list length exceeds MAX_SELECTORS
-    error KeyManager__SelectorsListTooBig();
-    /// @notice Thrown when attempting to register a key that is already active
-    error KeyManager__KeyRegistered();
-
     // =============================================================
     //                          CONSTANTS
     // =============================================================
@@ -63,17 +47,6 @@ abstract contract KeysManager is BaseOPF7702, IKey, SpendLimit {
     mapping(bytes32 => KeyData) public keys;
     /// @notice Tracks used challenges (to prevent replay) in WebAuthn
     mapping(bytes32 => bool) public usedChallenges;
-
-    // =============================================================
-    //                             EVENTS
-    // =============================================================
-
-    /// @notice Emitted when a key is revoked
-    /// @param key The identifier (hash or address‐derived hash) of the revoked key
-    event KeyRevoked(bytes32 indexed key);
-    /// @notice Emitted when a new key is registered
-    /// @param key The identifier (hash or address‐derived hash) of the newly registered key
-    event KeyRegistrated(bytes32 indexed key);
 
     // =============================================================
     //                 PUBLIC / EXTERNAL FUNCTIONS
@@ -115,11 +88,11 @@ abstract contract KeysManager is BaseOPF7702, IKey, SpendLimit {
     ) public {
         _requireForExecute();
         // Must have limit checks to prevent register masterKey
-        if (_limit == 0) revert KeyManager__MustIncludeLimits();
+        if (_limit == 0) revert IKeysManager.KeyManager__MustIncludeLimits();
 
         // Validate timestamps
         if (_validUntil <= block.timestamp || _validAfter > _validUntil) {
-            revert KeyManager__InvalidTimestamp();
+            revert IKeysManager.KeyManager__InvalidTimestamp();
         }
 
         KeyType kt = _key.keyType;
@@ -133,7 +106,7 @@ abstract contract KeysManager is BaseOPF7702, IKey, SpendLimit {
         KeyData storage sKey = keys[keyId];
 
         if (sKey.isActive) {
-            revert KeyManager__KeyRegistered();
+            revert IKeysManager.KeyManager__KeyRegistered();
         }
 
         _addKey(
@@ -155,7 +128,7 @@ abstract contract KeysManager is BaseOPF7702, IKey, SpendLimit {
             id++;
         }
 
-        emit KeyRegistrated(keyId);
+        emit IKeysManager.KeyRegistrated(keyId);
     }
 
     /**
@@ -181,7 +154,7 @@ abstract contract KeysManager is BaseOPF7702, IKey, SpendLimit {
 
         KeyData storage sKey = keys[keyId];
         _revokeKey(sKey);
-        emit KeyRevoked(keyId);
+        emit IKeysManager.KeyRevoked(keyId);
     }
 
     /**
@@ -206,7 +179,7 @@ abstract contract KeysManager is BaseOPF7702, IKey, SpendLimit {
 
             KeyData storage sKey = keys[keyId];
             _revokeKey(sKey);
-            emit KeyRevoked(keyId);
+            emit IKeysManager.KeyRevoked(keyId);
             unchecked {
                 ++i;
             }
@@ -261,7 +234,7 @@ abstract contract KeysManager is BaseOPF7702, IKey, SpendLimit {
             // Whitelist contract and token if requested
             if (_whitelisting) {
                 if (_contractAddress == address(0)) {
-                    revert KeyManager__AddressCantBeZero();
+                    revert IKeysManager.KeyManager__AddressCantBeZero();
                 }
                 // Add the contract itself
                 sKey.whitelist[_contractAddress] = true;
@@ -269,13 +242,13 @@ abstract contract KeysManager is BaseOPF7702, IKey, SpendLimit {
                 // Validate token address
                 address tokenAddr = _spendTokenInfo.token;
                 if (tokenAddr == address(0)) {
-                    revert KeyManager__AddressCantBeZero();
+                    revert IKeysManager.KeyManager__AddressCantBeZero();
                 }
                 sKey.whitelist[tokenAddr] = true;
 
                 uint256 selCount = _allowedSelectors.length;
                 if (selCount > MAX_SELECTORS) {
-                    revert KeyManager__SelectorsListTooBig();
+                    revert IKeysManager.KeyManager__SelectorsListTooBig();
                 }
                 for (uint256 i = 0; i < selCount;) {
                     sKey.allowedSelectors.push(_allowedSelectors[i]);
@@ -286,7 +259,7 @@ abstract contract KeysManager is BaseOPF7702, IKey, SpendLimit {
             } else {
                 // Even if not whitelisting contracts, we must still validate token
                 if (_spendTokenInfo.token == address(0)) {
-                    revert KeyManager__AddressCantBeZero();
+                    revert IKeysManager.KeyManager__AddressCantBeZero();
                 }
             }
 
@@ -304,7 +277,7 @@ abstract contract KeysManager is BaseOPF7702, IKey, SpendLimit {
      */
     function _revokeKey(KeyData storage sKey) internal {
         if (!sKey.isActive) {
-            revert KeyManager__KeyInactive();
+            revert IKeysManager.KeyManager__KeyInactive();
         }
         sKey.isActive = false;
         sKey.validUntil = 0;

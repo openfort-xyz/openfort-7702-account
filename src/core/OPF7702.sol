@@ -51,9 +51,6 @@ contract OPF7702 is Execution, Initializable {
 
     address public immutable WEBAUTHN_VERIFIER;
 
-    /// @notice Emitted when the account is initialized with a masterKey
-    event Initialized(Key indexed masterKey);
-
     constructor(address _entryPoint, address _webAuthnVerifier) {
         ENTRY_POINT = _entryPoint;
         WEBAUTHN_VERIFIER = _webAuthnVerifier;

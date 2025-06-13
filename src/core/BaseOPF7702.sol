@@ -14,6 +14,7 @@
 
 pragma solidity ^0.8.29;
 
+import {IBaseOPF7702} from "src/interfaces/IBaseOPF7702.sol";
 import {IAccount} from "lib/account-abstraction/contracts/interfaces/IAccount.sol";
 import {BaseAccount} from "lib/account-abstraction/contracts/core/BaseAccount.sol";
 import {IEntryPoint} from "lib/account-abstraction/contracts/interfaces/IEntryPoint.sol";
@@ -38,14 +39,6 @@ abstract contract BaseOPF7702 is
     ERC1155Holder
 {
     // =============================================================
-    //                            ERRORS
-    // =============================================================
-
-    error OpenfortBaseAccount7702V1__InvalidSignature();
-    /// @notice msg.sender not from address(this) and nit from Entry Point
-    error OpenfortBaseAccount7702V1_UnauthorizedCaller();
-
-    // =============================================================
     //                          CONSTANTS
     // =============================================================
 
@@ -60,15 +53,6 @@ abstract contract BaseOPF7702 is
     address internal immutable ENTRY_POINT;
 
     // =============================================================
-    //                             EVENTS
-    // =============================================================
-
-    /// @notice Emitted when ETH is deposited into this account for covering gas fees.
-    /// @param source The address that sent the ETH deposit.
-    /// @param amount The amount of ETH deposited.
-    event DepositAdded(address indexed source, uint256 amount);
-
-    // =============================================================
     //                       RECEIVE / FALLBACK
     // =============================================================
 
@@ -79,7 +63,7 @@ abstract contract BaseOPF7702 is
     /// @notice Receive function to handle plain ETH transfers.
     /// @dev Emits `DepositAdded` event whenever ETH is received.
     receive() external payable {
-        emit DepositAdded(msg.sender, msg.value);
+        emit IBaseOPF7702.DepositAdded(msg.sender, msg.value);
     }
 
     // =============================================================
@@ -112,7 +96,7 @@ abstract contract BaseOPF7702 is
     function _requireForExecute() internal view virtual override {
         require(
             msg.sender == address(this) || msg.sender == address(entryPoint()),
-            OpenfortBaseAccount7702V1_UnauthorizedCaller()
+            IBaseOPF7702.OpenfortBaseAccount7702V1_UnauthorizedCaller()
         );
     }
 

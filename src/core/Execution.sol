@@ -15,6 +15,7 @@
 pragma solidity ^0.8.29;
 
 import {KeysManager} from "src/core/KeysManager.sol";
+import {IExecution} from "src/interfaces/IExecution.sol";
 import {ReentrancyGuard} from "lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 
 /// @title Execution
@@ -33,11 +34,6 @@ abstract contract Execution is KeysManager, ReentrancyGuard {
     bytes32 internal constant mode_1 = bytes32(uint256(0x01000000000000000000) << (22 * 8));
     bytes32 internal constant mode_3 = bytes32(uint256(0x01000000000078210002) << (22 * 8));
 
-    /// @dev The execution mode is not supported.
-    error UnsupportedExecutionMode();
-    /// @notice Thrown when the provided transaction length is invalid.
-    error OpenfortBaseAccount7702V1__InvalidTransactionLength();
-
     /// @dev Executes the calls in `executionData`.
     /// Reverts and bubbles up error if any call fails.
     function execute(bytes32 mode, bytes memory executionData) public payable virtual {
@@ -52,7 +48,7 @@ abstract contract Execution is KeysManager, ReentrancyGuard {
             }
             return;
         }
-        if (id == uint256(0)) revert UnsupportedExecutionMode();
+        if (id == uint256(0)) revert IExecution.UnsupportedExecutionMode();
         bool tryWithOpData;
         /// @solidity memory-safe-assembly
         assembly {
@@ -116,9 +112,9 @@ abstract contract Execution is KeysManager, ReentrancyGuard {
         }
     }
 
-    function _checkLength(uint256 txCount) internal {
+    function _checkLength(uint256 txCount) internal pure {
         if (txCount == 0 || txCount > MAX_TX) {
-            revert OpenfortBaseAccount7702V1__InvalidTransactionLength();
+            revert IExecution.OpenfortBaseAccount7702V1__InvalidTransactionLength();
         }
     }
 }
