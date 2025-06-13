@@ -64,23 +64,23 @@ contract Base is Test, IKey {
 
     /* ───────────────────────────────────────────────────────────── master key ── */
     bytes32 constant REG_PUBLIC_KEY_X =
-        hex"d281ad3bf98116d96c52605a88b66c6b93d7a5a89fe7485736f104e72ba43420";
+        hex"e797f25d2df9f6e0e936860dd657d605997f08d93594e6b75a0ed3c05bc0474c";
     bytes32 constant REG_PUBLIC_KEY_Y =
-        hex"68aec9820ae616bb585cbf959f7626b77c1e464f7d8543cedd6ec3a3b54634bf";
+        hex"7ccf36aff60050b77bb26ed017e23efd6f560c2c9fdc63c3b9caa8d27b789309";
 
     bytes public constant REG_CHALLENGE =
-        hex"6e35e960ff62629060deb8e6920f65b6ae2a239ad7485dca6a2c3949a8a946d3";
+        hex"906a73d7cfa7c301397cc9204b3c8ef7965b3d7b13ab1ce4f79f27e828e7c947";
 
     bytes32 public constant REG_SIGNATURE_R =
-        hex"b560c1a2051393eef66ea7ff6c8d1eaa1e2049eef709c12151e744fda13dc15c";
+        hex"0bc8b03d38448c04f386c3fb1be6fdcf30dfc288ad8dcb3aafae46347a7c106d";
     bytes32 public constant REG_SIGNATURE_S =
-        hex"6e72637c162a88ad90ac532c0e5e33d10c41eb36d37b21515c36ec5080c6ba65";
+        hex"366557d42c977f4263fd4c36e29919c3764bf2589266989810102cbcf978b625";
 
     bytes public constant REG_AUTHENTICATOR_DATA =
         hex"49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d97631d00000000";
 
     string public constant REG_CLIENT_DATA_JSON =
-        "{\"type\":\"webauthn.get\",\"challenge\":\"bjXpYP9iYpBg3rjmkg9ltq4qI5rXSF3Kaiw5SaipRtM\",\"origin\":\"http://localhost:5173\",\"crossOrigin\":false}";
+        "{\"type\":\"webauthn.get\",\"challenge\":\"kGpz18-nwwE5fMkgSzyO95ZbPXsTqxzk958n6CjnyUc\",\"origin\":\"http://localhost:5173\",\"crossOrigin\":false,\"other_keys_can_be_added_here\":\"do not compare clientDataJSON against a template. See https://goo.gl/yabPex\"}";
 
     uint256 public constant REG_CHALLENGE_INDEX = 23;
     uint256 public constant REG_TYPE_INDEX = 1;

@@ -62,38 +62,16 @@ abstract contract KeysManager is BaseOPF7702, IKey, SpendLimit {
      *      Requires `_validUntil > block.timestamp`, `_validAfter ≤ _validUntil`, and that the key is not active.
      *      Emits `KeyRegistrated(keyId)`.
      *
-     * @param _key             Struct containing key information:
-     *                         • `keyType`: one of {WEBAUTHN, P256, P256NONKEY, EOA}.
-     *                         • For WebAuthn/P256/P256NONKEY: `pubKey` must be set.
-     *                         • For EOA: `eoaAddress` must be non‐zero.
-     * @param _validUntil      UNIX timestamp after which this key is invalid.
-     * @param _validAfter      UNIX timestamp before which this key is not valid.
-     * @param _limit           Maximum number of transactions allowed.
-     * @param _whitelisting    If true, restrict calls to whitelisted contracts/tokens.
-     * @param _contractAddress Initial contract to whitelist (ignored if !_whitelisting).
-     * @param _spendTokenInfo  Struct specifying ERC‐20 token spending limit:
-     *                         • `token`: ERC‐20 address (non‐zero if `_limit > 0`).
-     *                         • `limit`: token amount allowed.
-     * @param _allowedSelectors Array of allowed function selectors (length ≤ MAX_SELECTORS).
-     * @param _ethLimit        Maximum ETH (wei) this key can spend.
+     * @param _key             Struct containing key information (PubKey or EOA).
+     * @param _keyData KeyReg data structure containing permissions and limits
      */
-    function registerKey(
-        Key calldata _key,
-        uint48 _validUntil,
-        uint48 _validAfter,
-        uint48 _limit,
-        bool _whitelisting,
-        address _contractAddress,
-        SpendTokenInfo calldata _spendTokenInfo,
-        bytes4[] calldata _allowedSelectors,
-        uint256 _ethLimit
-    ) public {
+    function registerKey(Key calldata _key, KeyReg calldata _keyData) public {
         _requireForExecute();
         // Must have limit checks to prevent register masterKey
-        if (_limit == 0) revert IKeysManager.KeyManager__MustIncludeLimits();
+        if (_keyData.limit == 0) revert IKeysManager.KeyManager__MustIncludeLimits();
 
         // Validate timestamps
-        if (_validUntil <= block.timestamp || _validAfter > _validUntil) {
+        if (_keyData.validUntil <= block.timestamp || _keyData.validAfter > _keyData.validUntil) {
             revert IKeysManager.KeyManager__InvalidTimestamp();
         }
 
@@ -105,18 +83,7 @@ abstract contract KeysManager is BaseOPF7702, IKey, SpendLimit {
             revert IKeysManager.KeyManager__KeyRegistered();
         }
 
-        _addKey(
-            sKey,
-            _key,
-            _validUntil,
-            _validAfter,
-            _limit,
-            _whitelisting,
-            _contractAddress,
-            _spendTokenInfo,
-            _allowedSelectors,
-            _ethLimit
-        );
+        _addKey(sKey, _key, _keyData);
 
         // Store Key struct by ID and increment
         idKeys[id] = _key;
@@ -180,75 +147,57 @@ abstract contract KeysManager is BaseOPF7702, IKey, SpendLimit {
      *
      * @param sKey             Storage reference to the `KeyData` being populated.
      * @param _key             Struct containing key information (PubKey or EOA).
-     * @param _validUntil      UNIX timestamp after which the key is invalid.
-     * @param _validAfter      UNIX timestamp before which the key is not valid.
-     * @param _limit           Maximum number of transactions (0 = unlimited/master).
-     * @param _whitelisting    If true, enable contract and token whitelisting.
-     * @param _contractAddress Initial contract to whitelist (non‐zero if whitelisting).
-     * @param _spendTokenInfo  Struct for ERC‐20 token spending limit (`token` must be non‐zero if `_limit > 0`).
-     * @param _allowedSelectors Array of allowed function selectors (length ≤ MAX_SELECTORS).
-     * @param _ethLimit        Maximum ETH (wei) this key can send.
+     * @param _keyData KeyReg data structure containing permissions and limits
      */
-    function _addKey(
-        KeyData storage sKey,
-        Key memory _key,
-        uint48 _validUntil,
-        uint48 _validAfter,
-        uint48 _limit,
-        bool _whitelisting,
-        address _contractAddress,
-        SpendTokenInfo memory _spendTokenInfo,
-        bytes4[] memory _allowedSelectors,
-        uint256 _ethLimit
-    ) internal {
+    function _addKey(KeyData storage sKey, Key memory _key, KeyReg memory _keyData) internal {
         sKey.pubKey = _key.pubKey;
         sKey.isActive = true;
-        sKey.validUntil = _validUntil;
-        sKey.validAfter = _validAfter;
-        sKey.limit = _limit;
-        sKey.masterKey = (_limit == 0);
+        sKey.validUntil = _keyData.validUntil;
+        sKey.validAfter = _keyData.validAfter;
+        sKey.limit = _keyData.limit;
+        sKey.masterKey = (_keyData.limit == 0);
         sKey.whoRegistrated = address(this);
 
         // Only enforce limits if _limit > 0
-        if (_limit > 0) {
-            sKey.whitelisting = _whitelisting;
-            sKey.ethLimit = _ethLimit;
+        if (_keyData.limit > 0) {
+            sKey.whitelisting = _keyData.whitelisting;
+            sKey.ethLimit = _keyData.ethLimit;
 
             // Whitelist contract and token if requested
-            if (_whitelisting) {
-                if (_contractAddress == address(0)) {
+            if (_keyData.whitelisting) {
+                if (_keyData.contractAddress == address(0)) {
                     revert IKeysManager.KeyManager__AddressCantBeZero();
                 }
                 // Add the contract itself
-                sKey.whitelist[_contractAddress] = true;
+                sKey.whitelist[_keyData.contractAddress] = true;
 
                 // Validate token address
-                address tokenAddr = _spendTokenInfo.token;
+                address tokenAddr = _keyData.spendTokenInfo.token;
                 if (tokenAddr == address(0)) {
                     revert IKeysManager.KeyManager__AddressCantBeZero();
                 }
                 sKey.whitelist[tokenAddr] = true;
 
-                uint256 selCount = _allowedSelectors.length;
+                uint256 selCount = _keyData.allowedSelectors.length;
                 if (selCount > MAX_SELECTORS) {
                     revert IKeysManager.KeyManager__SelectorsListTooBig();
                 }
                 for (uint256 i = 0; i < selCount;) {
-                    sKey.allowedSelectors.push(_allowedSelectors[i]);
+                    sKey.allowedSelectors.push(_keyData.allowedSelectors[i]);
                     unchecked {
                         ++i;
                     }
                 }
             } else {
                 // Even if not whitelisting contracts, we must still validate token
-                if (_spendTokenInfo.token == address(0)) {
+                if (_keyData.spendTokenInfo.token == address(0)) {
                     revert IKeysManager.KeyManager__AddressCantBeZero();
                 }
             }
 
             // Configure spendTokenInfo regardless of whitelisting
-            sKey.spendTokenInfo.token = _spendTokenInfo.token;
-            sKey.spendTokenInfo.limit = _spendTokenInfo.limit;
+            sKey.spendTokenInfo.token = _keyData.spendTokenInfo.token;
+            sKey.spendTokenInfo.limit = _keyData.spendTokenInfo.limit;
         }
     }
 

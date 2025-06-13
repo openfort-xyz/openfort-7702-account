@@ -28,7 +28,9 @@ contract P256Test is Base {
     Key internal keySK;
     PubKey internal pubKeySK;
 
+    KeyReg internal keyData;
     /* ─────────────────────────────────────────────────────────────── setup ──── */
+
     function setUp() public {
         vm.startPrank(sender);
 
@@ -137,13 +139,22 @@ contract P256Test is Base {
         SpendLimit.SpendTokenInfo memory spendInfo =
             SpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000e18});
 
+        keyData = KeyReg({
+            validUntil: validUntil,
+            validAfter: 0,
+            limit: limit,
+            whitelisting: true,
+            contractAddress: ETH_RECIVE,
+            spendTokenInfo: spendInfo,
+            allowedSelectors: _allowedSelectors(),
+            ethLimit: 0
+        });
+
         bytes memory code = abi.encodePacked(bytes3(0xef0100), address(implementation));
         vm.etch(owner, code);
 
         vm.prank(address(entryPoint));
-        account.registerKey(
-            keySK, validUntil, 0, limit, true, TOKEN, spendInfo, _allowedSelectors(), 0
-        );
+        account.registerKey(keySK, keyData);
     }
 
     function _initializeAccount() internal {
@@ -154,11 +165,22 @@ contract P256Test is Base {
         SpendLimit.SpendTokenInfo memory spendInfo =
             SpendLimit.SpendTokenInfo({token: TOKEN, limit: 0});
 
+        keyData = KeyReg({
+            validUntil: type(uint48).max,
+            validAfter: 0,
+            limit: 0,
+            whitelisting: false,
+            contractAddress: 0xDeaDbeefdEAdbeefdEadbEEFdeadbeEFdEaDbeeF,
+            spendTokenInfo: spendInfo,
+            allowedSelectors: _allowedSelectors(),
+            ethLimit: 0
+        });
+
         bytes32 msgHash = account.getDigestToSign();
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPk, msgHash);
         bytes memory sig = abi.encodePacked(r, s, v);
 
         vm.prank(address(entryPoint));
-        account.initialize(keyMK, spendInfo, _allowedSelectors(), sig, initialGuardian);
+        account.initialize(keyMK, keyData, sig, initialGuardian);
     }
 }

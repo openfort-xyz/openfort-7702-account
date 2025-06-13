@@ -37,6 +37,8 @@ contract Execution7821 is Base {
     PubKey internal pubKeySK;
     Key internal keySK_B;
     PubKey internal pubKeySK_B;
+
+    KeyReg internal keyData;
     /* ─────────────────────────────────────────────────────────────── setup ──── */
 
     function setUp() public {
@@ -1385,6 +1387,17 @@ contract Execution7821 is Base {
         SpendLimit.SpendTokenInfo memory spendInfo =
             SpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000e18});
 
+        keyData = KeyReg({
+            validUntil: validUntil,
+            validAfter: 0,
+            limit: limit,
+            whitelisting: true,
+            contractAddress: TOKEN,
+            spendTokenInfo: spendInfo,
+            allowedSelectors: _allowedSelectors(),
+            ethLimit: 0
+        });
+
         bytes memory code = abi.encodePacked(
             bytes3(0xef0100),
             address(implementation) // or your logic contract
@@ -1392,26 +1405,25 @@ contract Execution7821 is Base {
         vm.etch(owner, code);
 
         vm.prank(address(entryPoint));
-        account.registerKey(
-            keySK, validUntil, uint48(0), limit, true, TOKEN, spendInfo, _allowedSelectors(), 0
-        );
+        account.registerKey(keySK, keyData);
 
         keySK_B = Key({pubKey: pubKeySK, eoaAddress: guardianB, keyType: KeyType.EOA});
+
+        keyData = KeyReg({
+            validUntil: validUntil,
+            validAfter: 0,
+            limit: limit,
+            whitelisting: true,
+            contractAddress: ETH_RECIVE,
+            spendTokenInfo: spendInfo,
+            allowedSelectors: _allowedSelectors(),
+            ethLimit: ETH_LIMIT
+        });
 
         vm.etch(owner, code);
 
         vm.prank(address(entryPoint));
-        account.registerKey(
-            keySK_B,
-            validUntil,
-            uint48(0),
-            limit,
-            true,
-            ETH_RECIVE,
-            spendInfo,
-            _allowedSelectors(),
-            ETH_LIMIT
-        );
+        account.registerKey(keySK_B, keyData);
     }
 
     function _register_SessionKeyP256() internal {
@@ -1424,6 +1436,17 @@ contract Execution7821 is Base {
         SpendLimit.SpendTokenInfo memory spendInfo =
             SpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000e18});
 
+        keyData = KeyReg({
+            validUntil: validUntil,
+            validAfter: 0,
+            limit: limit,
+            whitelisting: true,
+            contractAddress: TOKEN,
+            spendTokenInfo: spendInfo,
+            allowedSelectors: _allowedSelectors(),
+            ethLimit: 0
+        });
+
         bytes memory code = abi.encodePacked(
             bytes3(0xef0100),
             address(implementation) // or your logic contract
@@ -1431,20 +1454,27 @@ contract Execution7821 is Base {
         vm.etch(owner, code);
 
         vm.prank(address(entryPoint));
-        account.registerKey(
-            keySK, validUntil, uint48(0), limit, true, TOKEN, spendInfo, _allowedSelectors(), 0
-        );
+        account.registerKey(keySK, keyData);
 
         pubKeySK = PubKey({x: MINT_P256_PUBLIC_KEY_X, y: MINT_P256_PUBLIC_KEY_Y});
 
         keySK = Key({pubKey: pubKeySK, eoaAddress: address(0), keyType: KeyType.P256});
 
+        keyData = KeyReg({
+            validUntil: validUntil,
+            validAfter: 0,
+            limit: limit,
+            whitelisting: true,
+            contractAddress: TOKEN,
+            spendTokenInfo: spendInfo,
+            allowedSelectors: _allowedSelectors(),
+            ethLimit: 0
+        });
+
         vm.etch(owner, code);
 
         vm.prank(address(entryPoint));
-        account.registerKey(
-            keySK, validUntil, uint48(0), limit, true, TOKEN, spendInfo, _allowedSelectors(), 0
-        );
+        account.registerKey(keySK, keyData);
     }
 
     function _register_SessionKeyP256NonKey() internal {
@@ -1463,10 +1493,19 @@ contract Execution7821 is Base {
         );
         vm.etch(owner, code);
 
+        keyData = KeyReg({
+            validUntil: validUntil,
+            validAfter: 0,
+            limit: limit,
+            whitelisting: true,
+            contractAddress: TOKEN,
+            spendTokenInfo: spendInfo,
+            allowedSelectors: _allowedSelectors(),
+            ethLimit: 0
+        });
+
         vm.prank(address(entryPoint));
-        account.registerKey(
-            keySK, validUntil, uint48(0), limit, true, TOKEN, spendInfo, _allowedSelectors(), 0
-        );
+        account.registerKey(keySK, keyData);
 
         pubKeySK = PubKey({x: MINT_P256NOKEY_PUBLIC_KEY_X, y: MINT_P256NOKEY_PUBLIC_KEY_Y});
 
@@ -1474,10 +1513,19 @@ contract Execution7821 is Base {
 
         vm.etch(owner, code);
 
+        keyData = KeyReg({
+            validUntil: validUntil,
+            validAfter: 0,
+            limit: limit,
+            whitelisting: true,
+            contractAddress: TOKEN,
+            spendTokenInfo: spendInfo,
+            allowedSelectors: _allowedSelectors(),
+            ethLimit: 0
+        });
+
         vm.prank(address(entryPoint));
-        account.registerKey(
-            keySK, validUntil, uint48(0), limit, true, TOKEN, spendInfo, _allowedSelectors(), 0
-        );
+        account.registerKey(keySK, keyData);
     }
 
     function _register_MKMint() internal {
@@ -1492,6 +1540,17 @@ contract Execution7821 is Base {
         SpendLimit.SpendTokenInfo memory spendInfo_Mint =
             SpendLimit.SpendTokenInfo({token: TOKEN, limit: 10000e18});
 
+        keyData = KeyReg({
+            validUntil: validUntil,
+            validAfter: 0,
+            limit: limit,
+            whitelisting: true,
+            contractAddress: TOKEN,
+            spendTokenInfo: spendInfo_Mint,
+            allowedSelectors: _allowedSelectors(),
+            ethLimit: ETH_LIMIT
+        });
+
         bytes memory code = abi.encodePacked(
             bytes3(0xef0100),
             address(implementation) // or your logic contract
@@ -1499,17 +1558,7 @@ contract Execution7821 is Base {
         vm.etch(owner, code);
 
         vm.prank(address(entryPoint));
-        account.registerKey(
-            keyMK_Mint,
-            validUntil,
-            uint48(0),
-            limit,
-            true,
-            TOKEN,
-            spendInfo_Mint,
-            _allowedSelectors(),
-            0
-        );
+        account.registerKey(keyMK_Mint, keyData);
     }
 
     function _register_MKBatch() internal {
@@ -1525,6 +1574,17 @@ contract Execution7821 is Base {
         SpendLimit.SpendTokenInfo memory spendInfo_BATCH =
             SpendLimit.SpendTokenInfo({token: TOKEN, limit: 100000e18});
 
+        keyData = KeyReg({
+            validUntil: validUntil,
+            validAfter: 0,
+            limit: limit,
+            whitelisting: true,
+            contractAddress: TOKEN,
+            spendTokenInfo: spendInfo_BATCH,
+            allowedSelectors: _allowedSelectors(),
+            ethLimit: ETH_LIMIT
+        });
+
         bytes memory code = abi.encodePacked(
             bytes3(0xef0100),
             address(implementation) // or your logic contract
@@ -1532,17 +1592,7 @@ contract Execution7821 is Base {
         vm.etch(owner, code);
 
         vm.prank(address(entryPoint));
-        account.registerKey(
-            keyMK_BATCH,
-            validUntil,
-            uint48(0),
-            limit,
-            true,
-            TOKEN,
-            spendInfo_BATCH,
-            _allowedSelectors(),
-            0
-        );
+        account.registerKey(keyMK_BATCH, keyData);
     }
 
     function _register_MKBatchs() internal {
@@ -1558,6 +1608,17 @@ contract Execution7821 is Base {
         SpendLimit.SpendTokenInfo memory spendInfo_BATCH =
             SpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000000000e18});
 
+        keyData = KeyReg({
+            validUntil: validUntil,
+            validAfter: 0,
+            limit: limit,
+            whitelisting: true,
+            contractAddress: TOKEN,
+            spendTokenInfo: spendInfo_BATCH,
+            allowedSelectors: _allowedSelectors(),
+            ethLimit: ETH_LIMIT
+        });
+
         bytes memory code = abi.encodePacked(
             bytes3(0xef0100),
             address(implementation) // or your logic contract
@@ -1565,17 +1626,7 @@ contract Execution7821 is Base {
         vm.etch(owner, code);
 
         vm.prank(address(entryPoint));
-        account.registerKey(
-            keyMK_BATCHS,
-            validUntil,
-            uint48(0),
-            limit,
-            true,
-            TOKEN,
-            spendInfo_BATCH,
-            _allowedSelectors(),
-            0
-        );
+        account.registerKey(keyMK_BATCHS, keyData);
     }
 
     /* ─────────────────────────────────────────────────────────── helpers ──── */
@@ -1588,12 +1639,23 @@ contract Execution7821 is Base {
         SpendLimit.SpendTokenInfo memory spendInfo =
             SpendLimit.SpendTokenInfo({token: TOKEN, limit: 0});
 
+        keyData = KeyReg({
+            validUntil: type(uint48).max,
+            validAfter: 0,
+            limit: 0,
+            whitelisting: false,
+            contractAddress: 0xDeaDbeefdEAdbeefdEadbEEFdeadbeEFdEaDbeeF,
+            spendTokenInfo: spendInfo,
+            allowedSelectors: _allowedSelectors(),
+            ethLimit: 0
+        });
+
         /* sign arbitrary message so initialise() passes sig check */
         bytes32 msgHash = account.getDigestToSign();
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPk, msgHash);
         bytes memory sig = abi.encodePacked(r, s, v);
 
         vm.prank(address(entryPoint));
-        account.initialize(keyMK, spendInfo, _allowedSelectors(), sig, initialGuardian);
+        account.initialize(keyMK, keyData, sig, initialGuardian);
     }
 }

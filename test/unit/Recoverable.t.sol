@@ -41,6 +41,8 @@ contract Recoverable is Base {
 
     uint256 internal proposalTimestamp;
 
+    KeyReg internal keyData;
+
     /* ─────────────────────────────────────────────────────────────── setup ──── */
     function setUp() public {
         vm.startPrank(sender);
@@ -710,73 +712,128 @@ contract Recoverable is Base {
         account.startRecovery(recovery_keyWebAuthn /*, guardianB*/ );
     }
 
+    /* ─────────────────────────────────────────────────────────────── tests ──── */
     function _register_KeyEOA() internal {
-        uint48 validUntil = uint48(block.timestamp + 1 days);
-        uint48 limit = uint48(3);
-        pubKeySK = PubKey({
-            x: 0x0000000000000000000000000000000000000000000000000000000000000000,
-            y: 0x0000000000000000000000000000000000000000000000000000000000000000
-        });
+        uint256 count = 15;
 
-        keySK = Key({pubKey: pubKeySK, eoaAddress: sessionKey, keyType: KeyType.EOA});
+        for (uint256 i; i < count; i++) {
+            uint48 validUntil = uint48(block.timestamp + 1 days);
+            uint48 limit = uint48(3);
+            pubKeySK = PubKey({
+                x: 0x0000000000000000000000000000000000000000000000000000000000000000,
+                y: 0x0000000000000000000000000000000000000000000000000000000000000000
+            });
 
-        SpendLimit.SpendTokenInfo memory spendInfo =
-            SpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000e18});
+            string memory iString = vm.toString(i);
+            address sessionKeyAddr = makeAddr(iString);
 
-        bytes memory code = abi.encodePacked(
-            bytes3(0xef0100),
-            address(implementation) // or your logic contract
-        );
-        vm.etch(owner, code);
+            keySK = Key({pubKey: pubKeySK, eoaAddress: sessionKeyAddr, keyType: KeyType.EOA});
 
-        vm.prank(address(entryPoint));
-        account.registerKey(
-            keySK, validUntil, uint48(0), limit, true, TOKEN, spendInfo, _allowedSelectors(), 0
-        );
+            SpendLimit.SpendTokenInfo memory spendInfo =
+                SpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000e18});
+
+            keyData = KeyReg({
+                validUntil: validUntil,
+                validAfter: 0,
+                limit: limit,
+                whitelisting: true,
+                contractAddress: ETH_RECIVE,
+                spendTokenInfo: spendInfo,
+                allowedSelectors: _allowedSelectors(),
+                ethLimit: 0
+            });
+
+            bytes memory code = abi.encodePacked(
+                bytes3(0xef0100),
+                address(implementation) // or your logic contract
+            );
+            vm.etch(owner, code);
+
+            vm.prank(address(entryPoint));
+            account.registerKey(keySK, keyData);
+        }
     }
 
     function _register_KeyP256() internal {
-        uint48 validUntil = uint48(block.timestamp + 1 days);
-        uint48 limit = uint48(3);
-        pubKeySK = PubKey({x: P256_PUBLIC_KEY_X, y: P256_PUBLIC_KEY_Y});
+        uint256 count = 15;
 
-        keySK = Key({pubKey: pubKeySK, eoaAddress: address(0), keyType: KeyType.P256});
+        for (uint256 i; i < count; i++) {
+            uint48 validUntil = uint48(block.timestamp + 1 days);
+            uint48 limit = uint48(3);
 
-        SpendLimit.SpendTokenInfo memory spendInfo =
-            SpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000e18});
+            bytes32 RANDOM_P256_PUBLIC_KEY_X =
+                keccak256(abi.encodePacked("X_KEY", i, block.timestamp));
+            bytes32 RANDOM_P256_PUBLIC_KEY_Y =
+                keccak256(abi.encodePacked("Y_KEY", i, block.timestamp, msg.sender));
 
-        bytes memory code = abi.encodePacked(
-            bytes3(0xef0100),
-            address(implementation) // or your logic contract
-        );
-        vm.etch(owner, code);
+            pubKeySK = PubKey({x: RANDOM_P256_PUBLIC_KEY_X, y: RANDOM_P256_PUBLIC_KEY_Y});
 
-        vm.prank(address(entryPoint));
-        account.registerKey(
-            keySK, validUntil, uint48(0), limit, true, TOKEN, spendInfo, _allowedSelectors(), 0
-        );
+            keySK = Key({pubKey: pubKeySK, eoaAddress: address(0), keyType: KeyType.P256});
+
+            SpendLimit.SpendTokenInfo memory spendInfo =
+                SpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000e18});
+
+            keyData = KeyReg({
+                validUntil: validUntil,
+                validAfter: 0,
+                limit: limit,
+                whitelisting: true,
+                contractAddress: ETH_RECIVE,
+                spendTokenInfo: spendInfo,
+                allowedSelectors: _allowedSelectors(),
+                ethLimit: 0
+            });
+
+            bytes memory code = abi.encodePacked(
+                bytes3(0xef0100),
+                address(implementation) // or your logic contract
+            );
+            vm.etch(owner, code);
+
+            vm.prank(address(entryPoint));
+            account.registerKey(keySK, keyData);
+        }
     }
 
     function _register_KeyP256NonKey() internal {
-        uint48 validUntil = uint48(block.timestamp + 1 days);
-        uint48 limit = uint48(3);
-        pubKeySK = PubKey({x: P256NOKEY_PUBLIC_KEY_X, y: P256NOKEY_PUBLIC_KEY_Y});
+        uint256 count = 10;
 
-        keySK = Key({pubKey: pubKeySK, eoaAddress: address(0), keyType: KeyType.P256NONKEY});
+        for (uint256 i; i < count; i++) {
+            uint48 validUntil = uint48(block.timestamp + 1 days);
+            uint48 limit = uint48(3);
 
-        SpendLimit.SpendTokenInfo memory spendInfo =
-            SpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000e18});
+            bytes32 RANDOM_P256_PUBLIC_KEY_X =
+                keccak256(abi.encodePacked("X_KEY", i, block.timestamp + 1000));
+            bytes32 RANDOM_P256_PUBLIC_KEY_Y =
+                keccak256(abi.encodePacked("Y_KEY", i, block.timestamp + 1000, msg.sender));
 
-        bytes memory code = abi.encodePacked(
-            bytes3(0xef0100),
-            address(implementation) // or your logic contract
-        );
-        vm.etch(owner, code);
+            pubKeySK = PubKey({x: RANDOM_P256_PUBLIC_KEY_X, y: RANDOM_P256_PUBLIC_KEY_Y});
 
-        vm.prank(address(entryPoint));
-        account.registerKey(
-            keySK, validUntil, uint48(0), limit, true, TOKEN, spendInfo, _allowedSelectors(), 0
-        );
+            keySK = Key({pubKey: pubKeySK, eoaAddress: address(0), keyType: KeyType.P256NONKEY});
+
+            SpendLimit.SpendTokenInfo memory spendInfo =
+                SpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000e18});
+
+            keyData = KeyReg({
+                validUntil: validUntil,
+                validAfter: 0,
+                limit: limit,
+                whitelisting: true,
+                contractAddress: ETH_RECIVE,
+                spendTokenInfo: spendInfo,
+                allowedSelectors: _allowedSelectors(),
+                ethLimit: 0
+            });
+
+            bytes memory code = abi.encodePacked(
+                bytes3(0xef0100),
+                address(implementation) // or your logic contract
+            );
+            vm.etch(owner, code);
+
+            vm.prank(address(entryPoint));
+            account.registerKey(keySK, keyData);
+        }
     }
 
     /* ─────────────────────────────────────────────────────────── helpers ──── */
@@ -789,12 +846,23 @@ contract Recoverable is Base {
         SpendLimit.SpendTokenInfo memory spendInfo =
             SpendLimit.SpendTokenInfo({token: TOKEN, limit: 0});
 
+        keyData = KeyReg({
+            validUntil: type(uint48).max,
+            validAfter: 0,
+            limit: 0,
+            whitelisting: false,
+            contractAddress: 0xDeaDbeefdEAdbeefdEadbEEFdeadbeEFdEaDbeeF,
+            spendTokenInfo: spendInfo,
+            allowedSelectors: _allowedSelectors(),
+            ethLimit: 0
+        });
+
         /* sign arbitrary message so initialise() passes sig check */
-        bytes32 digest = account.getDigestToSign();
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPk, digest);
+        bytes32 msgHash = account.getDigestToSign();
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPk, msgHash);
         bytes memory sig = abi.encodePacked(r, s, v);
 
         vm.prank(address(entryPoint));
-        account.initialize(keyMK, spendInfo, _allowedSelectors(), sig, initialGuardian);
+        account.initialize(keyMK, keyData, sig, initialGuardian);
     }
 }

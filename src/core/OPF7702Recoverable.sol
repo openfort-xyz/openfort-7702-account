@@ -112,15 +112,13 @@ contract OPF7702Recoverable is OPF7702, EIP712 {
      *  • Emits `Initialized(_key)`.
      *
      * @param _key              The Key struct (master key).
-     * @param _spendTokenInfo   Token limit info (ignored for master).
-     * @param _allowedSelectors Unused selectors (ignored for master).
+     * @param _keyData KeyReg data structure containing permissions and limits
      * @param _signature        Signature over `_hash` by this contract.
      * @param _initialGuardian  Initialize Guardian. Must be at least one guardian!
      */
     function initialize(
         Key calldata _key,
-        SpendTokenInfo calldata _spendTokenInfo,
-        bytes4[] calldata _allowedSelectors,
+        KeyReg calldata _keyData,
         bytes memory _signature,
         address _initialGuardian
     ) external initializer {
@@ -139,18 +137,7 @@ contract OPF7702Recoverable is OPF7702, EIP712 {
         idKeys[0] = _key;
 
         // register masterKey: never expires, no spending/whitelist restrictions
-        _addKey(
-            sKey,
-            _key,
-            type(uint48).max, // validUntil = max
-            0, // validAfter = 0
-            0, // limit = 0 (master)
-            false, // no whitelisting
-            DEAD_ADDRESS, // dummy contract address
-            _spendTokenInfo, // token info (ignored)
-            _allowedSelectors, // selectors (ignored)
-            0 // ethLimit = 0
-        );
+        _addKey(sKey, _key, _keyData);
 
         unchecked {
             ++id;
@@ -459,18 +446,18 @@ contract OPF7702Recoverable is OPF7702, EIP712 {
 
         emit IOPF7702Recoverable.RecoveryCompleted();
 
-        _addKey(
-            sKey,
-            recoveryOwner,
-            type(uint48).max, // validUntil = max
-            0, // validAfter = 0
-            0, // limit = 0 (master)
-            false, // no whitelisting
-            DEAD_ADDRESS, // dummy contract address
-            _spendTokenInfo, // token info (ignored)
-            _allowedSelectors, // selectors (ignored)
-            0 // ethLimit = 0
-        );
+        KeyReg memory keyData = KeyReg({
+            validUntil: type(uint48).max,
+            validAfter: 0,
+            limit: 0,
+            whitelisting: false,
+            contractAddress: DEAD_ADDRESS,
+            spendTokenInfo: _spendTokenInfo,
+            allowedSelectors: _allowedSelectors,
+            ethLimit: 0
+        });
+
+        _addKey(sKey, recoveryOwner, keyData);
     }
 
     /// @dev Validates guardian signatures for recovery completion.
