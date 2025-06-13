@@ -15,6 +15,7 @@
 pragma solidity 0.8.29;
 
 import {IKey} from "src/interfaces/IKey.sol";
+import {KeyHashLib} from "src/libs/KeyHashLib.sol";
 import {SpendLimit} from "src/utils/SpendLimit.sol";
 import {BaseOPF7702} from "src/core/BaseOPF7702.sol";
 import {IKeysManager} from "src/interfaces/IKeysManager.sol";
@@ -24,6 +25,7 @@ import {IKeysManager} from "src/interfaces/IKeysManager.sol";
 /// @notice Manages registration, revocation, and querying of keys (WebAuthn/P256/EOA) with spending limits and whitelisting support.
 /// @dev Inherits BaseOPF7702 for account abstraction, IKey interface, and SpendLimit for token/ETH limits.
 abstract contract KeysManager is BaseOPF7702, IKey, SpendLimit {
+    using KeyHashLib for Key;
     // =============================================================
     //                          CONSTANTS
     // =============================================================
@@ -95,14 +97,8 @@ abstract contract KeysManager is BaseOPF7702, IKey, SpendLimit {
             revert IKeysManager.KeyManager__InvalidTimestamp();
         }
 
-        KeyType kt = _key.keyType;
-        bytes32 keyId;
+        bytes32 keyId = _key.computeKeyId();
 
-        if (kt == KeyType.WEBAUTHN || kt == KeyType.P256 || kt == KeyType.P256NONKEY) {
-            keyId = keccak256(abi.encodePacked(_key.pubKey.x, _key.pubKey.y));
-        } else {
-            keyId = keccak256(abi.encodePacked(_key.eoaAddress));
-        }
         KeyData storage sKey = keys[keyId];
 
         if (sKey.isActive) {
@@ -143,14 +139,7 @@ abstract contract KeysManager is BaseOPF7702, IKey, SpendLimit {
     function revokeKey(Key calldata _key) external {
         _requireForExecute();
 
-        KeyType kt = _key.keyType;
-        bytes32 keyId;
-
-        if (kt == KeyType.WEBAUTHN || kt == KeyType.P256 || kt == KeyType.P256NONKEY) {
-            keyId = keccak256(abi.encodePacked(_key.pubKey.x, _key.pubKey.y));
-        } else if (kt == KeyType.EOA) {
-            keyId = keccak256(abi.encodePacked(_key.eoaAddress));
-        }
+        bytes32 keyId = _key.computeKeyId();
 
         KeyData storage sKey = keys[keyId];
         _revokeKey(sKey);
@@ -168,14 +157,8 @@ abstract contract KeysManager is BaseOPF7702, IKey, SpendLimit {
         // Revoke WebAuthn/P256/P256NONKEY/EOA keys
         for (uint256 i = 1; i < id;) {
             Key memory k = idKeys[i];
-            KeyType kt = k.keyType;
-            bytes32 keyId;
 
-            if (kt == KeyType.WEBAUTHN || kt == KeyType.P256 || kt == KeyType.P256NONKEY) {
-                keyId = keccak256(abi.encodePacked(k.pubKey.x, k.pubKey.y));
-            } else if (k.keyType == KeyType.EOA && k.eoaAddress != address(0)) {
-                keyId = keccak256(abi.encodePacked(k.eoaAddress));
-            }
+            bytes32 keyId = k.computeKeyId();
 
             KeyData storage sKey = keys[keyId];
             _revokeKey(sKey);
@@ -297,27 +280,17 @@ abstract contract KeysManager is BaseOPF7702, IKey, SpendLimit {
     /**
      * @notice Retrieves registration info for a given key ID.
      * @param _id       Identifier (index) of the key to query.
-     * @param _keyType  Enum indicating which key mapping to query (WEBAUTHN/P256/P256NONKEY vs. EOA).
      * @return keyType       The type of the key that was registered.
      * @return registeredBy  Address that performed the registration (should be this contract).
      * @return isActive      Whether the key is currently active.
      */
-    function getKeyRegistrationInfo(uint256 _id, KeyType _keyType)
+    function getKeyRegistrationInfo(uint256 _id)
         external
         view
         returns (KeyType keyType, address registeredBy, bool isActive)
     {
-        bytes32 keyId;
         Key memory k = idKeys[_id];
-
-        if (
-            _keyType == KeyType.WEBAUTHN || _keyType == KeyType.P256
-                || _keyType == KeyType.P256NONKEY
-        ) {
-            keyId = keccak256(abi.encodePacked(k.pubKey.x, k.pubKey.y));
-        } else {
-            keyId = keccak256(abi.encodePacked(k.eoaAddress));
-        }
+        bytes32 keyId = k.computeKeyId();
 
         KeyData storage sKey = keys[keyId];
 

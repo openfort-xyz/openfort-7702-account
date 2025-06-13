@@ -14,6 +14,7 @@
 pragma solidity ^0.8.29;
 
 import {Execution} from "src/core/Execution.sol";
+import {KeyHashLib} from "src/libs/KeyHashLib.sol";
 import {IWebAuthnVerifier} from "src/interfaces/IWebAuthnVerifier.sol";
 import {EfficientHashLib} from "lib/solady/src/utils/EfficientHashLib.sol";
 import {ECDSA} from "lib/openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
@@ -45,6 +46,9 @@ import {
  */
 contract OPF7702 is Execution, Initializable {
     using ECDSA for bytes32;
+    using KeyHashLib for Key;
+    using KeyHashLib for PubKey;
+    using KeyHashLib for address;
 
     /// @notice Address of this implementation contract
     address public immutable _OPENFORT_CONTRACT_ADDRESS;
@@ -112,7 +116,7 @@ contract OPF7702 is Execution, Initializable {
             return SIG_VALIDATION_SUCCESS;
         }
 
-        bytes32 keyId = keccak256(abi.encodePacked(signer));
+        bytes32 keyId = signer.computeKeyId();
         // load the key for this EOA
         KeyData storage sKey = keys[keyId];
 
@@ -184,7 +188,7 @@ contract OPF7702 is Execution, Initializable {
             return SIG_VALIDATION_FAILED;
         }
 
-        bytes32 keyHash = keccak256(abi.encodePacked(pubKey.x, pubKey.y));
+        bytes32 keyHash = pubKey.computeKeyId();
         KeyData storage sKey = keys[keyHash];
 
         (Key memory composedKey, bool isValid) =
@@ -241,7 +245,7 @@ contract OPF7702 is Execution, Initializable {
             return SIG_VALIDATION_FAILED;
         }
 
-        bytes32 keyHash = keccak256(abi.encodePacked(pubKey.x, pubKey.y));
+        bytes32 keyHash = pubKey.computeKeyId();
         KeyData storage sKey = keys[keyHash];
 
         (Key memory composedKey, bool isValid) =
@@ -300,11 +304,11 @@ contract OPF7702 is Execution, Initializable {
 
         if (_key.keyType == KeyType.EOA) {
             if (_key.eoaAddress == address(0)) return false;
-            keyHash = keccak256(abi.encodePacked(_key.eoaAddress));
+            keyHash = _key.computeKeyId();
             sKey = keys[keyHash];
         } else {
             // WEBAUTHN/P256/P256NONKEY share same load path
-            keyHash = keccak256(abi.encodePacked(_key.pubKey.x, _key.pubKey.y));
+            keyHash = _key.computeKeyId();
             sKey = keys[keyHash];
         }
         // Basic checks:
@@ -522,7 +526,7 @@ contract OPF7702 is Execution, Initializable {
             return this.isValidSignature.selector;
         }
 
-        bytes32 keyHash = keccak256(abi.encodePacked(signer));
+        bytes32 keyHash = signer.computeKeyId();
         KeyData storage sKey = keys[keyHash];
 
         if (sKey.masterKey) return this.isValidSignature.selector;
@@ -588,7 +592,7 @@ contract OPF7702 is Execution, Initializable {
             return bytes4(0xffffffff);
         }
 
-        bytes32 keyHash = keccak256(abi.encodePacked(pubKey.x, pubKey.y));
+        bytes32 keyHash = pubKey.computeKeyId();
         KeyData storage sKey = keys[keyHash];
 
         if (sKey.masterKey) return this.isValidSignature.selector;
@@ -620,8 +624,7 @@ contract OPF7702 is Execution, Initializable {
         returns (bytes4)
     {
         (KeyType kt, bytes memory inner) = abi.decode(_signature, (KeyType, bytes));
-        (bytes32 r, bytes32 sSig, PubKey memory pubKey) =
-            abi.decode(inner, (bytes32, bytes32, PubKey));
+        (bytes32 r, bytes32 s, PubKey memory pubKey) = abi.decode(inner, (bytes32, bytes32, PubKey));
 
         if (usedChallenges[_hash]) {
             return bytes4(0xffffffff);
@@ -633,13 +636,13 @@ contract OPF7702 is Execution, Initializable {
         }
 
         bool sigOk = IWebAuthnVerifier(WEBAUTHN_VERIFIER).verifyP256Signature(
-            hashToCheck, r, sSig, pubKey.x, pubKey.y
+            hashToCheck, r, s, pubKey.x, pubKey.y
         );
         if (!sigOk) {
             return bytes4(0xffffffff);
         }
 
-        bytes32 keyHash = keccak256(abi.encodePacked(pubKey.x, pubKey.y));
+        bytes32 keyHash = pubKey.computeKeyId();
         KeyData storage sKey = keys[keyHash];
         if (
             sKey.validUntil == 0 || sKey.validAfter > block.timestamp

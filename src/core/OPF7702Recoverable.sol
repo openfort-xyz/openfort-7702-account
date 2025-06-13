@@ -14,6 +14,7 @@
 pragma solidity 0.8.29;
 
 import {OPF7702} from "src/core/OPF7702.sol";
+import {KeyHashLib} from "src/libs/KeyHashLib.sol";
 import {IOPF7702} from "src/interfaces/IOPF7702.sol";
 import {IBaseOPF7702} from "src/interfaces/IBaseOPF7702.sol";
 import {IKeysManager} from "src/interfaces/IKeysManager.sol";
@@ -37,6 +38,8 @@ import {EIP712} from "lib/openzeppelin-contracts/contracts/utils/cryptography/EI
 
 contract OPF7702Recoverable is OPF7702, EIP712 {
     using ECDSA for bytes32;
+    using KeyHashLib for Key;
+    using KeyHashLib for address;
 
     // ──────────────────────────────────────────────────────────────────────────────
     //                               Constants
@@ -131,7 +134,7 @@ contract OPF7702Recoverable is OPF7702, EIP712 {
             revert IBaseOPF7702.OpenfortBaseAccount7702V1__InvalidSignature();
         }
 
-        bytes32 keyId = keccak256(abi.encodePacked(_key.pubKey.x, _key.pubKey.y));
+        bytes32 keyId = _key.computeKeyId();
         KeyData storage sKey = keys[keyId];
         idKeys[0] = _key;
 
@@ -429,13 +432,7 @@ contract OPF7702Recoverable is OPF7702, EIP712 {
         // Todo: Need to Identify Master Key by Id or Any othewr flag
         // MK WebAuthn will be always id = 0 because of Initalization func enforce to be `0`
         Key storage oldMK = idKeys[0];
-        bytes32 oldHash;
-
-        if (oldMK.eoaAddress == address(0) || oldMK.eoaAddress == DEAD_ADDRESS) {
-            oldHash = keccak256(abi.encodePacked(oldMK.pubKey.x, oldMK.pubKey.y));
-        } else if (oldMK.eoaAddress != address(0)) {
-            oldHash = keccak256(abi.encodePacked(oldMK.eoaAddress));
-        }
+        bytes32 oldHash = oldMK.computeKeyId();
 
         /// @dev Only the nested mapping in stract will not be cleared mapping(address => bool) whitelist
         /// @notice not providing security risk
@@ -447,15 +444,7 @@ contract OPF7702Recoverable is OPF7702, EIP712 {
     /// @param recoveryOwner Key that becomes the new master key.
     function _setNewMasterKey(Key memory recoveryOwner) private {
         KeyData storage sKey;
-        bytes32 newHash;
-
-        if (recoveryOwner.keyType == KeyType.WEBAUTHN) {
-            newHash = keccak256(abi.encodePacked(recoveryOwner.pubKey.x, recoveryOwner.pubKey.y));
-        } else if (recoveryOwner.keyType == KeyType.EOA) {
-            newHash = keccak256(abi.encodePacked(recoveryOwner.eoaAddress));
-        } else {
-            revert IOPF7702Recoverable.OPF7702Recoverable__UnsupportedKeyType();
-        }
+        bytes32 newHash = recoveryOwner.computeKeyId();
 
         idKeys[0] = recoveryOwner;
 
@@ -496,7 +485,7 @@ contract OPF7702Recoverable is OPF7702, EIP712 {
                 bytes32 guardianHash;
 
                 address signer = digest.recover(_signatures[i]);
-                guardianHash = keccak256(abi.encodePacked(signer));
+                guardianHash = signer.computeKeyId();
 
                 if (!guardiansData.data[guardianHash].isActive) return false;
 
@@ -552,7 +541,7 @@ contract OPF7702Recoverable is OPF7702, EIP712 {
      * @return Guardian identifier hash.
      */
     function _guardianHash(address _guardian) internal pure returns (bytes32) {
-        return keccak256(abi.encodePacked(_guardian));
+        return _guardian.computeKeyId();
     }
 
     /**
@@ -597,7 +586,7 @@ contract OPF7702Recoverable is OPF7702, EIP712 {
      */
     function isGuardian(address _guardian) public view returns (bool) {
         bytes32 guradianHash;
-        guradianHash = keccak256(abi.encodePacked(_guardian));
+        guradianHash = _guardianHash(_guardian);
 
         return guardiansData.data[guradianHash].isActive;
     }

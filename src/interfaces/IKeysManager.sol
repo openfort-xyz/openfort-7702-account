@@ -93,12 +93,11 @@ interface IKeysManager is IKey {
     /**
      * @notice Retrieves registration info for a given key ID.
      * @param _id       Identifier of the key to query.
-     * @param _keyType  Enum indicating which key mapping to query.
      * @return keyType      The type of the key that was registered.
      * @return registeredBy Address that performed the registration.
      * @return isActive     Whether the key is currently active.
      */
-    function getKeyRegistrationInfo(uint256 _id, IKey.KeyType _keyType)
+    function getKeyRegistrationInfo(uint256 _id)
         external
         view
         returns (IKey.KeyType keyType, address registeredBy, bool isActive);
