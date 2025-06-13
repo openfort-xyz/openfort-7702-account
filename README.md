@@ -61,7 +61,7 @@ We believe smart accounts should provide an excellent experience throughout a us
   Stateless transaction executor contract with single and batch transaction support. Exposes `execute()` and `executeBatch()` with event emission and limit checks.
 
 - **`KeysManager.sol`**  
-  Handles session key registration, expiration, permissions, function whitelisting, and spending enforcement. Implements all session key logic and supports various key types via `KeyType`.
+  Handles key registration, expiration, permissions, function whitelisting, and spending enforcement. Implements all session key logic and supports various key types via `KeyType`.
 
 - **`OPF7702.sol`**  
   Main smart account contract that combines execution and key management. Fully implements the Openfort EIP-7702 smart account and ERC-4337 compatibility.
@@ -71,7 +71,7 @@ Extension of the main smart account that adds advanced social recovery capabilit
 
 ### Supporting Interfaces
 
-- **`ISessionKey.sol`** – Session key storage/logic interface  
+- **`Key.sol`** – Key storage/logic interface  
 - **`IWebAuthnVerifier.sol`** – Interface for WebAuthn verification  
 - **`IValidation.sol`** – Shared structs and validation types
 ---
@@ -124,7 +124,7 @@ Key memory key = Key({
 });
 
 // Register the session key
-account.registerSessionKey(
+account.registerKey(
     key,
     uint48(block.timestamp + 1 days),  // Valid until tomorrow
     uint48(block.timestamp),           // Valid from now

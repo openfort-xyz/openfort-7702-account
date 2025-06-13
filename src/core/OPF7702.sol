@@ -405,7 +405,7 @@ contract OPF7702 is Execution, Initializable {
 
         /// Todo: Check all possibilities to fails on this line
         // // Check whitelisting
-        // if (!sessionKey.whitelisting || sessionKey.whitelist[calls[i].target]) {
+        // if (!sKey.whitelisting || sKey.whitelist[calls[i].target]) {
         //     return true;
         // } else {return false;}
         if (!sKey.whitelisting || !sKey.whitelist[call.target]) {
