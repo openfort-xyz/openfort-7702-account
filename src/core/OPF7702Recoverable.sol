@@ -14,6 +14,7 @@
 pragma solidity 0.8.29;
 
 import {OPF7702} from "src/core/OPF7702.sol";
+import {ERC7201} from "src/utils/ERC7201.sol";
 import {KeyHashLib} from "src/libs/KeyHashLib.sol";
 import {IOPF7702} from "src/interfaces/IOPF7702.sol";
 import {IBaseOPF7702} from "src/interfaces/IBaseOPF7702.sol";
@@ -36,7 +37,7 @@ import {EIP712} from "lib/openzeppelin-contracts/contracts/utils/cryptography/EI
  *  • Reentrancy protection & explicit nonce replay prevention
  */
 
-contract OPF7702Recoverable is OPF7702, EIP712 {
+contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
     using ECDSA for bytes32;
     using KeyHashLib for Key;
     using KeyHashLib for address;

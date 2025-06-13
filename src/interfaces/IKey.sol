@@ -71,17 +71,14 @@ interface IKey {
 
     /**
      * @notice KeyReg data structure containing permissions and limits
-     * @param key Key structure containing all necessary key information
      * @param validUntil Timestamp until which the key is valid
      * @param validAfter Timestamp after which the key becomes valid
      * @param limit Number of transactions allowed (0 for unlimited/master key)
-     * @param masterKey Whether this is a master key with unlimited permissions
      * @param whitelisting Whether contract address whitelisting is enabled
-     * @param whitelist Mapping of whitelisted contract addresses
+     * @param contractAddress Whitelisted contract addresses
      * @param spendTokenInfo Token spending limit information
      * @param allowedSelectors List of allowed function selectors
      * @param ethLimit Maximum amount of ETH that can be spent
-     * @param whoRegistrated Address that registered this key
      */
     struct KeyReg {
         uint48 validUntil;

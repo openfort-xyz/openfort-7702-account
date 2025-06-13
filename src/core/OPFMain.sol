@@ -27,13 +27,13 @@ import {OPF7702Recoverable} from "src/core/OPF7702Recoverable.sol";
  *  • ERC-1271 on-chain signature support
  *  • Reentrancy protection & explicit nonce replay prevention
  *
- * /// @dev keccak256(abi.encode(uint256(keccak256("openfort.baseAccount.7702.v1")))) - 1)) & ~bytes32(uint256(0xff))
- * Layout storage slot (keccak256):
+ * /// @dev keccak256(abi.encode(uint256(keccak256("openfort.baseAccount.7702.v1")) - 1)) & ~bytes32(uint256(0xff))
+ * Layout storage slot:
  *  "openfort.baseAccount.7702.v1" =
- *    0x1d168103d4bf89e697001635aecfc1c0fcc2bb838ff814de1158c245c7775f1b
- *    == 13156833672903425976551922983481690079334842689423678806318949957614962171675
+ *    0xeddd36aac8c71936fe1d5edb073ff947aa7c1b6174e87c15677c96ab9ad95400
+ *    == 107588995614188179791452663824698570634674667931787294340862201729294267929600
  */
-contract OPFMain is OPF7702Recoverable layout at 13156833672903425976551922983481690079334842689423678806318949957614962171675 {
+contract OPFMain is OPF7702Recoverable layout at 107588995614188179791452663824698570634674667931787294340862201729294267929600 {
     /// @param _entryPoint      ERC-4337 EntryPoint address.
     /// @param _webAuthnVerifier WebAuthn verifier contract.
     /// @param _recoveryPeriod  Delay before guardians can execute recovery.
