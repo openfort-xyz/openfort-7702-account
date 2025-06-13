@@ -17,7 +17,7 @@ import {OPF7702} from "src/core/OPF7702.sol";
 import {IOPF7702} from "src/interfaces/IOPF7702.sol";
 import {IBaseOPF7702} from "src/interfaces/IBaseOPF7702.sol";
 import {IKeysManager} from "src/interfaces/IKeysManager.sol";
-import {IOPF7702Recoverable} from "../interfaces/IOPF7702Recoverable.sol";
+import {IOPF7702Recoverable} from "src/interfaces/IOPF7702Recoverable.sol";
 import {Math} from "lib/openzeppelin-contracts/contracts/utils/math/Math.sol";
 import {SafeCast} from "lib/openzeppelin-contracts/contracts/utils/math/SafeCast.sol";
 import {ECDSA} from "lib/openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
