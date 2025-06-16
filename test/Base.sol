@@ -63,27 +63,21 @@ contract Base is Test, IKey {
     uint256 public constant TYPE_INDEX = 1;
 
     /* ───────────────────────────────────────────────────────────── master key ── */
-    bytes32 constant REG_PUBLIC_KEY_X =
-        hex"e797f25d2df9f6e0e936860dd657d605997f08d93594e6b75a0ed3c05bc0474c";
-    bytes32 constant REG_PUBLIC_KEY_Y =
-        hex"7ccf36aff60050b77bb26ed017e23efd6f560c2c9fdc63c3b9caa8d27b789309";
+    string public json_reg = vm.readFile("test/data/registration.json");
 
-    bytes public constant REG_CHALLENGE =
-        hex"906a73d7cfa7c301397cc9204b3c8ef7965b3d7b13ab1ce4f79f27e828e7c947";
+    bytes32 public REG_PUBLIC_KEY_X = stdJson.readBytes32(json_reg, ".registration.x");
+    bytes32 public REG_PUBLIC_KEY_Y = stdJson.readBytes32(json_reg, ".registration.y");
 
-    bytes32 public constant REG_SIGNATURE_R =
-        hex"0bc8b03d38448c04f386c3fb1be6fdcf30dfc288ad8dcb3aafae46347a7c106d";
-    bytes32 public constant REG_SIGNATURE_S =
-        hex"366557d42c977f4263fd4c36e29919c3764bf2589266989810102cbcf978b625";
+    bytes32 public REG_CHALLENGE = stdJson.readBytes32(json_reg, ".registration.challenge");
 
-    bytes public constant REG_AUTHENTICATOR_DATA =
-        hex"49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d97631d00000000";
+    bytes32 public REG_SIGNATURE_R = stdJson.readBytes32(json_reg, ".registration.signature.r");
+    bytes32 public REG_SIGNATURE_S = stdJson.readBytes32(json_reg, ".registration.signature.s");
 
-    string public constant REG_CLIENT_DATA_JSON =
-        "{\"type\":\"webauthn.get\",\"challenge\":\"kGpz18-nwwE5fMkgSzyO95ZbPXsTqxzk958n6CjnyUc\",\"origin\":\"http://localhost:5173\",\"crossOrigin\":false,\"other_keys_can_be_added_here\":\"do not compare clientDataJSON against a template. See https://goo.gl/yabPex\"}";
+    bytes public REG_AUTHENTICATOR_DATA = stdJson.readBytes(json_reg, ".registration.metadata.authenticatorData");
+    string public REG_CLIENT_DATA_JSON = stdJson.readString(json_reg, ".registration.metadata.clientDataJSON");
 
-    uint256 public constant REG_CHALLENGE_INDEX = 23;
-    uint256 public constant REG_TYPE_INDEX = 1;
+    uint256 public REG_CHALLENGE_INDEX = stdJson.readUint(json_reg, ".registration.metadata.challengeIndex");
+    uint256 public REG_TYPE_INDEX = stdJson.readUint(json_reg, ".registration.metadata.typeIndex");
 
     /* ───────────────────────────────────────────────────────────── master key ── */
     bytes32 constant MINT_VALID_PUBLIC_KEY_X =
@@ -109,44 +103,37 @@ contract Base is Test, IKey {
     uint256 public constant MINT_TYPE_INDEX = 1;
 
     /* ───────────────────────────────────────────────────────────── master key ── */
-    bytes32 constant BATCH_VALID_PUBLIC_KEY_X =
-        hex"c721ebad9b39bcc05e499f5be082d2b1682cf294d7f6b69315a96dda466177de";
-    bytes32 constant BATCH_VALID_PUBLIC_KEY_Y =
-        hex"b7d93ee328e25fed31b8ba4016890fdc9bc5a3448b85e81176a516882d401b9e";
+    string public json_batch = vm.readFile("test/data/batch.json");
 
-    bytes public constant BATCH_CHALLENGE =
-        hex"614efcfe88f851e03bdd2511d2f7454b54e0596549f1a720649d16e45118c9e0";
+    bytes32 public BATCH_VALID_PUBLIC_KEY_X = stdJson.readBytes32(json_batch, ".batch.x");
+    bytes32 public BATCH_VALID_PUBLIC_KEY_Y = stdJson.readBytes32(json_batch, ".batch.y");
 
-    bytes32 public constant BATCH_VALID_SIGNATURE_R =
-        hex"7a04d81d4ec765c0fde5aa552d017d456cab594690b3750a58debcd93e20c862";
-    bytes32 public constant BATCH_VALID_SIGNATURE_S =
-        hex"2386940257d4e97e3b249288ba813e182b02b5eed822fe4e61223de30a54ec36";
+    bytes32 public BATCH_CHALLENGE = stdJson.readBytes32(json_batch, ".batch.challenge");
 
-    bytes public constant BATCH_AUTHENTICATOR_DATA =
-        hex"49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d97631d00000000";
+    bytes32 public BATCH_VALID_SIGNATURE_R = stdJson.readBytes32(json_batch, ".batch.signature.r");
+    bytes32 public BATCH_VALID_SIGNATURE_S = stdJson.readBytes32(json_batch, ".batch.signature.s");
 
-    string public constant BATCH_CLIENT_DATA_JSON =
-        "{\"type\":\"webauthn.get\",\"challenge\":\"YU78_oj4UeA73SUR0vdFS1TgWWVJ8acgZJ0W5FEYyeA\",\"origin\":\"http://localhost:5173\",\"crossOrigin\":false}";
+    bytes public BATCH_AUTHENTICATOR_DATA = stdJson.readBytes(json_batch, ".batch.metadata.authenticatorData");
 
-    uint256 public constant BATCH_CHALLENGE_INDEX = 23;
-    uint256 public constant BATCH_TYPE_INDEX = 1;
+    string public BATCH_CLIENT_DATA_JSON = stdJson.readString(json_batch, ".batch.metadata.clientDataJSON");
+
+    uint256 public BATCH_CHALLENGE_INDEX = 23;
+    uint256 public BATCH_TYPE_INDEX = 1;
 
     /* ───────────────────────────────────────────────────────────── master key ── */
-    bytes32 constant ETH_PUBLIC_KEY_X =
-        hex"f4b87261d616beb66c680c1581db6ce24f547ef271da6d1f4879c31f663d15e2";
-    bytes32 constant ETH_PUBLIC_KEY_Y =
-        hex"2d39a025daeb5ca67f4d51bed48f9f589da09ab484b7bb540122fce9fac26efa";
+    string public json_eth_dep = vm.readFile("test/data/eth.json");
 
-    bytes public constant ETH_CHALLENGE =
-        hex"724437f04606b4e030032c8f083962987d92473a471e16cdda50b0f5c2d97f7d";
+    bytes32 public ETH_PUBLIC_KEY_X = stdJson.readBytes32(json_eth_dep, ".eth.x");
+    bytes32 public ETH_PUBLIC_KEY_Y = stdJson.readBytes32(json_eth_dep, ".eth.y");
 
-    bytes32 public constant ETH_SIGNATURE_R =
-        hex"6e0bf59cc1224db65954f1733bb8b5b375b01bf7cf65daba8b1da92e7ab1f562";
-    bytes32 public constant ETH_SIGNATURE_S =
-        hex"6b93ce22358e97226abb21252db0631f4d4829475328967901af080ea5de8b39";
+    bytes32 public ETH_CHALLENGE = stdJson.readBytes32(json_eth_dep, ".eth.challenge");
 
-    string public constant ETH_CLIENT_DATA_JSON =
-        "{\"type\":\"webauthn.get\",\"challenge\":\"ckQ38EYGtOAwAyyPCDlimH2SRzpHHhbN2lCw9cLZf30\",\"origin\":\"http://localhost:5173\",\"crossOrigin\":false,\"other_keys_can_be_added_here\":\"do not compare clientDataJSON against a template. See https://goo.gl/yabPex\"}";
+    bytes32 public ETH_SIGNATURE_R = stdJson.readBytes32(json_eth_dep, ".eth.signature.r");
+    bytes32 public ETH_SIGNATURE_S = stdJson.readBytes32(json_eth_dep, ".eth.signature.s");
+
+    bytes public ETH_AUTHENTICATOR_DATA = stdJson.readBytes(json_eth_dep, ".eth.metadata.authenticatorData");
+
+    string public ETH_CLIENT_DATA_JSON = stdJson.readString(json_eth_dep, ".eth.metadata.clientDataJSON");
 
     /* ──────────────────────────────────────────────────────────────── P256 ──── */
     string public json = vm.readFile("test/data/p256.json");
@@ -261,27 +248,22 @@ contract Base is Test, IKey {
     uint256 public constant G_TYPE_INDEX = 1;
 
     /* ───────────────────────────────────────────────────────────── master key ── */
-    bytes32 constant BATCHS_VALID_PUBLIC_KEY_X =
-        hex"3e23236366a3f14504a7380492b91a46ac65377e0f1c59d2668f7e28807c7f3c";
-    bytes32 constant BATCHS_VALID_PUBLIC_KEY_Y =
-        hex"9360cfeec35459e71743b95b3de979e4e0f0ce652d431ac6e5725665284806e2";
+    string public json_b_of_b = vm.readFile("test/data/batchofbatches.json");
 
-    bytes public constant BATCHS_CHALLENGE =
-        hex"ac2f11b7c5e40c13fa91640d14783ea0b95f6a23693a73bdaf71d5a5da4034bc";
+    bytes32 public BATCHS_VALID_PUBLIC_KEY_X = stdJson.readBytes32(json_b_of_b, ".batchofbatches.x");
+    bytes32 public BATCHS_VALID_PUBLIC_KEY_Y = stdJson.readBytes32(json_b_of_b, ".batchofbatches.y");
 
-    bytes32 public constant BATCHS_VALID_SIGNATURE_R =
-        hex"b3efd20bbfe675145b1e8367cedac086b12ad8fdea6a6aea9e77dc2614e8f21d";
-    bytes32 public constant BATCHS_VALID_SIGNATURE_S =
-        hex"252ab569a95f58320c3a9cad534a99d2703127aafec4c64c6bfdc28a7f6c4365";
+    bytes32 public BATCHS_CHALLENGE = stdJson.readBytes32(json_b_of_b, ".batchofbatches.challenge");
 
-    bytes public constant BATCHS_AUTHENTICATOR_DATA =
-        hex"49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d97631d00000000";
+    bytes32 public BATCHS_VALID_SIGNATURE_R = stdJson.readBytes32(json_b_of_b, ".batchofbatches.signature.r");
+    bytes32 public BATCHS_VALID_SIGNATURE_S = stdJson.readBytes32(json_b_of_b, ".batchofbatches.signature.s");
 
-    string public constant BATCHS_CLIENT_DATA_JSON =
-        "{\"type\":\"webauthn.get\",\"challenge\":\"rC8Rt8XkDBP6kWQNFHg-oLlfaiNpOnO9r3HVpdpANLw\",\"origin\":\"http://localhost:5173\",\"crossOrigin\":false}";
+    bytes public BATCHS_AUTHENTICATOR_DATA = stdJson.readBytes(json_b_of_b, ".batchofbatches.metadata.authenticatorData");
 
-    uint256 public constant BATCHS_CHALLENGE_INDEX = 23;
-    uint256 public constant BATCHS_TYPE_INDEX = 1;
+    string public BATCHS_CLIENT_DATA_JSON = stdJson.readString(json_b_of_b, ".batchofbatches.metadata.clientDataJSON");
+
+    uint256 public BATCHS_CHALLENGE_INDEX = 23;
+    uint256 public BATCHS_TYPE_INDEX = 1;
 
     function _allowedSelectors() internal pure returns (bytes4[] memory sel) {
         sel = new bytes4[](3);

@@ -273,7 +273,7 @@ contract DepositAndTransferETH is Base {
 
         bytes memory _signature = account.encodeWebAuthnSignature(
             true,
-            AUTHENTICATOR_DATA,
+            ETH_AUTHENTICATOR_DATA,
             ETH_CLIENT_DATA_JSON,
             CHALLENGE_INDEX,
             TYPE_INDEX,

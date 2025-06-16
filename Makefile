@@ -70,7 +70,7 @@ deploy-7702-base:
 
 # 0x9cab09f5b22e6C7812cEeAEF081BEF62b91BF8F2
 deploy-7702-mainnet:
-	forge create src/core/OPF7702Recoverable.sol:OPF7702Recoverable \
+	forge create src/core/OPFMain.sol:OPFMain \
 	--rpc-url $(SEPOLIA_RPC_URL) \
 	--account BURNER_KEY \
 	--verify \

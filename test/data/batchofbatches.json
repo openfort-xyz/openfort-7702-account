@@ -1,0 +1,22 @@
+{
+    "batchofbatches" : {
+        "challenge": "0xc13e14c256cab1e1b7dabac70e3d44f656e96315b74d96258b43430a1c0d05a1",
+    
+            "x": "0x783860ad73be918ed6d1809a4d01b416d76e1e8313a8f61f7d09cbc71d6d499f",
+            "y": "0x02548785f6edc72f2039142167e4623683a4328325b1fe68f442446c56425dca",
+            
+                "metadata": {
+                    "authenticatorData": "0x49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d97631d00000000",
+                    "clientDataJSON": "{\"type\":\"webauthn.get\",\"challenge\":\"wT4UwlbKseG32rrHDj1E9lbpYxW3TZYli0NDChwNBaE\",\"origin\":\"http://localhost:5173\",\"crossOrigin\":false}",
+                    "challengeIndex": 23,
+                    "typeIndex": 1,
+                    "userVerificationRequired": true
+                },
+                "signature": {
+                    "r": "0x11fc722cffd7e756e4cac24fab411adecd8874883bc5d494ac2ee9f33b9a9fc6",
+                    "s": "0x3ae9c2b34ddfbf7ee73433fdc547c85a1442a730c0a477cd30db740f146e88b0"
+                }
+            
+        
+        }
+}
