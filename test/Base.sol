@@ -73,10 +73,13 @@ contract Base is Test, IKey {
     bytes32 public REG_SIGNATURE_R = stdJson.readBytes32(json_reg, ".registration.signature.r");
     bytes32 public REG_SIGNATURE_S = stdJson.readBytes32(json_reg, ".registration.signature.s");
 
-    bytes public REG_AUTHENTICATOR_DATA = stdJson.readBytes(json_reg, ".registration.metadata.authenticatorData");
-    string public REG_CLIENT_DATA_JSON = stdJson.readString(json_reg, ".registration.metadata.clientDataJSON");
+    bytes public REG_AUTHENTICATOR_DATA =
+        stdJson.readBytes(json_reg, ".registration.metadata.authenticatorData");
+    string public REG_CLIENT_DATA_JSON =
+        stdJson.readString(json_reg, ".registration.metadata.clientDataJSON");
 
-    uint256 public REG_CHALLENGE_INDEX = stdJson.readUint(json_reg, ".registration.metadata.challengeIndex");
+    uint256 public REG_CHALLENGE_INDEX =
+        stdJson.readUint(json_reg, ".registration.metadata.challengeIndex");
     uint256 public REG_TYPE_INDEX = stdJson.readUint(json_reg, ".registration.metadata.typeIndex");
 
     /* ───────────────────────────────────────────────────────────── master key ── */
@@ -113,9 +116,11 @@ contract Base is Test, IKey {
     bytes32 public BATCH_VALID_SIGNATURE_R = stdJson.readBytes32(json_batch, ".batch.signature.r");
     bytes32 public BATCH_VALID_SIGNATURE_S = stdJson.readBytes32(json_batch, ".batch.signature.s");
 
-    bytes public BATCH_AUTHENTICATOR_DATA = stdJson.readBytes(json_batch, ".batch.metadata.authenticatorData");
+    bytes public BATCH_AUTHENTICATOR_DATA =
+        stdJson.readBytes(json_batch, ".batch.metadata.authenticatorData");
 
-    string public BATCH_CLIENT_DATA_JSON = stdJson.readString(json_batch, ".batch.metadata.clientDataJSON");
+    string public BATCH_CLIENT_DATA_JSON =
+        stdJson.readString(json_batch, ".batch.metadata.clientDataJSON");
 
     uint256 public BATCH_CHALLENGE_INDEX = 23;
     uint256 public BATCH_TYPE_INDEX = 1;
@@ -131,9 +136,11 @@ contract Base is Test, IKey {
     bytes32 public ETH_SIGNATURE_R = stdJson.readBytes32(json_eth_dep, ".eth.signature.r");
     bytes32 public ETH_SIGNATURE_S = stdJson.readBytes32(json_eth_dep, ".eth.signature.s");
 
-    bytes public ETH_AUTHENTICATOR_DATA = stdJson.readBytes(json_eth_dep, ".eth.metadata.authenticatorData");
+    bytes public ETH_AUTHENTICATOR_DATA =
+        stdJson.readBytes(json_eth_dep, ".eth.metadata.authenticatorData");
 
-    string public ETH_CLIENT_DATA_JSON = stdJson.readString(json_eth_dep, ".eth.metadata.clientDataJSON");
+    string public ETH_CLIENT_DATA_JSON =
+        stdJson.readString(json_eth_dep, ".eth.metadata.clientDataJSON");
 
     /* ──────────────────────────────────────────────────────────────── P256 ──── */
     string public json = vm.readFile("test/data/p256.json");
@@ -255,12 +262,16 @@ contract Base is Test, IKey {
 
     bytes32 public BATCHS_CHALLENGE = stdJson.readBytes32(json_b_of_b, ".batchofbatches.challenge");
 
-    bytes32 public BATCHS_VALID_SIGNATURE_R = stdJson.readBytes32(json_b_of_b, ".batchofbatches.signature.r");
-    bytes32 public BATCHS_VALID_SIGNATURE_S = stdJson.readBytes32(json_b_of_b, ".batchofbatches.signature.s");
+    bytes32 public BATCHS_VALID_SIGNATURE_R =
+        stdJson.readBytes32(json_b_of_b, ".batchofbatches.signature.r");
+    bytes32 public BATCHS_VALID_SIGNATURE_S =
+        stdJson.readBytes32(json_b_of_b, ".batchofbatches.signature.s");
 
-    bytes public BATCHS_AUTHENTICATOR_DATA = stdJson.readBytes(json_b_of_b, ".batchofbatches.metadata.authenticatorData");
+    bytes public BATCHS_AUTHENTICATOR_DATA =
+        stdJson.readBytes(json_b_of_b, ".batchofbatches.metadata.authenticatorData");
 
-    string public BATCHS_CLIENT_DATA_JSON = stdJson.readString(json_b_of_b, ".batchofbatches.metadata.clientDataJSON");
+    string public BATCHS_CLIENT_DATA_JSON =
+        stdJson.readString(json_b_of_b, ".batchofbatches.metadata.clientDataJSON");
 
     uint256 public BATCHS_CHALLENGE_INDEX = 23;
     uint256 public BATCHS_TYPE_INDEX = 1;

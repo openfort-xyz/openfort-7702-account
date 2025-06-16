@@ -39,7 +39,6 @@ import {
  *  • ERC-1271 on-chain signature support
  *  • Reentrancy protection & explicit nonce replay prevention
  *
-
  */
 contract OPF7702 is Execution, Initializable {
     using ECDSA for bytes32;
@@ -48,9 +47,7 @@ contract OPF7702 is Execution, Initializable {
     using KeyHashLib for address;
 
     /// @notice Address of this implementation contract
-    address public immutable _OPENFORT_CONTRACT_ADDRESS;
-
-    address public immutable WEBAUTHN_VERIFIER;
+    address public _OPENFORT_CONTRACT_ADDRESS;
 
     constructor(address _entryPoint, address _webAuthnVerifier) {
         ENTRY_POINT = _entryPoint;
@@ -58,6 +55,14 @@ contract OPF7702 is Execution, Initializable {
         _OPENFORT_CONTRACT_ADDRESS = address(this);
         _disableInitializers();
     }
+
+    // ──────────────────────────────────────────────────────────────────────────────
+    //                          Public / External methods
+    // ──────────────────────────────────────────────────────────────────────────────
+    // function ugrdWebAuthnVerifier(address _webAuthnVerifier) external {
+    //     _requireForExecute();
+    //     WEBAUTHN_VERIFIER = _webAuthnVerifier;
+    // }
 
     /**
      * @notice EIP-4337 signature validation hook — routes to the correct key type validator.

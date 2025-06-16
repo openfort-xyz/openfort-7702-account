@@ -43,7 +43,7 @@ abstract contract BaseOPF7702 is
     // =============================================================
 
     /// @dev Number of storage slots to clear in `_clearStorage`.
-    uint256 private constant _NUM_CLEAR_SLOTS = 3;
+    uint256 private constant _NUM_CLEAR_SLOTS = 16;
 
     // =============================================================
     //                          STATE VARIABLES
@@ -51,6 +51,9 @@ abstract contract BaseOPF7702 is
 
     /// @notice The EntryPoint singleton contract used to dispatch user operations.
     address internal immutable ENTRY_POINT;
+
+    /// @notice The WebAuthn Verifier singleton contract used to verify WebAuthn and P256 signatures.
+    address public immutable WEBAUTHN_VERIFIER;
 
     // =============================================================
     //                       RECEIVE / FALLBACK
@@ -65,18 +68,19 @@ abstract contract BaseOPF7702 is
     receive() external payable {
         emit IBaseOPF7702.DepositAdded(msg.sender, msg.value);
     }
-
+    
     // =============================================================
     //                        INTERNAL FUNCTIONS
     // =============================================================
 
     /**
      * @notice Clears the contract’s custom storage slots for reinitialization purposes.
-     * @dev Uses inline assembly to set three consecutive storage slots (starting at keccak256("openfort.baseAccount.7702.v1")) to zero.
+     * @dev Uses inline assembly to set three consecutive storage slots 
+     *      keccak256(abi.encode(uint256(keccak256("openfort.baseAccount.7702.v1")) - 1)) & ~bytes32(uint256(0xff)) to zero.
      *      Useful when proxy patterns or re-deployment require resetting specific storage.
      */
     function _clearStorage() internal {
-        bytes32 baseSlot = keccak256("openfort.baseAccount.7702.v1");
+        bytes32 baseSlot = keccak256(abi.encode(uint256(keccak256("openfort.baseAccount.7702.v1")) - 1)) & ~bytes32(uint256(0xff));
         for (uint256 i = 0; i < _NUM_CLEAR_SLOTS;) {
             bytes32 slot = bytes32(uint256(baseSlot) + i);
             assembly {
