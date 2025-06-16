@@ -17,6 +17,7 @@ import {Execution} from "src/core/Execution.sol";
 import {KeyHashLib} from "src/libs/KeyHashLib.sol";
 import {IWebAuthnVerifier} from "src/interfaces/IWebAuthnVerifier.sol";
 import {EfficientHashLib} from "lib/solady/src/utils/EfficientHashLib.sol";
+import {KeyDataValidationLib as KeyValidation} from "src/libs/KeyDataValidationLib.sol";
 import {ECDSA} from "lib/openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
 import {Initializable} from "lib/openzeppelin-contracts/contracts/proxy/utils/Initializable.sol";
 import {PackedUserOperation} from
@@ -45,6 +46,7 @@ contract OPF7702 is Execution, Initializable {
     using KeyHashLib for Key;
     using KeyHashLib for PubKey;
     using KeyHashLib for address;
+    using KeyValidation for KeyData;
 
     /// @notice Address of this implementation contract
     address public _OPENFORT_CONTRACT_ADDRESS;
@@ -260,7 +262,7 @@ contract OPF7702 is Execution, Initializable {
         returns (Key memory composedKey, bool isValid)
     {
         // Check if key is valid and active
-        if (sKey.validUntil == 0 || sKey.whoRegistrated != address(this) || !sKey.isActive) {
+        if (!sKey.isRegistered() || !sKey.isActive) {
             return (composedKey, false); // Early return for invalid key
         }
 
@@ -306,7 +308,7 @@ contract OPF7702 is Execution, Initializable {
             sKey = keys[keyHash];
         }
         // Basic checks:
-        if (sKey.validUntil == 0 || !sKey.isActive || sKey.whoRegistrated != address(this)) {
+        if (!sKey.isRegistered() || !sKey.isActive) {
             return false;
         }
 
@@ -373,8 +375,7 @@ contract OPF7702 is Execution, Initializable {
 
     function _validateCall(KeyData storage sKey, Call memory call) private returns (bool) {
         if (call.target == address(this)) return false;
-        if (sKey.limit == 0) return false;
-        if (sKey.ethLimit < call.value) return false;
+        if (!sKey.passesCallGuards(call.value)) return false;
 
         bytes memory innerData = call.data;
         bytes4 innerSelector;
@@ -386,11 +387,9 @@ contract OPF7702 is Execution, Initializable {
             return false;
         }
 
-        unchecked {
-            sKey.limit--;
-        }
+        sKey.consumeQuota();
         if (call.value > 0) {
-            sKey.ethLimit -= call.value;
+            unchecked { sKey.ethLimit -= call.value; }
         }
 
         if (sKey.spendTokenInfo.token == call.target) {
@@ -526,17 +525,7 @@ contract OPF7702 is Execution, Initializable {
         if (sKey.masterKey) return this.isValidSignature.selector;
 
         // validity window
-        if (
-            sKey.validUntil == 0 || sKey.validAfter > block.timestamp
-                || sKey.validUntil < block.timestamp
-        ) {
-            return bytes4(0xffffffff);
-        }
-        // spend limit check
-        if (!sKey.masterKey && sKey.limit < 1) {
-            return bytes4(0xffffffff);
-        }
-        if (sKey.whoRegistrated != address(this)) {
+        if (!sKey.passesBaseChecks() || !sKey.hasQuota()) {
             return bytes4(0xffffffff);
         }
         return this.isValidSignature.selector;
@@ -591,16 +580,7 @@ contract OPF7702 is Execution, Initializable {
 
         if (sKey.masterKey) return this.isValidSignature.selector;
 
-        if (
-            sKey.validUntil == 0 || sKey.validAfter > block.timestamp
-                || sKey.validUntil < block.timestamp
-        ) {
-            return bytes4(0xffffffff);
-        }
-        if (!sKey.masterKey && sKey.limit < 1) {
-            return bytes4(0xffffffff);
-        }
-        if (sKey.whoRegistrated != address(this)) {
+        if (!sKey.passesBaseChecks() || !sKey.hasQuota()) {
             return bytes4(0xffffffff);
         }
         return this.isValidSignature.selector;
@@ -638,16 +618,7 @@ contract OPF7702 is Execution, Initializable {
 
         bytes32 keyHash = pubKey.computeKeyId();
         KeyData storage sKey = keys[keyHash];
-        if (
-            sKey.validUntil == 0 || sKey.validAfter > block.timestamp
-                || sKey.validUntil < block.timestamp
-        ) {
-            return bytes4(0xffffffff);
-        }
-        if (!sKey.masterKey && sKey.limit < 1) {
-            return bytes4(0xffffffff);
-        }
-        if (sKey.whoRegistrated != address(this)) {
+        if (!sKey.passesBaseChecks() || !sKey.hasQuota()) {
             return bytes4(0xffffffff);
         }
         return this.isValidSignature.selector;
