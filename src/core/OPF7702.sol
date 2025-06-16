@@ -389,7 +389,9 @@ contract OPF7702 is Execution, Initializable {
 
         sKey.consumeQuota();
         if (call.value > 0) {
-            unchecked { sKey.ethLimit -= call.value; }
+            unchecked {
+                sKey.ethLimit -= call.value;
+            }
         }
 
         if (sKey.spendTokenInfo.token == call.target) {

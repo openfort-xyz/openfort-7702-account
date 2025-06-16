@@ -27,8 +27,7 @@ library KeyDataValidationLib {
     /// @return true when the key is flagged active *and* still inside its [after, until] window.
     function isLive(IKey.KeyData storage sKey) internal view returns (bool) {
         //             ─────── registered ───────      ─ current window ─
-        return sKey.isActive
-            && block.timestamp >= sKey.validAfter
+        return sKey.isActive && block.timestamp >= sKey.validAfter
             && block.timestamp <= sKey.validUntil;
     }
 
@@ -39,7 +38,11 @@ library KeyDataValidationLib {
     }
 
     /// @return true if `weiValue` is within the key’s ETH spend allowance.
-    function withinEthLimit(IKey.KeyData storage sKey, uint256 weiValue) internal view returns (bool) {
+    function withinEthLimit(IKey.KeyData storage sKey, uint256 weiValue)
+        internal
+        view
+        returns (bool)
+    {
         return sKey.ethLimit >= weiValue;
     }
 
