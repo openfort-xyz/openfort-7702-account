@@ -18,6 +18,7 @@ import {IKey} from "src/interfaces/IKey.sol";
 import {KeyHashLib} from "src/libs/KeyHashLib.sol";
 import {SpendLimit} from "src/utils/SpendLimit.sol";
 import {BaseOPF7702} from "src/core/BaseOPF7702.sol";
+import {ValidationLib} from "src/libs/ValidationLib.sol";
 import {IKeysManager} from "src/interfaces/IKeysManager.sol";
 
 /// @title KeysManager
@@ -26,6 +27,7 @@ import {IKeysManager} from "src/interfaces/IKeysManager.sol";
 /// @dev Inherits BaseOPF7702 for account abstraction, IKey interface, and SpendLimit for token/ETH limits.
 abstract contract KeysManager is BaseOPF7702, IKey, SpendLimit {
     using KeyHashLib for Key;
+    using ValidationLib for *;
     // =============================================================
     //                          CONSTANTS
     // =============================================================
@@ -68,12 +70,10 @@ abstract contract KeysManager is BaseOPF7702, IKey, SpendLimit {
     function registerKey(Key calldata _key, KeyReg calldata _keyData) public {
         _requireForExecute();
         // Must have limit checks to prevent register masterKey
-        if (_keyData.limit == 0) revert IKeysManager.KeyManager__MustIncludeLimits();
+        _keyData.limit.ensureLimit();
 
         // Validate timestamps
-        if (_keyData.validUntil <= block.timestamp || _keyData.validAfter > _keyData.validUntil) {
-            revert IKeysManager.KeyManager__InvalidTimestamp();
-        }
+        ValidationLib.ensureValidTimestamps(_keyData.validAfter, _keyData.validUntil);
 
         bytes32 keyId = _key.computeKeyId();
 
@@ -128,6 +128,14 @@ abstract contract KeysManager is BaseOPF7702, IKey, SpendLimit {
             bytes32 keyId = k.computeKeyId();
 
             KeyData storage sKey = keys[keyId];
+
+            if (!sKey.isActive) {
+                unchecked {
+                    ++i;
+                }
+                continue;
+            }
+
             _revokeKey(sKey);
             emit IKeysManager.KeyRevoked(keyId);
             unchecked {
@@ -165,23 +173,17 @@ abstract contract KeysManager is BaseOPF7702, IKey, SpendLimit {
 
             // Whitelist contract and token if requested
             if (_keyData.whitelisting) {
-                if (_keyData.contractAddress == address(0)) {
-                    revert IKeysManager.KeyManager__AddressCantBeZero();
-                }
+                _keyData.contractAddress.ensureNotZero();
                 // Add the contract itself
                 sKey.whitelist[_keyData.contractAddress] = true;
 
                 // Validate token address
                 address tokenAddr = _keyData.spendTokenInfo.token;
-                if (tokenAddr == address(0)) {
-                    revert IKeysManager.KeyManager__AddressCantBeZero();
-                }
+                tokenAddr.ensureNotZero();
                 sKey.whitelist[tokenAddr] = true;
 
                 uint256 selCount = _keyData.allowedSelectors.length;
-                if (selCount > MAX_SELECTORS) {
-                    revert IKeysManager.KeyManager__SelectorsListTooBig();
-                }
+                selCount.ensureSelectorsLen();
                 for (uint256 i = 0; i < selCount;) {
                     sKey.allowedSelectors.push(_keyData.allowedSelectors[i]);
                     unchecked {
@@ -190,9 +192,7 @@ abstract contract KeysManager is BaseOPF7702, IKey, SpendLimit {
                 }
             } else {
                 // Even if not whitelisting contracts, we must still validate token
-                if (_keyData.spendTokenInfo.token == address(0)) {
-                    revert IKeysManager.KeyManager__AddressCantBeZero();
-                }
+                _keyData.spendTokenInfo.token.ensureNotZero();
             }
 
             // Configure spendTokenInfo regardless of whitelisting

@@ -56,14 +56,6 @@ contract OPF7702 is Execution, Initializable {
         _disableInitializers();
     }
 
-    // ──────────────────────────────────────────────────────────────────────────────
-    //                          Public / External methods
-    // ──────────────────────────────────────────────────────────────────────────────
-    // function ugrdWebAuthnVerifier(address _webAuthnVerifier) external {
-    //     _requireForExecute();
-    //     WEBAUTHN_VERIFIER = _webAuthnVerifier;
-    // }
-
     /**
      * @notice EIP-4337 signature validation hook — routes to the correct key type validator.
      * @dev

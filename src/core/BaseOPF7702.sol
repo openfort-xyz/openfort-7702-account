@@ -68,19 +68,21 @@ abstract contract BaseOPF7702 is
     receive() external payable {
         emit IBaseOPF7702.DepositAdded(msg.sender, msg.value);
     }
-    
+
     // =============================================================
     //                        INTERNAL FUNCTIONS
     // =============================================================
 
     /**
      * @notice Clears the contract’s custom storage slots for reinitialization purposes.
-     * @dev Uses inline assembly to set three consecutive storage slots 
+     * @dev Uses inline assembly to set three consecutive storage slots
      *      keccak256(abi.encode(uint256(keccak256("openfort.baseAccount.7702.v1")) - 1)) & ~bytes32(uint256(0xff)) to zero.
      *      Useful when proxy patterns or re-deployment require resetting specific storage.
      */
     function _clearStorage() internal {
-        bytes32 baseSlot = keccak256(abi.encode(uint256(keccak256("openfort.baseAccount.7702.v1")) - 1)) & ~bytes32(uint256(0xff));
+        bytes32 baseSlot = keccak256(
+            abi.encode(uint256(keccak256("openfort.baseAccount.7702.v1")) - 1)
+        ) & ~bytes32(uint256(0xff));
         for (uint256 i = 0; i < _NUM_CLEAR_SLOTS;) {
             bytes32 slot = bytes32(uint256(baseSlot) + i);
             assembly {
