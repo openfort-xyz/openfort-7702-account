@@ -41,6 +41,8 @@ abstract contract BaseOPF7702 is
 {
     using UpgradeAddress for address;
 
+    error NotFromEntryPoint();
+
     // =============================================================
     //                          CONSTANTS
     // =============================================================
