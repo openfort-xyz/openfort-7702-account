@@ -14,6 +14,6 @@ contract ERC7201 is IERC7201 {
 
     /// @notice Returns the namespace and version of the contract
     function namespaceAndVersion() external pure returns (string memory) {
-        return "Uniswap.Calibur.1.0.0";
+        return "openfort.baseAccount.7702.v1";
     }
 }
