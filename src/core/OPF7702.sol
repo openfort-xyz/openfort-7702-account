@@ -14,8 +14,11 @@
 pragma solidity ^0.8.29;
 
 import {Execution} from "src/core/Execution.sol";
+import {KeyHashLib} from "src/libs/KeyHashLib.sol";
+import {UpgradeAddress} from "src/libs/UpgradeAddress.sol";
 import {IWebAuthnVerifier} from "src/interfaces/IWebAuthnVerifier.sol";
 import {EfficientHashLib} from "lib/solady/src/utils/EfficientHashLib.sol";
+import {KeyDataValidationLib as KeyValidation} from "src/libs/KeyDataValidationLib.sol";
 import {ECDSA} from "lib/openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
 import {Initializable} from "lib/openzeppelin-contracts/contracts/proxy/utils/Initializable.sol";
 import {PackedUserOperation} from
@@ -28,7 +31,7 @@ import {
 
 /**
  * @title   Openfort Base Account 7702 with ERC-4337 Support
- * @author  Openfort — https://openfort.xyz
+ * @author  Openfort@0xkoiner
  * @notice  Smart contract wallet implementing EIP-7702 + ERC-4337 + multi-format keys.
  * @dev
  *  • EIP-4337 integration via EntryPoint
@@ -38,21 +41,16 @@ import {
  *  • ERC-1271 on-chain signature support
  *  • Reentrancy protection & explicit nonce replay prevention
  *
- * Layout storage slot (keccak256):
- *  "openfort.baseAccount.7702.v1" =
- *    0x801ae8efc2175d3d963e799b27e0e948b9a3fa84e2ce105a370245c8c127f368
- *    == 57943590311362240630886240343495690972153947532773266946162183175043753177960
  */
 contract OPF7702 is Execution, Initializable {
     using ECDSA for bytes32;
+    using KeyHashLib for Key;
+    using KeyHashLib for PubKey;
+    using KeyHashLib for address;
+    using KeyValidation for KeyData;
 
     /// @notice Address of this implementation contract
-    address public immutable _OPENFORT_CONTRACT_ADDRESS;
-
-    address public immutable WEBAUTHN_VERIFIER;
-
-    /// @notice Emitted when the account is initialized with a masterKey
-    event Initialized(Key indexed masterKey);
+    address public _OPENFORT_CONTRACT_ADDRESS;
 
     constructor(address _entryPoint, address _webAuthnVerifier) {
         ENTRY_POINT = _entryPoint;
@@ -115,7 +113,7 @@ contract OPF7702 is Execution, Initializable {
             return SIG_VALIDATION_SUCCESS;
         }
 
-        bytes32 keyId = keccak256(abi.encodePacked(signer));
+        bytes32 keyId = signer.computeKeyId();
         // load the key for this EOA
         KeyData storage sKey = keys[keyId];
 
@@ -171,7 +169,7 @@ contract OPF7702 is Execution, Initializable {
             return SIG_VALIDATION_FAILED;
         }
 
-        bool sigOk = IWebAuthnVerifier(WEBAUTHN_VERIFIER).verifySoladySignature(
+        bool sigOk = IWebAuthnVerifier(webAuthnVerifier()).verifySoladySignature(
             userOpHash,
             requireUV,
             authenticatorData,
@@ -187,7 +185,7 @@ contract OPF7702 is Execution, Initializable {
             return SIG_VALIDATION_FAILED;
         }
 
-        bytes32 keyHash = keccak256(abi.encodePacked(pubKey.x, pubKey.y));
+        bytes32 keyHash = pubKey.computeKeyId();
         KeyData storage sKey = keys[keyHash];
 
         (Key memory composedKey, bool isValid) =
@@ -237,14 +235,14 @@ contract OPF7702 is Execution, Initializable {
             userOpHash = EfficientHashLib.sha2(userOpHash);
         }
 
-        bool sigOk = IWebAuthnVerifier(WEBAUTHN_VERIFIER).verifyP256Signature(
+        bool sigOk = IWebAuthnVerifier(webAuthnVerifier()).verifyP256Signature(
             userOpHash, r, sSig, pubKey.x, pubKey.y
         );
         if (!sigOk) {
             return SIG_VALIDATION_FAILED;
         }
 
-        bytes32 keyHash = keccak256(abi.encodePacked(pubKey.x, pubKey.y));
+        bytes32 keyHash = pubKey.computeKeyId();
         KeyData storage sKey = keys[keyHash];
 
         (Key memory composedKey, bool isValid) =
@@ -265,7 +263,7 @@ contract OPF7702 is Execution, Initializable {
         returns (Key memory composedKey, bool isValid)
     {
         // Check if key is valid and active
-        if (sKey.validUntil == 0 || sKey.whoRegistrated != address(this) || !sKey.isActive) {
+        if (!sKey.isRegistered() || !sKey.isActive) {
             return (composedKey, false); // Early return for invalid key
         }
 
@@ -303,15 +301,15 @@ contract OPF7702 is Execution, Initializable {
 
         if (_key.keyType == KeyType.EOA) {
             if (_key.eoaAddress == address(0)) return false;
-            keyHash = keccak256(abi.encodePacked(_key.eoaAddress));
+            keyHash = _key.computeKeyId();
             sKey = keys[keyHash];
         } else {
             // WEBAUTHN/P256/P256NONKEY share same load path
-            keyHash = keccak256(abi.encodePacked(_key.pubKey.x, _key.pubKey.y));
+            keyHash = _key.computeKeyId();
             sKey = keys[keyHash];
         }
         // Basic checks:
-        if (sKey.validUntil == 0 || !sKey.isActive || sKey.whoRegistrated != address(this)) {
+        if (!sKey.isRegistered() || !sKey.isActive) {
             return false;
         }
 
@@ -378,8 +376,7 @@ contract OPF7702 is Execution, Initializable {
 
     function _validateCall(KeyData storage sKey, Call memory call) private returns (bool) {
         if (call.target == address(this)) return false;
-        if (sKey.limit == 0) return false;
-        if (sKey.ethLimit < call.value) return false;
+        if (!sKey.passesCallGuards(call.value)) return false;
 
         bytes memory innerData = call.data;
         bytes4 innerSelector;
@@ -391,11 +388,11 @@ contract OPF7702 is Execution, Initializable {
             return false;
         }
 
-        unchecked {
-            sKey.limit--;
-        }
+        sKey.consumeQuota();
         if (call.value > 0) {
-            sKey.ethLimit -= call.value;
+            unchecked {
+                sKey.ethLimit -= call.value;
+            }
         }
 
         if (sKey.spendTokenInfo.token == call.target) {
@@ -525,23 +522,13 @@ contract OPF7702 is Execution, Initializable {
             return this.isValidSignature.selector;
         }
 
-        bytes32 keyHash = keccak256(abi.encodePacked(signer));
+        bytes32 keyHash = signer.computeKeyId();
         KeyData storage sKey = keys[keyHash];
 
         if (sKey.masterKey) return this.isValidSignature.selector;
 
         // validity window
-        if (
-            sKey.validUntil == 0 || sKey.validAfter > block.timestamp
-                || sKey.validUntil < block.timestamp
-        ) {
-            return bytes4(0xffffffff);
-        }
-        // spend limit check
-        if (!sKey.masterKey && sKey.limit < 1) {
-            return bytes4(0xffffffff);
-        }
-        if (sKey.whoRegistrated != address(this)) {
+        if (!sKey.passesBaseChecks() || !sKey.hasQuota()) {
             return bytes4(0xffffffff);
         }
         return this.isValidSignature.selector;
@@ -575,7 +562,7 @@ contract OPF7702 is Execution, Initializable {
         if (usedChallenges[_hash]) {
             return bytes4(0xffffffff);
         }
-        bool sigOk = IWebAuthnVerifier(WEBAUTHN_VERIFIER).verifySoladySignature(
+        bool sigOk = IWebAuthnVerifier(webAuthnVerifier()).verifySoladySignature(
             _hash,
             requireUV,
             authenticatorData,
@@ -591,21 +578,12 @@ contract OPF7702 is Execution, Initializable {
             return bytes4(0xffffffff);
         }
 
-        bytes32 keyHash = keccak256(abi.encodePacked(pubKey.x, pubKey.y));
+        bytes32 keyHash = pubKey.computeKeyId();
         KeyData storage sKey = keys[keyHash];
 
         if (sKey.masterKey) return this.isValidSignature.selector;
 
-        if (
-            sKey.validUntil == 0 || sKey.validAfter > block.timestamp
-                || sKey.validUntil < block.timestamp
-        ) {
-            return bytes4(0xffffffff);
-        }
-        if (!sKey.masterKey && sKey.limit < 1) {
-            return bytes4(0xffffffff);
-        }
-        if (sKey.whoRegistrated != address(this)) {
+        if (!sKey.passesBaseChecks() || !sKey.hasQuota()) {
             return bytes4(0xffffffff);
         }
         return this.isValidSignature.selector;
@@ -623,8 +601,7 @@ contract OPF7702 is Execution, Initializable {
         returns (bytes4)
     {
         (KeyType kt, bytes memory inner) = abi.decode(_signature, (KeyType, bytes));
-        (bytes32 r, bytes32 sSig, PubKey memory pubKey) =
-            abi.decode(inner, (bytes32, bytes32, PubKey));
+        (bytes32 r, bytes32 s, PubKey memory pubKey) = abi.decode(inner, (bytes32, bytes32, PubKey));
 
         if (usedChallenges[_hash]) {
             return bytes4(0xffffffff);
@@ -635,25 +612,16 @@ contract OPF7702 is Execution, Initializable {
             hashToCheck = EfficientHashLib.sha2(_hash);
         }
 
-        bool sigOk = IWebAuthnVerifier(WEBAUTHN_VERIFIER).verifyP256Signature(
-            hashToCheck, r, sSig, pubKey.x, pubKey.y
+        bool sigOk = IWebAuthnVerifier(webAuthnVerifier()).verifyP256Signature(
+            hashToCheck, r, s, pubKey.x, pubKey.y
         );
         if (!sigOk) {
             return bytes4(0xffffffff);
         }
 
-        bytes32 keyHash = keccak256(abi.encodePacked(pubKey.x, pubKey.y));
+        bytes32 keyHash = pubKey.computeKeyId();
         KeyData storage sKey = keys[keyHash];
-        if (
-            sKey.validUntil == 0 || sKey.validAfter > block.timestamp
-                || sKey.validUntil < block.timestamp
-        ) {
-            return bytes4(0xffffffff);
-        }
-        if (!sKey.masterKey && sKey.limit < 1) {
-            return bytes4(0xffffffff);
-        }
-        if (sKey.whoRegistrated != address(this)) {
+        if (!sKey.passesBaseChecks() || !sKey.hasQuota()) {
             return bytes4(0xffffffff);
         }
         return this.isValidSignature.selector;

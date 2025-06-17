@@ -1,0 +1,22 @@
+{
+    "batch" : {
+        "challenge": "0x25891b248f0acdae248c3c49cd1c66b8664afff2891753d189e0c23b55909366",
+        
+            "x": "0x111a58a77c116eb4070fe0c9cb1a29dd5902218e85d51bcbe0f8bf53914e20ac",
+            "y": "0x17ed08a2bc2ec9603acb6e73ca106f0563b9f4bd21cacb9e2be6dd8f4e39a02d",
+            
+                "metadata": {
+                    "authenticatorData": "0x49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d97631d00000000",
+                    "clientDataJSON": "{\"type\":\"webauthn.get\",\"challenge\":\"JYkbJI8Kza4kjDxJzRxmuGZK__KJF1PRieDCO1WQk2Y\",\"origin\":\"http://localhost:5173\",\"crossOrigin\":false}",
+                    "challengeIndex": 23,
+                    "typeIndex": 1,
+                    "userVerificationRequired": true
+                },
+                "signature": {
+                    "r": "0x0e46ee124e60c070a7955a37002dcc1b54f2468699cc90c63c3444d740284fa1",
+                    "s": "0x5fc8f70e2136132fe1ecab5bf11d87940b991d035e0b988631838373b45c7ea2"
+                }
+            
+        
+        }
+}

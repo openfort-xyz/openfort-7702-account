@@ -12,34 +12,22 @@
 
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.29;
+pragma solidity 0.8.29;
 
+import {IKey} from "src/interfaces/IKey.sol";
+import {KeyHashLib} from "src/libs/KeyHashLib.sol";
 import {SpendLimit} from "src/utils/SpendLimit.sol";
 import {BaseOPF7702} from "src/core/BaseOPF7702.sol";
-import {IKey} from "src/interfaces/IKey.sol";
+import {ValidationLib} from "src/libs/ValidationLib.sol";
+import {IKeysManager} from "src/interfaces/IKeysManager.sol";
 
 /// @title KeysManager
 /// @author Openfort@0xkoiner
 /// @notice Manages registration, revocation, and querying of keys (WebAuthn/P256/EOA) with spending limits and whitelisting support.
 /// @dev Inherits BaseOPF7702 for account abstraction, IKey interface, and SpendLimit for token/ETH limits.
 abstract contract KeysManager is BaseOPF7702, IKey, SpendLimit {
-    // =============================================================
-    //                            ERRORS
-    // =============================================================
-
-    /// @notice Thrown when a timestamp provided for key validity is invalid
-    error KeyManager__InvalidTimestamp();
-    /// @notice Thrown when registration does not include any usage or spend limits
-    error KeyManager__MustIncludeLimits();
-    /// @notice Thrown when an address parameter expected to be non-zero is zero
-    error KeyManager__AddressCantBeZero();
-    /// @notice Thrown when attempting to revoke or query a key that is already inactive
-    error KeyManager__KeyInactive();
-    /// @notice Thrown when the provided selectors list length exceeds MAX_SELECTORS
-    error KeyManager__SelectorsListTooBig();
-    /// @notice Thrown when attempting to register a key that is already active
-    error KeyManager__KeyRegistered();
-
+    using KeyHashLib for Key;
+    using ValidationLib for *;
     // =============================================================
     //                          CONSTANTS
     // =============================================================
@@ -65,17 +53,6 @@ abstract contract KeysManager is BaseOPF7702, IKey, SpendLimit {
     mapping(bytes32 => bool) public usedChallenges;
 
     // =============================================================
-    //                             EVENTS
-    // =============================================================
-
-    /// @notice Emitted when a key is revoked
-    /// @param key The identifier (hash or address‐derived hash) of the revoked key
-    event KeyRevoked(bytes32 indexed key);
-    /// @notice Emitted when a new key is registered
-    /// @param key The identifier (hash or address‐derived hash) of the newly registered key
-    event KeyRegistrated(bytes32 indexed key);
-
-    // =============================================================
     //                 PUBLIC / EXTERNAL FUNCTIONS
     // =============================================================
 
@@ -87,67 +64,26 @@ abstract contract KeysManager is BaseOPF7702, IKey, SpendLimit {
      *      Requires `_validUntil > block.timestamp`, `_validAfter ≤ _validUntil`, and that the key is not active.
      *      Emits `KeyRegistrated(keyId)`.
      *
-     * @param _key             Struct containing key information:
-     *                         • `keyType`: one of {WEBAUTHN, P256, P256NONKEY, EOA}.
-     *                         • For WebAuthn/P256/P256NONKEY: `pubKey` must be set.
-     *                         • For EOA: `eoaAddress` must be non‐zero.
-     * @param _validUntil      UNIX timestamp after which this key is invalid.
-     * @param _validAfter      UNIX timestamp before which this key is not valid.
-     * @param _limit           Maximum number of transactions allowed.
-     * @param _whitelisting    If true, restrict calls to whitelisted contracts/tokens.
-     * @param _contractAddress Initial contract to whitelist (ignored if !_whitelisting).
-     * @param _spendTokenInfo  Struct specifying ERC‐20 token spending limit:
-     *                         • `token`: ERC‐20 address (non‐zero if `_limit > 0`).
-     *                         • `limit`: token amount allowed.
-     * @param _allowedSelectors Array of allowed function selectors (length ≤ MAX_SELECTORS).
-     * @param _ethLimit        Maximum ETH (wei) this key can spend.
+     * @param _key             Struct containing key information (PubKey or EOA).
+     * @param _keyData KeyReg data structure containing permissions and limits
      */
-    function registerKey(
-        Key calldata _key,
-        uint48 _validUntil,
-        uint48 _validAfter,
-        uint48 _limit,
-        bool _whitelisting,
-        address _contractAddress,
-        SpendTokenInfo calldata _spendTokenInfo,
-        bytes4[] calldata _allowedSelectors,
-        uint256 _ethLimit
-    ) public {
+    function registerKey(Key calldata _key, KeyReg calldata _keyData) public {
         _requireForExecute();
         // Must have limit checks to prevent register masterKey
-        if (_limit == 0) revert KeyManager__MustIncludeLimits();
+        _keyData.limit.ensureLimit();
 
         // Validate timestamps
-        if (_validUntil <= block.timestamp || _validAfter > _validUntil) {
-            revert KeyManager__InvalidTimestamp();
-        }
+        ValidationLib.ensureValidTimestamps(_keyData.validAfter, _keyData.validUntil);
 
-        KeyType kt = _key.keyType;
-        bytes32 keyId;
+        bytes32 keyId = _key.computeKeyId();
 
-        if (kt == KeyType.WEBAUTHN || kt == KeyType.P256 || kt == KeyType.P256NONKEY) {
-            keyId = keccak256(abi.encodePacked(_key.pubKey.x, _key.pubKey.y));
-        } else {
-            keyId = keccak256(abi.encodePacked(_key.eoaAddress));
-        }
         KeyData storage sKey = keys[keyId];
 
         if (sKey.isActive) {
-            revert KeyManager__KeyRegistered();
+            revert IKeysManager.KeyManager__KeyRegistered();
         }
 
-        _addKey(
-            sKey,
-            _key,
-            _validUntil,
-            _validAfter,
-            _limit,
-            _whitelisting,
-            _contractAddress,
-            _spendTokenInfo,
-            _allowedSelectors,
-            _ethLimit
-        );
+        _addKey(sKey, _key, _keyData);
 
         // Store Key struct by ID and increment
         idKeys[id] = _key;
@@ -155,7 +91,7 @@ abstract contract KeysManager is BaseOPF7702, IKey, SpendLimit {
             id++;
         }
 
-        emit KeyRegistrated(keyId);
+        emit IKeysManager.KeyRegistrated(keyId);
     }
 
     /**
@@ -170,18 +106,11 @@ abstract contract KeysManager is BaseOPF7702, IKey, SpendLimit {
     function revokeKey(Key calldata _key) external {
         _requireForExecute();
 
-        KeyType kt = _key.keyType;
-        bytes32 keyId;
-
-        if (kt == KeyType.WEBAUTHN || kt == KeyType.P256 || kt == KeyType.P256NONKEY) {
-            keyId = keccak256(abi.encodePacked(_key.pubKey.x, _key.pubKey.y));
-        } else if (kt == KeyType.EOA) {
-            keyId = keccak256(abi.encodePacked(_key.eoaAddress));
-        }
+        bytes32 keyId = _key.computeKeyId();
 
         KeyData storage sKey = keys[keyId];
         _revokeKey(sKey);
-        emit KeyRevoked(keyId);
+        emit IKeysManager.KeyRevoked(keyId);
     }
 
     /**
@@ -195,18 +124,20 @@ abstract contract KeysManager is BaseOPF7702, IKey, SpendLimit {
         // Revoke WebAuthn/P256/P256NONKEY/EOA keys
         for (uint256 i = 1; i < id;) {
             Key memory k = idKeys[i];
-            KeyType kt = k.keyType;
-            bytes32 keyId;
 
-            if (kt == KeyType.WEBAUTHN || kt == KeyType.P256 || kt == KeyType.P256NONKEY) {
-                keyId = keccak256(abi.encodePacked(k.pubKey.x, k.pubKey.y));
-            } else if (k.keyType == KeyType.EOA && k.eoaAddress != address(0)) {
-                keyId = keccak256(abi.encodePacked(k.eoaAddress));
-            }
+            bytes32 keyId = k.computeKeyId();
 
             KeyData storage sKey = keys[keyId];
+
+            if (!sKey.isActive) {
+                unchecked {
+                    ++i;
+                }
+                continue;
+            }
+
             _revokeKey(sKey);
-            emit KeyRevoked(keyId);
+            emit IKeysManager.KeyRevoked(keyId);
             unchecked {
                 ++i;
             }
@@ -224,75 +155,49 @@ abstract contract KeysManager is BaseOPF7702, IKey, SpendLimit {
      *
      * @param sKey             Storage reference to the `KeyData` being populated.
      * @param _key             Struct containing key information (PubKey or EOA).
-     * @param _validUntil      UNIX timestamp after which the key is invalid.
-     * @param _validAfter      UNIX timestamp before which the key is not valid.
-     * @param _limit           Maximum number of transactions (0 = unlimited/master).
-     * @param _whitelisting    If true, enable contract and token whitelisting.
-     * @param _contractAddress Initial contract to whitelist (non‐zero if whitelisting).
-     * @param _spendTokenInfo  Struct for ERC‐20 token spending limit (`token` must be non‐zero if `_limit > 0`).
-     * @param _allowedSelectors Array of allowed function selectors (length ≤ MAX_SELECTORS).
-     * @param _ethLimit        Maximum ETH (wei) this key can send.
+     * @param _keyData KeyReg data structure containing permissions and limits
      */
-    function _addKey(
-        KeyData storage sKey,
-        Key memory _key,
-        uint48 _validUntil,
-        uint48 _validAfter,
-        uint48 _limit,
-        bool _whitelisting,
-        address _contractAddress,
-        SpendTokenInfo memory _spendTokenInfo,
-        bytes4[] memory _allowedSelectors,
-        uint256 _ethLimit
-    ) internal {
+    function _addKey(KeyData storage sKey, Key memory _key, KeyReg memory _keyData) internal {
         sKey.pubKey = _key.pubKey;
         sKey.isActive = true;
-        sKey.validUntil = _validUntil;
-        sKey.validAfter = _validAfter;
-        sKey.limit = _limit;
-        sKey.masterKey = (_limit == 0);
+        sKey.validUntil = _keyData.validUntil;
+        sKey.validAfter = _keyData.validAfter;
+        sKey.limit = _keyData.limit;
+        sKey.masterKey = (_keyData.limit == 0);
         sKey.whoRegistrated = address(this);
 
         // Only enforce limits if _limit > 0
-        if (_limit > 0) {
-            sKey.whitelisting = _whitelisting;
-            sKey.ethLimit = _ethLimit;
+        if (_keyData.limit > 0) {
+            sKey.whitelisting = _keyData.whitelisting;
+            sKey.ethLimit = _keyData.ethLimit;
 
             // Whitelist contract and token if requested
-            if (_whitelisting) {
-                if (_contractAddress == address(0)) {
-                    revert KeyManager__AddressCantBeZero();
-                }
+            if (_keyData.whitelisting) {
+                _keyData.contractAddress.ensureNotZero();
                 // Add the contract itself
-                sKey.whitelist[_contractAddress] = true;
+                sKey.whitelist[_keyData.contractAddress] = true;
 
                 // Validate token address
-                address tokenAddr = _spendTokenInfo.token;
-                if (tokenAddr == address(0)) {
-                    revert KeyManager__AddressCantBeZero();
-                }
+                address tokenAddr = _keyData.spendTokenInfo.token;
+                tokenAddr.ensureNotZero();
                 sKey.whitelist[tokenAddr] = true;
 
-                uint256 selCount = _allowedSelectors.length;
-                if (selCount > MAX_SELECTORS) {
-                    revert KeyManager__SelectorsListTooBig();
-                }
+                uint256 selCount = _keyData.allowedSelectors.length;
+                selCount.ensureSelectorsLen();
                 for (uint256 i = 0; i < selCount;) {
-                    sKey.allowedSelectors.push(_allowedSelectors[i]);
+                    sKey.allowedSelectors.push(_keyData.allowedSelectors[i]);
                     unchecked {
                         ++i;
                     }
                 }
             } else {
                 // Even if not whitelisting contracts, we must still validate token
-                if (_spendTokenInfo.token == address(0)) {
-                    revert KeyManager__AddressCantBeZero();
-                }
+                _keyData.spendTokenInfo.token.ensureNotZero();
             }
 
             // Configure spendTokenInfo regardless of whitelisting
-            sKey.spendTokenInfo.token = _spendTokenInfo.token;
-            sKey.spendTokenInfo.limit = _spendTokenInfo.limit;
+            sKey.spendTokenInfo.token = _keyData.spendTokenInfo.token;
+            sKey.spendTokenInfo.limit = _keyData.spendTokenInfo.limit;
         }
     }
 
@@ -304,7 +209,7 @@ abstract contract KeysManager is BaseOPF7702, IKey, SpendLimit {
      */
     function _revokeKey(KeyData storage sKey) internal {
         if (!sKey.isActive) {
-            revert KeyManager__KeyInactive();
+            revert IKeysManager.KeyManager__KeyInactive();
         }
         sKey.isActive = false;
         sKey.validUntil = 0;
@@ -324,27 +229,17 @@ abstract contract KeysManager is BaseOPF7702, IKey, SpendLimit {
     /**
      * @notice Retrieves registration info for a given key ID.
      * @param _id       Identifier (index) of the key to query.
-     * @param _keyType  Enum indicating which key mapping to query (WEBAUTHN/P256/P256NONKEY vs. EOA).
      * @return keyType       The type of the key that was registered.
      * @return registeredBy  Address that performed the registration (should be this contract).
      * @return isActive      Whether the key is currently active.
      */
-    function getKeyRegistrationInfo(uint256 _id, KeyType _keyType)
+    function getKeyRegistrationInfo(uint256 _id)
         external
         view
         returns (KeyType keyType, address registeredBy, bool isActive)
     {
-        bytes32 keyId;
         Key memory k = idKeys[_id];
-
-        if (
-            _keyType == KeyType.WEBAUTHN || _keyType == KeyType.P256
-                || _keyType == KeyType.P256NONKEY
-        ) {
-            keyId = keccak256(abi.encodePacked(k.pubKey.x, k.pubKey.y));
-        } else {
-            keyId = keccak256(abi.encodePacked(k.eoaAddress));
-        }
+        bytes32 keyId = k.computeKeyId();
 
         KeyData storage sKey = keys[keyId];
 

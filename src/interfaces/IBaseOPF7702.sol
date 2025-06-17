@@ -13,6 +13,25 @@ import "lib/openzeppelin-contracts/contracts/token/ERC1155/utils/ERC1155Holder.s
 /// @dev Declares all externally-visible state, functions, and events.
 interface IBaseOPF7702 is IAccount, IERC1271, IERC165, IERC721Receiver, IERC1155Receiver {
     // =============================================================
+    //                            ERRORS
+    // =============================================================
+
+    error OpenfortBaseAccount7702V1__InvalidSignature();
+    /// @notice msg.sender not from address(this) and nit from Entry Point
+    error OpenfortBaseAccount7702V1_UnauthorizedCaller();
+
+    // =============================================================
+    //                             EVENTS
+    // =============================================================
+
+    /// @notice Emitted when ETH is deposited into this account for covering gas fees.
+    /// @param source The address that sent the ETH deposit.
+    /// @param amount The amount of ETH deposited.
+    event DepositAdded(address indexed source, uint256 amount);
+
+    event EntryPointUpdated(address indexed newEntryPoint);
+    event WebAuthnVerifierUpdated(address indexed newVerifier);
+    // =============================================================
     //                        EXTERNAL FUNCTIONS
     // =============================================================
 

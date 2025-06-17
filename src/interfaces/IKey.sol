@@ -68,4 +68,26 @@ interface IKey {
         uint256 ethLimit;
         address whoRegistrated;
     }
+
+    /**
+     * @notice KeyReg data structure containing permissions and limits
+     * @param validUntil Timestamp until which the key is valid
+     * @param validAfter Timestamp after which the key becomes valid
+     * @param limit Number of transactions allowed (0 for unlimited/master key)
+     * @param whitelisting Whether contract address whitelisting is enabled
+     * @param contractAddress Whitelisted contract addresses
+     * @param spendTokenInfo Token spending limit information
+     * @param allowedSelectors List of allowed function selectors
+     * @param ethLimit Maximum amount of ETH that can be spent
+     */
+    struct KeyReg {
+        uint48 validUntil;
+        uint48 validAfter;
+        uint48 limit;
+        bool whitelisting;
+        address contractAddress;
+        SpendLimit.SpendTokenInfo spendTokenInfo;
+        bytes4[] allowedSelectors;
+        uint256 ethLimit;
+    }
 }

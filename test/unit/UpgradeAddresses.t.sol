@@ -10,6 +10,7 @@ import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.so
 import {IEntryPoint} from "lib/account-abstraction/contracts/interfaces/IEntryPoint.sol";
 
 import {OPFMain as OPF7702} from "src/core/OPFMain.sol";
+import {BaseOPF7702} from "src/core/BaseOPF7702.sol";
 import {MockERC20} from "src/mocks/MockERC20.sol";
 import {SpendLimit} from "src/utils/SpendLimit.sol";
 import {IKey} from "src/interfaces/IKey.sol";
@@ -18,6 +19,8 @@ import {PackedUserOperation} from
     "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
 
 contract DepositAndTransferETH is Base {
+    error NotFromEntryPoint();
+
     /* ───────────────────────────────────────────────────────────── contracts ── */
     IEntryPoint public entryPoint;
     WebAuthnVerifier public webAuthn;
@@ -68,26 +71,29 @@ contract DepositAndTransferETH is Base {
         entryPoint.depositTo{value: 0.11e18}(owner);
     }
 
-    function test_ExecuteOwnerCall() public {
-        console.log("/* -------------------------------- test_ExecuteOwnerCall -------- */");
+    function test_Addresses() external view {
+        console.log("/* --------------------------------- test_Addresses -------- */");
+        address ePoint = address(account.entryPoint());
+        address webAuthnVerifier = account.webAuthnVerifier();
 
-        Call[] memory calls = new Call[](1);
+        console.log("entryPoint", ePoint);
+        console.log("webAuthnVerifier", webAuthnVerifier);
 
-        bytes memory dataHex = hex"";
+        assertEq(ePoint, address(entryPoint));
+        assertEq(webAuthnVerifier, address(SEPOLIA_WEBAUTHN));
+        console.log("/* --------------------------------- test_Addresses -------- */");
+    }
 
-        calls[0] = Call({target: sessionKey, value: 2e18, data: dataHex});
-
-        // ERC-7821 mode for single execution (mode ID = 1)
-        // The mode value should have the pattern at position 22*8 bits
-        bytes32 mode = bytes32(uint256(0x01000000000000000000) << (22 * 8));
-
-        // Encode the execution data as Call[] array
-        bytes memory executionData = abi.encode(calls);
-
+    function test_UpgradeEntryPointWithRootKey() public {
+        console.log(
+            "/* -------------------------------- test_UpgradeEntryPointWithRootKey -------- */"
+        );
         bytes memory callData =
-            abi.encodeWithSelector(bytes4(keccak256("execute(bytes32,bytes)")), mode, executionData);
+            abi.encodeWithSelector(BaseOPF7702.setEntryPoint.selector, address(789012));
 
         uint256 nonce = entryPoint.getNonce(owner, 1);
+
+        address ePoint_Before = address(account.entryPoint());
 
         PackedUserOperation memory userOp = PackedUserOperation({
             sender: owner,
@@ -113,8 +119,6 @@ contract DepositAndTransferETH is Base {
 
         userOp.signature = _signature;
 
-        uint256 balanceOwnerBefore = owner.balance;
-
         PackedUserOperation[] memory ops = new PackedUserOperation[](1);
         ops[0] = userOp;
 
@@ -124,35 +128,25 @@ contract DepositAndTransferETH is Base {
         vm.prank(sender);
         entryPoint.handleOps(ops, payable(sender));
 
-        uint256 balanceOwnerAfter = owner.balance;
-
-        assertEq(balanceOwnerBefore - 2e18, balanceOwnerAfter);
-        console.log("/* -------------------------------- test_ExecuteOwnerCall -------- */");
+        address ePoint_After = address(account.entryPoint());
+        assertEq(ePoint_Before, address(entryPoint));
+        assertEq(ePoint_After, address(789012));
+        assertNotEq(ePoint_After, ePoint_Before);
+        console.log(
+            "/* -------------------------------- test_UpgradeEntryPointWithRootKey -------- */"
+        );
     }
 
-    function test_ExecuteBatchOwnerCall() public {
-        console.log("/* -------------------------------- test_ExecuteBatchOwnerCall -------- */");
-
-        // Create the Call array with multiple transactions
-        Call[] memory calls = new Call[](2);
-
-        bytes memory dataHex = hex"";
-        bytes memory dataHex2 = hex"";
-
-        calls[0] = Call({target: sessionKey, value: 2e18, data: dataHex});
-        calls[1] = Call({target: sessionKey, value: 2e18, data: dataHex2});
-
-        // ERC-7821 mode for batch execution (still mode ID = 1)
-        bytes32 mode = bytes32(uint256(0x01000000000000000000) << (22 * 8));
-
-        // Encode the execution data as Call[] array
-        bytes memory executionData = abi.encode(calls);
-
-        // Create the callData for the ERC-7821 execute function
+    function test_UpgradeWebAuthnVerifiertWithRootKey() public {
+        console.log(
+            "/* -------------------------------- test_UpgradeWebAuthnVerifiertWithRootKey -------- */"
+        );
         bytes memory callData =
-            abi.encodeWithSelector(bytes4(keccak256("execute(bytes32,bytes)")), mode, executionData);
+            abi.encodeWithSelector(BaseOPF7702.setWebAuthnVerifier.selector, address(123456));
 
         uint256 nonce = entryPoint.getNonce(owner, 1);
+
+        address webAuthnVerifier_Before = account.webAuthnVerifier();
 
         PackedUserOperation memory userOp = PackedUserOperation({
             sender: owner,
@@ -178,8 +172,6 @@ contract DepositAndTransferETH is Base {
 
         userOp.signature = _signature;
 
-        uint256 balanceOwnerBefore = owner.balance;
-
         PackedUserOperation[] memory ops = new PackedUserOperation[](1);
         ops[0] = userOp;
 
@@ -189,51 +181,111 @@ contract DepositAndTransferETH is Base {
         vm.prank(sender);
         entryPoint.handleOps(ops, payable(sender));
 
-        uint256 balanceOwnerAfter = owner.balance;
-
-        assertEq(balanceOwnerBefore - 4e18, balanceOwnerAfter);
-        console.log("/* -------------------------------- test_ExecuteBatchOwnerCall -------- */");
+        address webAuthnVerifier_After = account.webAuthnVerifier();
+        assertEq(webAuthnVerifier_Before, WEBAUTHN_VERIFIER);
+        assertEq(webAuthnVerifier_After, address(123456));
+        assertNotEq(webAuthnVerifier_After, webAuthnVerifier_Before);
+        console.log(
+            "/* -------------------------------- test_UpgradeWebAuthnVerifiertWithRootKey -------- */"
+        );
     }
 
-    function test_DepositEthFromEOA() public {
-        uint256 balanceBefore = sender.balance;
+    function test_UpgradeEntryPointWithMasterKey() public {
+        console.log(
+            "/* -------------------------------- test_test_UpgradeEntryPointWithMasterKey -------- */"
+        );
+        bytes memory callData =
+            abi.encodeWithSelector(BaseOPF7702.setEntryPoint.selector, address(789012));
 
-        bytes memory code = abi.encodePacked(bytes3(0xef0100), address(implementation));
+        uint256 nonce = entryPoint.getNonce(owner, 1);
+
+        address ePoint_Before = address(account.entryPoint());
+
+        PackedUserOperation memory userOp = PackedUserOperation({
+            sender: owner,
+            nonce: nonce,
+            initCode: hex"7702",
+            callData: callData,
+            accountGasLimits: _packAccountGasLimits(400000, 300000),
+            preVerificationGas: 800000,
+            gasFees: _packGasFees(80 gwei, 15 gwei),
+            paymasterAndData: hex"",
+            signature: hex""
+        });
+
+        bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
+        console.logBytes32(userOpHash);
+
+        IKey.PubKey memory pubKeyExecuteBatch =
+            IKey.PubKey({x: CHANGE_PUBLIC_KEY_X, y: CHANGE_PUBLIC_KEY_Y});
+
+        bytes memory _signature = account.encodeWebAuthnSignature(
+            true,
+            CHANGE_AUTHENTICATOR_DATA,
+            CHANGE_CLIENT_DATA_JSON,
+            CHALLENGE_INDEX,
+            TYPE_INDEX,
+            CHANGE_SIGNATURE_R,
+            CHANGE_SIGNATURE_S,
+            pubKeyExecuteBatch
+        );
+
+        bytes4 magicValue = account.isValidSignature(userOpHash, _signature);
+        bool usedChallenge = account.usedChallenges(userOpHash);
+        console.log("usedChallenge", usedChallenge);
+        console.logBytes4(magicValue);
+
+        bool isValid = webAuthn.verifySoladySignature(
+            userOpHash,
+            true,
+            CHANGE_AUTHENTICATOR_DATA,
+            CHANGE_CLIENT_DATA_JSON,
+            CHALLENGE_INDEX,
+            TYPE_INDEX,
+            CHANGE_SIGNATURE_R,
+            CHANGE_SIGNATURE_S,
+            CHANGE_PUBLIC_KEY_X,
+            CHANGE_PUBLIC_KEY_Y
+        );
+        console.log("isValid", isValid);
+
+        userOp.signature = _signature;
+
+        PackedUserOperation[] memory ops = new PackedUserOperation[](1);
+        ops[0] = userOp;
+
+        bytes memory code = abi.encodePacked(
+            bytes3(0xef0100),
+            address(implementation) // or your logic contract
+        );
         vm.etch(owner, code);
-        uint256 balanceOwnerBefore = owner.balance;
 
         vm.prank(sender);
-        (bool s,) = owner.call{value: 2e18}("");
+        entryPoint.handleOps(ops, payable(sender));
 
-        uint256 balanceAfter = sender.balance;
-        uint256 balanceOwnerAfter = owner.balance;
+        address ePoint_After = address(account.entryPoint());
+        assertEq(ePoint_Before, address(entryPoint));
+        assertEq(ePoint_After, address(789012));
+        assertNotEq(ePoint_After, ePoint_Before);
 
-        assertTrue(s);
-        assertEq(balanceBefore - 2e18, balanceAfter);
-        assertEq(balanceOwnerBefore + 2e18, balanceOwnerAfter);
+        console.log(
+            "/* -------------------------------- test_test_UpgradeEntryPointWithMasterKey -------- */"
+        );
     }
 
-    function test_TransferFromAccount() public {
-        uint256 balanceBefore = sender.balance;
+    function test_UpgradeEntryPointAndSendTXWithMasterKey() public {
+        console.log(
+            "/* -------------------------------- test_UpgradeEntryPointAndSendTXWithMasterKey -------- */"
+        );
+        address ePoint_Before = address(account.entryPoint());
 
-        bytes memory code = abi.encodePacked(bytes3(0xef0100), address(implementation));
-        vm.etch(owner, code);
+        _upgradeEPoint();
 
-        uint256 balanceOwnerBefore = owner.balance;
+        address ePoint_After = address(account.entryPoint());
+        assertEq(ePoint_Before, address(entryPoint));
+        assertEq(ePoint_After, address(789012));
+        assertNotEq(ePoint_After, ePoint_Before);
 
-        vm.prank(owner);
-        (bool s,) = sender.call{value: 2e18}("");
-
-        uint256 balanceAfter = sender.balance;
-        uint256 balanceOwnerAfter = owner.balance;
-
-        assertTrue(s);
-        assertEq(balanceBefore + 2e18, balanceAfter);
-        assertEq(balanceOwnerBefore - 2e18, balanceOwnerAfter);
-    }
-
-    function test_ExecuteMasterKey() public {
-        console.log("/* -------------------------------- test_ExecuteMasterKey -------- */");
         uint256 value = 1e18;
         Call[] memory calls = new Call[](1);
 
@@ -312,118 +364,18 @@ contract DepositAndTransferETH is Base {
         );
         vm.etch(owner, code);
 
-        uint256 balanceOfBefore = owner.balance;
-        uint256 balanceSenderBefore = sender.balance;
-
+        vm.expectRevert();
         vm.prank(sender);
         entryPoint.handleOps(ops, payable(sender));
 
-        uint256 balanceOfAfter = owner.balance;
-        uint256 balanceSenderAfter = sender.balance;
-
-        console.log("balanceOfBefore", balanceOfBefore);
-        console.log("balanceOfAfter", balanceOfAfter);
-        console.log("balanceSenderBefore", balanceSenderBefore);
-        console.log("balanceSenderAfter", balanceSenderAfter);
-        assertEq(balanceOfBefore - value, balanceOfAfter);
-
-        console.log("/* -------------------------------- test_ExecuteMasterKey -------- */");
+        console.log(
+            "/* -------------------------------- test_UpgradeEntryPointAndSendTXWithMasterKey -------- */"
+        );
     }
 
-    function test_ExecuteBatchSKEOA() public {
-        console.log("/* -------------------------------- test_ExecuteBatchSKEOA -------- */");
-        // Create the Call array with multiple transactions
-        Call[] memory calls = new Call[](2);
-
-        bytes memory dataHex = hex"";
-        bytes memory dataHex2 = hex"";
-
-        uint256 value = 0.1e18;
-
-        calls[0] = Call({target: ETH_RECIVE, value: value, data: dataHex});
-        calls[1] = Call({target: ETH_RECIVE, value: value, data: dataHex2});
-
-        // ERC-7821 mode for batch execution (still mode ID = 1)
-        bytes32 mode = bytes32(uint256(0x01000000000000000000) << (22 * 8));
-
-        // Encode the execution data as Call[] array
-        bytes memory executionData = abi.encode(calls);
-
-        // Create the callData for the ERC-7821 execute function
+    function _upgradeEPoint() internal {
         bytes memory callData =
-            abi.encodeWithSelector(bytes4(keccak256("execute(bytes32,bytes)")), mode, executionData);
-
-        uint256 nonce = entryPoint.getNonce(owner, 1);
-
-        PackedUserOperation memory userOp = PackedUserOperation({
-            sender: owner,
-            nonce: nonce,
-            initCode: hex"7702",
-            callData: callData,
-            accountGasLimits: _packAccountGasLimits(400000, 300000),
-            preVerificationGas: 800000,
-            gasFees: _packGasFees(80 gwei, 15 gwei),
-            paymasterAndData: hex"",
-            signature: hex""
-        });
-
-        bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
-
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(sessionKeyPk, userOpHash);
-        bytes memory signature = abi.encodePacked(r, s, v);
-
-        bytes memory _signature = account.encodeEOASignature(signature);
-
-        bytes4 magicValue = account.isValidSignature(userOpHash, signature);
-        console.logBytes4(magicValue);
-
-        userOp.signature = _signature;
-
-        PackedUserOperation[] memory ops = new PackedUserOperation[](1);
-        ops[0] = userOp;
-
-        bytes memory code = abi.encodePacked(bytes3(0xef0100), address(implementation));
-        vm.etch(owner, code);
-
-        uint256 balanceOfBefore = owner.balance;
-        uint256 balanceSenderBefore = ETH_RECIVE.balance;
-
-        vm.prank(sender);
-        entryPoint.handleOps(ops, payable(sender));
-
-        uint256 balanceOfAfter = owner.balance;
-        uint256 balanceSenderAfter = ETH_RECIVE.balance;
-
-        console.log("balanceOfBefore", balanceOfBefore);
-        console.log("balanceOfAfter", balanceOfAfter);
-        console.log("balanceSenderBefore", balanceSenderBefore);
-        console.log("balanceSenderAfter", balanceSenderAfter);
-        assertEq(balanceOfBefore - (value * 2), balanceOfAfter);
-
-        console.log("/* -------------------------------- test_ExecuteBatchSKEOA -------- */");
-    }
-
-    function test_ExecuteBatchSKP256() public {
-        console.log("/* ---------------------------------- test_ExecuteBatchSKP256 -------- */");
-
-        // Create the Call array with multiple transactions
-        Call[] memory calls = new Call[](2);
-
-        bytes memory dataHex = hex"";
-        bytes memory dataHex2 = hex"";
-        uint256 value = 0.1e18;
-        calls[0] = Call({target: ETH_RECIVE, value: value, data: dataHex});
-        calls[1] = Call({target: ETH_RECIVE, value: value, data: dataHex2});
-
-        // ERC-7821 mode for batch execution (still mode ID = 1)
-        bytes32 mode = bytes32(uint256(0x01000000000000000000) << (22 * 8));
-
-        // Encode the execution data as Call[] array
-        bytes memory executionData = abi.encode(calls);
-
-        // Create the callData for the ERC-7821 execute function
-        bytes memory callData =
-            abi.encodeWithSelector(bytes4(keccak256("execute(bytes32,bytes)")), mode, executionData);
+            abi.encodeWithSelector(BaseOPF7702.setEntryPoint.selector, address(789012));
 
         uint256 nonce = entryPoint.getNonce(owner, 1);
 
@@ -443,10 +395,17 @@ contract DepositAndTransferETH is Base {
         console.logBytes32(userOpHash);
 
         IKey.PubKey memory pubKeyExecuteBatch =
-            IKey.PubKey({x: ETH_P256_PUBLIC_KEY_X, y: ETH_P256_PUBLIC_KEY_Y});
+            IKey.PubKey({x: CHANGE_PUBLIC_KEY_X, y: CHANGE_PUBLIC_KEY_Y});
 
-        bytes memory _signature = account.encodeP256Signature(
-            ETH_P256_SIGNATURE_R, ETH_P256_SIGNATURE_S, pubKeyExecuteBatch
+        bytes memory _signature = account.encodeWebAuthnSignature(
+            true,
+            CHANGE_AUTHENTICATOR_DATA,
+            CHANGE_CLIENT_DATA_JSON,
+            CHALLENGE_INDEX,
+            TYPE_INDEX,
+            CHANGE_SIGNATURE_R,
+            CHANGE_SIGNATURE_S,
+            pubKeyExecuteBatch
         );
 
         bytes4 magicValue = account.isValidSignature(userOpHash, _signature);
@@ -454,12 +413,17 @@ contract DepositAndTransferETH is Base {
         console.log("usedChallenge", usedChallenge);
         console.logBytes4(magicValue);
 
-        bool isValid = webAuthn.verifyP256Signature(
+        bool isValid = webAuthn.verifySoladySignature(
             userOpHash,
-            ETH_P256_SIGNATURE_R,
-            ETH_P256_SIGNATURE_S,
-            P256_PUBLIC_KEY_X,
-            P256_PUBLIC_KEY_Y
+            true,
+            CHANGE_AUTHENTICATOR_DATA,
+            CHANGE_CLIENT_DATA_JSON,
+            CHALLENGE_INDEX,
+            TYPE_INDEX,
+            CHANGE_SIGNATURE_R,
+            CHANGE_SIGNATURE_S,
+            CHANGE_PUBLIC_KEY_X,
+            CHANGE_PUBLIC_KEY_Y
         );
         console.log("isValid", isValid);
 
@@ -468,117 +432,14 @@ contract DepositAndTransferETH is Base {
         PackedUserOperation[] memory ops = new PackedUserOperation[](1);
         ops[0] = userOp;
 
-        bytes memory code = abi.encodePacked(bytes3(0xef0100), address(implementation));
+        bytes memory code = abi.encodePacked(
+            bytes3(0xef0100),
+            address(implementation) // or your logic contract
+        );
         vm.etch(owner, code);
-
-        uint256 balanceOfBefore = owner.balance;
-        uint256 balanceSenderBefore = ETH_RECIVE.balance;
 
         vm.prank(sender);
         entryPoint.handleOps(ops, payable(sender));
-
-        uint256 balanceOfAfter = owner.balance;
-        uint256 balanceSenderAfter = ETH_RECIVE.balance;
-
-        console.log("balanceOfBefore", balanceOfBefore);
-        console.log("balanceOfAfter", balanceOfAfter);
-        console.log("balanceSenderBefore", balanceSenderBefore);
-        console.log("balanceSenderAfter", balanceSenderAfter);
-        assertEq(balanceOfBefore - (value * 2), balanceOfAfter);
-        console.log("/* ---------------------------------- test_ExecuteBatchSKP256 -------- */");
-    }
-
-    function test_ExecuteBatchSKP256NonKey() public {
-        console.log(
-            "/* ---------------------------------- test_ExecuteBatchSKP256NonKey -------- */"
-        );
-
-        // Create the Call array with multiple transactions
-        Call[] memory calls = new Call[](2);
-
-        bytes memory dataHex = hex"";
-        bytes memory dataHex2 = hex"";
-        uint256 value = 0.1e18;
-
-        calls[0] = Call({target: ETH_RECIVE, value: value, data: dataHex});
-        calls[1] = Call({target: ETH_RECIVE, value: value, data: dataHex2});
-
-        // ERC-7821 mode for batch execution (still mode ID = 1)
-        bytes32 mode = bytes32(uint256(0x01000000000000000000) << (22 * 8));
-
-        // Encode the execution data as Call[] array
-        bytes memory executionData = abi.encode(calls);
-
-        // Create the callData for the ERC-7821 execute function
-        bytes memory callData =
-            abi.encodeWithSelector(bytes4(keccak256("execute(bytes32,bytes)")), mode, executionData);
-
-        uint256 nonce = entryPoint.getNonce(owner, 1);
-
-        PackedUserOperation memory userOp = PackedUserOperation({
-            sender: owner,
-            nonce: nonce,
-            initCode: hex"7702",
-            callData: callData,
-            accountGasLimits: _packAccountGasLimits(400000, 300000),
-            preVerificationGas: 800000,
-            gasFees: _packGasFees(80 gwei, 15 gwei),
-            paymasterAndData: hex"",
-            signature: hex""
-        });
-
-        bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
-        console.logBytes32(userOpHash);
-
-        IKey.PubKey memory pubKeyExecuteBatch =
-            IKey.PubKey({x: ETH_P256NOKEY_PUBLIC_KEY_X, y: ETH_P256NOKEY_PUBLIC_KEY_Y});
-
-        bytes memory _signature = account.encodeP256NonKeySignature(
-            ETH_P256NOKEY_SIGNATURE_R, ETH_P256NOKEY_SIGNATURE_S, pubKeyExecuteBatch
-        );
-
-        bytes4 magicValue = account.isValidSignature(userOpHash, _signature);
-        bool usedChallenge = account.usedChallenges(userOpHash);
-        console.log("usedChallenge", usedChallenge);
-        console.logBytes4(magicValue);
-
-        bytes32 _hash = EfficientHashLib.sha2(userOpHash);
-        console.logBytes32(_hash);
-
-        bool isValid = webAuthn.verifyP256Signature(
-            _hash,
-            ETH_P256NOKEY_SIGNATURE_R,
-            ETH_P256NOKEY_SIGNATURE_S,
-            ETH_P256NOKEY_PUBLIC_KEY_X,
-            ETH_P256NOKEY_PUBLIC_KEY_Y
-        );
-        console.log("isValid Test", isValid);
-
-        userOp.signature = _signature;
-
-        PackedUserOperation[] memory ops = new PackedUserOperation[](1);
-        ops[0] = userOp;
-
-        bytes memory code = abi.encodePacked(bytes3(0xef0100), address(implementation));
-        vm.etch(owner, code);
-
-        uint256 balanceOfBefore = owner.balance;
-        uint256 balanceSenderBefore = ETH_RECIVE.balance;
-
-        vm.prank(sender);
-        entryPoint.handleOps(ops, payable(sender));
-
-        uint256 balanceOfAfter = owner.balance;
-        uint256 balanceSenderAfter = ETH_RECIVE.balance;
-
-        console.log("balanceOfBefore", balanceOfBefore);
-        console.log("balanceOfAfter", balanceOfAfter);
-        console.log("balanceSenderBefore", balanceSenderBefore);
-        console.log("balanceSenderAfter", balanceSenderAfter);
-        assertEq(balanceOfBefore - (value * 2), balanceOfAfter);
-        console.log(
-            "/* ---------------------------------- test_ExecuteBatchSKP256NonKey -------- */"
-        );
     }
 
     function _register_KeyEOA() internal {
@@ -680,7 +541,7 @@ contract DepositAndTransferETH is Base {
     /* ─────────────────────────────────────────────────────────── helpers ──── */
     function _initializeAccount() internal {
         /* sample WebAuthn public key – replace with a real one if needed */
-        pubKeyMK = PubKey({x: ETH_PUBLIC_KEY_X, y: ETH_PUBLIC_KEY_Y});
+        pubKeyMK = PubKey({x: CHANGE_PUBLIC_KEY_X, y: CHANGE_PUBLIC_KEY_Y});
 
         keyMK = Key({pubKey: pubKeyMK, eoaAddress: address(0), keyType: KeyType.WEBAUTHN});
 

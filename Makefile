@@ -24,6 +24,9 @@ install-forge: openzeppelin account-abstraction solady
 test-keys:
 	forge test --mp test/unit/Keys.t.sol -vv --rpc-url $(SEPOLIA_RPC_URL)
 
+test-upgrade-addresses:
+	forge test --mp test/unit/UpgradeAddresses.t.sol -vv --rpc-url $(SEPOLIA_RPC_URL)
+
 test-P256:
 	node script/P256_Single_Mint.ts && forge test --mp test/unit/P256.t.sol -vv --rpc-url $(SEPOLIA_RPC_URL)
 
@@ -70,7 +73,7 @@ deploy-7702-base:
 
 # 0x9cab09f5b22e6C7812cEeAEF081BEF62b91BF8F2
 deploy-7702-mainnet:
-	forge create src/core/OPF7702Recoverable.sol:OPF7702Recoverable \
+	forge create src/core/OPFMain.sol:OPFMain \
 	--rpc-url $(SEPOLIA_RPC_URL) \
 	--account BURNER_KEY \
 	--verify \
@@ -88,4 +91,4 @@ simple-mainnet:
 	--constructor-args 0x4337084D9E255Ff0702461CF8895CE9E3b5Ff108 
 
 push:
-	git push -u origin OPF7702_Recoverable_7821
+	git push -u origin OPF7702_Before_Audit

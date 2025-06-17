@@ -8,6 +8,15 @@ import {KeysManager} from "src/core/KeysManager.sol";
 /// @dev Declares all externally‐visible functions, events, and errors. Uses `KeysManager.Call` for transaction data.
 interface IExecution {
     // =============================================================
+    //                            ERRORS
+    // =============================================================
+
+    /// @dev The execution mode is not supported.
+    error UnsupportedExecutionMode();
+    /// @notice Thrown when the provided transaction length is invalid.
+    error OpenfortBaseAccount7702V1__InvalidTransactionLength();
+
+    // =============================================================
     //                         PUBLIC FUNCTIONS
     // =============================================================
 

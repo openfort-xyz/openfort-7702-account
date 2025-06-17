@@ -14,6 +14,8 @@
 
 pragma solidity ^0.8.29;
 
+import {UpgradeAddress} from "src/libs/UpgradeAddress.sol";
+import {IBaseOPF7702} from "src/interfaces/IBaseOPF7702.sol";
 import {IAccount} from "lib/account-abstraction/contracts/interfaces/IAccount.sol";
 import {BaseAccount} from "lib/account-abstraction/contracts/core/BaseAccount.sol";
 import {IEntryPoint} from "lib/account-abstraction/contracts/interfaces/IEntryPoint.sol";
@@ -37,20 +39,16 @@ abstract contract BaseOPF7702 is
     ERC721Holder,
     ERC1155Holder
 {
-    // =============================================================
-    //                            ERRORS
-    // =============================================================
+    using UpgradeAddress for address;
 
-    error OpenfortBaseAccount7702V1__InvalidSignature();
-    /// @notice msg.sender not from address(this) and nit from Entry Point
-    error OpenfortBaseAccount7702V1_UnauthorizedCaller();
+    error NotFromEntryPoint();
 
     // =============================================================
     //                          CONSTANTS
     // =============================================================
 
     /// @dev Number of storage slots to clear in `_clearStorage`.
-    uint256 private constant _NUM_CLEAR_SLOTS = 3;
+    uint256 private constant _NUM_CLEAR_SLOTS = 16;
 
     // =============================================================
     //                          STATE VARIABLES
@@ -59,14 +57,8 @@ abstract contract BaseOPF7702 is
     /// @notice The EntryPoint singleton contract used to dispatch user operations.
     address internal immutable ENTRY_POINT;
 
-    // =============================================================
-    //                             EVENTS
-    // =============================================================
-
-    /// @notice Emitted when ETH is deposited into this account for covering gas fees.
-    /// @param source The address that sent the ETH deposit.
-    /// @param amount The amount of ETH deposited.
-    event DepositAdded(address indexed source, uint256 amount);
+    /// @notice The WebAuthn Verifier singleton contract used to verify WebAuthn and P256 signatures.
+    address public immutable WEBAUTHN_VERIFIER;
 
     // =============================================================
     //                       RECEIVE / FALLBACK
@@ -79,7 +71,21 @@ abstract contract BaseOPF7702 is
     /// @notice Receive function to handle plain ETH transfers.
     /// @dev Emits `DepositAdded` event whenever ETH is received.
     receive() external payable {
-        emit DepositAdded(msg.sender, msg.value);
+        emit IBaseOPF7702.DepositAdded(msg.sender, msg.value);
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────────
+    //                          Public / External methods
+    // ──────────────────────────────────────────────────────────────────────────────
+
+    function setEntryPoint(address _entryPoint) external {
+        _requireForExecute();
+        _entryPoint.setEntryPoint();
+    }
+
+    function setWebAuthnVerifier(address _webAuthnVerifier) external {
+        _requireForExecute();
+        _webAuthnVerifier.setWebAuthnVerifier();
     }
 
     // =============================================================
@@ -88,11 +94,14 @@ abstract contract BaseOPF7702 is
 
     /**
      * @notice Clears the contract’s custom storage slots for reinitialization purposes.
-     * @dev Uses inline assembly to set three consecutive storage slots (starting at keccak256("openfort.baseAccount.7702.v1")) to zero.
+     * @dev Uses inline assembly to set three consecutive storage slots
+     *      keccak256(abi.encode(uint256(keccak256("openfort.baseAccount.7702.v1")) - 1)) & ~bytes32(uint256(0xff)) to zero.
      *      Useful when proxy patterns or re-deployment require resetting specific storage.
      */
     function _clearStorage() internal {
-        bytes32 baseSlot = keccak256("openfort.baseAccount.7702.v1");
+        bytes32 baseSlot = keccak256(
+            abi.encode(uint256(keccak256("openfort.baseAccount.7702.v1")) - 1)
+        ) & ~bytes32(uint256(0xff));
         for (uint256 i = 0; i < _NUM_CLEAR_SLOTS;) {
             bytes32 slot = bytes32(uint256(baseSlot) + i);
             assembly {
@@ -112,10 +121,13 @@ abstract contract BaseOPF7702 is
     function _requireForExecute() internal view virtual override {
         require(
             msg.sender == address(this) || msg.sender == address(entryPoint()),
-            OpenfortBaseAccount7702V1_UnauthorizedCaller()
+            IBaseOPF7702.OpenfortBaseAccount7702V1_UnauthorizedCaller()
         );
     }
 
+    function _requireFromEntryPoint() internal view virtual override {
+        require(msg.sender == address(UpgradeAddress.entryPoint(ENTRY_POINT)), NotFromEntryPoint());
+    }
     // =============================================================
     //                    GETTERS PUBLIC FUNCTIONS
     // =============================================================
@@ -126,13 +138,18 @@ abstract contract BaseOPF7702 is
      * @dev Required by `IAccount` interface to route UserOperations.
      */
     function entryPoint() public view override returns (IEntryPoint) {
-        return IEntryPoint(ENTRY_POINT);
+        return IEntryPoint(UpgradeAddress.entryPoint(ENTRY_POINT));
+    }
+
+    function webAuthnVerifier() public view returns (address) {
+        return UpgradeAddress.webAuthnVerifier(WEBAUTHN_VERIFIER);
     }
 
     /// @notice Checks if the contract implements a given interface.
     /// @param _interfaceId The interface identifier, as specified in ERC-165.
     /// @return `true` if this contract supports `_interfaceId`, `false` otherwise.
     /// @dev Overrides ERC1155Holder and IERC165’s `supportsInterface`.
+
     function supportsInterface(bytes4 _interfaceId)
         public
         pure
