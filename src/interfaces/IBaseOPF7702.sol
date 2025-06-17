@@ -29,6 +29,8 @@ interface IBaseOPF7702 is IAccount, IERC1271, IERC165, IERC721Receiver, IERC1155
     /// @param amount The amount of ETH deposited.
     event DepositAdded(address indexed source, uint256 amount);
 
+    event EntryPointUpdated(address indexed newEntryPoint);
+    event WebAuthnVerifierUpdated(address indexed newVerifier);
     // =============================================================
     //                        EXTERNAL FUNCTIONS
     // =============================================================

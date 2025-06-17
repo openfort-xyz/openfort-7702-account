@@ -15,6 +15,7 @@ pragma solidity ^0.8.29;
 
 import {Execution} from "src/core/Execution.sol";
 import {KeyHashLib} from "src/libs/KeyHashLib.sol";
+import {UpgradeAddress} from "src/libs/UpgradeAddress.sol";
 import {IWebAuthnVerifier} from "src/interfaces/IWebAuthnVerifier.sol";
 import {EfficientHashLib} from "lib/solady/src/utils/EfficientHashLib.sol";
 import {KeyDataValidationLib as KeyValidation} from "src/libs/KeyDataValidationLib.sol";
@@ -30,7 +31,7 @@ import {
 
 /**
  * @title   Openfort Base Account 7702 with ERC-4337 Support
- * @author  Openfort — https://openfort.xyz
+ * @author  Openfort@0xkoiner
  * @notice  Smart contract wallet implementing EIP-7702 + ERC-4337 + multi-format keys.
  * @dev
  *  • EIP-4337 integration via EntryPoint
@@ -168,7 +169,7 @@ contract OPF7702 is Execution, Initializable {
             return SIG_VALIDATION_FAILED;
         }
 
-        bool sigOk = IWebAuthnVerifier(WEBAUTHN_VERIFIER).verifySoladySignature(
+        bool sigOk = IWebAuthnVerifier(webAuthnVerifier()).verifySoladySignature(
             userOpHash,
             requireUV,
             authenticatorData,
@@ -234,7 +235,7 @@ contract OPF7702 is Execution, Initializable {
             userOpHash = EfficientHashLib.sha2(userOpHash);
         }
 
-        bool sigOk = IWebAuthnVerifier(WEBAUTHN_VERIFIER).verifyP256Signature(
+        bool sigOk = IWebAuthnVerifier(webAuthnVerifier()).verifyP256Signature(
             userOpHash, r, sSig, pubKey.x, pubKey.y
         );
         if (!sigOk) {
@@ -561,7 +562,7 @@ contract OPF7702 is Execution, Initializable {
         if (usedChallenges[_hash]) {
             return bytes4(0xffffffff);
         }
-        bool sigOk = IWebAuthnVerifier(WEBAUTHN_VERIFIER).verifySoladySignature(
+        bool sigOk = IWebAuthnVerifier(webAuthnVerifier()).verifySoladySignature(
             _hash,
             requireUV,
             authenticatorData,
@@ -611,7 +612,7 @@ contract OPF7702 is Execution, Initializable {
             hashToCheck = EfficientHashLib.sha2(_hash);
         }
 
-        bool sigOk = IWebAuthnVerifier(WEBAUTHN_VERIFIER).verifyP256Signature(
+        bool sigOk = IWebAuthnVerifier(webAuthnVerifier()).verifyP256Signature(
             hashToCheck, r, s, pubKey.x, pubKey.y
         );
         if (!sigOk) {

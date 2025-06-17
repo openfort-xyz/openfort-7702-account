@@ -26,7 +26,7 @@ import {ECDSA} from "lib/openzeppelin-contracts/contracts/utils/cryptography/ECD
 import {EIP712} from "lib/openzeppelin-contracts/contracts/utils/cryptography/EIP712.sol";
 /**
  * @title   Openfort Base Account 7702 with ERC-4337 Support
- * @author  Openfort — https://openfort.xyz
+ * @author  Openfort@0xkoiner
  * @notice  Smart contract wallet implementing EIP-7702 + ERC-4337 with guardian-based recovery and multi-format keys.
  * @dev
  *  • EIP-4337 integration via EntryPoint

@@ -276,6 +276,23 @@ contract Base is Test, IKey {
     uint256 public BATCHS_CHALLENGE_INDEX = 23;
     uint256 public BATCHS_TYPE_INDEX = 1;
 
+    /* ───────────────────────────────────────────────────────────── master key ── */
+    string public json_change = vm.readFile("test/data/change.json");
+
+    bytes32 public CHANGE_PUBLIC_KEY_X = stdJson.readBytes32(json_change, ".change.x");
+    bytes32 public CHANGE_PUBLIC_KEY_Y = stdJson.readBytes32(json_change, ".change.y");
+
+    bytes32 public CHANGE_CHALLENGE = stdJson.readBytes32(json_change, ".change.challenge");
+
+    bytes32 public CHANGE_SIGNATURE_R = stdJson.readBytes32(json_change, ".change.signature.r");
+    bytes32 public CHANGE_SIGNATURE_S = stdJson.readBytes32(json_change, ".change.signature.s");
+
+    bytes public CHANGE_AUTHENTICATOR_DATA =
+        stdJson.readBytes(json_change, ".change.metadata.authenticatorData");
+
+    string public CHANGE_CLIENT_DATA_JSON =
+        stdJson.readString(json_change, ".change.metadata.clientDataJSON");
+
     function _allowedSelectors() internal pure returns (bytes4[] memory sel) {
         sel = new bytes4[](3);
         sel[0] = 0xa9059cbb;

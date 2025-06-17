@@ -24,6 +24,9 @@ install-forge: openzeppelin account-abstraction solady
 test-keys:
 	forge test --mp test/unit/Keys.t.sol -vv --rpc-url $(SEPOLIA_RPC_URL)
 
+test-upgrade-addresses:
+	forge test --mp test/unit/UpgradeAddresses.t.sol -vv --rpc-url $(SEPOLIA_RPC_URL)
+
 test-P256:
 	node script/P256_Single_Mint.ts && forge test --mp test/unit/P256.t.sol -vv --rpc-url $(SEPOLIA_RPC_URL)
 

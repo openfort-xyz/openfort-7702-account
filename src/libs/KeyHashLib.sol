@@ -5,7 +5,6 @@ import {IKey} from "src/interfaces/IKey.sol";
 
 /**
  * @title KeyHashLib
- * @author Openfort
  * @notice Pure helper library for deriving the canonical `keyId` used by
  *         `KeysManager`. Centralising the hashing logic eliminates code
  *         duplication and makes the system easier to audit.

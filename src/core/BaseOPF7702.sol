@@ -14,6 +14,7 @@
 
 pragma solidity ^0.8.29;
 
+import {UpgradeAddress} from "src/libs/UpgradeAddress.sol";
 import {IBaseOPF7702} from "src/interfaces/IBaseOPF7702.sol";
 import {IAccount} from "lib/account-abstraction/contracts/interfaces/IAccount.sol";
 import {BaseAccount} from "lib/account-abstraction/contracts/core/BaseAccount.sol";
@@ -38,6 +39,8 @@ abstract contract BaseOPF7702 is
     ERC721Holder,
     ERC1155Holder
 {
+    using UpgradeAddress for address;
+
     // =============================================================
     //                          CONSTANTS
     // =============================================================
@@ -67,6 +70,20 @@ abstract contract BaseOPF7702 is
     /// @dev Emits `DepositAdded` event whenever ETH is received.
     receive() external payable {
         emit IBaseOPF7702.DepositAdded(msg.sender, msg.value);
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────────
+    //                          Public / External methods
+    // ──────────────────────────────────────────────────────────────────────────────
+
+    function setEntryPoint(address _entryPoint) external {
+        _requireForExecute();
+        _entryPoint.setEntryPoint();
+    }
+
+    function setWebAuthnVerifier(address _webAuthnVerifier) external {
+        _requireForExecute();
+        _webAuthnVerifier.setWebAuthnVerifier();
     }
 
     // =============================================================
@@ -106,6 +123,9 @@ abstract contract BaseOPF7702 is
         );
     }
 
+    function _requireFromEntryPoint() internal view virtual override {
+        require(msg.sender == address(UpgradeAddress.entryPoint(ENTRY_POINT)), NotFromEntryPoint());
+    }
     // =============================================================
     //                    GETTERS PUBLIC FUNCTIONS
     // =============================================================
@@ -116,13 +136,18 @@ abstract contract BaseOPF7702 is
      * @dev Required by `IAccount` interface to route UserOperations.
      */
     function entryPoint() public view override returns (IEntryPoint) {
-        return IEntryPoint(ENTRY_POINT);
+        return IEntryPoint(UpgradeAddress.entryPoint(ENTRY_POINT));
+    }
+
+    function webAuthnVerifier() public view returns (address) {
+        return UpgradeAddress.webAuthnVerifier(WEBAUTHN_VERIFIER);
     }
 
     /// @notice Checks if the contract implements a given interface.
     /// @param _interfaceId The interface identifier, as specified in ERC-165.
     /// @return `true` if this contract supports `_interfaceId`, `false` otherwise.
     /// @dev Overrides ERC1155Holder and IERC165’s `supportsInterface`.
+
     function supportsInterface(bytes4 _interfaceId)
         public
         pure
