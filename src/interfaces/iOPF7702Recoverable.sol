@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+
 pragma solidity 0.8.29;
 
 import {IKey} from "./IKey.sol";
@@ -119,6 +120,7 @@ interface IOPF7702Recoverable is IOPF7702 {
     // ──────────────────────────────────────────────────────────────────────────────
 
     /// @notice Initialize with a master key + first guardian
+    // @audit-info ⚠️: initialize params was changed, fit to exist.
     function initialize(
         IKey.Key calldata _key,
         SpendLimit.SpendTokenInfo calldata _spendTokenInfo,
@@ -128,21 +130,27 @@ interface IOPF7702Recoverable is IOPF7702 {
     ) external;
 
     /// @notice Propose a new guardian (after securityPeriod)
+    // @audit-low ⚠️: pass bytes32 and not address
     function proposeGuardian(address _guardian) external;
 
     /// @notice Confirm a previously proposed guardian
+    // @audit-low ⚠️: pass bytes32 and not address
     function confirmGuardianProposal(address _guardian) external;
 
     /// @notice Cancel a guardian proposal
+    // @audit-low ⚠️: pass bytes32 and not address
     function cancelGuardianProposal(address _guardian) external;
 
     /// @notice Schedule removal of an existing guardian
+    // @audit-low ⚠️: pass bytes32 and not address
     function revokeGuardian(address _guardian) external;
 
     /// @notice Confirm a scheduled guardian removal
+    // @audit-low ⚠️: pass bytes32 and not address
     function confirmGuardianRevocation(address _guardian) external;
 
     /// @notice Cancel a guardian removal
+    // @audit-low ⚠️: pass bytes32 and not address
     function cancelGuardianRevocation(address _guardian) external;
 
     /// @notice Start recovery by proposing a new master key (guardian signatures to follow)
@@ -182,3 +190,5 @@ interface IOPF7702Recoverable is IOPF7702 {
     /// @notice EIP-712 digest that guardians must sign for recovery
     function getDigestToSign() external view returns (bytes32);
 }
+
+/// @audit-first-round: ✅

@@ -15,7 +15,7 @@ interface IBaseOPF7702 is IAccount, IERC1271, IERC165, IERC721Receiver, IERC1155
     // =============================================================
     //                            ERRORS
     // =============================================================
-
+    // @audit-info ⚠️: Natspec
     error OpenfortBaseAccount7702V1__InvalidSignature();
     /// @notice msg.sender not from address(this) and nit from Entry Point
     error OpenfortBaseAccount7702V1_UnauthorizedCaller();
@@ -28,8 +28,9 @@ interface IBaseOPF7702 is IAccount, IERC1271, IERC165, IERC721Receiver, IERC1155
     /// @param source The address that sent the ETH deposit.
     /// @param amount The amount of ETH deposited.
     event DepositAdded(address indexed source, uint256 amount);
-
+    // @audit-info ⚠️: Natspec
     event EntryPointUpdated(address indexed newEntryPoint);
+    // @audit-info ⚠️: Natspec
     event WebAuthnVerifierUpdated(address indexed newVerifier);
     // =============================================================
     //                        EXTERNAL FUNCTIONS
@@ -45,4 +46,8 @@ interface IBaseOPF7702 is IAccount, IERC1271, IERC165, IERC721Receiver, IERC1155
     /// @return `true` if this contract supports `interfaceId`, `false` otherwise.
     /// @dev Combines ERC-165, IAccount, IERC1271, ERC721Receiver, and ERC1155Receiver.
     function supportsInterface(bytes4 interfaceId) external view returns (bool);
+
+    // @audit-info ⚠️: Add function supportsInterface(bytes4 _interfaceId)
 }
+
+/// @audit-first-round: ✅

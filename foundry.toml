@@ -11,6 +11,17 @@ fs_permissions = [
   { access = "read", path = "./test/data" }
 ]
 
+# Fuzz testing configuration
+[fuzz]
+runs = 10000                    # Number of fuzz runs per test
+max_local_rejects = 65536      # Maximum number of local rejections
+max_global_rejects = 65536     # Maximum number of global rejections
+dictionary_weight = 40         # Weight of dictionary values in fuzzing (0-100)
+include_storage = true         # Include storage values in fuzzing
+include_push_bytes = true      # Include push bytes in fuzzing
+seed = "0x1234"               # Optional: Set a specific seed for reproducibility
+
+
 # Add CI profile with same settings
 [profile.ci]
 src = "src"

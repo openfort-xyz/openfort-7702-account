@@ -43,6 +43,7 @@ interface IOPF7702 is IExecution, IKeysManager, IERC1271, IERC165 {
      * @param _validUntil       Expiration timestamp for this initialization.
      * @param _nonce            Nonce to prevent replay.
      */
+    // @audit-info ⚠️: No function in the contract
     function initialize(
         Key calldata _key,
         SpendLimit.SpendTokenInfo calldata _spendTokenInfo,
@@ -68,3 +69,5 @@ interface IOPF7702 is IExecution, IKeysManager, IERC1271, IERC165 {
         view
         returns (bytes4);
 }
+
+/// @audit-first-round: ✅

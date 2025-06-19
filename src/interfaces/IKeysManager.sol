@@ -35,12 +35,13 @@ interface IKeysManager is IKey {
     event KeyRevoked(bytes32 indexed key);
     /// @notice Emitted when a new key is registered
     /// @param key The identifier (hash or address‐derived hash) of the newly registered key
-    event KeyRegistrated(bytes32 indexed key);
+    event KeyRegistreted(bytes32 indexed key);
 
     // =============================================================
     //                          STATE GETTERS
     // =============================================================
-
+    // @audit-info ⚠️: No keys mappings getters!
+    
     /// @notice Incremental ID for WebAuthn/P256/P256NONKEY keys.
     function id() external view returns (uint256);
 
@@ -64,6 +65,7 @@ interface IKeysManager is IKey {
      *      Supports WebAuthn/P256/P256NONKEY and EOA keys.
      *      Emits `KeyRegistrated(keyId)`.
      */
+    // @audit-info ⚠️: Function was changed. Fit to exits `function registerKey(Key calldata _key, KeyReg calldata _keyData)`
     function registerKey(
         IKey.Key calldata _key,
         uint48 _validUntil,
@@ -102,7 +104,7 @@ interface IKeysManager is IKey {
         view
         returns (IKey.KeyType keyType, address registeredBy, bool isActive);
 
-    /**
+    /** 
      * @notice Retrieves the `Key` struct stored at a given ID.
      * @param _id Identifier index for the key to retrieve.
      * @return The `Key` struct containing key type, public key, or EOA address.
@@ -146,6 +148,7 @@ interface IKeysManager is IKey {
     /**
      * @notice Encodes a P-256 signature payload (KeyType.P256).
      */
+    // @audit-info ⚠️: Combine with function encodeP256NonKeySignature and pass Key _key. And enconde the keyType
     function encodeP256Signature(bytes32 r, bytes32 s, IKey.PubKey memory pubKey)
         external
         pure
@@ -154,6 +157,7 @@ interface IKeysManager is IKey {
     /**
      * @notice Encodes a P-256 non-key signature payload (KeyType.P256NONKEY).
      */
+    // @audit-info ⚠️: Combine with function encodeP256Signature and pass Key _key. And enconde the keyType
     function encodeP256NonKeySignature(bytes32 r, bytes32 s, IKey.PubKey memory pubKey)
         external
         pure
@@ -164,3 +168,5 @@ interface IKeysManager is IKey {
      */
     function encodeEOASignature(bytes calldata _signature) external pure returns (bytes memory);
 }
+
+/// @audit-first-round: ✅

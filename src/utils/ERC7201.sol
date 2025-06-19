@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+// @audit-info ⚠️: Fixed Pragma -> ^0.8.29
 pragma solidity ^0.8.23;
 
 import {IERC7201} from "src/interfaces/IERC7201.sol";
@@ -17,3 +18,5 @@ contract ERC7201 is IERC7201 {
         return "openfort.baseAccount.7702.v1";
     }
 }
+
+/// @audit-first-round: ✅

@@ -8,6 +8,7 @@ pragma solidity ^0.8.29;
  * @notice Interface defining validation structures for signature verification
  * @dev Contains structs used for signature validation in account initialization
  */
+// @audit-info ⚠️: Unused Code!!
 interface IValidation {
     /**
      * @notice Structure containing signature and validation data
@@ -21,3 +22,5 @@ interface IValidation {
         uint256 validUntil;
     }
 }
+
+/// @audit-first-round: ✅

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIR
-
+// @audit-info ⚠️: Fixed Pragma -> ^0.8.29
 pragma solidity ^0.8.0;
 
 import {IKey} from "src/interfaces/IKey.sol";
@@ -21,6 +21,7 @@ abstract contract SpendLimit {
      * @param innerData Call data containing token transfer details
      * @return True if the token spend is valid, false otherwise
      */
+    // @audit-info ⚠️: Unused Code!!
     function _validateTokenSpend(IKey.KeyData storage key, bytes memory innerData)
         internal
         virtual
@@ -41,3 +42,4 @@ abstract contract SpendLimit {
         return true;
     }
 }
+/// @audit-first-round: ✅

@@ -1,0 +1,26 @@
+Traces:
+  [507508] WebAuthnChains::test_Mainet_Solady()
+    ├─ [0] VM::createFork("<rpc url>")
+    │   └─ ← [Return] 0
+    ├─ [0] VM::selectFork(0)
+    │   └─ ← [Return]
+    ├─ [254500] → new VerifierSolady@0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f
+    │   └─ ← [Return] 1271 bytes of code
+    ├─ [181788] VerifierSolady::verifySoladySignature(0xcea3e080968320575bc01fbe2293a690683e321ac28cfb95a234e4b959e4fcfa, true, 0x49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d97631d00000000, "{\"type\":\"webauthn.get\",\"challenge\":\"zqPggJaDIFdbwB--IpOmkGg-MhrCjPuVojTkuVnk_Po\",\"origin\":\"http://localhost:5173\",\"crossOrigin\":false}", 23, 1, 0xcf1d727573eee8b3d301ab94aec432c1b7953969dcdf71388d14385630378a80, 0x417d9bafa3acecdbba348f851c1efc93c7ed780e2eddc7046767a1998db4f0c8, 0xf014cc9fb4edba3c439a22423f580ad29cb177dbd5af224e4d068ef6374df083, 0xf4c5322095ffa8db8344b7675f82eeadd2a17af4d9db9d4d4c582e8839ca391e) [staticcall]
+    │   ├─ [120] PRECOMPILES::sha256(0x7b2274797065223a22776562617574686e2e676574222c226368616c6c656e6765223a227a715067674a61444946646277422d2d49704f6d6b47672d4d6872436a5075566f6a546b75566e6b5f506f222c226f726967696e223a22687474703a2f2f6c6f63616c686f73743a35313733222c2263726f73734f726967696e223a66616c73657d) [staticcall]
+    │   │   └─ ← [Return] 0x219e7c3fe7a11bb2c9a1df45b0edf5fc2643e7391b9e89e6725aa27a4e4f2308
+    │   ├─ [96] PRECOMPILES::sha256(0x49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d97631d00000000219e7c3fe7a11bb2c9a1df45b0edf5fc2643e7391b9e89e6725aa27a4e4f2308) [staticcall]
+    │   │   └─ ← [Return] 0xf8a2ad3bfb24311530aa0157be355d27d57f2f9e3b7f68bce248a729ab95aa75
+    │   ├─ [0] 0x0000000000000000000000000000000000000100::f8a2ad3b(fb24311530aa0157be355d27d57f2f9e3b7f68bce248a729ab95aa75cf1d727573eee8b3d301ab94aec432c1b7953969dcdf71388d14385630378a80417d9bafa3acecdbba348f851c1efc93c7ed780e2eddc7046767a1998db4f0c8f014cc9fb4edba3c439a22423f580ad29cb177dbd5af224e4d068ef6374df083f4c5322095ffa8db8344b7675f82eeadd2a17af4d9db9d4d4c582e8839ca391e) [staticcall]
+    │   │   └─ ← [Stop]
+    │   ├─ [169171] 0x000000000000D01eA45F9eFD5c54f037Fa57Ea1a::f8a2ad3b(fb24311530aa0157be355d27d57f2f9e3b7f68bce248a729ab95aa75cf1d727573eee8b3d301ab94aec432c1b7953969dcdf71388d14385630378a80417d9bafa3acecdbba348f851c1efc93c7ed780e2eddc7046767a1998db4f0c8f014cc9fb4edba3c439a22423f580ad29cb177dbd5af224e4d068ef6374df083f4c5322095ffa8db8344b7675f82eeadd2a17af4d9db9d4d4c582e8839ca391e) [staticcall]
+    │   │   ├─ [1360] PRECOMPILES::modexp(32, 32, 32, 0x417d9bafa3acecdbba348f851c1efc93c7ed780e2eddc7046767a1998db4f0c8, 0xffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc63254f, 0xffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632551) [staticcall]
+    │   │   │   └─ ← [Return] 0x0045b25f83a9d65d17382ec31df8a1ba3ce92ed69bb890396c4021dbf4705df4
+    │   │   ├─ [1360] PRECOMPILES::modexp(32, 32, 32, 0x18cfcde3b8d7575f848fba319ecdfb33045a2d7a175dd9676da62431ae80a333, 0xffffffff00000001000000000000000000000000fffffffffffffffffffffffd, 0xffffffff00000001000000000000000000000000ffffffffffffffffffffffff) [staticcall]
+    │   │   │   └─ ← [Return] 0x89257cd9ec83eaf5fa85b2a3c4cf54d70ca4dd6675d7617905b10246a5e90f41
+    │   │   └─ ← [Return] 0x0000000000000000000000000000000000000000000000000000000000000001
+    │   └─ ← [Return] true
+    ├─ [0] VM::assertTrue(true) [staticcall]
+    │   └─ ← [Return]
+    └─ ← [Return]
+

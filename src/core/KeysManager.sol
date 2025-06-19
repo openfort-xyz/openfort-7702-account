@@ -31,7 +31,7 @@ abstract contract KeysManager is BaseOPF7702, IKey, SpendLimit {
     // =============================================================
     //                          CONSTANTS
     // =============================================================
-
+        
     /// @notice Maximum number of allowed function selectors per key
     uint256 internal constant MAX_SELECTORS = 10;
     /// @notice “Burn” address used as placeholder
@@ -91,7 +91,7 @@ abstract contract KeysManager is BaseOPF7702, IKey, SpendLimit {
             id++;
         }
 
-        emit IKeysManager.KeyRegistrated(keyId);
+        emit IKeysManager.KeyRegistreted(keyId);
     }
 
     /**
@@ -164,7 +164,7 @@ abstract contract KeysManager is BaseOPF7702, IKey, SpendLimit {
         sKey.validAfter = _keyData.validAfter;
         sKey.limit = _keyData.limit;
         sKey.masterKey = (_keyData.limit == 0);
-        sKey.whoRegistrated = address(this);
+        sKey.whoRegistered = address(this);
 
         // Only enforce limits if _limit > 0
         if (_keyData.limit > 0) {
@@ -183,6 +183,7 @@ abstract contract KeysManager is BaseOPF7702, IKey, SpendLimit {
                 sKey.whitelist[tokenAddr] = true;
 
                 uint256 selCount = _keyData.allowedSelectors.length;
+                // audit-question: check the length of selector in the beggining to avoid DoS?
                 selCount.ensureSelectorsLen();
                 for (uint256 i = 0; i < selCount;) {
                     sKey.allowedSelectors.push(_keyData.allowedSelectors[i]);
@@ -207,6 +208,7 @@ abstract contract KeysManager is BaseOPF7702, IKey, SpendLimit {
      *
      * @param sKey Storage reference to the `KeyData` being revoked.
      */
+     // audit-question: why not delete pubKey.x || pubKey.y || eoaAddress ??
     function _revokeKey(KeyData storage sKey) internal {
         if (!sKey.isActive) {
             revert IKeysManager.KeyManager__KeyInactive();
@@ -243,7 +245,7 @@ abstract contract KeysManager is BaseOPF7702, IKey, SpendLimit {
 
         KeyData storage sKey = keys[keyId];
 
-        return (k.keyType, sKey.whoRegistrated, sKey.isActive);
+        return (k.keyType, sKey.whoRegistered, sKey.isActive);
     }
 
     /**
@@ -325,6 +327,7 @@ abstract contract KeysManager is BaseOPF7702, IKey, SpendLimit {
      * @param pubKey  Public key (x, y) used for signing.
      * @return ABI‐encoded payload as: KeyType.P256, abi.encode(r, s, pubKey).
      */
+    // @audit-info ⚠️: Combine with function encodeP256NonKeySignature and pass Key _key. And enconde the keyType
     function encodeP256Signature(bytes32 r, bytes32 s, PubKey memory pubKey)
         external
         pure
@@ -341,6 +344,7 @@ abstract contract KeysManager is BaseOPF7702, IKey, SpendLimit {
      * @param pubKey  Public key (x, y) used for signing.
      * @return ABI‐encoded payload as: KeyType.P256NONKEY, abi.encode(r, s, pubKey).
      */
+    // @audit-info ⚠️: Combine with function encodeP256Signature and pass Key _key. And enconde the keyType
     function encodeP256NonKeySignature(bytes32 r, bytes32 s, PubKey memory pubKey)
         external
         pure
@@ -359,3 +363,5 @@ abstract contract KeysManager is BaseOPF7702, IKey, SpendLimit {
         return abi.encode(KeyType.EOA, _signature);
     }
 }
+
+/// @audit-first-round: ✅

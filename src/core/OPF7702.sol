@@ -15,6 +15,7 @@ pragma solidity ^0.8.29;
 
 import {Execution} from "src/core/Execution.sol";
 import {KeyHashLib} from "src/libs/KeyHashLib.sol";
+// @audit-info ⚠️: Unused import
 import {UpgradeAddress} from "src/libs/UpgradeAddress.sol";
 import {IWebAuthnVerifier} from "src/interfaces/IWebAuthnVerifier.sol";
 import {EfficientHashLib} from "lib/solady/src/utils/EfficientHashLib.sol";
@@ -50,6 +51,7 @@ contract OPF7702 is Execution, Initializable {
     using KeyValidation for KeyData;
 
     /// @notice Address of this implementation contract
+    // audit-medium 🟠: will be cleared during initialize. Convert to immutable
     address public _OPENFORT_CONTRACT_ADDRESS;
 
     constructor(address _entryPoint, address _webAuthnVerifier) {
@@ -164,7 +166,7 @@ contract OPF7702 is Execution, Initializable {
         ) = abi.decode(
             signature, (KeyType, bool, bytes, string, uint256, uint256, bytes32, bytes32, PubKey)
         );
-
+        // @audit-info ⚠️: usedChallenges does nothing useful
         if (usedChallenges[userOpHash]) {
             return SIG_VALIDATION_FAILED;
         }
@@ -199,6 +201,8 @@ contract OPF7702 is Execution, Initializable {
         }
 
         if (isValidKey(composedKey, callData)) {
+            // @audit-info ⚠️: usedChallenges does nothing useful
+            // @audit-medium 🟠🟠🟠: mark challenge as used in the beggining. masterKey can be replayed!!! nust come after checking directly
             usedChallenges[userOpHash] = true; // mark challenge as used
             return _packValidationData(false, sKey.validUntil, sKey.validAfter);
         }
@@ -227,7 +231,7 @@ contract OPF7702 is Execution, Initializable {
     ) private returns (uint256) {
         (bytes32 r, bytes32 sSig, PubKey memory pubKey) =
             abi.decode(sigData, (bytes32, bytes32, PubKey));
-
+        // @audit-info ⚠️: usedChallenges does nothing useful
         if (usedChallenges[userOpHash]) {
             return SIG_VALIDATION_FAILED;
         }
@@ -251,6 +255,8 @@ contract OPF7702 is Execution, Initializable {
         if (!isValid) return SIG_VALIDATION_FAILED;
 
         if (isValidKey(composedKey, callData)) {
+            // @audit-info ⚠️: usedChallenges does nothing useful
+            // @audit-low 🟠🟠🟠: mark challenge as used in the beggining
             usedChallenges[userOpHash] = true;
             return _packValidationData(false, sKey.validUntil, sKey.validAfter);
         }
@@ -282,7 +288,7 @@ contract OPF7702 is Execution, Initializable {
      * @dev
      *  • Loads the correct `KeyData` based on `KeyType`:
      *      – WEBAUTHN/P256/P256NONKEY/EOA → `keys[keccak(pubKey.x,pubKey.y)]`
-     *  • Checks: validUntil != 0, isActive, whoRegistrated == address(this).
+     *  • Checks: validUntil != 0, isActive, whoRegistered == address(this).
      *  • Extracts the first 4 bytes of `_callData` and calls:
      *      – `_validateExecuteCall(...)`
      *      – `_validateExecuteBatchCall(...)`
@@ -299,16 +305,21 @@ contract OPF7702 is Execution, Initializable {
         KeyData storage sKey;
         bytes32 keyHash;
 
+        // @audit-info ⚠️: Dont need checking of `_key.eoaAddress == address(0)`. revoke key will be active = false.
         if (_key.keyType == KeyType.EOA) {
             if (_key.eoaAddress == address(0)) return false;
+             // @audit-info ⚠️: can compute for all
             keyHash = _key.computeKeyId();
             sKey = keys[keyHash];
         } else {
+            // @audit-info ⚠️: can compute for all
             // WEBAUTHN/P256/P256NONKEY share same load path
             keyHash = _key.computeKeyId();
             sKey = keys[keyHash];
         }
         // Basic checks:
+        // @audit-medium 🟠🟠🟠: no checks if the key expired or validAfter! ✅ Resolved -> checking on Epoint!!!
+        // @audit-low ⚠️: Double cheking. Checked in `function _keyValidation`
         if (!sKey.isRegistered() || !sKey.isActive) {
             return false;
         }
@@ -316,7 +327,7 @@ contract OPF7702 is Execution, Initializable {
         // Extract function selector from callData
         bytes4 funcSelector = bytes4(_callData[:4]);
 
-        if (funcSelector == 0xe9ae5c53) {
+        if (funcSelector == 0xe9ae5c53) { // execute(bytes32,bytes)
             return _validateExecuteCall(sKey, _callData);
         }
         return false;
@@ -470,7 +481,7 @@ contract OPF7702 is Execution, Initializable {
      *    Else, load `key = keys[keyHash]` and enforce:
      *      - validUntil > now ≥ validAfter
      *      - (masterKey or limit≥1)
-     *      - whoRegistrated == address(this)
+     *      - whoRegistered == address(this)
      * @param _hash       The hash that was signed.
      * @param _signature  The signature blob to verify.
      * @return `this.isValidSignature.selector` if valid; otherwise `0xffffffff`.
@@ -637,3 +648,5 @@ contract OPF7702 is Execution, Initializable {
         return ECDSA.recover(hash, signature) == address(this);
     }
 }
+
+/// @audit-first-round: ✅

@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+// @audit-info ⚠️: Fixed Pragma -> ^0.8.29
 pragma solidity ^0.8.19;
 
 import {IKey} from "src/interfaces/IKey.sol"; // Brings in KeyData / SpendTokenInfo structs
@@ -21,7 +22,7 @@ library KeyDataValidationLib {
 
     /// @return true when the key was registered by *this* contract (index ≠ 0) and not wiped.
     function isRegistered(IKey.KeyData storage sKey) internal view returns (bool) {
-        return sKey.validUntil != 0 && sKey.whoRegistrated == address(this);
+        return sKey.validUntil != 0 && sKey.whoRegistered == address(this);
     }
 
     /// @return true when the key is flagged active *and* still inside its [after, until] window.
@@ -71,3 +72,5 @@ library KeyDataValidationLib {
         ok = hasQuota(sKey) && withinEthLimit(sKey, weiValue);
     }
 }
+
+/// @audit-first-round: ✅

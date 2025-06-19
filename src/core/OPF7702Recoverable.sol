@@ -117,6 +117,11 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
      * @param _signature        Signature over `_hash` by this contract.
      * @param _initialGuardian  Initialize Guardian. Must be at least one guardian!
      */
+    // @audit-low ⚠️: pass bytes32 and not _initialGuardian address
+    // @audit-question: If user passing not masterKey it will init the account? Assume the app and user checking that init masterKey
+    // @audit-question: No checks if pubKey(x,y) is `0`...  assume correct data.
+    // @audit-question: Can be frontrun with other key?
+    // msg.sender ->  msg.sender == address(this) || msg.sender == address(entryPoint())
     function initialize(
         Key calldata _key,
         KeyReg calldata _keyData,
@@ -126,6 +131,16 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
         _requireForExecute();
         _clearStorage();
 
+        // @audit-low ⚠️: Move the function inside the call -> `if (!_checkSignature(getDigestToSign(), _signature))`
+        // @audit-medium 🟠🟠🟠: getDigestToSign() signing: no data in `recoveryData`
+        /**
+            abi.encode(
+                RECOVER_TYPEHASH,
+                recoveryData.key,: address 0
+                recoveryData.executeAfter,: 0
+                recoveryData.guardiansRequired: 0
+            )
+         */
         bytes32 digest = getDigestToSign();
 
         // Todo: Use EIP712 to initialize account
@@ -133,6 +148,7 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
             revert IBaseOPF7702.OpenfortBaseAccount7702V1__InvalidSignature();
         }
 
+        // @audit-low ⚠️: Move the function inside the call -> ` KeyData storage sKey = keys[_key.computeKeyId()];`
         bytes32 keyId = _key.computeKeyId();
         KeyData storage sKey = keys[keyId];
         idKeys[0] = _key;
@@ -155,6 +171,7 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
 
     /// @dev Helper to configure the first guardian during `initialize`.
     /// @param _initialGuardian Guardian address to register.
+    // @audit-low ⚠️: pass bytes32 and not address
     function initializeGuardians(address _initialGuardian) private {
         if (_initialGuardian == address(0)) {
             revert IOPF7702Recoverable.OPF7702Recoverable__AddressCantBeZero();
@@ -179,10 +196,11 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
      * @notice Proposes adding a new guardian. Must be confirmed after the security period.
      * @param _guardian Guardian address to add.
      */
+    // @audit-low ⚠️: pass bytes32 and not address
     function proposeGuardian(address _guardian) external {
         _requireForExecute();
         if (isLocked()) revert IOPF7702Recoverable.OPF7702Recoverable__AccountLocked();
-
+        // @audit-low ⚠️: Make library for checkes that repeat
         if (_guardian == address(0)) {
             revert IOPF7702Recoverable.OPF7702Recoverable__AddressCantBeZero();
         }
@@ -213,9 +231,11 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
      * @notice Finalizes a previously proposed guardian after the timelock.
      * @param _guardian Guardian address to activate.
      */
+    // @audit-low ⚠️: pass bytes32 and not address
     function confirmGuardianProposal(address _guardian) external {
         _requireForExecute();
         _requireRecovery(false);
+        // @audit-low ⚠️: Why to check again?
         if (_guardian == address(0)) {
             revert IOPF7702Recoverable.OPF7702Recoverable__AddressCantBeZero();
         }
@@ -240,12 +260,13 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
         gi.pending = 0;
         gi.index = guardiansData.guardians.length;
         guardiansData.guardians.push(gHash);
-    }
+    } 
 
     /**
      * @notice Cancels a guardian addition proposal before it is confirmed.
      * @param _guardian Guardian address whose proposal should be cancelled.
      */
+    // @audit-low ⚠️: pass bytes32 and not address
     function cancelGuardianProposal(address _guardian) external {
         _requireForExecute();
         _requireRecovery(false);
@@ -266,8 +287,10 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
      * @notice Initiates guardian removal. Must be confirmed after the security period.
      * @param _guardian Guardian address to revoke.
      */
+    // @audit-low ⚠️: pass bytes32 and not address
     function revokeGuardian(address _guardian) external {
         _requireForExecute();
+        // @audit-question: Does this function can't revoke guarduian if the recovery started? _requireRecovery(true);
         if (isLocked()) revert IOPF7702Recoverable.OPF7702Recoverable__AccountLocked();
 
         bytes32 gHash = _guardianHash(_guardian);
@@ -279,17 +302,19 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
             revert IOPF7702Recoverable.OPF7702Recoverable__DuplicatedRevoke();
         }
 
-        gi.pending = block.timestamp + securityPeriod;
-
         emit IOPF7702Recoverable.GuardianRevocationScheduled(gHash, gi.pending);
+
+        gi.pending = block.timestamp + securityPeriod;
     }
 
     /**
      * @notice Confirms guardian removal after the timelock.
      * @param _guardian Guardian address to remove permanently.
      */
+    // @audit-low ⚠️: pass bytes32 and not address
     function confirmGuardianRevocation(address _guardian) external {
         _requireForExecute();
+        // @audit-question: Does this function can't revoke guarduian if the recovery started? _requireRecovery(true);
         if (isLocked()) revert IOPF7702Recoverable.OPF7702Recoverable__AccountLocked();
 
         bytes32 gHash = _guardianHash(_guardian);
@@ -324,8 +349,10 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
      * @notice Cancels a pending guardian removal.
      * @param _guardian Guardian address whose removal should be cancelled.
      */
+    // @audit-low ⚠️: pass bytes32 and not address
     function cancelGuardianRevocation(address _guardian) external {
         _requireForExecute();
+        // @audit-question: Does this function can't revoke guarduian if the recovery started? _requireRecovery(true);
         if (isLocked()) revert IOPF7702Recoverable.OPF7702Recoverable__AccountLocked();
 
         bytes32 gHash = _guardianHash(_guardian);
@@ -349,6 +376,7 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
      * @param _recoveryKey New master key to set once recovery succeeds.
      */
     function startRecovery(Key memory _recoveryKey) external virtual {
+        // @audit-low ⚠️: pass bytes32 and not address
         if (!isGuardian(msg.sender)) {
             revert IOPF7702Recoverable.OPF7702Recoverable__MustBeGuardian();
         }
@@ -362,6 +390,8 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
             revert IOPF7702Recoverable.OPF7702Recoverable__AddressCantBeZero();
         }
 
+        // @audit-question: Could be DoS if propose masterKey?
+        // @audit-question: no checking if it old masterKey
         if (isGuardian(_recoveryKey.eoaAddress)) {
             revert IOPF7702Recoverable.OPF7702Recoverable__GuardianCannotBeOwner();
         }
@@ -522,6 +552,7 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
     //                               View helpers
     // ──────────────────────────────────────────────────────────────────────────────
 
+    // @audit-info ⚠️: Move function to  Internal helpers ^^^
     /**
      * @notice Computes the storage hash for a guardian address.
      * @dev Only EOA (address) are supported.
@@ -606,3 +637,5 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
         digest = _hashTypedDataV4(structHash);
     }
 }
+
+/// @audit-first-round: ✅

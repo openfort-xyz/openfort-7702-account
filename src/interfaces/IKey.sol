@@ -52,7 +52,7 @@ interface IKey {
      * @param spendTokenInfo Token spending limit information
      * @param allowedSelectors List of allowed function selectors
      * @param ethLimit Maximum amount of ETH that can be spent
-     * @param whoRegistrated Address that registered this key
+     * @param whoRegistered Address that registered this key
      */
     struct KeyData {
         PubKey pubKey;
@@ -61,12 +61,16 @@ interface IKey {
         uint48 validAfter;
         uint48 limit;
         bool masterKey;
+        // @audit-info ⚠️: Not needed. Assume if !masterKey will be always `whitelisting`
         bool whitelisting;
+        // @audit-info ⚠️: Why ussing mapping wen possible register only one contract
         mapping(address contractAddress => bool allowed) whitelist;
         SpendLimit.SpendTokenInfo spendTokenInfo;
+        // @audit-info ⚠️: Allocate static array with MAX_SELECTORS bytes4[10]
+        // @audit-info ⚠️: Maybe to change to mapping? (bytes4 => bool) allowedSelectors ??
         bytes4[] allowedSelectors;
         uint256 ethLimit;
-        address whoRegistrated;
+        address whoRegistered;
     }
 
     /**
@@ -87,7 +91,10 @@ interface IKey {
         bool whitelisting;
         address contractAddress;
         SpendLimit.SpendTokenInfo spendTokenInfo;
+        // @audit-info ⚠️: Maybe to change to mapping? (bytes4 => bool) allowedSelectors ??
         bytes4[] allowedSelectors;
         uint256 ethLimit;
     }
 }
+
+/// @audit-first-round: ✅

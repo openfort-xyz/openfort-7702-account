@@ -36,12 +36,14 @@ abstract contract Execution is KeysManager, ReentrancyGuard {
 
     /// @dev Executes the calls in `executionData`.
     /// Reverts and bubbles up error if any call fails.
+    // audit-high 🔴🔴🔴: No nonReentrant portection!!!!
+    // audit-question: line execute(mode, batches[i]); rerecursive call. nonReentrant might not help!
     function execute(bytes32 mode, bytes memory executionData) public payable virtual {
         uint256 id = _executionModeId(mode);
         if (id == 3) {
             mode ^= bytes32(uint256(3 << (22 * 8)));
             bytes[] memory batches = abi.decode(executionData, (bytes[]));
-
+            // audit-medium 🟠🟠🟠: Checking length of batches and not how many txs inside batches[batch[], batch[], batch[] .......]
             _checkLength(batches.length);
             for (uint256 i; i < batches.length; ++i) {
                 execute(mode, batches[i]);
@@ -83,6 +85,7 @@ abstract contract Execution is KeysManager, ReentrancyGuard {
     /// Reverts and bubbles up error if any call fails.
     function _execute(Call[] memory calls, bytes memory opData) internal virtual {
         if (opData.length == uint256(0)) {
+            // @audit-low ⚠️: move to _requireForExecute(); to --> function execute(bytes32 mode, bytes memory executionData)
             _requireForExecute();
             return _execute(calls);
         }
@@ -118,3 +121,9 @@ abstract contract Execution is KeysManager, ReentrancyGuard {
         }
     }
 }
+
+/// @audit-first-round: ✅
+
+/*
+ check new code in test/internal-audit/Execution.sol
+ */

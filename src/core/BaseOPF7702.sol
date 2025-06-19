@@ -40,13 +40,14 @@ abstract contract BaseOPF7702 is
     ERC1155Holder
 {
     using UpgradeAddress for address;
+    // @audit-info ⚠️: Natspec
 
     error NotFromEntryPoint();
 
     // =============================================================
     //                          CONSTANTS
     // =============================================================
-
+    // @audit-question: Why 16 slots to clear?
     /// @dev Number of storage slots to clear in `_clearStorage`.
     uint256 private constant _NUM_CLEAR_SLOTS = 16;
 
@@ -98,6 +99,7 @@ abstract contract BaseOPF7702 is
      *      keccak256(abi.encode(uint256(keccak256("openfort.baseAccount.7702.v1")) - 1)) & ~bytes32(uint256(0xff)) to zero.
      *      Useful when proxy patterns or re-deployment require resetting specific storage.
      */
+    // @audit-question: Check if clearing correct slots!
     function _clearStorage() internal {
         bytes32 baseSlot = keccak256(
             abi.encode(uint256(keccak256("openfort.baseAccount.7702.v1")) - 1)
@@ -124,6 +126,7 @@ abstract contract BaseOPF7702 is
             IBaseOPF7702.OpenfortBaseAccount7702V1_UnauthorizedCaller()
         );
     }
+    // @audit-info ⚠️: Call function entryPoint() to get last addr. of ePoint
 
     function _requireFromEntryPoint() internal view virtual override {
         require(msg.sender == address(UpgradeAddress.entryPoint(ENTRY_POINT)), NotFromEntryPoint());
@@ -149,7 +152,8 @@ abstract contract BaseOPF7702 is
     /// @param _interfaceId The interface identifier, as specified in ERC-165.
     /// @return `true` if this contract supports `_interfaceId`, `false` otherwise.
     /// @dev Overrides ERC1155Holder and IERC165’s `supportsInterface`.
-
+    // @audit-info ⚠️: Add support IERC7201
+    // @audit-info ⚠️: Add support ERC777 ??
     function supportsInterface(bytes4 _interfaceId)
         public
         pure
@@ -163,3 +167,5 @@ abstract contract BaseOPF7702 is
             || _interfaceId == type(IERC7821).interfaceId;
     }
 }
+
+/// @audit-first-round: ✅

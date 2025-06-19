@@ -29,14 +29,15 @@ library UpgradeAddress {
     //  _VERIFIER_SLOT = (keccak256("openfort.webauthnverifier.storage") - 1) & ~0xff
     bytes32 internal constant _VERIFIER_SLOT =
         0xfd39baddba6b1a9197cb18b09396db32f340e9b468af2bcc8f997735c03db200;
-
+    // @audit-info ⚠️: Natspec
     uint256 internal constant _OVERRIDDEN_FLAG = 1 << 255;
 
     /* --------------------------------------------------------------------- */
     /*                                   EVENTS                              */
     /* --------------------------------------------------------------------- */
-
+    // @audit-info ⚠️: Natspec
     event EntryPointUpdated(address indexed previous, address indexed current);
+    // @audit-info ⚠️: Natspec
     event WebAuthnVerifierUpdated(address indexed previous, address indexed current);
 
     /* --------------------------------------------------------------------- */
@@ -82,6 +83,7 @@ library UpgradeAddress {
 
     /// @notice Permanently overrides the WebAuthnVerifier address.
     function setWebAuthnVerifier(address newV) internal {
+        // @audit-info ⚠️: Use with custom error `UpgradeAddress__AddressCantBeZero()`
         require(newV != address(0), "EntryPointLib: zero verifier addr");
         address oldV;
         uint256 currentPacked;
@@ -103,6 +105,19 @@ library UpgradeAddress {
     /* --------------------------------------------------------------------- */
 
     /// @dev Packs an address and sets the MSB flag.
+    /*  @audit-has ⚠️: Update code 
+        error UpgradeAddress__AddressNotCanonical();
+        function _pack(address addr) private pure returns (uint256 packed) {
+        uint256 a;
+        assembly {
+            a := addr
+        } 
+        if (a >> 160 != 0) {
+            revert UpgradeAddress__AddressNotCanonical();
+        }
+        packed = (a | _OVERRIDDEN_FLAG);
+    }
+     */
     function _pack(address addr) private pure returns (uint256) {
         return uint256(uint160(addr)) | _OVERRIDDEN_FLAG;
     }
@@ -117,3 +132,5 @@ library UpgradeAddress {
         return packed & _OVERRIDDEN_FLAG != 0;
     }
 }
+
+/// @audit-first-round: ✅
