@@ -41,7 +41,7 @@ interface IKeysManager is IKey {
     //                          STATE GETTERS
     // =============================================================
     // @audit-info ⚠️: No keys mappings getters!
-    
+
     /// @notice Incremental ID for WebAuthn/P256/P256NONKEY keys.
     function id() external view returns (uint256);
 
@@ -104,7 +104,7 @@ interface IKeysManager is IKey {
         view
         returns (IKey.KeyType keyType, address registeredBy, bool isActive);
 
-    /** 
+    /**
      * @notice Retrieves the `Key` struct stored at a given ID.
      * @param _id Identifier index for the key to retrieve.
      * @return The `Key` struct containing key type, public key, or EOA address.

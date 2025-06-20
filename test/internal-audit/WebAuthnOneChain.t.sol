@@ -2,6 +2,7 @@
 
 pragma solidity ^0.8.0;
 
+import {P256} from "lib/solady/src/utils/P256.sol";
 import {WebAuthn} from "lib/webauthn-sol/src/WebAuthn.sol";
 import {Test, console2 as console} from "lib/forge-std/src/test.sol";
 import {WebAuthn as WebAuthnVerifierSolady} from "lib/solady/src/utils/WebAuthn.sol";
@@ -70,6 +71,8 @@ contract WebAuthnOneChain is Test {
             PUBLIC_KEY_Y
         );
 
+        bool res = vS.hasPrecompileOrVerifier();
+        console.log("hasPrecompileOrVerifier", res);
         assertTrue(isValid);
     }
 }
@@ -152,5 +155,9 @@ contract VerifierSolady {
         assembly {
             mstore(add(result, 32), data)
         }
+    }
+
+    function hasPrecompileOrVerifier() public view returns (bool result) {
+        result = P256.hasPrecompileOrVerifier();
     }
 }

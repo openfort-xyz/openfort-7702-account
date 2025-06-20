@@ -31,7 +31,7 @@ abstract contract KeysManager is BaseOPF7702, IKey, SpendLimit {
     // =============================================================
     //                          CONSTANTS
     // =============================================================
-        
+
     /// @notice Maximum number of allowed function selectors per key
     uint256 internal constant MAX_SELECTORS = 10;
     /// @notice “Burn” address used as placeholder
@@ -208,7 +208,7 @@ abstract contract KeysManager is BaseOPF7702, IKey, SpendLimit {
      *
      * @param sKey Storage reference to the `KeyData` being revoked.
      */
-     // audit-question: why not delete pubKey.x || pubKey.y || eoaAddress ??
+    // audit-question: why not delete pubKey.x || pubKey.y || eoaAddress ??
     function _revokeKey(KeyData storage sKey) internal {
         if (!sKey.isActive) {
             revert IKeysManager.KeyManager__KeyInactive();

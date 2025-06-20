@@ -1,0 +1,25 @@
+{
+    "registration" : {
+        "challenge": "0x442585a2a3d70b2708adc8467622cdd32bf4055c2c97c8266a976c8df6d907ac",
+        
+        
+            "x": "0x78dc8d52ff921946209feaa08f18e975351f34a8c2c129089211aa0f618de206",
+            "y": "0x35b53d9f899ef3c0bf67dcc58c1448345bb372c241847942718ab9dd56627bb7",
+            
+                "metadata": {
+                    "authenticatorData": "0x49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d97631d00000000",
+                    "clientDataJSON": "{\"type\":\"webauthn.get\",\"challenge\":\"RCWFoqPXCycIrchGdiLN0yv0BVwsl8gmapdsjfbZB6w\",\"origin\":\"http://localhost:5173\",\"crossOrigin\":false,\"other_keys_can_be_added_here\":\"do not compare clientDataJSON against a template. See https://goo.gl/yabPex\"}",
+                    "challengeIndex": 23,
+                    "typeIndex": 1,
+                    "userVerificationRequired": true
+                },
+                "signature": {
+                    "r": "0x330f3bd0f6874d29ab0787d5d6213ce15131dda78ae7a90597f5b8787ca66ea2",
+                    "s": "0x135bade671a95701240f7f4db1e59d48402313c41616e2257501ca60a52ef91f"
+                }
+            
+        
+            
+        
+    }
+}

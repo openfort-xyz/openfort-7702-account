@@ -40,8 +40,8 @@ abstract contract BaseOPF7702 is
     ERC1155Holder
 {
     using UpgradeAddress for address;
-    // @audit-info ⚠️: Natspec
 
+    // @audit-info ⚠️: Natspec
     error NotFromEntryPoint();
 
     // =============================================================
@@ -126,8 +126,8 @@ abstract contract BaseOPF7702 is
             IBaseOPF7702.OpenfortBaseAccount7702V1_UnauthorizedCaller()
         );
     }
-    // @audit-info ⚠️: Call function entryPoint() to get last addr. of ePoint
 
+    // @audit-info ⚠️: Call function entryPoint() to get last addr. of ePoint
     function _requireFromEntryPoint() internal view virtual override {
         require(msg.sender == address(UpgradeAddress.entryPoint(ENTRY_POINT)), NotFromEntryPoint());
     }

@@ -134,12 +134,12 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
         // @audit-low ⚠️: Move the function inside the call -> `if (!_checkSignature(getDigestToSign(), _signature))`
         // @audit-medium 🟠🟠🟠: getDigestToSign() signing: no data in `recoveryData`
         /**
-            abi.encode(
-                RECOVER_TYPEHASH,
-                recoveryData.key,: address 0
-                recoveryData.executeAfter,: 0
-                recoveryData.guardiansRequired: 0
-            )
+         * abi.encode(
+         *             RECOVER_TYPEHASH,
+         *             recoveryData.key,: address 0
+         *             recoveryData.executeAfter,: 0
+         *             recoveryData.guardiansRequired: 0
+         *         )
          */
         bytes32 digest = getDigestToSign();
 
@@ -260,7 +260,7 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
         gi.pending = 0;
         gi.index = guardiansData.guardians.length;
         guardiansData.guardians.push(gHash);
-    } 
+    }
 
     /**
      * @notice Cancels a guardian addition proposal before it is confirmed.
@@ -375,6 +375,7 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
      * @dev The caller must be an active guardian. Wallet enters locked state immediately.
      * @param _recoveryKey New master key to set once recovery succeeds.
      */
+    // @audit-low ⚠️: No checks what type of Key!
     function startRecovery(Key memory _recoveryKey) external virtual {
         // @audit-low ⚠️: pass bytes32 and not address
         if (!isGuardian(msg.sender)) {

@@ -12,6 +12,7 @@
 
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.29;
+import {console2 as console} from "lib/forge-std/src/Script.sol";
 
 import {Execution} from "src/core/Execution.sol";
 import {KeyHashLib} from "src/libs/KeyHashLib.sol";
@@ -183,6 +184,7 @@ contract OPF7702 is Execution, Initializable {
             pubKey.x,
             pubKey.y
         );
+
         if (!sigOk) {
             return SIG_VALIDATION_FAILED;
         }
@@ -308,7 +310,7 @@ contract OPF7702 is Execution, Initializable {
         // @audit-info ⚠️: Dont need checking of `_key.eoaAddress == address(0)`. revoke key will be active = false.
         if (_key.keyType == KeyType.EOA) {
             if (_key.eoaAddress == address(0)) return false;
-             // @audit-info ⚠️: can compute for all
+            // @audit-info ⚠️: can compute for all
             keyHash = _key.computeKeyId();
             sKey = keys[keyHash];
         } else {
@@ -327,7 +329,8 @@ contract OPF7702 is Execution, Initializable {
         // Extract function selector from callData
         bytes4 funcSelector = bytes4(_callData[:4]);
 
-        if (funcSelector == 0xe9ae5c53) { // execute(bytes32,bytes)
+        if (funcSelector == 0xe9ae5c53) {
+            // execute(bytes32,bytes)
             return _validateExecuteCall(sKey, _callData);
         }
         return false;

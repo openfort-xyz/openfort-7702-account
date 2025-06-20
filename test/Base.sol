@@ -83,6 +83,26 @@ contract Base is Test, IKey {
     uint256 public REG_TYPE_INDEX = stdJson.readUint(json_reg, ".registration.metadata.typeIndex");
 
     /* ───────────────────────────────────────────────────────────── master key ── */
+    string public json_reg_v2 = vm.readFile("test/data/registration_v2.json");
+
+    bytes32 public REG_PUBLIC_KEY_X_V2 = stdJson.readBytes32(json_reg_v2, ".registration.x");
+    bytes32 public REG_PUBLIC_KEY_Y_V2 = stdJson.readBytes32(json_reg_v2, ".registration.y");
+
+    bytes32 public REG_CHALLENGE_V2 = stdJson.readBytes32(json_reg_v2, ".registration.challenge");
+
+    bytes32 public REG_SIGNATURE_R_V2 = stdJson.readBytes32(json_reg_v2, ".registration.signature.r");
+    bytes32 public REG_SIGNATURE_S_V2 = stdJson.readBytes32(json_reg_v2, ".registration.signature.s");
+
+    bytes public REG_AUTHENTICATOR_DATA_V2 =
+        stdJson.readBytes(json_reg_v2, ".registration.metadata.authenticatorData");
+    string public REG_CLIENT_DATA_JSON_V2 =
+        stdJson.readString(json_reg_v2, ".registration.metadata.clientDataJSON");
+
+    uint256 public REG_CHALLENGE_INDEX_V2 =
+        stdJson.readUint(json_reg_v2, ".registration.metadata.challengeIndex");
+    uint256 public REG_TYPE_INDEX_V2 = stdJson.readUint(json_reg_v2, ".registration.metadata.typeIndex");
+
+    /* ───────────────────────────────────────────────────────────── master key ── */
     bytes32 constant MINT_VALID_PUBLIC_KEY_X =
         hex"4d1a5e0a438f91389c9695b0c68c51840062c184710c7ac2c90a2e70a3aa21a7";
     bytes32 constant MINT_VALID_PUBLIC_KEY_Y =
