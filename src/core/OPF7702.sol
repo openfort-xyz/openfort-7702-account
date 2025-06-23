@@ -15,7 +15,6 @@ pragma solidity ^0.8.29;
 
 import {Execution} from "src/core/Execution.sol";
 import {KeyHashLib} from "src/libs/KeyHashLib.sol";
-import {UpgradeAddress} from "src/libs/UpgradeAddress.sol";
 import {IWebAuthnVerifier} from "src/interfaces/IWebAuthnVerifier.sol";
 import {EfficientHashLib} from "lib/solady/src/utils/EfficientHashLib.sol";
 import {KeyDataValidationLib as KeyValidation} from "src/libs/KeyDataValidationLib.sol";
@@ -50,7 +49,7 @@ contract OPF7702 is Execution, Initializable {
     using KeyValidation for KeyData;
 
     /// @notice Address of this implementation contract
-    address public _OPENFORT_CONTRACT_ADDRESS;
+    address public immutable _OPENFORT_CONTRACT_ADDRESS;
 
     constructor(address _entryPoint, address _webAuthnVerifier) {
         ENTRY_POINT = _entryPoint;
@@ -168,6 +167,7 @@ contract OPF7702 is Execution, Initializable {
         if (usedChallenges[userOpHash]) {
             return SIG_VALIDATION_FAILED;
         }
+        usedChallenges[userOpHash] = true; // mark challenge as used
 
         bool sigOk = IWebAuthnVerifier(webAuthnVerifier()).verifySoladySignature(
             userOpHash,
@@ -199,7 +199,6 @@ contract OPF7702 is Execution, Initializable {
         }
 
         if (isValidKey(composedKey, callData)) {
-            usedChallenges[userOpHash] = true; // mark challenge as used
             return _packValidationData(false, sKey.validUntil, sKey.validAfter);
         }
         return SIG_VALIDATION_FAILED;
@@ -231,6 +230,8 @@ contract OPF7702 is Execution, Initializable {
         if (usedChallenges[userOpHash]) {
             return SIG_VALIDATION_FAILED;
         }
+        usedChallenges[userOpHash] = true;
+
         if (sigType == KeyType.P256NONKEY) {
             userOpHash = EfficientHashLib.sha2(userOpHash);
         }
@@ -251,7 +252,6 @@ contract OPF7702 is Execution, Initializable {
         if (!isValid) return SIG_VALIDATION_FAILED;
 
         if (isValidKey(composedKey, callData)) {
-            usedChallenges[userOpHash] = true;
             return _packValidationData(false, sKey.validUntil, sKey.validAfter);
         }
         return SIG_VALIDATION_FAILED;
@@ -299,19 +299,8 @@ contract OPF7702 is Execution, Initializable {
         KeyData storage sKey;
         bytes32 keyHash;
 
-        if (_key.keyType == KeyType.EOA) {
-            if (_key.eoaAddress == address(0)) return false;
-            keyHash = _key.computeKeyId();
-            sKey = keys[keyHash];
-        } else {
-            // WEBAUTHN/P256/P256NONKEY share same load path
-            keyHash = _key.computeKeyId();
-            sKey = keys[keyHash];
-        }
-        // Basic checks:
-        if (!sKey.isRegistered() || !sKey.isActive) {
-            return false;
-        }
+        keyHash = _key.computeKeyId();
+        sKey = keys[keyHash];
 
         // Extract function selector from callData
         bytes4 funcSelector = bytes4(_callData[:4]);
@@ -400,11 +389,6 @@ contract OPF7702 is Execution, Initializable {
             if (!validSpend) return false;
         }
 
-        /// Todo: Check all possibilities to fails on this line
-        // // Check whitelisting
-        // if (!sKey.whitelisting || sKey.whitelist[calls[i].target]) {
-        //     return true;
-        // } else {return false;}
         if (!sKey.whitelisting || !sKey.whitelist[call.target]) {
             return false;
         }
