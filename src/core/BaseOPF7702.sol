@@ -80,7 +80,10 @@ abstract contract BaseOPF7702 is
     ///      Uses UpgradeAddress library to handle the update logic
     function setEntryPoint(address _entryPoint) external {
         _requireForExecute();
+        address previous = address(entryPoint());
         _entryPoint.setEntryPoint();
+
+        emit UpgradeAddress.EntryPointUpdated(previous, address(entryPoint()));
     }
 
     /// @notice Updates the WebAuthn verifier contract address used by this account
@@ -89,7 +92,10 @@ abstract contract BaseOPF7702 is
     ///      Uses UpgradeAddress library to handle the update logic
     function setWebAuthnVerifier(address _webAuthnVerifier) external {
         _requireForExecute();
+        address previous = webAuthnVerifier();
         _webAuthnVerifier.setWebAuthnVerifier();
+
+        emit UpgradeAddress.WebAuthnVerifierUpdated(previous, webAuthnVerifier());
     }
 
     // =============================================================

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.29;
 
 import {IKey} from "src/interfaces/IKey.sol"; // Brings in KeyData / SpendTokenInfo structs
 
