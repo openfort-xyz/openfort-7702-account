@@ -23,6 +23,7 @@ import {IEntryPoint} from "lib/account-abstraction/contracts/interfaces/IEntryPo
 import "src/interfaces/IERC7821.sol";
 import "lib/openzeppelin-contracts/contracts/interfaces/IERC1271.sol";
 import "lib/openzeppelin-contracts/contracts/utils/introspection/ERC165.sol";
+import "lib/openzeppelin-contracts/contracts/interfaces/IERC777Recipient.sol";
 import "lib/openzeppelin-contracts/contracts/token/ERC721/utils/ERC721Holder.sol";
 import "lib/openzeppelin-contracts/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 
@@ -31,24 +32,19 @@ import "lib/openzeppelin-contracts/contracts/token/ERC1155/utils/ERC1155Holder.s
 /// @notice Abstract base contract implementing an ERC-4337 (Account Abstraction) account with Openfort entry point integration.
 /// @dev Inherits from IAccount (ERC-4337), BaseAccount (Openfort core logic), ERC165, ERC1271, and token receiver interfaces for ERC721 and ERC1155.
 abstract contract BaseOPF7702 is
+    IERC165,
+    IERC1271,
+    IERC7821,
     IAccount,
     BaseAccount,
-    IERC165,
-    IERC7821,
-    IERC1271,
     ERC721Holder,
-    ERC1155Holder
+    ERC1155Holder,
+    IERC777Recipient
 {
     using UpgradeAddress for address;
 
+    /// @notice Revert if msg.sender != entryPoint()
     error NotFromEntryPoint();
-
-    // =============================================================
-    //                          CONSTANTS
-    // =============================================================
-
-    /// @dev Number of storage slots to clear in `_clearStorage`.
-    uint256 private constant _NUM_CLEAR_SLOTS = 16;
 
     // =============================================================
     //                          STATE VARIABLES
@@ -78,11 +74,19 @@ abstract contract BaseOPF7702 is
     //                          Public / External methods
     // ──────────────────────────────────────────────────────────────────────────────
 
+    /// @notice Updates the EntryPoint contract address used by this account
+    /// @param _entryPoint The new EntryPoint contract address to set
+    /// @dev Only callable by authorized parties (self or current EntryPoint).
+    ///      Uses UpgradeAddress library to handle the update logic
     function setEntryPoint(address _entryPoint) external {
         _requireForExecute();
         _entryPoint.setEntryPoint();
     }
 
+    /// @notice Updates the WebAuthn verifier contract address used by this account
+    /// @param _webAuthnVerifier The new WebAuthn verifier contract address to set
+    /// @dev Only callable by authorized parties (self or current EntryPoint).
+    ///      Uses UpgradeAddress library to handle the update logic
     function setWebAuthnVerifier(address _webAuthnVerifier) external {
         _requireForExecute();
         _webAuthnVerifier.setWebAuthnVerifier();
@@ -102,16 +106,45 @@ abstract contract BaseOPF7702 is
         bytes32 baseSlot = keccak256(
             abi.encode(uint256(keccak256("openfort.baseAccount.7702.v1")) - 1)
         ) & ~bytes32(uint256(0xff));
-        for (uint256 i = 0; i < _NUM_CLEAR_SLOTS;) {
+
+        // clear slot 0
+        assembly {
+            sstore(baseSlot, 0)
+        }
+
+        // clear slots 8–14
+        for (uint256 i = 8; i <= 14; ++i) {
             bytes32 slot = bytes32(uint256(baseSlot) + i);
             assembly {
                 sstore(slot, 0)
             }
-            unchecked {
-                i++;
-            }
         }
     }
+    /**
+     * ╭----------------------------+------------------------------------------+--------------------------------------------------------------------------------+--------+-------+------------------------------╮
+     * | Name                       | Type                                     | Slot                                                                           | Offset | Bytes | Contract                     |
+     * +========================================================================================================================================================================================================+
+     * | id                         | uint256                                  | 107588995614188179791452663824698570634674667931787294340862201729294267929600 | 0      | 32    | src/core/OPFMain.sol:OPFMain |
+     * |----------------------------+------------------------------------------+--------------------------------------------------------------------------------+--------+-------+------------------------------|
+     * | idKeys                     | mapping(uint256 => struct IKey.Key)      | 107588995614188179791452663824698570634674667931787294340862201729294267929601 | 0      | 32    | src/core/OPFMain.sol:OPFMain |
+     * |----------------------------+------------------------------------------+--------------------------------------------------------------------------------+--------+-------+------------------------------|
+     * | keys                       | mapping(bytes32 => struct IKey.KeyData)  | 107588995614188179791452663824698570634674667931787294340862201729294267929602 | 0      | 32    | src/core/OPFMain.sol:OPFMain |
+     * |----------------------------+------------------------------------------+--------------------------------------------------------------------------------+--------+-------+------------------------------|
+     * | usedChallenges             | mapping(bytes32 => bool)                 | 107588995614188179791452663824698570634674667931787294340862201729294267929603 | 0      | 32    | src/core/OPFMain.sol:OPFMain |
+     * |----------------------------+------------------------------------------+--------------------------------------------------------------------------------+--------+-------+------------------------------|
+     * | _status                    | uint256                                  | 107588995614188179791452663824698570634674667931787294340862201729294267929604 | 0      | 32    | src/core/OPFMain.sol:OPFMain |
+     * |----------------------------+------------------------------------------+--------------------------------------------------------------------------------+--------+-------+------------------------------|
+     * | _OPENFORT_CONTRACT_ADDRESS | address                                  | 107588995614188179791452663824698570634674667931787294340862201729294267929605 | 0      | 20    | src/core/OPFMain.sol:OPFMain |
+     * |----------------------------+------------------------------------------+--------------------------------------------------------------------------------+--------+-------+------------------------------|
+     * | _nameFallback              | string                                   | 107588995614188179791452663824698570634674667931787294340862201729294267929606 | 0      | 32    | src/core/OPFMain.sol:OPFMain |
+     * |----------------------------+------------------------------------------+--------------------------------------------------------------------------------+--------+-------+------------------------------|
+     * | _versionFallback           | string                                   | 107588995614188179791452663824698570634674667931787294340862201729294267929607 | 0      | 32    | src/core/OPFMain.sol:OPFMain |
+     * |----------------------------+------------------------------------------+--------------------------------------------------------------------------------+--------+-------+------------------------------|
+     * | guardiansData              | struct IOPF7702Recoverable.GuardiansData | 107588995614188179791452663824698570634674667931787294340862201729294267929608 | 0      | 96    | src/core/OPFMain.sol:OPFMain |
+     * |----------------------------+------------------------------------------+--------------------------------------------------------------------------------+--------+-------+------------------------------|
+     * | recoveryData               | struct IOPF7702Recoverable.RecoveryData  | 107588995614188179791452663824698570634674667931787294340862201729294267929611 | 0      | 128   | src/core/OPFMain.sol:OPFMain |
+     * ╰----------------------------+------------------------------------------+--------------------------------------------------------------------------------+--------+-------+------------------------------╯
+     */
 
     /**
      * @notice Ensures that only authorized callers can forward calls to this account.
@@ -126,7 +159,7 @@ abstract contract BaseOPF7702 is
     }
 
     function _requireFromEntryPoint() internal view virtual override {
-        require(msg.sender == address(UpgradeAddress.entryPoint(ENTRY_POINT)), NotFromEntryPoint());
+        require(msg.sender == address(entryPoint()), NotFromEntryPoint());
     }
     // =============================================================
     //                    GETTERS PUBLIC FUNCTIONS
@@ -141,6 +174,10 @@ abstract contract BaseOPF7702 is
         return IEntryPoint(UpgradeAddress.entryPoint(ENTRY_POINT));
     }
 
+    /**
+     * @notice Returns the webAuthn verifier contract used by this account.
+     * @return The `address` of implementation.
+     */
     function webAuthnVerifier() public view returns (address) {
         return UpgradeAddress.webAuthnVerifier(WEBAUTHN_VERIFIER);
     }
@@ -158,8 +195,16 @@ abstract contract BaseOPF7702 is
     {
         return _interfaceId == type(IERC165).interfaceId
             || _interfaceId == type(IAccount).interfaceId || _interfaceId == type(IERC1271).interfaceId
-            || _interfaceId == type(IERC1155Receiver).interfaceId
+            || _interfaceId == type(IERC7821).interfaceId
             || _interfaceId == type(IERC721Receiver).interfaceId
-            || _interfaceId == type(IERC7821).interfaceId;
+            || _interfaceId == type(IERC1155Receiver).interfaceId
+            || _interfaceId == type(IERC777Recipient).interfaceId;
     }
+
+    /// @notice Called by an ERC777 token contract whenever tokens are being moved or created into this account
+    function tokensReceived(address, address, address, uint256, bytes calldata, bytes calldata)
+        external
+        pure
+        override
+    {}
 }

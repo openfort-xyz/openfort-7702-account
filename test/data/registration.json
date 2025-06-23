@@ -1,18 +1,22 @@
 {
     "registration" : {
-        "challenge": "0xe90877124afeb6ccf2237cb45bfcee1aa65cf32dd2c59defda77e02604839b97",
-        "x": "0x6c4421a42fca2be992f2bd16428e8342499f519b89f284498c067ac257b2ed5f",
-        "y": "0x340145298f71c08a1c2112873d5afe5cac985fd81737d3cf6da92843383d91dc",
-        "metadata": {
-            "authenticatorData": "0x49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d97631d00000000",
-            "clientDataJSON": "{\"type\":\"webauthn.get\",\"challenge\":\"6Qh3Ekr-tszyI3y0W_zuGqZc8y3SxZ3v2nfgJgSDm5c\",\"origin\":\"http://localhost:5173\",\"crossOrigin\":false}",
-            "challengeIndex": 23,
-            "typeIndex": 1,
-            "userVerificationRequired": true
-        },
-        "signature": {
-            "r": "0x0e9497b62ac38ae00855a7dc72781f18ecccadb6be78bab90d7b6001c542c1e9",
-            "s": "0x1b8780cd3e22db0e8551dde2bd92b27ed5b112f09a37488ad99475bfaec28b8b"
-        }
+        "challenge": "0x3059f69699be3df61ffed81866dc5a4af373012450854da0c28f5d420725c68a",
+        
+            "x": "0xa2b15d67482f5006550cc068a774926e91a10c4832498b1fd9fb59f1b4757992",
+            "y": "0x713b1afbf115e422d5dc13a2ab5d1abab01ae198cc95af756232e0880425d43c",
+            
+                "metadata": {
+                    "authenticatorData": "0x49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d97631d00000000",
+                    "clientDataJSON": "{\"type\":\"webauthn.get\",\"challenge\":\"MFn2lpm-PfYf_tgYZtxaSvNzASRQhU2gwo9dQgclxoo\",\"origin\":\"http://localhost:5173\",\"crossOrigin\":false,\"other_keys_can_be_added_here\":\"do not compare clientDataJSON against a template. See https://goo.gl/yabPex\"}",
+                    "challengeIndex": 23,
+                    "typeIndex": 1,
+                    "userVerificationRequired": true
+                },
+                "signature": {
+                    "r": "0xda22245904f272de046e2e4b7f874f58dc657cc4356f54269e37fb55c228a1a5",
+                    "s": "0x1519229cebb9e35d0a16ed9a2554fc616780a666c86d0b012ab7eff9a2738a14"
+                }
+            
+        
     }
 }

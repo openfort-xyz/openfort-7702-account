@@ -52,7 +52,7 @@ gas:
 	forge test --gas-report --rpc-url $(SEPOLIA_RPC_URL)
 	
 storage:
-	forge clean && forge inspect src/core/OPF7702Recoverable.sol:OPF7702Recoverable storageLayout
+	forge clean && forge inspect src/core/OPFMain.sol:OPFMain storageLayout
 	
 deploy-webauthn:
 	forge create src/utils/WebAuthnVerifier.sol:WebAuthnVerifier  \
