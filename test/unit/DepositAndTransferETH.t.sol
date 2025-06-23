@@ -534,7 +534,10 @@ contract DepositAndTransferETH is Base {
             IKey.PubKey({x: ETH_P256NOKEY_PUBLIC_KEY_X, y: ETH_P256NOKEY_PUBLIC_KEY_Y});
 
         bytes memory _signature = account.encodeP256Signature(
-            ETH_P256NOKEY_SIGNATURE_R, ETH_P256NOKEY_SIGNATURE_S, pubKeyExecuteBatch, KeyType.P256NONKEY
+            ETH_P256NOKEY_SIGNATURE_R,
+            ETH_P256NOKEY_SIGNATURE_S,
+            pubKeyExecuteBatch,
+            KeyType.P256NONKEY
         );
 
         bytes4 magicValue = account.isValidSignature(userOpHash, _signature);

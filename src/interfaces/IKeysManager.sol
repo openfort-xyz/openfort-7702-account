@@ -136,10 +136,12 @@ interface IKeysManager is IKey {
     /**
      * @notice Encodes a P-256 signature payload (KeyType.P256).
      */
-    function encodeP256Signature(bytes32 r, bytes32 s, IKey.PubKey memory pubKey, IKey.KeyType _keyType)
-        external
-        pure
-        returns (bytes memory);
+    function encodeP256Signature(
+        bytes32 r,
+        bytes32 s,
+        IKey.PubKey memory pubKey,
+        IKey.KeyType _keyType
+    ) external pure returns (bytes memory);
 
     /**
      * @notice Encodes an EOA signature for KeyType.EOA.

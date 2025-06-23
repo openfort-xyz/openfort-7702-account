@@ -1255,8 +1255,9 @@ contract Execution7821 is Base {
         IKey.PubKey memory pubKeyExecuteBatch =
             IKey.PubKey({x: P256_PUBLIC_KEY_X, y: P256_PUBLIC_KEY_Y});
 
-        bytes memory _signature =
-            account.encodeP256Signature(P256_SIGNATURE_R, P256_SIGNATURE_S, pubKeyExecuteBatch, KeyType.P256);
+        bytes memory _signature = account.encodeP256Signature(
+            P256_SIGNATURE_R, P256_SIGNATURE_S, pubKeyExecuteBatch, KeyType.P256
+        );
 
         bytes4 magicValue = account.isValidSignature(userOpHash, _signature);
         bool usedChallenge = account.usedChallenges(userOpHash);
@@ -1360,7 +1361,10 @@ contract Execution7821 is Base {
             IKey.PubKey({x: MINT_P256NOKEY_PUBLIC_KEY_X, y: MINT_P256NOKEY_PUBLIC_KEY_Y});
 
         bytes memory _signature = account.encodeP256Signature(
-            MINT_P256NOKEY_SIGNATURE_R, MINT_P256NOKEY_SIGNATURE_S, pubKeyExecuteBatch, KeyType.P256NONKEY
+            MINT_P256NOKEY_SIGNATURE_R,
+            MINT_P256NOKEY_SIGNATURE_S,
+            pubKeyExecuteBatch,
+            KeyType.P256NONKEY
         );
 
         bytes4 magicValue = account.isValidSignature(userOpHash, _signature);

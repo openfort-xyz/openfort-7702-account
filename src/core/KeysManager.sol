@@ -28,7 +28,7 @@ import {IKeysManager} from "src/interfaces/IKeysManager.sol";
 abstract contract KeysManager is BaseOPF7702, IKey, SpendLimit {
     using KeyHashLib for Key;
     using ValidationLib for *;
-    
+
     // =============================================================
     //                          CONSTANTS
     // =============================================================
