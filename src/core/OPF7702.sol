@@ -112,11 +112,10 @@ contract OPF7702 is Execution, Initializable {
             return SIG_VALIDATION_SUCCESS;
         }
 
-        bytes32 keyId = signer.computeKeyId();
         // load the key for this EOA
-        KeyData storage sKey = keys[keyId];
+        KeyData storage sKey = keys[signer.computeKeyId()];
 
-        (Key memory composedKey, bool isValid) = _keyValidation(sKey, signer, KeyType.EOA);
+        bool isValid = _keyValidation(sKey);
 
         if (!isValid) return SIG_VALIDATION_FAILED;
 
@@ -125,7 +124,7 @@ contract OPF7702 is Execution, Initializable {
             return SIG_VALIDATION_SUCCESS;
         }
 
-        if (isValidKey(composedKey, callData)) {
+        if (isValidKey(callData, sKey)) {
             return _packValidationData(false, sKey.validUntil, sKey.validAfter);
         }
         return SIG_VALIDATION_FAILED;
@@ -185,11 +184,9 @@ contract OPF7702 is Execution, Initializable {
             return SIG_VALIDATION_FAILED;
         }
 
-        bytes32 keyHash = pubKey.computeKeyId();
-        KeyData storage sKey = keys[keyHash];
+        KeyData storage sKey = keys[pubKey.computeKeyId()];
 
-        (Key memory composedKey, bool isValid) =
-            _keyValidation(sKey, DEAD_ADDRESS, KeyType.WEBAUTHN);
+        bool isValid = _keyValidation(sKey);
 
         if (!isValid) return SIG_VALIDATION_FAILED;
 
@@ -198,7 +195,7 @@ contract OPF7702 is Execution, Initializable {
             return SIG_VALIDATION_SUCCESS;
         }
 
-        if (isValidKey(composedKey, callData)) {
+        if (isValidKey(callData, sKey)) {
             return _packValidationData(false, sKey.validUntil, sKey.validAfter);
         }
         return SIG_VALIDATION_FAILED;
@@ -243,38 +240,28 @@ contract OPF7702 is Execution, Initializable {
             return SIG_VALIDATION_FAILED;
         }
 
-        bytes32 keyHash = pubKey.computeKeyId();
-        KeyData storage sKey = keys[keyHash];
+        KeyData storage sKey = keys[pubKey.computeKeyId()];
 
-        (Key memory composedKey, bool isValid) =
-            _keyValidation(sKey, DEAD_ADDRESS, KeyType.WEBAUTHN);
+        bool isValid = _keyValidation(sKey);
 
         if (!isValid) return SIG_VALIDATION_FAILED;
 
-        if (isValidKey(composedKey, callData)) {
+        if (isValidKey(callData, sKey)) {
             return _packValidationData(false, sKey.validUntil, sKey.validAfter);
         }
         return SIG_VALIDATION_FAILED;
     }
 
-    function _keyValidation(KeyData storage sKey, address signer, KeyType keyType)
-        internal
-        view
-        returns (Key memory composedKey, bool isValid)
-    {
+    /// @notice Validates if a key is registered and active
+    /// @param sKey Storage reference to the key data to validate
+    /// @return isValid True if key is both registered and active, false otherwise
+    function _keyValidation(KeyData storage sKey) internal view returns (bool isValid) {
         // Check if key is valid and active
         if (!sKey.isRegistered() || !sKey.isActive) {
-            return (composedKey, false); // Early return for invalid key
+            return false; // Early return for invalid key
         }
 
-        // Build the composed key
-        composedKey = Key({
-            pubKey: PubKey({x: sKey.pubKey.x, y: sKey.pubKey.y}),
-            eoaAddress: signer,
-            keyType: keyType
-        });
-
-        return (composedKey, true);
+        return true;
     }
 
     /**
@@ -286,22 +273,14 @@ contract OPF7702 is Execution, Initializable {
      *  • Extracts the first 4 bytes of `_callData` and calls:
      *      – `_validateExecuteCall(...)`
      *      – `_validateExecuteBatchCall(...)`
-     *
-     * @param _key       The Key struct being tested.
      * @param _callData  The calldata (starting with selector).
      * @return True if permitted, false otherwise.
      */
-    function isValidKey(Key memory _key, bytes calldata _callData)
+    function isValidKey(bytes calldata _callData, KeyData storage sKey)
         internal
         virtual
         returns (bool)
     {
-        KeyData storage sKey;
-        bytes32 keyHash;
-
-        keyHash = _key.computeKeyId();
-        sKey = keys[keyHash];
-
         // Extract function selector from callData
         bytes4 funcSelector = bytes4(_callData[:4]);
 

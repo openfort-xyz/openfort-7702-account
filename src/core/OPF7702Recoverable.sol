@@ -130,7 +130,6 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
 
         bytes32 digest = getDigestToSign();
 
-        // Todo: Use EIP712 to initialize account
         if (!_checkSignature(digest, _signature)) {
             revert IBaseOPF7702.OpenfortBaseAccount7702V1__InvalidSignature();
         }

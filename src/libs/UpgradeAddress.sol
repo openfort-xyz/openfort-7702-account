@@ -38,7 +38,6 @@ library UpgradeAddress {
     /*                                   EVENTS                              */
     /* --------------------------------------------------------------------- */
 
-
     /// @notice Emitted when the EntryPoint contract address is updated
     /// @dev This event is fired when the account's EntryPoint reference is changed,
     ///      which affects how UserOperations are processed and validated. Critical for
@@ -47,7 +46,7 @@ library UpgradeAddress {
     /// @param current The address of the new EntryPoint contract that is now active
     event EntryPointUpdated(address indexed previous, address indexed current);
 
-    /// @notice Emitted when the WebAuthn verifier contract address is updated  
+    /// @notice Emitted when the WebAuthn verifier contract address is updated
     /// @dev This event is triggered when the account updates its WebAuthn signature
     ///      verification contract, affecting how WebAuthn and P256 signatures are validated.
     ///      Important for tracking authentication infrastructure changes
@@ -123,7 +122,7 @@ library UpgradeAddress {
         uint256 a;
         assembly {
             a := addr
-        } 
+        }
         if (a >> 160 != 0) {
             revert UpgradeAddress__AddressNotCanonical();
         }
