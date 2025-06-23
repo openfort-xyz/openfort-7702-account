@@ -12,9 +12,15 @@ interface IExecution {
     // =============================================================
 
     /// @dev The execution mode is not supported.
-    error UnsupportedExecutionMode();
+    error OpenfortBaseAccount7702V1__UnsupportedExecutionMode();
     /// @notice Thrown when the provided transaction length is invalid.
     error OpenfortBaseAccount7702V1__InvalidTransactionLength();
+    /// @dev Thrown when `opData`‑aware mode is requested but not yet
+    ///      implemented.
+    error OpenfortBaseAccount7702V1__UnsupportedOpData();
+
+    /// @dev Thrown when the sum of executed calls exceeds `MAX_TX`.
+    error OpenfortBaseAccount7702V1__TooManyCalls(uint256 total, uint256 max);
 
     // =============================================================
     //                         PUBLIC FUNCTIONS
