@@ -35,5 +35,5 @@ interface IExecution {
 
     /// @dev Convenience helper for wallets / bundlers to pre‑check
     ///      whether a specific `mode` is understood.
-    function supportsExecutionMode(bytes32 mode) external view virtual returns (bool);
+    function supportsExecutionMode(bytes32 mode) external view returns (bool);
 }
