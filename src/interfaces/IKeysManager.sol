@@ -64,17 +64,7 @@ interface IKeysManager is IKey {
      *      Supports WebAuthn/P256/P256NONKEY and EOA keys.
      *      Emits `KeyRegistrated(keyId)`.
      */
-    function registerKey(
-        IKey.Key calldata _key,
-        uint48 _validUntil,
-        uint48 _validAfter,
-        uint48 _limit,
-        bool _whitelisting,
-        address _contractAddress,
-        SpendLimit.SpendTokenInfo calldata _spendTokenInfo,
-        bytes4[] calldata _allowedSelectors,
-        uint256 _ethLimit
-    ) external;
+    function registerKey(IKey.Key calldata _key, KeyReg calldata _keyData) external;
 
     /**
      * @notice Revokes a specific key, marking it inactive and clearing its parameters.
@@ -146,15 +136,7 @@ interface IKeysManager is IKey {
     /**
      * @notice Encodes a P-256 signature payload (KeyType.P256).
      */
-    function encodeP256Signature(bytes32 r, bytes32 s, IKey.PubKey memory pubKey)
-        external
-        pure
-        returns (bytes memory);
-
-    /**
-     * @notice Encodes a P-256 non-key signature payload (KeyType.P256NONKEY).
-     */
-    function encodeP256NonKeySignature(bytes32 r, bytes32 s, IKey.PubKey memory pubKey)
+    function encodeP256Signature(bytes32 r, bytes32 s, IKey.PubKey memory pubKey, IKey.KeyType _keyType)
         external
         pure
         returns (bytes memory);

@@ -12,7 +12,7 @@
 
 // SPDX-License-Identifier: MIT
 
-pragma solidity 0.8.29;
+pragma solidity ^0.8.29;
 
 import {IKey} from "src/interfaces/IKey.sol";
 import {KeyHashLib} from "src/libs/KeyHashLib.sol";
@@ -28,6 +28,7 @@ import {IKeysManager} from "src/interfaces/IKeysManager.sol";
 abstract contract KeysManager is BaseOPF7702, IKey, SpendLimit {
     using KeyHashLib for Key;
     using ValidationLib for *;
+    
     // =============================================================
     //                          CONSTANTS
     // =============================================================
@@ -319,35 +320,20 @@ abstract contract KeysManager is BaseOPF7702, IKey, SpendLimit {
     }
 
     /**
-     * @notice Encodes a P-256 signature payload (KeyType.P256).
+     * @notice Encodes a P-256 signature payload (KeyType.P256 || KeyType.P256NONKEY).
      * @param r       R component of the P-256 signature (32 bytes).
      * @param s       S component of the P-256 signature (32 bytes).
      * @param pubKey  Public key (x, y) used for signing.
+     * @param _keyType  KeyType of key.
      * @return ABI‐encoded payload as: KeyType.P256, abi.encode(r, s, pubKey).
      */
-    function encodeP256Signature(bytes32 r, bytes32 s, PubKey memory pubKey)
+    function encodeP256Signature(bytes32 r, bytes32 s, PubKey memory pubKey, KeyType _keyType)
         external
         pure
         returns (bytes memory)
     {
         bytes memory inner = abi.encode(r, s, pubKey);
-        return abi.encode(KeyType.P256, inner);
-    }
-
-    /**
-     * @notice Encodes a P-256 non-key signature payload (KeyType.P256NONKEY).
-     * @param r       R component of the P-256 signature (32 bytes).
-     * @param s       S component of the P-256 signature (32 bytes).
-     * @param pubKey  Public key (x, y) used for signing.
-     * @return ABI‐encoded payload as: KeyType.P256NONKEY, abi.encode(r, s, pubKey).
-     */
-    function encodeP256NonKeySignature(bytes32 r, bytes32 s, PubKey memory pubKey)
-        external
-        pure
-        returns (bytes memory)
-    {
-        bytes memory inner = abi.encode(r, s, pubKey);
-        return abi.encode(KeyType.P256NONKEY, inner);
+        return abi.encode(_keyType, inner);
     }
 
     /**
