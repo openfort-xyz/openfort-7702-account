@@ -18,9 +18,9 @@ import {WebAuthnVerifier} from "src/utils/WebAuthnVerifier.sol";
 import {WebAuthnVerifierV2} from "src/utils/WebAuthnVerifierV2.sol";
 import {PackedUserOperation} from
     "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
-    
+
 contract RunWebAuthnV2 is Base {
-//     address constant SEPOLIA_WEBAUTHN_V2 = 0x14e3051499C88AFb94a512131239dD60eCf80930;
+    //     address constant SEPOLIA_WEBAUTHN_V2 = 0x14e3051499C88AFb94a512131239dD60eCf80930;
     WebAuthnVerifierV2 public SEPOLIA_WEBAUTHN_V2;
 
     /* ───────────────────────────────────────────────────────────── contracts ── */
@@ -61,7 +61,7 @@ contract RunWebAuthnV2 is Base {
         );
         vm.etch(owner, address(implementation).code);
         account = OPF7702(payable(owner));
-     
+
         vm.stopPrank();
         console.log("SEPOLIA_WEBAUTHN_V2", address(SEPOLIA_WEBAUTHN_V2));
 

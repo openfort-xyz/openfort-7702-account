@@ -90,8 +90,10 @@ contract Base is Test, IKey {
 
     bytes32 public REG_CHALLENGE_V2 = stdJson.readBytes32(json_reg_v2, ".registration.challenge");
 
-    bytes32 public REG_SIGNATURE_R_V2 = stdJson.readBytes32(json_reg_v2, ".registration.signature.r");
-    bytes32 public REG_SIGNATURE_S_V2 = stdJson.readBytes32(json_reg_v2, ".registration.signature.s");
+    bytes32 public REG_SIGNATURE_R_V2 =
+        stdJson.readBytes32(json_reg_v2, ".registration.signature.r");
+    bytes32 public REG_SIGNATURE_S_V2 =
+        stdJson.readBytes32(json_reg_v2, ".registration.signature.s");
 
     bytes public REG_AUTHENTICATOR_DATA_V2 =
         stdJson.readBytes(json_reg_v2, ".registration.metadata.authenticatorData");
@@ -100,7 +102,8 @@ contract Base is Test, IKey {
 
     uint256 public REG_CHALLENGE_INDEX_V2 =
         stdJson.readUint(json_reg_v2, ".registration.metadata.challengeIndex");
-    uint256 public REG_TYPE_INDEX_V2 = stdJson.readUint(json_reg_v2, ".registration.metadata.typeIndex");
+    uint256 public REG_TYPE_INDEX_V2 =
+        stdJson.readUint(json_reg_v2, ".registration.metadata.typeIndex");
 
     /* ───────────────────────────────────────────────────────────── master key ── */
     bytes32 constant MINT_VALID_PUBLIC_KEY_X =

@@ -12,6 +12,7 @@
 
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.29;
+
 import {console2 as console} from "lib/forge-std/src/Script.sol";
 
 import {Execution} from "src/core/Execution.sol";
