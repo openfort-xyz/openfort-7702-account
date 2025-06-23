@@ -13,6 +13,7 @@ import {ECDSA} from "lib/openzeppelin-contracts/contracts/utils/cryptography/ECD
 import {IEntryPoint} from "lib/account-abstraction/contracts/interfaces/IEntryPoint.sol";
 
 import {OPFMain as OPF7702} from "src/core/OPFMain.sol";
+import {KeyHashLib} from "src/libs/KeyHashLib.sol";
 import {MockERC20} from "src/mocks/MockERC20.sol";
 import {KeysManager} from "src/core/KeysManager.sol";
 import {SpendLimit} from "src/utils/SpendLimit.sol";
@@ -22,7 +23,9 @@ import {PackedUserOperation} from
     "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
 
 contract Recoverable is Base {
+    using KeyHashLib for address;
     /* ───────────────────────────────────────────────────────────── contracts ── */
+
     IEntryPoint public entryPoint;
     WebAuthnVerifier public webAuthn;
     OPF7702 public implementation;
@@ -99,7 +102,7 @@ contract Recoverable is Base {
 
         assertTrue(isActive);
 
-        assertEq(guardians[0], keccak256(abi.encodePacked(initialGuardian)));
+        assertEq(guardians[0], initialGuardian);
 
         console.log("/* --------------------------------- test_AfterConstructor -------- */");
     }
@@ -107,17 +110,17 @@ contract Recoverable is Base {
     function test_AfterProposal() external view {
         console.log("/* --------------------------------- test_AfterProposal -------- */");
 
-        bool isActiveEOA = account.isGuardian(sessionKey);
+        bool isActiveEOA = account.isGuardian(sessionKey.computeKeyId());
         console.log("isActiveEOA", isActiveEOA);
 
-        bool isActiveB = account.isGuardian(guardianB);
+        bool isActiveB = account.isGuardian(guardianB.computeKeyId());
         console.log("isActiveB", isActiveB);
 
         assertFalse(isActiveEOA);
         assertFalse(isActiveB);
 
-        uint256 pendingEOA = account.getPendingStatusGuardians(sessionKey);
-        uint256 pendingEOAB = account.getPendingStatusGuardians(guardianB);
+        uint256 pendingEOA = account.getPendingStatusGuardians(sessionKey.computeKeyId());
+        uint256 pendingEOAB = account.getPendingStatusGuardians(guardianB.computeKeyId());
         console.log("pendingEOA", pendingEOA);
         console.log("pendingEOAB", pendingEOAB);
 
@@ -129,17 +132,17 @@ contract Recoverable is Base {
     function test_AfterCancellation() external {
         console.log("/* --------------------------------- test_AfterCancellation -------- */");
 
-        bool isActiveEOA = account.isGuardian(sessionKey);
+        bool isActiveEOA = account.isGuardian(sessionKey.computeKeyId());
         console.log("isActiveEOA", isActiveEOA);
 
-        bool isActiveB = account.isGuardian(guardianB);
+        bool isActiveB = account.isGuardian(guardianB.computeKeyId());
         console.log("isActiveB", isActiveB);
 
         assertFalse(isActiveEOA);
         assertFalse(isActiveB);
 
-        uint256 pendingEOA = account.getPendingStatusGuardians(sessionKey);
-        uint256 pendingEOAB = account.getPendingStatusGuardians(guardianB);
+        uint256 pendingEOA = account.getPendingStatusGuardians(sessionKey.computeKeyId());
+        uint256 pendingEOAB = account.getPendingStatusGuardians(guardianB.computeKeyId());
         console.log("pendingEOA", pendingEOA);
         console.log("pendingEOAB", pendingEOAB);
 
@@ -148,8 +151,8 @@ contract Recoverable is Base {
 
         _cancelGuardian();
 
-        uint256 pendingEOA_After = account.getPendingStatusGuardians(sessionKey);
-        uint256 pendingEOAB_After = account.getPendingStatusGuardians(guardianB);
+        uint256 pendingEOA_After = account.getPendingStatusGuardians(sessionKey.computeKeyId());
+        uint256 pendingEOAB_After = account.getPendingStatusGuardians(guardianB.computeKeyId());
         console.log("pendingEOA_After", pendingEOA_After);
         console.log("pendingEOAB_After", pendingEOAB_After);
 
@@ -174,16 +177,16 @@ contract Recoverable is Base {
         }
         bool isActive = account.isGuardian(initialGuardian);
         console.log("isActive", isActive);
-        bool isActiveEOA = account.isGuardian(sessionKey);
+        bool isActiveEOA = account.isGuardian(sessionKey.computeKeyId());
         console.log("isActiveEOA", isActiveEOA);
-        bool isActiveB = account.isGuardian(guardianB);
+        bool isActiveB = account.isGuardian(guardianB.computeKeyId());
         console.log("isActiveB", isActiveB);
 
         assertTrue(isActive);
         assertTrue(isActiveEOA);
         assertTrue(isActiveB);
 
-        assertEq(guardians[0], keccak256(abi.encodePacked(initialGuardian)));
+        assertEq(guardians[0], (initialGuardian));
         assertEq(guardians[1], keccak256(abi.encodePacked(sessionKey)));
         assertEq(guardians[2], keccak256(abi.encodePacked(guardianB)));
 
@@ -206,22 +209,22 @@ contract Recoverable is Base {
         }
         bool isActive = account.isGuardian(initialGuardian);
         console.log("isActive", isActive);
-        bool isActiveEOA = account.isGuardian(sessionKey);
+        bool isActiveEOA = account.isGuardian(sessionKey.computeKeyId());
         console.log("isActiveEOA", isActiveEOA);
-        bool isActiveB = account.isGuardian(guardianB);
+        bool isActiveB = account.isGuardian(guardianB.computeKeyId());
         console.log("isActiveB", isActiveB);
 
         assertTrue(isActive);
         assertTrue(isActiveEOA);
         assertTrue(isActiveB);
 
-        assertEq(guardians[0], keccak256(abi.encodePacked(initialGuardian)));
+        assertEq(guardians[0], initialGuardian);
         assertEq(guardians[1], keccak256(abi.encodePacked(sessionKey)));
         assertEq(guardians[2], keccak256(abi.encodePacked(guardianB)));
         _revokeGuardian();
 
-        uint256 pendingEOA = account.getPendingStatusGuardians(sessionKey);
-        uint256 pendingEOAB = account.getPendingStatusGuardians(guardianB);
+        uint256 pendingEOA = account.getPendingStatusGuardians(sessionKey.computeKeyId());
+        uint256 pendingEOAB = account.getPendingStatusGuardians(guardianB.computeKeyId());
 
         console.log("pendingEOA", pendingEOA);
         console.log("pendingEOAB", pendingEOAB);
@@ -248,22 +251,22 @@ contract Recoverable is Base {
         }
         bool isActive = account.isGuardian(initialGuardian);
         console.log("isActive", isActive);
-        bool isActiveEOA = account.isGuardian(sessionKey);
+        bool isActiveEOA = account.isGuardian(sessionKey.computeKeyId());
         console.log("isActiveEOA", isActiveEOA);
-        bool isActiveB = account.isGuardian(guardianB);
+        bool isActiveB = account.isGuardian(guardianB.computeKeyId());
         console.log("isActiveB", isActiveB);
 
         assertTrue(isActive);
         assertTrue(isActiveEOA);
         assertTrue(isActiveB);
 
-        assertEq(guardians[0], keccak256(abi.encodePacked(initialGuardian)));
+        assertEq(guardians[0], initialGuardian);
         assertEq(guardians[1], keccak256(abi.encodePacked(sessionKey)));
         assertEq(guardians[2], keccak256(abi.encodePacked(guardianB)));
         _revokeGuardian();
 
-        uint256 pendingEOA = account.getPendingStatusGuardians(sessionKey);
-        uint256 pendingEOAB = account.getPendingStatusGuardians(guardianB);
+        uint256 pendingEOA = account.getPendingStatusGuardians(sessionKey.computeKeyId());
+        uint256 pendingEOAB = account.getPendingStatusGuardians(guardianB.computeKeyId());
 
         console.log("pendingEOA", pendingEOA);
         console.log("pendingEOAB", pendingEOAB);
@@ -274,8 +277,8 @@ contract Recoverable is Base {
 
         _cancelGuardianRevocation();
 
-        uint256 pendingEOA_After = account.getPendingStatusGuardians(sessionKey);
-        uint256 pendingEOAB_After = account.getPendingStatusGuardians(guardianB);
+        uint256 pendingEOA_After = account.getPendingStatusGuardians(sessionKey.computeKeyId());
+        uint256 pendingEOAB_After = account.getPendingStatusGuardians(guardianB.computeKeyId());
 
         assertEq(pendingEOA_After, 0);
         assertEq(pendingEOAB_After, 0);
@@ -298,22 +301,22 @@ contract Recoverable is Base {
         }
         bool isActive = account.isGuardian(initialGuardian);
         console.log("isActive", isActive);
-        bool isActiveEOA = account.isGuardian(sessionKey);
+        bool isActiveEOA = account.isGuardian(sessionKey.computeKeyId());
         console.log("isActiveEOA", isActiveEOA);
-        bool isActiveB = account.isGuardian(guardianB);
+        bool isActiveB = account.isGuardian(guardianB.computeKeyId());
         console.log("isActiveB", isActiveB);
 
         assertTrue(isActive);
         assertTrue(isActiveEOA);
         assertTrue(isActiveB);
 
-        assertEq(guardians[0], keccak256(abi.encodePacked(initialGuardian)));
+        assertEq(guardians[0], initialGuardian);
         assertEq(guardians[1], keccak256(abi.encodePacked(sessionKey)));
         assertEq(guardians[2], keccak256(abi.encodePacked(guardianB)));
 
         _revokeGuardian();
-        uint256 pendingEOA = account.getPendingStatusGuardians(sessionKey);
-        uint256 pendingEOAB = account.getPendingStatusGuardians(guardianB);
+        uint256 pendingEOA = account.getPendingStatusGuardians(sessionKey.computeKeyId());
+        uint256 pendingEOAB = account.getPendingStatusGuardians(guardianB.computeKeyId());
 
         console.log("pendingEOA", pendingEOA);
         console.log("pendingEOAB", pendingEOAB);
@@ -335,11 +338,11 @@ contract Recoverable is Base {
             }
         }
 
-        bool isActiveEOA_After = account.isGuardian(sessionKey);
+        bool isActiveEOA_After = account.isGuardian(sessionKey.computeKeyId());
         console.log("isActiveEOA_After", isActiveEOA_After);
         assertTrue(!isActiveEOA_After);
 
-        assertEq(guardians[0], keccak256(abi.encodePacked(initialGuardian)));
+        assertEq(guardians[0], initialGuardian);
         assertEq(guardians[1], keccak256(abi.encodePacked(guardianB)));
 
         _confirmGuardianRevocationWebAuthn();
@@ -355,10 +358,10 @@ contract Recoverable is Base {
             }
         }
 
-        bool isActiveB_After = account.isGuardian(guardianB);
+        bool isActiveB_After = account.isGuardian(guardianB.computeKeyId());
         console.log("isActiveB_After", isActiveB_After);
         assertTrue(!isActiveB_After);
-        assertEq(guardians[0], keccak256(abi.encodePacked(initialGuardian)));
+        assertEq(guardians[0], initialGuardian);
 
         console.log("/* --------------------------------- test_RevokeGuardian -------- */");
     }
@@ -577,12 +580,12 @@ contract Recoverable is Base {
         proposalTimestamp = block.timestamp;
 
         vm.prank(address(entryPoint));
-        account.proposeGuardian(sessionKey);
+        account.proposeGuardian(sessionKey.computeKeyId());
 
         vm.etch(owner, code);
 
         vm.prank(address(entryPoint));
-        account.proposeGuardian(guardianB);
+        account.proposeGuardian(guardianB.computeKeyId());
     }
 
     function _confirmGuardian() internal {
@@ -597,12 +600,12 @@ contract Recoverable is Base {
         vm.warp(proposalTimestamp + SECURITY_PERIOD + 1);
 
         vm.prank(address(entryPoint));
-        account.confirmGuardianProposal(sessionKey);
+        account.confirmGuardianProposal(sessionKey.computeKeyId());
 
         vm.etch(owner, code);
 
         vm.prank(address(entryPoint));
-        account.confirmGuardianProposal(guardianB);
+        account.confirmGuardianProposal(guardianB.computeKeyId());
     }
 
     function _revokeGuardian() internal {
@@ -610,12 +613,12 @@ contract Recoverable is Base {
         vm.etch(owner, code);
 
         vm.prank(address(entryPoint));
-        account.revokeGuardian(sessionKey);
+        account.revokeGuardian(sessionKey.computeKeyId());
 
         vm.etch(owner, code);
 
         vm.prank(address(entryPoint));
-        account.revokeGuardian(guardianB);
+        account.revokeGuardian(guardianB.computeKeyId());
     }
 
     function _cancelGuardianRevocation() internal {
@@ -627,12 +630,12 @@ contract Recoverable is Base {
         vm.warp(proposalTimestamp + SECURITY_PERIOD + 1);
 
         vm.prank(address(entryPoint));
-        account.cancelGuardianRevocation(sessionKey);
+        account.cancelGuardianRevocation(sessionKey.computeKeyId());
 
         vm.etch(owner, code);
 
         vm.prank(address(entryPoint));
-        account.cancelGuardianRevocation(guardianB);
+        account.cancelGuardianRevocation(guardianB.computeKeyId());
     }
 
     function _confirmGuardianRevocationEOA() internal {
@@ -642,7 +645,7 @@ contract Recoverable is Base {
 
         vm.warp(proposalTimestamp + SECURITY_PERIOD + SECURITY_WINDOW);
         vm.prank(address(entryPoint));
-        account.confirmGuardianRevocation(sessionKey);
+        account.confirmGuardianRevocation(sessionKey.computeKeyId());
     }
 
     function _confirmGuardianRevocationWebAuthn() internal {
@@ -651,7 +654,7 @@ contract Recoverable is Base {
         vm.etch(owner, code);
 
         vm.prank(address(entryPoint));
-        account.confirmGuardianRevocation(guardianB);
+        account.confirmGuardianRevocation(guardianB.computeKeyId());
     }
 
     function _cancelGuardian() internal {
@@ -666,12 +669,12 @@ contract Recoverable is Base {
         vm.warp(proposalTimestamp + SECURITY_PERIOD + 1);
 
         vm.prank(address(entryPoint));
-        account.cancelGuardianProposal(sessionKey);
+        account.cancelGuardianProposal(sessionKey.computeKeyId());
 
         vm.etch(owner, code);
 
         vm.prank(address(entryPoint));
-        account.cancelGuardianProposal(guardianB);
+        account.cancelGuardianProposal(guardianB.computeKeyId());
     }
 
     function _startRecovery() internal {

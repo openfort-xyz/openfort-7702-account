@@ -203,7 +203,7 @@ contract Base is Test, IKey {
     uint256 public GUARDIAN_EOA_PRIVATE_KEY = vm.envUint("GUARDIAN_EOA_PRIVATE_KEY");
     address internal GUARDIAN_EOA_ADDRESS = vm.addr(GUARDIAN_EOA_PRIVATE_KEY);
 
-    address internal initialGuardian;
+    bytes32 internal initialGuardian;
     uint256 internal guardianB_PK;
     address internal guardianB;
 
@@ -338,7 +338,8 @@ contract Base is Test, IKey {
         keyGuardianWebAuthn =
             Key({pubKey: pubKeyGuardianWebAuthn, eoaAddress: address(0), keyType: KeyType.WEBAUTHN});
 
-        initialGuardian = makeAddr("initialGuardian");
+        address initialAddr = makeAddr("initialGuardian");
+        initialGuardian = keccak256(abi.encodePacked(initialAddr));
         (guardianB, guardianB_PK) = makeAddrAndKey("guardianB");
     }
 }

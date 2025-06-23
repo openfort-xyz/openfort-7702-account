@@ -67,8 +67,10 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
     //                               Storage vars
     // ──────────────────────────────────────────────────────────────────────────────
 
-    IOPF7702Recoverable.GuardiansData internal guardiansData;
+    /// @notice Recovery flow state variables.
     IOPF7702Recoverable.RecoveryData public recoveryData;
+    /// @notice Encapsulates guardian related state.
+    IOPF7702Recoverable.GuardiansData internal guardiansData;
 
     // ──────────────────────────────────────────────────────────────────────────────
     //                              Constructor
@@ -121,7 +123,7 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
         Key calldata _key,
         KeyReg calldata _keyData,
         bytes memory _signature,
-        address _initialGuardian
+        bytes32 _initialGuardian
     ) external initializer {
         _requireForExecute();
         _clearStorage();
@@ -133,8 +135,7 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
             revert IBaseOPF7702.OpenfortBaseAccount7702V1__InvalidSignature();
         }
 
-        bytes32 keyId = _key.computeKeyId();
-        KeyData storage sKey = keys[keyId];
+        KeyData storage sKey = keys[_key.computeKeyId()];
         idKeys[0] = _key;
 
         // register masterKey: never expires, no spending/whitelist restrictions
@@ -155,16 +156,15 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
 
     /// @dev Helper to configure the first guardian during `initialize`.
     /// @param _initialGuardian Guardian address to register.
-    function initializeGuardians(address _initialGuardian) private {
-        if (_initialGuardian == address(0)) {
+    function initializeGuardians(bytes32 _initialGuardian) private {
+        if (_initialGuardian == bytes32(0)) {
             revert IOPF7702Recoverable.OPF7702Recoverable__AddressCantBeZero();
         }
-        bytes32 gHash = _guardianHash(_initialGuardian);
 
-        guardiansData.guardians.push(gHash);
-        IOPF7702Recoverable.GuardianIdentity storage gi = guardiansData.data[gHash];
+        guardiansData.guardians.push(_initialGuardian);
+        IOPF7702Recoverable.GuardianIdentity storage gi = guardiansData.data[_initialGuardian];
 
-        emit IOPF7702Recoverable.GuardianAdded(gHash);
+        emit IOPF7702Recoverable.GuardianAdded(_initialGuardian);
 
         gi.isActive = true;
         gi.index = 0;
@@ -179,22 +179,22 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
      * @notice Proposes adding a new guardian. Must be confirmed after the security period.
      * @param _guardian Guardian address to add.
      */
-    function proposeGuardian(address _guardian) external {
+    function proposeGuardian(bytes32 _guardian) external {
         _requireForExecute();
         if (isLocked()) revert IOPF7702Recoverable.OPF7702Recoverable__AccountLocked();
 
-        if (_guardian == address(0)) {
+        if (_guardian == bytes32(0)) {
             revert IOPF7702Recoverable.OPF7702Recoverable__AddressCantBeZero();
         }
-        bytes32 gHash = _guardianHash(_guardian);
-        IOPF7702Recoverable.GuardianIdentity storage gi = guardiansData.data[gHash];
 
-        if (address(this) == _guardian) {
+        IOPF7702Recoverable.GuardianIdentity storage gi = guardiansData.data[_guardian];
+
+        if (address(this).computeKeyId() == _guardian) {
             revert IOPF7702Recoverable.OPF7702Recoverable__GuardianCannotBeAddressThis();
         }
 
         Key memory mk = getKeyById(0);
-        if (mk.eoaAddress == _guardian) {
+        if (mk.eoaAddress.computeKeyId() == _guardian) {
             revert IOPF7702Recoverable.OPF7702Recoverable__GuardianCannotBeCurrentMasterKey();
         }
 
@@ -206,23 +206,22 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
 
         gi.pending = block.timestamp + securityPeriod;
 
-        emit IOPF7702Recoverable.GuardianProposed(gHash, gi.pending);
+        emit IOPF7702Recoverable.GuardianProposed(_guardian, gi.pending);
     }
 
     /**
      * @notice Finalizes a previously proposed guardian after the timelock.
      * @param _guardian Guardian address to activate.
      */
-    function confirmGuardianProposal(address _guardian) external {
+    function confirmGuardianProposal(bytes32 _guardian) external {
         _requireForExecute();
         _requireRecovery(false);
-        if (_guardian == address(0)) {
+        if (_guardian == bytes32(0)) {
             revert IOPF7702Recoverable.OPF7702Recoverable__AddressCantBeZero();
         }
         if (isLocked()) revert IOPF7702Recoverable.OPF7702Recoverable__AccountLocked();
 
-        bytes32 gHash = _guardianHash(_guardian);
-        IOPF7702Recoverable.GuardianIdentity storage gi = guardiansData.data[gHash];
+        IOPF7702Recoverable.GuardianIdentity storage gi = guardiansData.data[_guardian];
 
         if (gi.pending == 0) revert IOPF7702Recoverable.OPF7702Recoverable__UnknownProposal();
         if (block.timestamp < gi.pending) {
@@ -234,30 +233,29 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
 
         if (gi.isActive) revert IOPF7702Recoverable.OPF7702Recoverable__DuplicatedGuardian();
 
-        emit IOPF7702Recoverable.GuardianAdded(gHash);
+        emit IOPF7702Recoverable.GuardianAdded(_guardian);
 
         gi.isActive = true;
         gi.pending = 0;
         gi.index = guardiansData.guardians.length;
-        guardiansData.guardians.push(gHash);
+        guardiansData.guardians.push(_guardian);
     }
 
     /**
      * @notice Cancels a guardian addition proposal before it is confirmed.
      * @param _guardian Guardian address whose proposal should be cancelled.
      */
-    function cancelGuardianProposal(address _guardian) external {
+    function cancelGuardianProposal(bytes32 _guardian) external {
         _requireForExecute();
         _requireRecovery(false);
         if (isLocked()) revert IOPF7702Recoverable.OPF7702Recoverable__AccountLocked();
 
-        bytes32 gHash = _guardianHash(_guardian);
-        IOPF7702Recoverable.GuardianIdentity storage gi = guardiansData.data[gHash];
+        IOPF7702Recoverable.GuardianIdentity storage gi = guardiansData.data[_guardian];
 
         if (gi.pending == 0) revert IOPF7702Recoverable.OPF7702Recoverable__UnknownProposal();
         if (gi.isActive) revert IOPF7702Recoverable.OPF7702Recoverable__DuplicatedGuardian();
 
-        emit IOPF7702Recoverable.GuardianProposalCancelled(gHash);
+        emit IOPF7702Recoverable.GuardianProposalCancelled(_guardian);
 
         gi.pending = 0;
     }
@@ -266,12 +264,11 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
      * @notice Initiates guardian removal. Must be confirmed after the security period.
      * @param _guardian Guardian address to revoke.
      */
-    function revokeGuardian(address _guardian) external {
+    function revokeGuardian(bytes32 _guardian) external {
         _requireForExecute();
         if (isLocked()) revert IOPF7702Recoverable.OPF7702Recoverable__AccountLocked();
 
-        bytes32 gHash = _guardianHash(_guardian);
-        IOPF7702Recoverable.GuardianIdentity storage gi = guardiansData.data[gHash];
+        IOPF7702Recoverable.GuardianIdentity storage gi = guardiansData.data[_guardian];
 
         if (!gi.isActive) revert IOPF7702Recoverable.OPF7702Recoverable__MustBeGuardian();
 
@@ -281,19 +278,18 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
 
         gi.pending = block.timestamp + securityPeriod;
 
-        emit IOPF7702Recoverable.GuardianRevocationScheduled(gHash, gi.pending);
+        emit IOPF7702Recoverable.GuardianRevocationScheduled(_guardian, gi.pending);
     }
 
     /**
      * @notice Confirms guardian removal after the timelock.
      * @param _guardian Guardian address to remove permanently.
      */
-    function confirmGuardianRevocation(address _guardian) external {
+    function confirmGuardianRevocation(bytes32 _guardian) external {
         _requireForExecute();
         if (isLocked()) revert IOPF7702Recoverable.OPF7702Recoverable__AccountLocked();
 
-        bytes32 gHash = _guardianHash(_guardian);
-        IOPF7702Recoverable.GuardianIdentity storage gi = guardiansData.data[gHash];
+        IOPF7702Recoverable.GuardianIdentity storage gi = guardiansData.data[_guardian];
 
         if (gi.pending == 0) revert IOPF7702Recoverable.OPF7702Recoverable__UnknownRevoke();
         if (block.timestamp < gi.pending) {
@@ -308,35 +304,34 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
         bytes32 lastHash = guardiansData.guardians[lastIndex];
         uint256 targetIndex = gi.index;
 
-        if (gHash != lastHash) {
+        if (_guardian != lastHash) {
             guardiansData.guardians[targetIndex] = lastHash;
             guardiansData.data[lastHash].index = targetIndex;
         }
 
-        emit IOPF7702Recoverable.GuardianRemoved(gHash);
+        emit IOPF7702Recoverable.GuardianRemoved(_guardian);
 
         guardiansData.guardians.pop();
 
-        delete guardiansData.data[gHash];
+        delete guardiansData.data[_guardian];
     }
 
     /**
      * @notice Cancels a pending guardian removal.
      * @param _guardian Guardian address whose removal should be cancelled.
      */
-    function cancelGuardianRevocation(address _guardian) external {
+    function cancelGuardianRevocation(bytes32 _guardian) external {
         _requireForExecute();
         if (isLocked()) revert IOPF7702Recoverable.OPF7702Recoverable__AccountLocked();
 
-        bytes32 gHash = _guardianHash(_guardian);
-        IOPF7702Recoverable.GuardianIdentity storage gi = guardiansData.data[gHash];
+        IOPF7702Recoverable.GuardianIdentity storage gi = guardiansData.data[_guardian];
 
         if (!gi.isActive) revert IOPF7702Recoverable.OPF7702Recoverable__MustBeGuardian();
         if (gi.pending == 0) revert IOPF7702Recoverable.OPF7702Recoverable__UnknownRevoke();
 
-        emit IOPF7702Recoverable.GuardianRevocationCancelled(gHash);
+        emit IOPF7702Recoverable.GuardianRevocationCancelled(_guardian);
 
-        guardiansData.data[gHash].pending = 0;
+        guardiansData.data[_guardian].pending = 0;
     }
 
     // ──────────────────────────────────────────────────────────────────────────────
@@ -349,8 +344,11 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
      * @param _recoveryKey New master key to set once recovery succeeds.
      */
     function startRecovery(Key memory _recoveryKey) external virtual {
-        if (!isGuardian(msg.sender)) {
+        if (!isGuardian(msg.sender.computeKeyId())) {
             revert IOPF7702Recoverable.OPF7702Recoverable__MustBeGuardian();
+        }
+        if (_recoveryKey.keyType == KeyType.P256 || _recoveryKey.keyType == KeyType.P256NONKEY) {
+            revert IOPF7702Recoverable.OPF7702Recoverable__UnsupportedKeyType();
         }
 
         _requireRecovery(false);
@@ -362,7 +360,11 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
             revert IOPF7702Recoverable.OPF7702Recoverable__AddressCantBeZero();
         }
 
-        if (isGuardian(_recoveryKey.eoaAddress)) {
+        if (keys[_recoveryKey.computeKeyId()].isActive) {
+            revert IOPF7702Recoverable.OPF7702Recoverable__RecoverCannotBeActiveKey();
+        }
+
+        if (isGuardian(_recoveryKey.eoaAddress.computeKeyId())) {
             revert IOPF7702Recoverable.OPF7702Recoverable__GuardianCannotBeOwner();
         }
 
@@ -414,17 +416,12 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
 
     /// @dev Deletes the old master key data structures (both WebAuthn and EOA variants).
     function _deleteOldKeys() private {
-        // Todo: Change the Admin key of index 0 in the keys for new Master Key
-        // _transferOwnership(recoveryOwner);
-
-        // Todo: Need to Identify Master Key by Id or Any othewr flag
         // MK WebAuthn will be always id = 0 because of Initalization func enforce to be `0`
         Key storage oldMK = idKeys[0];
-        bytes32 oldHash = oldMK.computeKeyId();
 
         /// @dev Only the nested mapping in stract will not be cleared mapping(address => bool) whitelist
         /// @notice not providing security risk
-        delete keys[oldHash];
+        delete keys[oldMK.computeKeyId()];
         delete idKeys[0];
     }
 
@@ -432,11 +429,10 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
     /// @param recoveryOwner Key that becomes the new master key.
     function _setNewMasterKey(Key memory recoveryOwner) private {
         KeyData storage sKey;
-        bytes32 newHash = recoveryOwner.computeKeyId();
 
         idKeys[0] = recoveryOwner;
 
-        sKey = keys[newHash];
+        sKey = keys[recoveryOwner.computeKeyId()];
 
         if (sKey.isActive) {
             revert IKeysManager.KeyManager__KeyRegistered();
@@ -523,16 +519,6 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
     // ──────────────────────────────────────────────────────────────────────────────
 
     /**
-     * @notice Computes the storage hash for a guardian address.
-     * @dev Only EOA (address) are supported.
-     * @param _guardian Guardian address to hash.
-     * @return Guardian identifier hash.
-     */
-    function _guardianHash(address _guardian) internal pure returns (bytes32) {
-        return _guardian.computeKeyId();
-    }
-
-    /**
      * @notice Returns all guardian hashes currently active.
      * @return Array of guardian hashes.
      */
@@ -554,9 +540,8 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
      * @param _guardian Guardian address to query.
      * @return Timestamp until which the action is pending (0 if none).
      */
-    function getPendingStatusGuardians(address _guardian) external view returns (uint256) {
-        bytes32 gHash = _guardianHash(_guardian);
-        return guardiansData.data[gHash].pending;
+    function getPendingStatusGuardians(bytes32 _guardian) external view returns (uint256) {
+        return guardiansData.data[_guardian].pending;
     }
 
     /**
@@ -572,11 +557,8 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
      * @param _guardian Guardian address to query.
      * @return True if active guardian.
      */
-    function isGuardian(address _guardian) public view returns (bool) {
-        bytes32 guradianHash;
-        guradianHash = _guardianHash(_guardian);
-
-        return guardiansData.data[guradianHash].isActive;
+    function isGuardian(bytes32 _guardian) public view returns (bool) {
+        return guardiansData.data[_guardian].isActive;
     }
 
     /**
