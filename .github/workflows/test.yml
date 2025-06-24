@@ -45,7 +45,8 @@ jobs:
             lib/account-abstraction \
             lib/forge-std \
             lib/openzeppelin-contracts \
-            lib/solady
+            lib/solady \
+            lib/webauthn-sol
 
       # 3) install Foundry toolchain
       - name: Install Foundry
