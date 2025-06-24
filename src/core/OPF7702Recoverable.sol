@@ -128,7 +128,7 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
         _requireForExecute();
         _clearStorage();
 
-        bytes32 digest = getDigestToSign();
+        bytes32 digest = getDigestToInit(_key, _initialGuardian);
 
         if (!_checkSignature(digest, _signature)) {
             revert IBaseOPF7702.OpenfortBaseAccount7702V1__InvalidSignature();
@@ -581,6 +581,20 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
                 recoveryData.key,
                 recoveryData.executeAfter,
                 recoveryData.guardiansRequired
+            )
+        );
+
+        digest = _hashTypedDataV4(structHash);
+    }
+
+    function getDigestToInit(Key calldata _key, bytes32 _initialGuardian)
+        public
+        view
+        returns (bytes32 digest)
+    {
+        bytes32 structHash = keccak256(
+            abi.encode(
+                RECOVER_TYPEHASH, _key.pubKey.x, _key.pubKey.y, _key.eoaAddress, _key.keyType, _initialGuardian
             )
         );
 

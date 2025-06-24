@@ -177,7 +177,7 @@ contract P256Test is Base {
             ethLimit: 0
         });
 
-        bytes32 msgHash = account.getDigestToSign();
+        bytes32 msgHash = account.getDigestToInit(keyMK, initialGuardian);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPk, msgHash);
         bytes memory sig = abi.encodePacked(r, s, v);
 

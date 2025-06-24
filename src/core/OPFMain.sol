@@ -29,7 +29,6 @@ import {OPF7702Recoverable} from "src/core/OPF7702Recoverable.sol";
  *
  * /// @dev keccak256(abi.encode(uint256(keccak256("openfort.baseAccount.7702.v1")) - 1)) & ~bytes32(uint256(0xff))
  * Layout storage slot:
- *  "openfort.baseAccount.7702.v1" =
  *    0xeddd36aac8c71936fe1d5edb073ff947aa7c1b6174e87c15677c96ab9ad95400
  *    == 107588995614188179791452663824698570634674667931787294340862201729294267929600
  */
