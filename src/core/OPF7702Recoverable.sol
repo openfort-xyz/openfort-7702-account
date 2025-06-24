@@ -594,7 +594,12 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
     {
         bytes32 structHash = keccak256(
             abi.encode(
-                RECOVER_TYPEHASH, _key.pubKey.x, _key.pubKey.y, _key.eoaAddress, _key.keyType, _initialGuardian
+                RECOVER_TYPEHASH,
+                _key.pubKey.x,
+                _key.pubKey.y,
+                _key.eoaAddress,
+                _key.keyType,
+                _initialGuardian
             )
         );
 
