@@ -1,24 +1,22 @@
 {
     "batch" : {
-        "challenge": "0x421b667f78b936a78ae5aedd63644a162a1902235fd144410d0d44a610b3eee3",
+        "challenge": "0x7544ff29c19c65ecbe12b3fbb6d8a67f3f9fd6012912855322cc071c3d1744b0",
         
-        
-            "x": "0x3fe22c0016cb67e1badf3ef6d0be4c30d28f8a6f0aff0d15e08b6da4699234da",
-            "y": "0x787c7c0b831d7e58f11289c1abd72562ae465a8dc3038a0946dec9025cca8fac",
+            "x": "0xa96bc7976eac124efa7536fffc934565e4a80b2cac1f430fe3deca95d5154e3e",
+            "y": "0xfa2a250a1e1bf600fc3491976a77cc7a1c68b594dab1518a3038e7d54746211b",
             
                 "metadata": {
                     "authenticatorData": "0x49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d97631d00000000",
-                    "clientDataJSON": "{\"type\":\"webauthn.get\",\"challenge\":\"Qhtmf3i5NqeK5a7dY2RKFioZAiNf0URBDQ1EphCz7uM\",\"origin\":\"http://localhost:5173\",\"crossOrigin\":false}",
+                    "clientDataJSON": "{\"type\":\"webauthn.get\",\"challenge\":\"dUT_KcGcZey-ErP7ttimfz-f1gEpEoVTIswHHD0XRLA\",\"origin\":\"http://localhost:5173\",\"crossOrigin\":false,\"other_keys_can_be_added_here\":\"do not compare clientDataJSON against a template. See https://goo.gl/yabPex\"}",
                     "challengeIndex": 23,
                     "typeIndex": 1,
                     "userVerificationRequired": true
                 },
                 "signature": {
-                    "r": "0x6359cb31e278b3d5db1bdd36918a521ec815ed75f2b1ba2ac38088efbf00151d",
-                    "s": "0x6a1a8061f43450bc105b0e52e2651980a55149ea50b270ec626fddb253a1d5c1"
+                    "r": "0xe38121b0d6f4de154b526dce6f6c3545b77717533c4340e036395e3f0e7f697b",
+                    "s": "0x4c6f5269a735d785196dca5205fd150fdc6ad334c0f0c796b3cd9d7694e6edc8"
                 }
             
-        
         
         }
 }

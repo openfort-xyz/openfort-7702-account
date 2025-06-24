@@ -134,7 +134,7 @@ contract OPF7702 is Execution, Initializable {
      * @notice Validates a WebAuthn‐type signature (Solady verifier).
      * @dev
      *  • Reject reused challenges.
-     *  • Verify with `verifySoladySignature`.
+     *  • Verify with `verifySignature`.
      *  • If master Key, immediate success.
      *  • Otherwise, call `isValidKey(...)`.
      *
@@ -168,7 +168,7 @@ contract OPF7702 is Execution, Initializable {
         }
         usedChallenges[userOpHash] = true; // mark challenge as used
 
-        bool sigOk = IWebAuthnVerifier(webAuthnVerifier()).verifySoladySignature(
+        bool sigOk = IWebAuthnVerifier(webAuthnVerifier()).verifySignature(
             userOpHash,
             requireUV,
             authenticatorData,
@@ -525,7 +525,7 @@ contract OPF7702 is Execution, Initializable {
         if (usedChallenges[_hash]) {
             return bytes4(0xffffffff);
         }
-        bool sigOk = IWebAuthnVerifier(webAuthnVerifier()).verifySoladySignature(
+        bool sigOk = IWebAuthnVerifier(webAuthnVerifier()).verifySignature(
             _hash,
             requireUV,
             authenticatorData,

@@ -62,6 +62,14 @@ deploy-webauthn:
 	--etherscan-api-key $(ETHERSCAN_KEY) \
 	--broadcast 
 
+deploy-webauthnv2:
+	forge create src/utils/WebAuthnVerifierV2.sol:WebAuthnVerifierV2  \
+	--rpc-url $(SEPOLIA_RPC_URL) \
+	--account BURNER_KEY \
+	--verify \
+	--etherscan-api-key $(ETHERSCAN_KEY) \
+	--broadcast 
+
 deploy-7702-base:
 	forge create src/core/OPF7702Recoverable.sol:OPF7702Recoverable \
 	--rpc-url $(SEPOLIA_BASE_RPC_URL) \
