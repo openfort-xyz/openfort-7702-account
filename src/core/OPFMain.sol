@@ -13,6 +13,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.29;
 
+import {LibEIP7702} from "solady/accounts/LibEIP7702.sol";
 import {OPF7702Recoverable} from "src/core/OPF7702Recoverable.sol";
 
 /**
@@ -56,4 +57,15 @@ contract OPFMain is OPF7702Recoverable layout at 1075889956141881797914526638246
             _securityWindow
         )
     {}
+
+    /// @dev Upgrades the proxy delegation.
+    /// If this delegation is delegated directly without usage of EIP7702Proxy,
+    /// this operation will not affect the logic until the authority is redelegated
+    /// to a proper EIP7702Proxy. The `newImplementation` should implement
+    /// `upgradeProxyDelegation` or similar, otherwise upgrades will be locked and
+    /// only a new EIP-7702 transaction can change the authority's logic.
+    function upgradeProxyDelegation(address newImplementation) public virtual {
+        _requireForExecute();
+        LibEIP7702.upgradeProxyDelegation(newImplementation);
+    }
 }
