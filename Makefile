@@ -90,7 +90,7 @@ deploy-7702-mainnet:
 	--constructor-args 0x4337084D9E255Ff0702461CF8895CE9E3b5Ff108 0x83b7acb5A6aa8A34A97bdA13182aEA787AC3f10d 172800 604800 129600 43200
 
 deploy-7702-proxy:
-	forge create src/core/OPF7702Proxy.sol:OPF7702Proxy \
+	forge create src/upgradeable/UpgradeableOPF7702.sol:UpgradeableOPF7702 \
 	--rpc-url $(SEPOLIA_RPC_URL) \
 	--account BURNER_KEY \
 	--verify \
