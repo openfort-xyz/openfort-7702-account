@@ -63,7 +63,7 @@ contract KeysTest is Base {
         _register_KeyP256NonKey();
 
         vm.prank(sender);
-        entryPoint.depositTo{value: 0.11e18}(owner);
+        entryPoint.depositTo{value: 0.08e18}(owner);
     }
 
     function test_RevokeByID() public {

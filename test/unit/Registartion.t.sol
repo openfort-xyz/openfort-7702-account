@@ -65,7 +65,7 @@ contract RegistartionTest is Base {
         _register_KeyP256NonKey();
 
         vm.prank(sender);
-        entryPoint.depositTo{value: 0.11e18}(owner);
+        entryPoint.depositTo{value: 0.09e18}(owner);
     }
 
     /* ─────────────────────────────────────────────────────────────── tests ──── */

@@ -1,20 +1,20 @@
 {
     "registration" : {
-        "challenge": "0x759627b44ec2edf26762e354d9ee684019e6ad5680d0e08f787296d5f40b274c",
+        "challenge": "0xfbc4cb4bfa3dffd43853a0e83f7be943d51c06bc0f894155b92fc67dc2c9ecdd",
         
-            "x": "0x7e4e071909a886db839d511a760a2accfe4adfa7b0b228d015132bb292bd963a",
-            "y": "0x1daba9a3777ca765c39410cf71e316db9704c6ff31c33709ac9dbb66453f870f",
+            "x": "0x1e0f486e55d4735d4063874c9fe6f64e0503ca1bf9910b407d9944fe2fa8d39a",
+            "y": "0x9c33a651451e707b4f4f48e61db97f756fa3d25ec6d65ab7cd7e6d1c8b02a440",
             
                 "metadata": {
                     "authenticatorData": "0x49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d97631d00000000",
-                    "clientDataJSON": "{\"type\":\"webauthn.get\",\"challenge\":\"dZYntE7C7fJnYuNU2e5oQBnmrVaA0OCPeHKW1fQLJ0w\",\"origin\":\"http://localhost:5173\",\"crossOrigin\":false}",
+                    "clientDataJSON": "{\"type\":\"webauthn.get\",\"challenge\":\"-8TLS_o9_9Q4U6DoP3vpQ9UcBrwPiUFVuS_GfcLJ7N0\",\"origin\":\"http://localhost:5173\",\"crossOrigin\":false,\"other_keys_can_be_added_here\":\"do not compare clientDataJSON against a template. See https://goo.gl/yabPex\"}",
                     "challengeIndex": 23,
                     "typeIndex": 1,
                     "userVerificationRequired": true
                 },
                 "signature": {
-                    "r": "0x5579fef0696e97bb2858619ef752b47cb32c47eec752d6caa2d1b20cb6f7d428",
-                    "s": "0x50e1564128bd88e00056c08e41d5d6eef447b85de21b753ab068a44d85a5fc64"
+                    "r": "0x35076dafee0045cb53baab20ed2710817da5aa00643e94e9c2349a7120b4661d",
+                    "s": "0x64a6047fd2a666cf7eefe0405de70b3dc744a5df8a1ffd5e1a30ecd8ebce9f88"
                 }
             
         

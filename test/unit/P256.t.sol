@@ -55,7 +55,7 @@ contract P256Test is Base {
         _register_KeyP256();
 
         vm.prank(sender);
-        entryPoint.depositTo{value: 0.11 ether}(owner);
+        entryPoint.depositTo{value: 0.09e18}(owner);
     }
 
     function test_ExecuteBatchSKP256() public {
