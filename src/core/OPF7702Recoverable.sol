@@ -117,7 +117,9 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
      *  • Emits `Initialized(_key)`.
      *
      * @param _key              The Key struct (master key).
-     * @param _keyData KeyReg data structure containing permissions and limits
+     * @param _keyData          KeyReg data structure containing permissions and limits
+     * @param _sessionKey       The Key struct (session key).
+     * @param _sessionKeyData   KeyReg data structure containing permissions and limits
      * @param _signature        Signature over `_hash` by this contract.
      * @param _initialGuardian  Initialize Guardian. Must be at least one guardian!
      */
