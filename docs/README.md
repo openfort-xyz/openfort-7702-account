@@ -128,7 +128,6 @@ struct SessionKey {
     bool whitelisting;
     mapping(address => bool) whitelist;
     bytes4[] allowedSelectors;
-    address whoRegistrated;
     uint256 ethLimit;
     SpendTokenInfo spendTokenInfo;
 }

@@ -52,7 +52,6 @@ interface IKey {
      * @param spendTokenInfo Token spending limit information
      * @param allowedSelectors List of allowed function selectors
      * @param ethLimit Maximum amount of ETH that can be spent
-     * @param whoRegistrated Address that registered this key
      */
     struct KeyData {
         PubKey pubKey;
@@ -66,7 +65,6 @@ interface IKey {
         SpendLimit.SpendTokenInfo spendTokenInfo;
         bytes4[] allowedSelectors;
         uint256 ethLimit;
-        address whoRegistrated;
     }
 
     /**

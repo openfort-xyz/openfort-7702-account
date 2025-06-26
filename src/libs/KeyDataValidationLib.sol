@@ -24,7 +24,7 @@ library KeyDataValidationLib {
 
     /// @return true when the key was registered by *this* contract (index ≠ 0) and not wiped.
     function isRegistered(IKey.KeyData storage sKey) internal view returns (bool) {
-        return sKey.validUntil != 0 && sKey.whoRegistrated == address(this);
+        return sKey.validUntil != 0;
     }
 
     /// @return true when the key is flagged active *and* still inside its [after, until] window.

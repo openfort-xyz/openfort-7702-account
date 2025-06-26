@@ -165,7 +165,6 @@ abstract contract KeysManager is BaseOPF7702, IKey, SpendLimit {
         sKey.validAfter = _keyData.validAfter;
         sKey.limit = _keyData.limit;
         sKey.masterKey = (_keyData.limit == 0);
-        sKey.whoRegistrated = address(this);
 
         // Only enforce limits if _limit > 0
         if (_keyData.limit > 0) {
@@ -231,20 +230,19 @@ abstract contract KeysManager is BaseOPF7702, IKey, SpendLimit {
      * @notice Retrieves registration info for a given key ID.
      * @param _id       Identifier (index) of the key to query.
      * @return keyType       The type of the key that was registered.
-     * @return registeredBy  Address that performed the registration (should be this contract).
      * @return isActive      Whether the key is currently active.
      */
     function getKeyRegistrationInfo(uint256 _id)
         external
         view
-        returns (KeyType keyType, address registeredBy, bool isActive)
+        returns (KeyType keyType, bool isActive)
     {
         Key memory k = idKeys[_id];
         bytes32 keyId = k.computeKeyId();
 
         KeyData storage sKey = keys[keyId];
 
-        return (k.keyType, sKey.whoRegistrated, sKey.isActive);
+        return (k.keyType, sKey.isActive);
     }
 
     /**

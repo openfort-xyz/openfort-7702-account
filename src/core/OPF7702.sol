@@ -269,7 +269,7 @@ contract OPF7702 is Execution, Initializable {
      * @dev
      *  • Loads the correct `KeyData` based on `KeyType`:
      *      – WEBAUTHN/P256/P256NONKEY/EOA → `keys[keccak(pubKey.x,pubKey.y)]`
-     *  • Checks: validUntil != 0, isActive, whoRegistrated == address(this).
+     *  • Checks: validUntil != 0, isActive.
      *  • Extracts the first 4 bytes of `_callData` and calls:
      *      – `_validateExecuteCall(...)`
      *      – `_validateExecuteBatchCall(...)`
@@ -433,7 +433,6 @@ contract OPF7702 is Execution, Initializable {
      *    Else, load `key = keys[keyHash]` and enforce:
      *      - validUntil > now ≥ validAfter
      *      - (masterKey or limit≥1)
-     *      - whoRegistrated == address(this)
      * @param _hash       The hash that was signed.
      * @param _signature  The signature blob to verify.
      * @return `this.isValidSignature.selector` if valid; otherwise `0xffffffff`.
