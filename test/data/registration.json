@@ -1,20 +1,20 @@
 {
     "registration" : {
-        "challenge": "0xfbc4cb4bfa3dffd43853a0e83f7be943d51c06bc0f894155b92fc67dc2c9ecdd",
+        "challenge": "0xc4fafc30a1634bfa6aad32876b0c4205c942bf326d67ba8274de8652b0abb451",
         
-            "x": "0x1e0f486e55d4735d4063874c9fe6f64e0503ca1bf9910b407d9944fe2fa8d39a",
-            "y": "0x9c33a651451e707b4f4f48e61db97f756fa3d25ec6d65ab7cd7e6d1c8b02a440",
+            "x": "0x081fb2bd8048ec142b30c9e86ac14dafb8a9584c01d0ce86623df970ffa58511",
+            "y": "0xc259b5978e9eae771e242c5c3d8556eaa51e2ebf6d3134b4f6383f32ab10ceea",
             
                 "metadata": {
                     "authenticatorData": "0x49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d97631d00000000",
-                    "clientDataJSON": "{\"type\":\"webauthn.get\",\"challenge\":\"-8TLS_o9_9Q4U6DoP3vpQ9UcBrwPiUFVuS_GfcLJ7N0\",\"origin\":\"http://localhost:5173\",\"crossOrigin\":false,\"other_keys_can_be_added_here\":\"do not compare clientDataJSON against a template. See https://goo.gl/yabPex\"}",
+                    "clientDataJSON": "{\"type\":\"webauthn.get\",\"challenge\":\"xPr8MKFjS_pqrTKHawxCBclCvzJtZ7qCdN6GUrCrtFE\",\"origin\":\"http://localhost:5173\",\"crossOrigin\":false}",
                     "challengeIndex": 23,
                     "typeIndex": 1,
                     "userVerificationRequired": true
                 },
                 "signature": {
-                    "r": "0x35076dafee0045cb53baab20ed2710817da5aa00643e94e9c2349a7120b4661d",
-                    "s": "0x64a6047fd2a666cf7eefe0405de70b3dc744a5df8a1ffd5e1a30ecd8ebce9f88"
+                    "r": "0x88d92845c8ebec253844a6b308dc32d5a0c9b2eba6b4d4bd8ce92efe62986e2b",
+                    "s": "0x3cd0733f921461e732295fbafb88245e7e3429ea81282a42832cf998fe38b4da"
                 }
             
         

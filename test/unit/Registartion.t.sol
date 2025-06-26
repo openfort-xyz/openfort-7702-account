@@ -32,6 +32,7 @@ contract RegistartionTest is Base {
     PubKey internal pubKeySK;
 
     KeyReg internal keyData;
+    KeyReg internal keyDataSK;
 
     /* ─────────────────────────────────────────────────────────────── setup ──── */
     function setUp() public {
@@ -79,8 +80,13 @@ contract RegistartionTest is Base {
         Key memory kSk = account.getKeyById(1);
         console.logBytes32(kSk.pubKey.x);
         console.logBytes32(kSk.pubKey.y);
+        (bool isActive, uint48 validUntil, uint48 validAfter, uint48 limit) = account.getKeyData(keccak256(abi.encodePacked(kSk.pubKey.x, kSk.pubKey.y)));
+        console.log("isActive", isActive);
+        console.log("validUntil", validUntil);
+        console.log("validAfter", validAfter);
+        console.log("limit", limit);
 
-        Key memory kSkNonKey = account.getKeyById(1);
+        Key memory kSkNonKey = account.getKeyById(2);
         console.logBytes32(kSkNonKey.pubKey.x);
         console.logBytes32(kSkNonKey.pubKey.y);
         console.log("/* --------------------------------- test_getKeyById_zero -------- */");
@@ -485,12 +491,29 @@ contract RegistartionTest is Base {
             ethLimit: 0
         });
 
+
+        pubKeySK = PubKey({x: MINT_P256_PUBLIC_KEY_X, y: MINT_P256_PUBLIC_KEY_Y});
+        keySK = Key({pubKey: pubKeySK, eoaAddress: address(0), keyType: KeyType.P256});
+        uint48 validUntil = uint48(1795096759);
+        uint48 limit = uint48(20);
+
+        keyDataSK = KeyReg({
+            validUntil: validUntil,
+            validAfter: 0,
+            limit: limit,
+            whitelisting: true,
+            contractAddress: TOKEN,
+            spendTokenInfo: spendInfo,
+            allowedSelectors: _allowedSelectors(),
+            ethLimit: 1e18
+        });
+
         /* sign arbitrary message so initialise() passes sig check */
         bytes32 msgHash = account.getDigestToInit(keyMK, initialGuardian);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPk, msgHash);
         bytes memory sig = abi.encodePacked(r, s, v);
 
         vm.prank(address(entryPoint));
-        account.initialize(keyMK, keyData, sig, initialGuardian);
+        account.initialize(keyMK, keyData, keySK, keyDataSK, sig, initialGuardian);
     }
 }

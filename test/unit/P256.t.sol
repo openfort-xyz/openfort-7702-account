@@ -177,11 +177,14 @@ contract P256Test is Base {
             ethLimit: 0
         });
 
+        pubKeyMK = PubKey({x: bytes32(0), y: bytes32(0)});
+        keySK = Key({pubKey: pubKeyMK, eoaAddress: address(0), keyType: KeyType.WEBAUTHN});
+
         bytes32 msgHash = account.getDigestToInit(keyMK, initialGuardian);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPk, msgHash);
         bytes memory sig = abi.encodePacked(r, s, v);
 
         vm.prank(address(entryPoint));
-        account.initialize(keyMK, keyData, sig, initialGuardian);
+        account.initialize(keyMK, keyData, keySK, keyData, sig, initialGuardian);
     }
 }

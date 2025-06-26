@@ -1,21 +1,23 @@
 {
     "eth" : {
-        "challenge": "0xae810cdf9f1ef5a2da192090ba1d8fa4e5f813ae813922dbf95c7c430cd51788",
+        "challenge": "0xe48b7a1fcf410ca081472851dfe932f05a74ddd73b1baffd9b628e634d55c868",
         
-            "x": "0xe1daa1b537d12e732dbe4cda18d47612e0c7995c57a241a44a1d3f413effbc1a",
-            "y": "0x061ec8e799695d31c8b14786239b6dfc60fa82aff2f2311260e45b171beb4ec1",
+            "x": "0x0d9ad7583bb4b8685473b5b1fa68ba0cd28a801a2cb1d244f25d7d49f878d318",
+            "y": "0x628c975c67d8fa63a84f6ada5bb9f8788237fd1021d1c0596c184f2015226206",
             
                 "metadata": {
                     "authenticatorData": "0x49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d97631d00000000",
-                    "clientDataJSON": "{\"type\":\"webauthn.get\",\"challenge\":\"roEM358e9aLaGSCQuh2PpOX4E66BOSLb-Vx8QwzVF4g\",\"origin\":\"http://localhost:5173\",\"crossOrigin\":false,\"other_keys_can_be_added_here\":\"do not compare clientDataJSON against a template. See https://goo.gl/yabPex\"}",
+                    "clientDataJSON": "{\"type\":\"webauthn.get\",\"challenge\":\"5It6H89BDKCBRyhR3-ky8Fp03dc7G6_9m2KOY01VyGg\",\"origin\":\"http://localhost:5173\",\"crossOrigin\":false}",
                     "challengeIndex": 23,
                     "typeIndex": 1,
                     "userVerificationRequired": true
                 },
                 "signature": {
-                    "r": "0xf1a106314cf4deeba373905bba013002e69a7c99dd5ca93d70d042324735a4bf",
-                    "s": "0x644ec013027292a656a69417fa2664cffd22a94040b5eafdff7e46e227f583d7"
+                    "r": "0xfadbeaf0983bde3ed98e03a1f2d1c41401d2f714a03656677f4bef6377a2002e",
+                    "s": "0x545f19e4c97aa0f57c5beab2ce7ccda1fbd881071eec1278d3b94b88feca807c"
                 }
+            
+        
             
         
             }

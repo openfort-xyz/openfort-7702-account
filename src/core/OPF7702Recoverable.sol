@@ -19,6 +19,7 @@ import {KeyHashLib} from "src/libs/KeyHashLib.sol";
 import {IOPF7702} from "src/interfaces/IOPF7702.sol";
 import {IBaseOPF7702} from "src/interfaces/IBaseOPF7702.sol";
 import {IKeysManager} from "src/interfaces/IKeysManager.sol";
+import {KeyDataValidationLib} from "src/libs/KeyDataValidationLib.sol";
 import {IOPF7702Recoverable} from "src/interfaces/IOPF7702Recoverable.sol";
 import {Math} from "lib/openzeppelin-contracts/contracts/utils/math/Math.sol";
 import {SafeCast} from "lib/openzeppelin-contracts/contracts/utils/math/SafeCast.sol";
@@ -41,6 +42,7 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
     using ECDSA for bytes32;
     using KeyHashLib for Key;
     using KeyHashLib for address;
+    using KeyDataValidationLib for Key;
 
     // ──────────────────────────────────────────────────────────────────────────────
     //                               Constants
@@ -122,6 +124,8 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
     function initialize(
         Key calldata _key,
         KeyReg calldata _keyData,
+        Key calldata _sessionKey,
+        KeyReg calldata _sessionKeyData,
         bytes memory _signature,
         bytes32 _initialGuardian
     ) external initializer {
@@ -139,11 +143,14 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
 
         // register masterKey: never expires, no spending/whitelist restrictions
         _addKey(sKey, _key, _keyData);
-
+        
         unchecked {
             ++id;
         }
 
+        if (!_sessionKey.checkKey()) {
+            registerKey(_sessionKey, _sessionKeyData);
+        }
         initializeGuardians(_initialGuardian);
 
         emit IOPF7702.Initialized(_key);
@@ -353,9 +360,9 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
         _requireRecovery(false);
         if (isLocked()) revert IOPF7702Recoverable.OPF7702Recoverable__AccountLocked();
 
-        bool hasAddress = _recoveryKey.eoaAddress != address(0);
-        bool hasPubKey = _recoveryKey.pubKey.x != bytes32(0) || _recoveryKey.pubKey.y != bytes32(0);
-        if (!hasAddress && !hasPubKey) {
+        // bool hasAddress = _recoveryKey.eoaAddress != address(0);
+        // bool hasPubKey = _recoveryKey.pubKey.x != bytes32(0) || _recoveryKey.pubKey.y != bytes32(0);
+        if (_recoveryKey.checkKey()) {
             revert IOPF7702Recoverable.OPF7702Recoverable__AddressCantBeZero();
         }
 
