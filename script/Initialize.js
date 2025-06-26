@@ -1,125 +1,99 @@
-import 'dotenv/config';
-import { createPublicClient, http } from 'viem'
+import { createPublicClient, createWalletClient, http, zeroAddress } from 'viem'
 import { sepolia } from 'viem/chains'
-import { keccak256, hexToBytes, encodeFunctionData, decodeFunctionResult } from 'viem'
+import { privateKeyToAccount } from 'viem/accounts'
+import { abi } from './abi.js'
 
-const RPC_URL = process.env.SEPOLIA_RPC_URL;
-if (!RPC_URL) {
-  console.error("Please set SEPOLIA_RPC_URL in your environment.");
-  process.exit(1);
+// Constants
+const ADDR_7702 = '0x5f41D7672CB83996CCC5E8C9Ce60Ba2a3D2DeaAe'
+const INITIAL_GUARDIAN = '0x5b9ce7e7c27dde72ccc1b4949bc5c5e8db37f64aa3b1b2ad2b4d82db76f9b25e'
+
+const key = {
+  pubKey: {
+    x: '0x349f670ed4e7cd75f89f1a253d3794b1c52be51a9b03579f7160ae88121e7878',
+    y: '0x0a0e01b7c0626be1b8dc3846d145ef31287a555873581ad6f8bee21914ee5eb1'
+  },
+  eoaAddress: zeroAddress,
+  keyType: 1
 }
 
-const PROXY_ADDRESS = "0x5f41D7672CB83996CCC5E8C9Ce60Ba2a3D2DeaAe";
-const BURN_ADDRESS = "0x0000000000000000000000000000000000000000"; // adjust as needed
-
-const publicClient = createPublicClient({
+// Create client
+const client = createPublicClient({
   chain: sepolia,
-  transport: http(RPC_URL),
-});
+  transport: http(process.env.SEPOLIA_RPC_URL)
+})
 
-// ABI fragments
-const proxyAbi = [
-  {
-    inputs: [],
-    name: "getImplementation",
-    outputs: [{ internalType: "address", name: "", type: "address" }],
-    stateMutability: "view",
-    type: "function",
-  },
-];
-const getDigestAbi = [
-  {
-    inputs: [
-      {
-        internalType: "tuple(tuple(bytes32 x, bytes32 y) pubKey, address eoaAddress, uint8 keyType)",
-        name: "_key",
-        type: "tuple",
-        components: [
-          {
-            internalType: "tuple(bytes32 x, bytes32 y)",
-            name: "pubKey",
-            type: "tuple",
-            components: [
-              { internalType: "bytes32", name: "x", type: "bytes32" },
-              { internalType: "bytes32", name: "y", type: "bytes32" },
-            ],
-          },
-          { internalType: "address", name: "eoaAddress", type: "address" },
-          { internalType: "uint8", name: "keyType", type: "uint8" },
-        ],
-      },
-      { internalType: "bytes32", name: "_initialGuardian", type: "bytes32" },
-    ],
-    name: "getDigestToInit",
-    outputs: [{ internalType: "bytes32", name: "digest", type: "bytes32" }],
-    stateMutability: "view",
-    type: "function",
-  },
-];
-
-async function main() {
-  // 1. Fetch implementation address
-  let implAddress;
+// Main function
+async function getDigest() {
   try {
-    implAddress = await publicClient.readContract({
-      address: PROXY_ADDRESS,
-      abi: proxyAbi,
-      functionName: "getImplementation",
-    });
-    console.log("Implementation address:", implAddress);
-  } catch (err) {
-    console.error("Error fetching implementation:", err);
-    return;
-  }
-  if (
-    !implAddress ||
-    implAddress === "0x0000000000000000000000000000000000000000"
-  ) {
-    console.error("Proxy implementation is zero. Please initialize the account first.");
-    return;
-  }
-
-  // 2. Prepare inputs
-  const PUB_X = "0x349f670ed4e7cd75f89f1a253d3794b1c52be51a9b03579f7160ae88121e7878";
-  const PUB_Y = "0x0a0e01b7c0626be1b8dc3846d145ef31287a555873581ad6f8bee21914ee5eb1";
-  const initialGuardian = keccak256(hexToBytes("0x15A788835Ae4a92f0C1A29599A8688aD2bFa34Ac"));
-  console.log("initialGuardian bytes32:", initialGuardian);
-
-  const keyArg = {
-    pubKey: { x: PUB_X, y: PUB_Y },
-    eoaAddress: BURN_ADDRESS,
-    keyType: 1,
-  };
-
-  // 3. Low-level call via proxy with a non-admin “from”
-  const NON_ADMIN = "0x0000000000000000000000000000000000000001";
-  const data = encodeFunctionData({
-    abi: getDigestAbi,
-    functionName: "getDigestToInit",
-    args: [keyArg, initialGuardian],
-  });
-  try {
-    const resultHex = await publicClient.call({
-      to: PROXY_ADDRESS,
-      data,
-      account: NON_ADMIN,
-    });
-    if (!resultHex || resultHex === "0x") {
-      console.error("Empty return from getDigestToInit. Check implementation or proxy flow.");
-      return;
-    }
-    const [digest] = decodeFunctionResult({
-      abi: getDigestAbi,
-      functionName: "getDigestToInit",
-      data: resultHex,
-    });
-    console.log("getDigestToInit digest:", digest);
-  } catch (err) {
-    console.error("Error calling getDigestToInit via low-level call:", err);
+    const result = await client.readContract({
+      address: ADDR_7702,
+      abi,
+      functionName: 'getDigestToInit',
+      args: [key, INITIAL_GUARDIAN]
+    })
+    
+    console.log('Digest:', result)
+    return result
+  } catch (error) {
+    console.error('Error getting digest:', error)
+    throw error
   }
 }
 
-main().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
+// Sign the digest
+async function signDigest(digest) {
+  const privateKey = '0x2034ba1358e16504666dfb260d238f4ca77f471f47ba7e5a6bca5eb5fa108957'
+  const account = privateKeyToAccount(privateKey)
+  
+  const signature = await account.signMessage({
+    message: { raw: digest }
+  })
+  
+  console.log('Signature:', signature)
+  console.log('Signer address:', account.address)
+  return signature
+}
+
+// Initialize contract
+async function initializeContract(signature) {
+  const walletClient = createWalletClient({
+    account: privateKeyToAccount('0x2034ba1358e16504666dfb260d238f4ca77f471f47ba7e5a6bca5eb5fa108957'),
+    chain: sepolia,
+    transport: http(process.env.SEPOLIA_RPC_URL)
+  })
+
+  // KeyReg data structure
+  const keyData = {
+    validUntil: 0n,
+    validAfter: 0n,
+    limit: 0n,
+    whitelisting: false,
+    contractAddress: zeroAddress,
+    spendTokenInfo: {
+      token: zeroAddress,
+      limit: 0n
+    },
+    allowedSelectors: ['0xdeedbeef'],
+    ethLimit: 0n
+  }
+
+  const txHash = await walletClient.writeContract({
+    address: ADDR_7702,
+    abi,
+    functionName: 'initialize',
+    args: [key, keyData, signature, INITIAL_GUARDIAN]
+  })
+
+  console.log('Transaction hash:', txHash)
+  return txHash
+}
+
+// Execute all steps
+async function main() {
+  const digest = await getDigest()
+  const signature = await signDigest(digest)
+  const txHash = await initializeContract(signature)
+  return { digest, signature, txHash }
+}
+
+main()

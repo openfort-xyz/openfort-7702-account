@@ -87,17 +87,25 @@ deploy-7702-mainnet:
 	--verify \
 	--etherscan-api-key $(ETHERSCAN_KEY) \
 	--broadcast \
-	--constructor-args 0x4337084D9E255Ff0702461CF8895CE9E3b5Ff108 0x83b7acb5A6aa8A34A97bdA13182aEA787AC3f10d 172800 604800 129600 43200
+	--constructor-args 0x4337084D9E255Ff0702461CF8895CE9E3b5Ff108 0xeD43b3a3D00d791BC0B353666b5780B0F9245CC1 172800 604800 129600 43200
 
 deploy-7702-proxy:
-	forge create src/upgradeable/UpgradeableOPF7702.sol:UpgradeableOPF7702 \
+	forge create src/core_upgr/OPFMainUpgradeable.sol:OPFMainUpgradeable \
 	--rpc-url $(SEPOLIA_RPC_URL) \
 	--account BURNER_KEY \
 	--verify \
 	--etherscan-api-key $(ETHERSCAN_KEY) \
 	--broadcast \
-	--constructor-args 0x211DC8EB0b09F5b762979C8681641dB05D7cd481 0x5f41d7672cb83996ccc5e8c9ce60ba2a3d2deaae
+	--constructor-args 0x4337084D9E255Ff0702461CF8895CE9E3b5Ff108 0xeD43b3a3D00d791BC0B353666b5780B0F9245CC1 172800 604800 129600 43200
 
+deploy-proxy:
+	forge create src/upgradeable/OPF7702Proxy.sol:OPF7702Proxy \
+	--rpc-url $(SEPOLIA_RPC_URL) \
+	--account BURNER_KEY \
+	--verify \
+	--etherscan-api-key $(ETHERSCAN_KEY) \
+	--broadcast \
+	--constructor-args 0x1Ee7B9280Df4F306B3296DA17E16492FF386B755
 
 simple-mainnet:
 	forge create src/mocks/SimpleContract.sol:SimpleContract \

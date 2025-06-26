@@ -13,9 +13,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.29;
 
-import {LibEIP7702} from "solady/accounts/LibEIP7702.sol";
-import {OPF7702Recoverable} from "src/core/OPF7702Recoverable.sol";
-
+import {LibEIP7702} from "lib/solady/src/accounts/LibEIP7702.sol";
+import {OPF7702RecoverableUpgradeable} from "src/core_upgr/OPF7702RecoverableUpgradeable.sol";
 /**
  * @title   Openfort Base Account 7702 with ERC-4337 Support
  * @author  Openfort@0xkoiner
@@ -33,7 +32,7 @@ import {OPF7702Recoverable} from "src/core/OPF7702Recoverable.sol";
  *    0xeddd36aac8c71936fe1d5edb073ff947aa7c1b6174e87c15677c96ab9ad95400
  *    == 107588995614188179791452663824698570634674667931787294340862201729294267929600
  */
-contract OPFMain is OPF7702Recoverable layout at 107588995614188179791452663824698570634674667931787294340862201729294267929600 {
+contract OPFMainUpgradeable is OPF7702RecoverableUpgradeable layout at 107588995614188179791452663824698570634674667931787294340862201729294267929600 {
     /// @param _entryPoint      ERC-4337 EntryPoint address.
     /// @param _webAuthnVerifier WebAuthn verifier contract.
     /// @param _recoveryPeriod  Delay before guardians can execute recovery.
@@ -48,7 +47,7 @@ contract OPFMain is OPF7702Recoverable layout at 1075889956141881797914526638246
         uint256 _securityPeriod,
         uint256 _securityWindow
     )
-        OPF7702Recoverable(
+        OPF7702RecoverableUpgradeable(
             _entryPoint,
             _webAuthnVerifier,
             _recoveryPeriod,
@@ -56,7 +55,9 @@ contract OPFMain is OPF7702Recoverable layout at 1075889956141881797914526638246
             _securityPeriod,
             _securityWindow
         )
-    {}
+    {
+        _disableInitializers();
+    }
 
     /// @dev Upgrades the proxy delegation.
     /// If this delegation is delegated directly without usage of EIP7702Proxy,

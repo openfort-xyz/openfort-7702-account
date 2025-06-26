@@ -8,7 +8,7 @@ import { eip7702Actions } from 'viem/experimental';
 const SEPOLIA_RPC = process.env.SEPOLIA_RPC_URL;
 
 // Replace with your implementation contract address
-const IMPLEMENTATION_CONTRACT = '0x850a6eAF23FF74cbC839b1B9F570D039056af1E3';
+const IMPLEMENTATION_CONTRACT = '0xA97Ca015ACe1F3eD63EAE764336dB62258B84E5F';
 
 // Initialize account from private key
 const account = privateKeyToAccount('0x2034ba1358e16504666dfb260d238f4ca77f471f47ba7e5a6bca5eb5fa108957');
