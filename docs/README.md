@@ -1,7 +1,7 @@
 # Openfort EIP-7702 Smart Contract Accounts
 
 <p align="center">
-  <img src="../contracts/Logo_black_primary_no_bg.png" alt="Openfort" style="width: 300px;" />
+  <img src="Logo_black_primary_no_bg.png" alt="Openfort" style="width: 300px;" />
 </p>
 
 > 💡 Live Demo: [https://7702.openfort.xyz](https://7702.openfort.xyz)

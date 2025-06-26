@@ -1,7 +1,7 @@
 <h1 align="center"> Openfort EIP-7702 Smart Accounts </h1>
 
 <p align="center">
-  <img src="docs/Logo_black_primary_no_bg.png" alt="Openfort" style="width: 300px;" />
+  <img src="./docs/Logo_black_primary_no_bg.png" alt="Openfort" style="width: 300px;" />
 </p>
 
 > 🚧 **Work In Progress**
