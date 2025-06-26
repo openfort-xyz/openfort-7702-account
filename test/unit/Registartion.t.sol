@@ -80,7 +80,8 @@ contract RegistartionTest is Base {
         Key memory kSk = account.getKeyById(1);
         console.logBytes32(kSk.pubKey.x);
         console.logBytes32(kSk.pubKey.y);
-        (bool isActive, uint48 validUntil, uint48 validAfter, uint48 limit) = account.getKeyData(keccak256(abi.encodePacked(kSk.pubKey.x, kSk.pubKey.y)));
+        (bool isActive, uint48 validUntil, uint48 validAfter, uint48 limit) =
+            account.getKeyData(keccak256(abi.encodePacked(kSk.pubKey.x, kSk.pubKey.y)));
         console.log("isActive", isActive);
         console.log("validUntil", validUntil);
         console.log("validAfter", validAfter);
@@ -490,7 +491,6 @@ contract RegistartionTest is Base {
             allowedSelectors: _allowedSelectors(),
             ethLimit: 0
         });
-
 
         pubKeySK = PubKey({x: MINT_P256_PUBLIC_KEY_X, y: MINT_P256_PUBLIC_KEY_Y});
         keySK = Key({pubKey: pubKeySK, eoaAddress: address(0), keyType: KeyType.P256});

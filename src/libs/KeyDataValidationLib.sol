@@ -19,7 +19,7 @@ import {IKey} from "src/interfaces/IKey.sol"; // Brings in KeyData / SpendTokenI
 library KeyDataValidationLib {
     /// @notice “Burn” address used as placeholder
     address internal constant DEAD_ADDRESS = 0xDeaDbeefdEAdbeefdEadbEEFdeadbeEFdEaDbeeF;
-    
+
     /*════════════════════════════ PUBLIC HELPERS ════════════════════════════*/
 
     /// @return true when the key was registered by *this* contract (index ≠ 0) and not wiped.

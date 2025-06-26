@@ -143,7 +143,7 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
 
         // register masterKey: never expires, no spending/whitelist restrictions
         _addKey(sKey, _key, _keyData);
-        
+
         unchecked {
             ++id;
         }
