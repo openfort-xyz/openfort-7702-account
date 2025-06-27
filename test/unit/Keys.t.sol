@@ -63,7 +63,7 @@ contract KeysTest is Base {
         _register_KeyP256NonKey();
 
         vm.prank(sender);
-        entryPoint.depositTo{value: 0.11e18}(owner);
+        entryPoint.depositTo{value: 0.08e18}(owner);
     }
 
     function test_RevokeByID() public {
@@ -287,12 +287,15 @@ contract KeysTest is Base {
             ethLimit: 0
         });
 
+        pubKeyMK = PubKey({x: bytes32(0), y: bytes32(0)});
+        keySK = Key({pubKey: pubKeyMK, eoaAddress: address(0), keyType: KeyType.WEBAUTHN});
+
         /* sign arbitrary message so initialise() passes sig check */
-        bytes32 msgHash = account.getDigestToSign();
+        bytes32 msgHash = account.getDigestToInit(keyMK, initialGuardian);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPk, msgHash);
         bytes memory sig = abi.encodePacked(r, s, v);
 
         vm.prank(address(entryPoint));
-        account.initialize(keyMK, keyData, sig, initialGuardian);
+        account.initialize(keyMK, keyData, keySK, keyData, sig, initialGuardian);
     }
 }

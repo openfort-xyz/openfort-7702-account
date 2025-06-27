@@ -76,7 +76,7 @@ contract Execution7821 is Base {
         _register_SessionKeyP256NonKey();
 
         vm.prank(sender);
-        entryPoint.depositTo{value: 0.11e18}(owner);
+        entryPoint.depositTo{value: 0.09e18}(owner);
     }
 
     /* ─────────────────────────────────────────────────────────────── tests ──── */
@@ -123,7 +123,7 @@ contract Execution7821 is Base {
             nonce: nonce,
             initCode: hex"7702",
             callData: callData,
-            accountGasLimits: _packAccountGasLimits(400000, 300000),
+            accountGasLimits: _packAccountGasLimits(600000, 400000),
             preVerificationGas: 800000,
             gasFees: _packGasFees(80 gwei, 15 gwei),
             paymasterAndData: hex"",
@@ -190,7 +190,7 @@ contract Execution7821 is Base {
             nonce: nonce,
             initCode: hex"7702",
             callData: callData,
-            accountGasLimits: _packAccountGasLimits(400000, 300000),
+            accountGasLimits: _packAccountGasLimits(600000, 400000),
             preVerificationGas: 800000,
             gasFees: _packGasFees(80 gwei, 15 gwei),
             paymasterAndData: hex"",
@@ -295,7 +295,7 @@ contract Execution7821 is Base {
             nonce: nonce,
             initCode: hex"7702",
             callData: callData,
-            accountGasLimits: _packAccountGasLimits(400000, 300000),
+            accountGasLimits: _packAccountGasLimits(600000, 400000),
             preVerificationGas: 800000,
             gasFees: _packGasFees(80 gwei, 15 gwei),
             paymasterAndData: hex"",
@@ -359,6 +359,174 @@ contract Execution7821 is Base {
         console.log("/* -------------------------------- test_ExecuteBatchOfBatches -------- */");
     }
 
+    function test_ExecuteBatchOfBatches7821Reverts() public {
+        console.log("/* -------------------------------- test_ExecuteBatchOfBatches -------- */");
+
+        // Create first batch - minting operations
+        Call[] memory mintBatch = new Call[](10);
+        mintBatch[0] = Call({
+            target: TOKEN,
+            value: 0,
+            data: abi.encodeWithSelector(MockERC20.mint.selector, owner, 10e18)
+        });
+        mintBatch[1] = Call({
+            target: TOKEN,
+            value: 0,
+            data: abi.encodeWithSelector(MockERC20.mint.selector, sender, 5e18)
+        });
+        mintBatch[2] = Call({
+            target: TOKEN,
+            value: 0,
+            data: abi.encodeWithSelector(MockERC20.mint.selector, sender, 5e18)
+        });
+        mintBatch[3] = Call({
+            target: TOKEN,
+            value: 0,
+            data: abi.encodeWithSelector(MockERC20.mint.selector, sender, 5e18)
+        });
+        mintBatch[4] = Call({
+            target: TOKEN,
+            value: 0,
+            data: abi.encodeWithSelector(MockERC20.mint.selector, sender, 5e18)
+        });
+        mintBatch[5] = Call({
+            target: TOKEN,
+            value: 0,
+            data: abi.encodeWithSelector(MockERC20.mint.selector, sender, 5e18)
+        });
+        mintBatch[6] = Call({
+            target: TOKEN,
+            value: 0,
+            data: abi.encodeWithSelector(MockERC20.mint.selector, sender, 5e18)
+        });
+        mintBatch[7] = Call({
+            target: TOKEN,
+            value: 0,
+            data: abi.encodeWithSelector(MockERC20.mint.selector, sender, 5e18)
+        });
+        mintBatch[8] = Call({
+            target: TOKEN,
+            value: 0,
+            data: abi.encodeWithSelector(MockERC20.mint.selector, sender, 5e18)
+        });
+        mintBatch[9] = Call({
+            target: TOKEN,
+            value: 0,
+            data: abi.encodeWithSelector(MockERC20.mint.selector, sender, 5e18)
+        });
+        // Create second batch - transfer operations (FROM OWNER)
+        Call[] memory transferBatch = new Call[](2);
+        transferBatch[0] = Call({
+            target: TOKEN,
+            value: 0,
+            data: abi.encodeWithSelector(IERC20.transfer.selector, sender, 3e18)
+        });
+        transferBatch[1] = Call({
+            target: TOKEN,
+            value: 0,
+            data: abi.encodeWithSelector(IERC20.transfer.selector, address(0x123), 2e18)
+        });
+
+        // Create third batch - approval operations
+        Call[] memory approveBatch = new Call[](1);
+        approveBatch[0] = Call({
+            target: TOKEN,
+            value: 0,
+            data: abi.encodeWithSelector(IERC20.approve.selector, address(0x456), 1e18)
+        });
+
+        // Encode each batch separately
+        bytes memory batch1Data = abi.encode(mintBatch);
+        bytes memory batch2Data = abi.encode(transferBatch);
+        bytes memory batch3Data = abi.encode(approveBatch);
+
+        // Create array of batch data
+        bytes[] memory batches = new bytes[](3);
+        batches[0] = batch1Data;
+        batches[1] = batch2Data;
+        batches[2] = batch3Data;
+
+        // Mode for batch of batches (ID = 3)
+        bytes32 mode = bytes32(uint256(0x01000000000078210002) << (22 * 8));
+
+        // Encode the execution data as bytes[] array
+        bytes memory executionData = abi.encode(batches);
+
+        // Create the callData for the ERC-7821 execute function
+        bytes memory callData =
+            abi.encodeWithSelector(bytes4(keccak256("execute(bytes32,bytes)")), mode, executionData);
+
+        uint256 nonce = entryPoint.getNonce(owner, 1);
+
+        PackedUserOperation memory userOp = PackedUserOperation({
+            sender: owner,
+            nonce: nonce,
+            initCode: hex"7702",
+            callData: callData,
+            accountGasLimits: _packAccountGasLimits(600000, 400000),
+            preVerificationGas: 800000,
+            gasFees: _packGasFees(80 gwei, 15 gwei),
+            paymasterAndData: hex"",
+            signature: hex""
+        });
+
+        bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPk, userOpHash);
+        bytes memory signature = abi.encodePacked(r, s, v);
+
+        bytes memory _signature = account.encodeEOASignature(signature);
+
+        bytes4 magicValue = account.isValidSignature(userOpHash, signature);
+        console.logBytes4(magicValue);
+
+        userOp.signature = _signature;
+
+        // uint256 balanceOfBefore = IERC20(TOKEN).balanceOf(owner);
+        // uint256 balanceOfBeforeSender = IERC20(TOKEN).balanceOf(sender);
+        // uint256 balanceOfBefore0x123 = IERC20(TOKEN).balanceOf(address(0x123));
+
+        // console.log("BEFORE EXECUTION:");
+        // console.log("Owner balance:", balanceOfBefore);
+        // console.log("Sender balance:", balanceOfBeforeSender);
+        // console.log("0x123 balance:", balanceOfBefore0x123);
+
+        PackedUserOperation[] memory ops = new PackedUserOperation[](1);
+        ops[0] = userOp;
+
+        bytes memory code = abi.encodePacked(bytes3(0xef0100), address(implementation));
+        vm.etch(owner, code);
+
+        vm.prank(sender);
+        entryPoint.handleOps(ops, payable(sender));
+
+        // uint256 balanceOfAfter = IERC20(TOKEN).balanceOf(owner);
+        // uint256 balanceOfAfterSender = IERC20(TOKEN).balanceOf(sender);
+        // uint256 balanceOfAfter0x123 = IERC20(TOKEN).balanceOf(address(0x123));
+
+        // console.log("AFTER EXECUTION:");
+        // console.log("Owner balance:", balanceOfAfter);
+        // console.log("Sender balance:", balanceOfAfterSender);
+        // console.log("0x123 balance:", balanceOfAfter0x123);
+
+        // CORRECTED ASSERTIONS - Check balance CHANGES, not absolute values:
+
+        // Owner should gain: +10e18 (minted) -3e18 (to sender) -2e18 (to 0x123) = +5e18
+        // assertEq(balanceOfAfter, balanceOfBefore + 5e18, "Owner should gain 5e18");
+
+        // // Sender should gain: +5e18 (minted) +3e18 (from owner) = +8e18
+        // assertEq(balanceOfAfterSender, balanceOfBeforeSender + 8e18, "Sender should gain 8e18");
+
+        // // 0x123 should gain: +2e18 (from owner) = +2e18
+        // assertEq(balanceOfAfter0x123, balanceOfBefore0x123 + 2e18, "0x123 should gain 2e18");
+
+        // // Verify approval was set
+        // uint256 allowance = IERC20(TOKEN).allowance(owner, address(0x456));
+        // assertEq(allowance, 1e18, "Approval should be 1e18");
+
+        console.log("/* -------------------------------- test_ExecuteBatchOfBatches -------- */");
+    }
+
     function test_ExecuteSKEOA7821() public {
         console.log("/* -------------------------------- test_ExecuteBatchSKEOA7821 -------- */");
 
@@ -385,7 +553,7 @@ contract Execution7821 is Base {
             nonce: nonce,
             initCode: hex"7702",
             callData: callData,
-            accountGasLimits: _packAccountGasLimits(400000, 300000),
+            accountGasLimits: _packAccountGasLimits(600000, 400000),
             preVerificationGas: 800000,
             gasFees: _packGasFees(80 gwei, 15 gwei),
             paymasterAndData: hex"",
@@ -452,7 +620,7 @@ contract Execution7821 is Base {
             nonce: nonce,
             initCode: hex"7702",
             callData: callData,
-            accountGasLimits: _packAccountGasLimits(400000, 300000),
+            accountGasLimits: _packAccountGasLimits(600000, 400000),
             preVerificationGas: 800000,
             gasFees: _packGasFees(80 gwei, 15 gwei),
             paymasterAndData: hex"",
@@ -519,7 +687,7 @@ contract Execution7821 is Base {
             nonce: nonce,
             initCode: hex"7702",
             callData: callData,
-            accountGasLimits: _packAccountGasLimits(400000, 300000),
+            accountGasLimits: _packAccountGasLimits(600000, 400000),
             preVerificationGas: 800000,
             gasFees: _packGasFees(80 gwei, 15 gwei),
             paymasterAndData: hex"",
@@ -618,7 +786,7 @@ contract Execution7821 is Base {
             nonce: nonce,
             initCode: hex"7702",
             callData: callData,
-            accountGasLimits: _packAccountGasLimits(400000, 300000),
+            accountGasLimits: _packAccountGasLimits(600000, 400000),
             preVerificationGas: 800000,
             gasFees: _packGasFees(80 gwei, 15 gwei),
             paymasterAndData: hex"",
@@ -715,7 +883,7 @@ contract Execution7821 is Base {
             nonce: nonce,
             initCode: hex"7702",
             callData: callData,
-            accountGasLimits: _packAccountGasLimits(400000, 300000),
+            accountGasLimits: _packAccountGasLimits(600000, 400000),
             preVerificationGas: 800000,
             gasFees: _packGasFees(80 gwei, 15 gwei),
             paymasterAndData: hex"",
@@ -744,7 +912,7 @@ contract Execution7821 is Base {
         console.log("usedChallenge", usedChallenge);
         console.logBytes4(magicValue);
 
-        bool isValid = webAuthn.verifySoladySignature(
+        bool isValid = webAuthn.verifySignature(
             userOpHash,
             true,
             BATCH_AUTHENTICATOR_DATA,
@@ -840,7 +1008,7 @@ contract Execution7821 is Base {
             nonce: nonce,
             initCode: hex"7702",
             callData: callData,
-            accountGasLimits: _packAccountGasLimits(400000, 300000),
+            accountGasLimits: _packAccountGasLimits(600000, 400000),
             preVerificationGas: 800000,
             gasFees: _packGasFees(80 gwei, 15 gwei),
             paymasterAndData: hex"",
@@ -869,7 +1037,7 @@ contract Execution7821 is Base {
         console.log("usedChallenge", usedChallenge);
         console.logBytes4(magicValue);
 
-        bool isValid = webAuthn.verifySoladySignature(
+        bool isValid = webAuthn.verifySignature(
             userOpHash,
             true,
             BATCHS_AUTHENTICATOR_DATA,
@@ -961,7 +1129,7 @@ contract Execution7821 is Base {
             nonce: nonce,
             initCode: hex"7702",
             callData: callData,
-            accountGasLimits: _packAccountGasLimits(400000, 300000),
+            accountGasLimits: _packAccountGasLimits(600000, 400000),
             preVerificationGas: 800000,
             gasFees: _packGasFees(80 gwei, 15 gwei),
             paymasterAndData: hex"",
@@ -975,7 +1143,7 @@ contract Execution7821 is Base {
             IKey.PubKey({x: MINT_P256_PUBLIC_KEY_X, y: MINT_P256_PUBLIC_KEY_Y});
 
         bytes memory _signature = account.encodeP256Signature(
-            MINT_P256_SIGNATURE_R, MINT_P256_SIGNATURE_S, pubKeyExecuteBatch
+            MINT_P256_SIGNATURE_R, MINT_P256_SIGNATURE_S, pubKeyExecuteBatch, KeyType.P256
         );
 
         bytes4 magicValue = account.isValidSignature(userOpHash, _signature);
@@ -1074,7 +1242,7 @@ contract Execution7821 is Base {
             nonce: nonce,
             initCode: hex"7702",
             callData: callData,
-            accountGasLimits: _packAccountGasLimits(400000, 300000),
+            accountGasLimits: _packAccountGasLimits(600000, 400000),
             preVerificationGas: 800000,
             gasFees: _packGasFees(80 gwei, 15 gwei),
             paymasterAndData: hex"",
@@ -1087,8 +1255,9 @@ contract Execution7821 is Base {
         IKey.PubKey memory pubKeyExecuteBatch =
             IKey.PubKey({x: P256_PUBLIC_KEY_X, y: P256_PUBLIC_KEY_Y});
 
-        bytes memory _signature =
-            account.encodeP256Signature(P256_SIGNATURE_R, P256_SIGNATURE_S, pubKeyExecuteBatch);
+        bytes memory _signature = account.encodeP256Signature(
+            P256_SIGNATURE_R, P256_SIGNATURE_S, pubKeyExecuteBatch, KeyType.P256
+        );
 
         bytes4 magicValue = account.isValidSignature(userOpHash, _signature);
         bool usedChallenge = account.usedChallenges(userOpHash);
@@ -1178,7 +1347,7 @@ contract Execution7821 is Base {
             nonce: nonce,
             initCode: hex"7702",
             callData: callData,
-            accountGasLimits: _packAccountGasLimits(400000, 300000),
+            accountGasLimits: _packAccountGasLimits(600000, 400000),
             preVerificationGas: 800000,
             gasFees: _packGasFees(80 gwei, 15 gwei),
             paymasterAndData: hex"",
@@ -1191,8 +1360,11 @@ contract Execution7821 is Base {
         IKey.PubKey memory pubKeyExecuteBatch =
             IKey.PubKey({x: MINT_P256NOKEY_PUBLIC_KEY_X, y: MINT_P256NOKEY_PUBLIC_KEY_Y});
 
-        bytes memory _signature = account.encodeP256NonKeySignature(
-            MINT_P256NOKEY_SIGNATURE_R, MINT_P256NOKEY_SIGNATURE_S, pubKeyExecuteBatch
+        bytes memory _signature = account.encodeP256Signature(
+            MINT_P256NOKEY_SIGNATURE_R,
+            MINT_P256NOKEY_SIGNATURE_S,
+            pubKeyExecuteBatch,
+            KeyType.P256NONKEY
         );
 
         bytes4 magicValue = account.isValidSignature(userOpHash, _signature);
@@ -1293,7 +1465,7 @@ contract Execution7821 is Base {
             nonce: nonce,
             initCode: hex"7702",
             callData: callData,
-            accountGasLimits: _packAccountGasLimits(400000, 300000),
+            accountGasLimits: _packAccountGasLimits(600000, 400000),
             preVerificationGas: 800000,
             gasFees: _packGasFees(80 gwei, 15 gwei),
             paymasterAndData: hex"",
@@ -1306,8 +1478,8 @@ contract Execution7821 is Base {
         IKey.PubKey memory pubKeyExecuteBatch =
             IKey.PubKey({x: P256NOKEY_PUBLIC_KEY_X, y: P256NOKEY_PUBLIC_KEY_Y});
 
-        bytes memory _signature = account.encodeP256NonKeySignature(
-            P256NOKEY_SIGNATURE_R, P256NOKEY_SIGNATURE_S, pubKeyExecuteBatch
+        bytes memory _signature = account.encodeP256Signature(
+            P256NOKEY_SIGNATURE_R, P256NOKEY_SIGNATURE_S, pubKeyExecuteBatch, KeyType.P256NONKEY
         );
 
         bytes4 magicValue = account.isValidSignature(userOpHash, _signature);
@@ -1650,12 +1822,15 @@ contract Execution7821 is Base {
             ethLimit: 0
         });
 
+        pubKeyMK = PubKey({x: bytes32(0), y: bytes32(0)});
+        keySK = Key({pubKey: pubKeyMK, eoaAddress: address(0), keyType: KeyType.WEBAUTHN});
+
         /* sign arbitrary message so initialise() passes sig check */
-        bytes32 msgHash = account.getDigestToSign();
+        bytes32 msgHash = account.getDigestToInit(keyMK, initialGuardian);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPk, msgHash);
         bytes memory sig = abi.encodePacked(r, s, v);
 
         vm.prank(address(entryPoint));
-        account.initialize(keyMK, keyData, sig, initialGuardian);
+        account.initialize(keyMK, keyData, keySK, keyData, sig, initialGuardian);
     }
 }

@@ -15,7 +15,6 @@ pragma solidity ^0.8.29;
 
 import {Execution} from "src/core/Execution.sol";
 import {KeyHashLib} from "src/libs/KeyHashLib.sol";
-import {UpgradeAddress} from "src/libs/UpgradeAddress.sol";
 import {IWebAuthnVerifier} from "src/interfaces/IWebAuthnVerifier.sol";
 import {EfficientHashLib} from "lib/solady/src/utils/EfficientHashLib.sol";
 import {KeyDataValidationLib as KeyValidation} from "src/libs/KeyDataValidationLib.sol";
@@ -50,7 +49,7 @@ contract OPF7702 is Execution, Initializable {
     using KeyValidation for KeyData;
 
     /// @notice Address of this implementation contract
-    address public _OPENFORT_CONTRACT_ADDRESS;
+    address public immutable _OPENFORT_CONTRACT_ADDRESS;
 
     constructor(address _entryPoint, address _webAuthnVerifier) {
         ENTRY_POINT = _entryPoint;
@@ -113,11 +112,10 @@ contract OPF7702 is Execution, Initializable {
             return SIG_VALIDATION_SUCCESS;
         }
 
-        bytes32 keyId = signer.computeKeyId();
         // load the key for this EOA
-        KeyData storage sKey = keys[keyId];
+        KeyData storage sKey = keys[signer.computeKeyId()];
 
-        (Key memory composedKey, bool isValid) = _keyValidation(sKey, signer, KeyType.EOA);
+        bool isValid = _keyValidation(sKey);
 
         if (!isValid) return SIG_VALIDATION_FAILED;
 
@@ -126,7 +124,7 @@ contract OPF7702 is Execution, Initializable {
             return SIG_VALIDATION_SUCCESS;
         }
 
-        if (isValidKey(composedKey, callData)) {
+        if (isValidKey(callData, sKey)) {
             return _packValidationData(false, sKey.validUntil, sKey.validAfter);
         }
         return SIG_VALIDATION_FAILED;
@@ -136,7 +134,7 @@ contract OPF7702 is Execution, Initializable {
      * @notice Validates a WebAuthn‐type signature (Solady verifier).
      * @dev
      *  • Reject reused challenges.
-     *  • Verify with `verifySoladySignature`.
+     *  • Verify with `verifySignature`.
      *  • If master Key, immediate success.
      *  • Otherwise, call `isValidKey(...)`.
      *
@@ -168,8 +166,9 @@ contract OPF7702 is Execution, Initializable {
         if (usedChallenges[userOpHash]) {
             return SIG_VALIDATION_FAILED;
         }
+        usedChallenges[userOpHash] = true; // mark challenge as used
 
-        bool sigOk = IWebAuthnVerifier(webAuthnVerifier()).verifySoladySignature(
+        bool sigOk = IWebAuthnVerifier(webAuthnVerifier()).verifySignature(
             userOpHash,
             requireUV,
             authenticatorData,
@@ -185,11 +184,9 @@ contract OPF7702 is Execution, Initializable {
             return SIG_VALIDATION_FAILED;
         }
 
-        bytes32 keyHash = pubKey.computeKeyId();
-        KeyData storage sKey = keys[keyHash];
+        KeyData storage sKey = keys[pubKey.computeKeyId()];
 
-        (Key memory composedKey, bool isValid) =
-            _keyValidation(sKey, DEAD_ADDRESS, KeyType.WEBAUTHN);
+        bool isValid = _keyValidation(sKey);
 
         if (!isValid) return SIG_VALIDATION_FAILED;
 
@@ -198,8 +195,7 @@ contract OPF7702 is Execution, Initializable {
             return SIG_VALIDATION_SUCCESS;
         }
 
-        if (isValidKey(composedKey, callData)) {
-            usedChallenges[userOpHash] = true; // mark challenge as used
+        if (isValidKey(callData, sKey)) {
             return _packValidationData(false, sKey.validUntil, sKey.validAfter);
         }
         return SIG_VALIDATION_FAILED;
@@ -231,6 +227,8 @@ contract OPF7702 is Execution, Initializable {
         if (usedChallenges[userOpHash]) {
             return SIG_VALIDATION_FAILED;
         }
+        usedChallenges[userOpHash] = true;
+
         if (sigType == KeyType.P256NONKEY) {
             userOpHash = EfficientHashLib.sha2(userOpHash);
         }
@@ -242,39 +240,28 @@ contract OPF7702 is Execution, Initializable {
             return SIG_VALIDATION_FAILED;
         }
 
-        bytes32 keyHash = pubKey.computeKeyId();
-        KeyData storage sKey = keys[keyHash];
+        KeyData storage sKey = keys[pubKey.computeKeyId()];
 
-        (Key memory composedKey, bool isValid) =
-            _keyValidation(sKey, DEAD_ADDRESS, KeyType.WEBAUTHN);
+        bool isValid = _keyValidation(sKey);
 
         if (!isValid) return SIG_VALIDATION_FAILED;
 
-        if (isValidKey(composedKey, callData)) {
-            usedChallenges[userOpHash] = true;
+        if (isValidKey(callData, sKey)) {
             return _packValidationData(false, sKey.validUntil, sKey.validAfter);
         }
         return SIG_VALIDATION_FAILED;
     }
 
-    function _keyValidation(KeyData storage sKey, address signer, KeyType keyType)
-        internal
-        view
-        returns (Key memory composedKey, bool isValid)
-    {
+    /// @notice Validates if a key is registered and active
+    /// @param sKey Storage reference to the key data to validate
+    /// @return isValid True if key is both registered and active, false otherwise
+    function _keyValidation(KeyData storage sKey) internal view returns (bool isValid) {
         // Check if key is valid and active
         if (!sKey.isRegistered() || !sKey.isActive) {
-            return (composedKey, false); // Early return for invalid key
+            return false; // Early return for invalid key
         }
 
-        // Build the composed key
-        composedKey = Key({
-            pubKey: PubKey({x: sKey.pubKey.x, y: sKey.pubKey.y}),
-            eoaAddress: signer,
-            keyType: keyType
-        });
-
-        return (composedKey, true);
+        return true;
     }
 
     /**
@@ -282,37 +269,18 @@ contract OPF7702 is Execution, Initializable {
      * @dev
      *  • Loads the correct `KeyData` based on `KeyType`:
      *      – WEBAUTHN/P256/P256NONKEY/EOA → `keys[keccak(pubKey.x,pubKey.y)]`
-     *  • Checks: validUntil != 0, isActive, whoRegistrated == address(this).
+     *  • Checks: validUntil != 0, isActive.
      *  • Extracts the first 4 bytes of `_callData` and calls:
      *      – `_validateExecuteCall(...)`
      *      – `_validateExecuteBatchCall(...)`
-     *
-     * @param _key       The Key struct being tested.
      * @param _callData  The calldata (starting with selector).
      * @return True if permitted, false otherwise.
      */
-    function isValidKey(Key memory _key, bytes calldata _callData)
+    function isValidKey(bytes calldata _callData, KeyData storage sKey)
         internal
         virtual
         returns (bool)
     {
-        KeyData storage sKey;
-        bytes32 keyHash;
-
-        if (_key.keyType == KeyType.EOA) {
-            if (_key.eoaAddress == address(0)) return false;
-            keyHash = _key.computeKeyId();
-            sKey = keys[keyHash];
-        } else {
-            // WEBAUTHN/P256/P256NONKEY share same load path
-            keyHash = _key.computeKeyId();
-            sKey = keys[keyHash];
-        }
-        // Basic checks:
-        if (!sKey.isRegistered() || !sKey.isActive) {
-            return false;
-        }
-
         // Extract function selector from callData
         bytes4 funcSelector = bytes4(_callData[:4]);
 
@@ -400,11 +368,6 @@ contract OPF7702 is Execution, Initializable {
             if (!validSpend) return false;
         }
 
-        /// Todo: Check all possibilities to fails on this line
-        // // Check whitelisting
-        // if (!sKey.whitelisting || sKey.whitelist[calls[i].target]) {
-        //     return true;
-        // } else {return false;}
         if (!sKey.whitelisting || !sKey.whitelist[call.target]) {
             return false;
         }
@@ -470,7 +433,6 @@ contract OPF7702 is Execution, Initializable {
      *    Else, load `key = keys[keyHash]` and enforce:
      *      - validUntil > now ≥ validAfter
      *      - (masterKey or limit≥1)
-     *      - whoRegistrated == address(this)
      * @param _hash       The hash that was signed.
      * @param _signature  The signature blob to verify.
      * @return `this.isValidSignature.selector` if valid; otherwise `0xffffffff`.
@@ -562,7 +524,7 @@ contract OPF7702 is Execution, Initializable {
         if (usedChallenges[_hash]) {
             return bytes4(0xffffffff);
         }
-        bool sigOk = IWebAuthnVerifier(webAuthnVerifier()).verifySoladySignature(
+        bool sigOk = IWebAuthnVerifier(webAuthnVerifier()).verifySignature(
             _hash,
             requireUV,
             authenticatorData,

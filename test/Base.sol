@@ -17,10 +17,10 @@ contract Base is Test, IKey {
     /* ───────────────────────────────────────────────────────────── constants ── */
 
     address constant SEPOLIA_ENTRYPOINT = 0x4337084D9E255Ff0702461CF8895CE9E3b5Ff108;
-    address constant SEPOLIA_WEBAUTHN = 0xeD43b3a3D00d791BC0B353666b5780B0F9245CC1;
+    address constant SEPOLIA_WEBAUTHN = 0x83b7acb5A6aa8A34A97bdA13182aEA787AC3f10d;
     address constant TOKEN = 0x9C0b94fb071Ed4066d7C18F4b68968e311A66209;
     address constant ETH_RECIVE = 0xCdB635ee58926769ee2789fA0942Ef04A4ae9d16;
-    address constant WEBAUTHN_VERIFIER = 0xeD43b3a3D00d791BC0B353666b5780B0F9245CC1;
+    address constant WEBAUTHN_VERIFIER = 0x83b7acb5A6aa8A34A97bdA13182aEA787AC3f10d;
     uint256 constant ETH_LIMIT = 1e18;
     bytes32 constant RECOVER_TYPEHASH =
         0x9f7aca777caf11405930359f601a4db01fad1b2d79ef3f2f9e93c835e9feffa5;
@@ -203,7 +203,7 @@ contract Base is Test, IKey {
     uint256 public GUARDIAN_EOA_PRIVATE_KEY = vm.envUint("GUARDIAN_EOA_PRIVATE_KEY");
     address internal GUARDIAN_EOA_ADDRESS = vm.addr(GUARDIAN_EOA_PRIVATE_KEY);
 
-    address internal initialGuardian;
+    bytes32 internal initialGuardian;
     uint256 internal guardianB_PK;
     address internal guardianB;
 
@@ -338,7 +338,8 @@ contract Base is Test, IKey {
         keyGuardianWebAuthn =
             Key({pubKey: pubKeyGuardianWebAuthn, eoaAddress: address(0), keyType: KeyType.WEBAUTHN});
 
-        initialGuardian = makeAddr("initialGuardian");
+        address initialAddr = makeAddr("initialGuardian");
+        initialGuardian = keccak256(abi.encodePacked(initialAddr));
         (guardianB, guardianB_PK) = makeAddrAndKey("guardianB");
     }
 }

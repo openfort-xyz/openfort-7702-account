@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.29;
 
 import {IKey} from "src/interfaces/IKey.sol"; // Brings in KeyData / SpendTokenInfo structs
 
@@ -17,11 +17,14 @@ import {IKey} from "src/interfaces/IKey.sol"; // Brings in KeyData / SpendTokenI
  *      additions to `KeyData` won’t break the lib as long as storage ordering is kept.
  */
 library KeyDataValidationLib {
+    /// @notice “Burn” address used as placeholder
+    address internal constant DEAD_ADDRESS = 0xDeaDbeefdEAdbeefdEadbEEFdeadbeEFdEaDbeeF;
+
     /*════════════════════════════ PUBLIC HELPERS ════════════════════════════*/
 
     /// @return true when the key was registered by *this* contract (index ≠ 0) and not wiped.
     function isRegistered(IKey.KeyData storage sKey) internal view returns (bool) {
-        return sKey.validUntil != 0 && sKey.whoRegistrated == address(this);
+        return sKey.validUntil != 0;
     }
 
     /// @return true when the key is flagged active *and* still inside its [after, until] window.
@@ -69,5 +72,13 @@ library KeyDataValidationLib {
         returns (bool ok)
     {
         ok = hasQuota(sKey) && withinEthLimit(sKey, weiValue);
+    }
+
+    /// @return ok True when the key not Empty.
+    function checkKey(IKey.Key memory sKey) internal pure returns (bool ok) {
+        bool hasAddress = sKey.eoaAddress != address(0) && sKey.eoaAddress != DEAD_ADDRESS;
+        bool hasPubKey = sKey.pubKey.x != bytes32(0) || sKey.pubKey.y != bytes32(0);
+
+        ok = !hasAddress && !hasPubKey; // Returns true when BOTH are false (empty)
     }
 }

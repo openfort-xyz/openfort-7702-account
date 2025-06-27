@@ -25,16 +25,30 @@ on:
 
 jobs:
   check:
+    name: Foundry project
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: true
 
-    name: Foundry project
-    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      # 1) checkout without any submodules
+      - name: Checkout repository (no submodules)
+        uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: false
 
+      # 2) manually init only the submodules you actually need
+      - name: Init necessary submodules
+        run: |
+          git submodule sync --recursive
+          git submodule update --init --depth=1 \
+            lib/account-abstraction \
+            lib/forge-std \
+            lib/openzeppelin-contracts \
+            lib/solady \
+            lib/webauthn-sol
+
+      # 3) install Foundry toolchain
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
 

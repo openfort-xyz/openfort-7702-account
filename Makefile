@@ -52,10 +52,18 @@ gas:
 	forge test --gas-report --rpc-url $(SEPOLIA_RPC_URL)
 	
 storage:
-	forge clean && forge inspect src/core/OPF7702Recoverable.sol:OPF7702Recoverable storageLayout
+	forge clean && forge inspect src/core/OPFMain.sol:OPFMain storageLayout
 	
 deploy-webauthn:
 	forge create src/utils/WebAuthnVerifier.sol:WebAuthnVerifier  \
+	--rpc-url $(SEPOLIA_RPC_URL) \
+	--account BURNER_KEY \
+	--verify \
+	--etherscan-api-key $(ETHERSCAN_KEY) \
+	--broadcast 
+
+deploy-webauthnv2:
+	forge create src/utils/WebAuthnVerifierV2.sol:WebAuthnVerifierV2  \
 	--rpc-url $(SEPOLIA_RPC_URL) \
 	--account BURNER_KEY \
 	--verify \
@@ -91,4 +99,4 @@ simple-mainnet:
 	--constructor-args 0x4337084D9E255Ff0702461CF8895CE9E3b5Ff108 
 
 push:
-	git push -u origin OPF7702_Before_Audit
+	git push -u origin OPF7702_ALPHA

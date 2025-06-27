@@ -18,6 +18,8 @@ pragma solidity ^0.8.20;
  */
 library UpgradeAddress {
     error UpgradeAddress__AddressCantBeZero();
+    error UpgradeAddress__AddressNotCanonical();
+
     /* --------------------------------------------------------------------- */
     /*                               SLOT LAYOUT                             */
     /* --------------------------------------------------------------------- */
@@ -29,14 +31,27 @@ library UpgradeAddress {
     //  _VERIFIER_SLOT = (keccak256("openfort.webauthnverifier.storage") - 1) & ~0xff
     bytes32 internal constant _VERIFIER_SLOT =
         0xfd39baddba6b1a9197cb18b09396db32f340e9b468af2bcc8f997735c03db200;
-
+    // flage if overriden
     uint256 internal constant _OVERRIDDEN_FLAG = 1 << 255;
 
     /* --------------------------------------------------------------------- */
     /*                                   EVENTS                              */
     /* --------------------------------------------------------------------- */
 
+    /// @notice Emitted when the EntryPoint contract address is updated
+    /// @dev This event is fired when the account's EntryPoint reference is changed,
+    ///      which affects how UserOperations are processed and validated. Critical for
+    ///      tracking account abstraction infrastructure changes
+    /// @param previous The address of the previous EntryPoint contract that was replaced
+    /// @param current The address of the new EntryPoint contract that is now active
     event EntryPointUpdated(address indexed previous, address indexed current);
+
+    /// @notice Emitted when the WebAuthn verifier contract address is updated
+    /// @dev This event is triggered when the account updates its WebAuthn signature
+    ///      verification contract, affecting how WebAuthn and P256 signatures are validated.
+    ///      Important for tracking authentication infrastructure changes
+    /// @param previous The address of the previous WebAuthn verifier contract that was replaced
+    /// @param current The address of the new WebAuthn verifier contract that is now active
     event WebAuthnVerifierUpdated(address indexed previous, address indexed current);
 
     /* --------------------------------------------------------------------- */
@@ -82,7 +97,7 @@ library UpgradeAddress {
 
     /// @notice Permanently overrides the WebAuthnVerifier address.
     function setWebAuthnVerifier(address newV) internal {
-        require(newV != address(0), "EntryPointLib: zero verifier addr");
+        require(newV != address(0), UpgradeAddress__AddressCantBeZero());
         address oldV;
         uint256 currentPacked;
         assembly {
@@ -103,8 +118,15 @@ library UpgradeAddress {
     /* --------------------------------------------------------------------- */
 
     /// @dev Packs an address and sets the MSB flag.
-    function _pack(address addr) private pure returns (uint256) {
-        return uint256(uint160(addr)) | _OVERRIDDEN_FLAG;
+    function _pack(address addr) private pure returns (uint256 packed) {
+        uint256 a;
+        assembly {
+            a := addr
+        }
+        if (a >> 160 != 0) {
+            revert UpgradeAddress__AddressNotCanonical();
+        }
+        packed = (a | _OVERRIDDEN_FLAG);
     }
 
     /// @dev Extracts the address from a packed word.

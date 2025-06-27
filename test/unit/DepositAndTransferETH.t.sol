@@ -65,7 +65,7 @@ contract DepositAndTransferETH is Base {
         _register_KeyP256NonKey();
 
         vm.prank(sender);
-        entryPoint.depositTo{value: 0.11e18}(owner);
+        entryPoint.depositTo{value: 0.09e18}(owner);
     }
 
     function test_ExecuteOwnerCall() public {
@@ -94,7 +94,7 @@ contract DepositAndTransferETH is Base {
             nonce: nonce,
             initCode: hex"7702",
             callData: callData,
-            accountGasLimits: _packAccountGasLimits(400000, 300000),
+            accountGasLimits: _packAccountGasLimits(600000, 400000),
             preVerificationGas: 800000,
             gasFees: _packGasFees(80 gwei, 15 gwei),
             paymasterAndData: hex"",
@@ -159,7 +159,7 @@ contract DepositAndTransferETH is Base {
             nonce: nonce,
             initCode: hex"7702",
             callData: callData,
-            accountGasLimits: _packAccountGasLimits(400000, 300000),
+            accountGasLimits: _packAccountGasLimits(600000, 400000),
             preVerificationGas: 800000,
             gasFees: _packGasFees(80 gwei, 15 gwei),
             paymasterAndData: hex"",
@@ -258,7 +258,7 @@ contract DepositAndTransferETH is Base {
             nonce: nonce,
             initCode: hex"7702",
             callData: callData,
-            accountGasLimits: _packAccountGasLimits(400000, 300000),
+            accountGasLimits: _packAccountGasLimits(600000, 400000),
             preVerificationGas: 800000,
             gasFees: _packGasFees(80 gwei, 15 gwei),
             paymasterAndData: hex"",
@@ -287,7 +287,7 @@ contract DepositAndTransferETH is Base {
         console.log("usedChallenge", usedChallenge);
         console.logBytes4(magicValue);
 
-        bool isValid = webAuthn.verifySoladySignature(
+        bool isValid = webAuthn.verifySignature(
             userOpHash,
             true,
             AUTHENTICATOR_DATA,
@@ -360,7 +360,7 @@ contract DepositAndTransferETH is Base {
             nonce: nonce,
             initCode: hex"7702",
             callData: callData,
-            accountGasLimits: _packAccountGasLimits(400000, 300000),
+            accountGasLimits: _packAccountGasLimits(600000, 400000),
             preVerificationGas: 800000,
             gasFees: _packGasFees(80 gwei, 15 gwei),
             paymasterAndData: hex"",
@@ -432,7 +432,7 @@ contract DepositAndTransferETH is Base {
             nonce: nonce,
             initCode: hex"7702",
             callData: callData,
-            accountGasLimits: _packAccountGasLimits(400000, 300000),
+            accountGasLimits: _packAccountGasLimits(600000, 400000),
             preVerificationGas: 800000,
             gasFees: _packGasFees(80 gwei, 15 gwei),
             paymasterAndData: hex"",
@@ -446,7 +446,7 @@ contract DepositAndTransferETH is Base {
             IKey.PubKey({x: ETH_P256_PUBLIC_KEY_X, y: ETH_P256_PUBLIC_KEY_Y});
 
         bytes memory _signature = account.encodeP256Signature(
-            ETH_P256_SIGNATURE_R, ETH_P256_SIGNATURE_S, pubKeyExecuteBatch
+            ETH_P256_SIGNATURE_R, ETH_P256_SIGNATURE_S, pubKeyExecuteBatch, KeyType.P256
         );
 
         bytes4 magicValue = account.isValidSignature(userOpHash, _signature);
@@ -520,7 +520,7 @@ contract DepositAndTransferETH is Base {
             nonce: nonce,
             initCode: hex"7702",
             callData: callData,
-            accountGasLimits: _packAccountGasLimits(400000, 300000),
+            accountGasLimits: _packAccountGasLimits(600000, 400000),
             preVerificationGas: 800000,
             gasFees: _packGasFees(80 gwei, 15 gwei),
             paymasterAndData: hex"",
@@ -533,8 +533,11 @@ contract DepositAndTransferETH is Base {
         IKey.PubKey memory pubKeyExecuteBatch =
             IKey.PubKey({x: ETH_P256NOKEY_PUBLIC_KEY_X, y: ETH_P256NOKEY_PUBLIC_KEY_Y});
 
-        bytes memory _signature = account.encodeP256NonKeySignature(
-            ETH_P256NOKEY_SIGNATURE_R, ETH_P256NOKEY_SIGNATURE_S, pubKeyExecuteBatch
+        bytes memory _signature = account.encodeP256Signature(
+            ETH_P256NOKEY_SIGNATURE_R,
+            ETH_P256NOKEY_SIGNATURE_S,
+            pubKeyExecuteBatch,
+            KeyType.P256NONKEY
         );
 
         bytes4 magicValue = account.isValidSignature(userOpHash, _signature);
@@ -697,12 +700,16 @@ contract DepositAndTransferETH is Base {
             allowedSelectors: _allowedSelectors(),
             ethLimit: 0
         });
+
+        pubKeyMK = PubKey({x: bytes32(0), y: bytes32(0)});
+        keySK = Key({pubKey: pubKeyMK, eoaAddress: address(0), keyType: KeyType.WEBAUTHN});
+
         /* sign arbitrary message so initialise() passes sig check */
-        bytes32 msgHash = account.getDigestToSign();
+        bytes32 msgHash = account.getDigestToInit(keyMK, initialGuardian);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPk, msgHash);
         bytes memory sig = abi.encodePacked(r, s, v);
 
         vm.prank(address(entryPoint));
-        account.initialize(keyMK, keyData, sig, initialGuardian);
+        account.initialize(keyMK, keyData, keySK, keyData, sig, initialGuardian);
     }
 }

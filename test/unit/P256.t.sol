@@ -55,7 +55,7 @@ contract P256Test is Base {
         _register_KeyP256();
 
         vm.prank(sender);
-        entryPoint.depositTo{value: 0.11 ether}(owner);
+        entryPoint.depositTo{value: 0.09e18}(owner);
     }
 
     function test_ExecuteBatchSKP256() public {
@@ -88,7 +88,7 @@ contract P256Test is Base {
             nonce: nonce,
             initCode: hex"7702",
             callData: callData,
-            accountGasLimits: _packAccountGasLimits(400000, 300000),
+            accountGasLimits: _packAccountGasLimits(600000, 400000),
             preVerificationGas: 800000,
             gasFees: _packGasFees(80 gwei, 15 gwei),
             paymasterAndData: hex"",
@@ -102,8 +102,9 @@ contract P256Test is Base {
         IKey.PubKey memory pubKey =
             IKey.PubKey({x: MINT_P256_PUBLIC_KEY_X, y: MINT_P256_PUBLIC_KEY_Y});
 
-        bytes memory _signature =
-            account.encodeP256Signature(MINT_P256_SIGNATURE_R, MINT_P256_SIGNATURE_S, pubKey);
+        bytes memory _signature = account.encodeP256Signature(
+            MINT_P256_SIGNATURE_R, MINT_P256_SIGNATURE_S, pubKey, KeyType.P256
+        );
         console.log("isValidSignature:");
         console.logBytes4(account.isValidSignature(userOpHash, _signature));
 
@@ -176,11 +177,14 @@ contract P256Test is Base {
             ethLimit: 0
         });
 
-        bytes32 msgHash = account.getDigestToSign();
+        pubKeyMK = PubKey({x: bytes32(0), y: bytes32(0)});
+        keySK = Key({pubKey: pubKeyMK, eoaAddress: address(0), keyType: KeyType.WEBAUTHN});
+
+        bytes32 msgHash = account.getDigestToInit(keyMK, initialGuardian);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPk, msgHash);
         bytes memory sig = abi.encodePacked(r, s, v);
 
         vm.prank(address(entryPoint));
-        account.initialize(keyMK, keyData, sig, initialGuardian);
+        account.initialize(keyMK, keyData, keySK, keyData, sig, initialGuardian);
     }
 }

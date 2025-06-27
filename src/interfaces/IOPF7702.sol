@@ -3,7 +3,6 @@ pragma solidity ^0.8.29;
 
 import {IExecution} from "src/interfaces/IExecution.sol";
 import {IKeysManager} from "src/interfaces/IKeysManager.sol";
-import {SpendLimit} from "src/utils/SpendLimit.sol";
 import {IERC1271} from "lib/openzeppelin-contracts/contracts/interfaces/IERC1271.sol";
 import {IERC165} from "lib/openzeppelin-contracts/contracts/utils/introspection/IERC165.sol";
 
@@ -21,37 +20,6 @@ interface IOPF7702 is IExecution, IKeysManager, IERC1271, IERC165 {
     // =============================================================
     //                         EXTERNAL FUNCTIONS
     // =============================================================
-
-    /**
-     * @notice Initializes the account with a “master” key (no spending or whitelist restrictions).
-     * @dev
-     *  • Callable only via EntryPoint or a self-call.
-     *  • Clears previous storage, checks nonce & expiration, verifies signature.
-     *  • Registers the provided `_key` as a master key:
-     *     - validUntil = max (never expires)
-     *     - validAfter  = 0
-     *     - limit       = 0  (master)
-     *     - whitelisting = false
-     *     - DEAD_ADDRESS placeholder in whitelistedContracts
-     *  • Emits `Initialized(_key)`.
-     *
-     * @param _key              The `Key` struct (master key).
-     * @param _spendTokenInfo   Token limit info (ignored for master).
-     * @param _allowedSelectors Unused selectors (ignored for master).
-     * @param _hash             Hash to sign (EIP-712 or UserOp hash).
-     * @param _signature        Signature over `_hash` by this contract.
-     * @param _validUntil       Expiration timestamp for this initialization.
-     * @param _nonce            Nonce to prevent replay.
-     */
-    function initialize(
-        Key calldata _key,
-        SpendLimit.SpendTokenInfo calldata _spendTokenInfo,
-        bytes4[] calldata _allowedSelectors,
-        bytes32 _hash,
-        bytes calldata _signature,
-        uint256 _validUntil,
-        uint256 _nonce
-    ) external;
 
     /**
      * @notice ERC-1271 on-chain signature validation entrypoint.

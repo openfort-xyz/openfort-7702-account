@@ -82,6 +82,8 @@ interface IOPF7702Recoverable is IOPF7702 {
     error OPF7702Recoverable__InvalidSignatureAmount();
     /// @dev Thrown when attempting to confirm a proposal before the timelock elapses.
     error OPF7702Recoverable__PendingProposalNotOver();
+    /// @dev Thrown when recovery equals the current key.
+    error OPF7702Recoverable__RecoverCannotBeActiveKey();
     /// @dev Thrown when guardian-supplied signatures are invalid.
     error OPF7702Recoverable__InvalidRecoverySignatures();
     /// @dev Thrown when guardian address equals the wallet itself.
@@ -120,30 +122,29 @@ interface IOPF7702Recoverable is IOPF7702 {
 
     /// @notice Initialize with a master key + first guardian
     function initialize(
-        IKey.Key calldata _key,
-        SpendLimit.SpendTokenInfo calldata _spendTokenInfo,
-        bytes4[] calldata _allowedSelectors,
-        bytes calldata _signature,
-        address _initialGuardian
+        Key calldata _key,
+        KeyReg calldata _keyData,
+        bytes memory _signature,
+        bytes32 _initialGuardian
     ) external;
 
     /// @notice Propose a new guardian (after securityPeriod)
-    function proposeGuardian(address _guardian) external;
+    function proposeGuardian(bytes32 _guardian) external;
 
     /// @notice Confirm a previously proposed guardian
-    function confirmGuardianProposal(address _guardian) external;
+    function confirmGuardianProposal(bytes32 _guardian) external;
 
     /// @notice Cancel a guardian proposal
-    function cancelGuardianProposal(address _guardian) external;
+    function cancelGuardianProposal(bytes32 _guardian) external;
 
     /// @notice Schedule removal of an existing guardian
-    function revokeGuardian(address _guardian) external;
+    function revokeGuardian(bytes32 _guardian) external;
 
     /// @notice Confirm a scheduled guardian removal
-    function confirmGuardianRevocation(address _guardian) external;
+    function confirmGuardianRevocation(bytes32 _guardian) external;
 
     /// @notice Cancel a guardian removal
-    function cancelGuardianRevocation(address _guardian) external;
+    function cancelGuardianRevocation(bytes32 _guardian) external;
 
     /// @notice Start recovery by proposing a new master key (guardian signatures to follow)
     function startRecovery(IKey.Key calldata _recoveryKey) external;
@@ -168,13 +169,13 @@ interface IOPF7702Recoverable is IOPF7702 {
     function getGuardians() external view returns (bytes32[] memory);
 
     /// @notice Pending timestamp for a guardian’s proposal/revocation
-    function getPendingStatusGuardians(address _guardian) external view returns (uint256);
+    function getPendingStatusGuardians(bytes32 _guardian) external view returns (uint256);
 
     /// @notice Whether the wallet is currently locked
     function isLocked() external view returns (bool);
 
     /// @notice True if the given address is an active guardian
-    function isGuardian(address _guardian) external view returns (bool);
+    function isGuardian(bytes32 _guardian) external view returns (bool);
 
     /// @notice Number of active guardians
     function guardianCount() external view returns (uint256);

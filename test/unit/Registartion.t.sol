@@ -32,6 +32,7 @@ contract RegistartionTest is Base {
     PubKey internal pubKeySK;
 
     KeyReg internal keyData;
+    KeyReg internal keyDataSK;
 
     /* ─────────────────────────────────────────────────────────────── setup ──── */
     function setUp() public {
@@ -65,7 +66,7 @@ contract RegistartionTest is Base {
         _register_KeyP256NonKey();
 
         vm.prank(sender);
-        entryPoint.depositTo{value: 0.11e18}(owner);
+        entryPoint.depositTo{value: 0.09e18}(owner);
     }
 
     /* ─────────────────────────────────────────────────────────────── tests ──── */
@@ -79,8 +80,14 @@ contract RegistartionTest is Base {
         Key memory kSk = account.getKeyById(1);
         console.logBytes32(kSk.pubKey.x);
         console.logBytes32(kSk.pubKey.y);
+        (bool isActive, uint48 validUntil, uint48 validAfter, uint48 limit) =
+            account.getKeyData(keccak256(abi.encodePacked(kSk.pubKey.x, kSk.pubKey.y)));
+        console.log("isActive", isActive);
+        console.log("validUntil", validUntil);
+        console.log("validAfter", validAfter);
+        console.log("limit", limit);
 
-        Key memory kSkNonKey = account.getKeyById(1);
+        Key memory kSkNonKey = account.getKeyById(2);
         console.logBytes32(kSkNonKey.pubKey.x);
         console.logBytes32(kSkNonKey.pubKey.y);
         console.log("/* --------------------------------- test_getKeyById_zero -------- */");
@@ -120,7 +127,7 @@ contract RegistartionTest is Base {
             nonce: nonce,
             initCode: hex"7702",
             callData: callData,
-            accountGasLimits: _packAccountGasLimits(400000, 300000),
+            accountGasLimits: _packAccountGasLimits(600000, 400000),
             preVerificationGas: 800000,
             gasFees: _packGasFees(80 gwei, 15 gwei),
             paymasterAndData: hex"",
@@ -149,7 +156,7 @@ contract RegistartionTest is Base {
         console.log("usedChallenge", usedChallenge);
         console.logBytes4(magicValue);
 
-        bool isValid = webAuthn.verifySoladySignature(
+        bool isValid = webAuthn.verifySignature(
             userOpHash,
             true,
             AUTHENTICATOR_DATA,
@@ -212,7 +219,7 @@ contract RegistartionTest is Base {
             nonce: nonce,
             initCode: hex"7702",
             callData: callData,
-            accountGasLimits: _packAccountGasLimits(400000, 300000),
+            accountGasLimits: _packAccountGasLimits(600000, 400000),
             preVerificationGas: 800000,
             gasFees: _packGasFees(80 gwei, 15 gwei),
             paymasterAndData: hex"",
@@ -241,7 +248,7 @@ contract RegistartionTest is Base {
         console.log("usedChallenge", usedChallenge);
         console.logBytes4(magicValue);
 
-        bool isValid = webAuthn.verifySoladySignature(
+        bool isValid = webAuthn.verifySignature(
             userOpHash,
             true,
             AUTHENTICATOR_DATA,
@@ -305,7 +312,7 @@ contract RegistartionTest is Base {
             nonce: nonce,
             initCode: hex"7702",
             callData: callData,
-            accountGasLimits: _packAccountGasLimits(400000, 300000),
+            accountGasLimits: _packAccountGasLimits(600000, 400000),
             preVerificationGas: 800000,
             gasFees: _packGasFees(80 gwei, 15 gwei),
             paymasterAndData: hex"",
@@ -334,7 +341,7 @@ contract RegistartionTest is Base {
         console.log("usedChallenge", usedChallenge);
         console.logBytes4(magicValue);
 
-        bool isValid = webAuthn.verifySoladySignature(
+        bool isValid = webAuthn.verifySignature(
             userOpHash,
             true,
             AUTHENTICATOR_DATA,
@@ -485,12 +492,28 @@ contract RegistartionTest is Base {
             ethLimit: 0
         });
 
+        pubKeySK = PubKey({x: MINT_P256_PUBLIC_KEY_X, y: MINT_P256_PUBLIC_KEY_Y});
+        keySK = Key({pubKey: pubKeySK, eoaAddress: address(0), keyType: KeyType.P256});
+        uint48 validUntil = uint48(1795096759);
+        uint48 limit = uint48(20);
+
+        keyDataSK = KeyReg({
+            validUntil: validUntil,
+            validAfter: 0,
+            limit: limit,
+            whitelisting: true,
+            contractAddress: TOKEN,
+            spendTokenInfo: spendInfo,
+            allowedSelectors: _allowedSelectors(),
+            ethLimit: 1e18
+        });
+
         /* sign arbitrary message so initialise() passes sig check */
-        bytes32 msgHash = account.getDigestToSign();
+        bytes32 msgHash = account.getDigestToInit(keyMK, initialGuardian);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPk, msgHash);
         bytes memory sig = abi.encodePacked(r, s, v);
 
         vm.prank(address(entryPoint));
-        account.initialize(keyMK, keyData, sig, initialGuardian);
+        account.initialize(keyMK, keyData, keySK, keyDataSK, sig, initialGuardian);
     }
 }
