@@ -98,14 +98,22 @@ deploy-7702-proxy:
 	--broadcast \
 	--constructor-args 0x4337084D9E255Ff0702461CF8895CE9E3b5Ff108 0xeD43b3a3D00d791BC0B353666b5780B0F9245CC1 172800 604800 129600 43200
 
-deploy-proxy:
+deploy-proxy: 
 	forge create src/upgradeable/OPF7702Proxy.sol:OPF7702Proxy \
 	--rpc-url $(SEPOLIA_RPC_URL) \
 	--account BURNER_KEY \
 	--verify \
 	--etherscan-api-key $(ETHERSCAN_KEY) \
 	--broadcast \
-	--constructor-args 0x1Ee7B9280Df4F306B3296DA17E16492FF386B755
+	--constructor-args 0x4337084D9E255Ff0702461CF8895CE9E3b5Ff108 0xeD43b3a3D00d791BC0B353666b5780B0F9245CC1
+
+deploy-proxy-test:
+	forge create src/upgradeable/OPF7702Test.sol:OPF7702Test \
+	--rpc-url $(SEPOLIA_RPC_URL) \
+	--account BURNER_KEY \
+	--verify \
+	--etherscan-api-key $(ETHERSCAN_KEY) \
+	--broadcast
 
 simple-mainnet:
 	forge create src/mocks/SimpleContract.sol:SimpleContract \

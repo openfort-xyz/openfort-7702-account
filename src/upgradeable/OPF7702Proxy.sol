@@ -1,18 +1,15 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.29;
+pragma solidity ^0.8.23;
 
+import {OPF7702Test} from "src/upgradeable/OPF7702Test.sol";
 import {LibEIP7702} from "lib/solady/src/accounts/LibEIP7702.sol";
 
-/**
- * @title UpgradeableOpenfortProxy (Non-upgradeable)
- * @notice Contract to create the proxies
- * It inherits from:
- *  - ERC1967Proxy
- */
 contract OPF7702Proxy {
+    address public immutable delegationImplementation;
     address public immutable delegationProxy;
 
-    constructor(address _delegationImplementation) payable {
-        delegationProxy = LibEIP7702.deployProxy(_delegationImplementation, address(0));
+    constructor(address _ep, address _waV) payable {
+        delegationImplementation = address(new OPF7702Test(_ep, _waV));
+        delegationProxy = LibEIP7702.deployProxy(delegationImplementation, address(0));
     }
 }

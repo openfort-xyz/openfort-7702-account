@@ -32,6 +32,7 @@ import {OPF7702RecoverableUpgradeable} from "src/core_upgr/OPF7702RecoverableUpg
  *    0xeddd36aac8c71936fe1d5edb073ff947aa7c1b6174e87c15677c96ab9ad95400
  *    == 107588995614188179791452663824698570634674667931787294340862201729294267929600
  */
+
 contract OPFMainUpgradeable is OPF7702RecoverableUpgradeable layout at 107588995614188179791452663824698570634674667931787294340862201729294267929600 {
     /// @param _entryPoint      ERC-4337 EntryPoint address.
     /// @param _webAuthnVerifier WebAuthn verifier contract.
