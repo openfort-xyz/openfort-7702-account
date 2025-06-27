@@ -43,7 +43,7 @@ export const p256Data = (async () => {
   const P256_xHex = toHex(pubKey.slice(1, 33));
   const P256_yHex = toHex(pubKey.slice(33));
 
-  const challengeBytesHex = '0xbc69bc743936524c07d56d013075725b79be3c1566e43a576339efc5883efc34';
+  const challengeBytesHex = '0xa6a68e0d6c6eea39719bb670c79a546e3a1ed7320b9331ce63aef8024353dd00';
   const challengeBytes = fromHex(challengeBytesHex, 'bytes');
   const P256_hashHex = toHex(challengeBytes);
 

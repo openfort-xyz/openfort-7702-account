@@ -1,20 +1,20 @@
 {
     "registration" : {
-        "challenge": "0x6414da5c331f4d0235f6f46b35c1198a6a8db9e906b9d3b644b3d4c143181e13",
+        "challenge": "0x47484e4f6ad89e2e2a7e365599243cfde768c2a96a9f81b0a0c35fcc4bbf77cc",
         
-            "x": "0x8bc6a3fa2e026925ecd2cfffaf618d2f0919ae1766af8552e6b2d10be4489f96",
-            "y": "0x846da37ecbb34af7eaa02e9ada53f6c47b5823a53d6adcae58388c39fcde118c",
+            "x": "0xfab10cbd58eeb1f64e72c4c099580fe67b486bc9bdd7088ebfe6d26b4c211cd3",
+            "y": "0x231b83a168cbf27bb0a4cde918d6bf8464a1e226ebe5184b290fc7c7f690f29b",
             
                 "metadata": {
                     "authenticatorData": "0x49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d97631d00000000",
-                    "clientDataJSON": "{\"type\":\"webauthn.get\",\"challenge\":\"ZBTaXDMfTQI19vRrNcEZimqNuekGudO2RLPUwUMYHhM\",\"origin\":\"http://localhost:5173\",\"crossOrigin\":false}",
+                    "clientDataJSON": "{\"type\":\"webauthn.get\",\"challenge\":\"R0hOT2rYni4qfjZVmSQ8_edowqlqn4GwoMNfzEu_d8w\",\"origin\":\"http://localhost:5173\",\"crossOrigin\":false}",
                     "challengeIndex": 23,
                     "typeIndex": 1,
                     "userVerificationRequired": true
                 },
                 "signature": {
-                    "r": "0x3b8863e7342e235522fbca5390968c4b847fdb71d87f944198b3e4e259542962",
-                    "s": "0x1d504a2aec845a0a79951ef141c3d61c0361c992e1767b89c5272ef605872476"
+                    "r": "0xd61e36e2dc9b21320e56061b56d01f2f98f0c03a9bf1b61f165f9c09257bdaa8",
+                    "s": "0x4c8ab682ddddf1b533e8e413e2a5456320e36cc907736ce7d0489173be81e3c7"
                 }
             
         
