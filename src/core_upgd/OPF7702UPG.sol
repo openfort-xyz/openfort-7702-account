@@ -14,12 +14,11 @@
 pragma solidity ^0.8.29;
 
 import {KeyHashLib} from "src/libs/KeyHashLib.sol";
+import {ExecutionUPG} from "src/core_upgd/ExecutionUPG.sol";
 import {IWebAuthnVerifier} from "src/interfaces/IWebAuthnVerifier.sol";
 import {EfficientHashLib} from "lib/solady/src/utils/EfficientHashLib.sol";
-import {ExecutionUpgradeable} from "src/core_upgr/ExecutionUpgradeable.sol";
-import {ECDSA} from "lib/openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
 import {KeyDataValidationLib as KeyValidation} from "src/libs/KeyDataValidationLib.sol";
-import {Initializable} from "lib/openzeppelin-contracts/contracts/proxy/utils/Initializable.sol";
+import {ECDSA} from "lib/openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
 import {PackedUserOperation} from
     "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
 import {
@@ -41,7 +40,7 @@ import {
  *  • Reentrancy protection & explicit nonce replay prevention
  *
  */
-contract OPF7702Upgradeable is ExecutionUpgradeable {
+contract OPF7702UPG is ExecutionUPG {
     using ECDSA for bytes32;
     using KeyHashLib for Key;
     using KeyHashLib for PubKey;
@@ -55,6 +54,7 @@ contract OPF7702Upgradeable is ExecutionUpgradeable {
         ENTRY_POINT = _entryPoint;
         WEBAUTHN_VERIFIER = _webAuthnVerifier;
         _OPENFORT_CONTRACT_ADDRESS = address(this);
+        _disableInitializers();
     }
 
     /**

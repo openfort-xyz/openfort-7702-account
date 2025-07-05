@@ -31,7 +31,7 @@ import "lib/openzeppelin-contracts/contracts/token/ERC1155/utils/ERC1155Holder.s
 /// @author Openfort@0xkoiner
 /// @notice Abstract base contract implementing an ERC-4337 (Account Abstraction) account with Openfort entry point integration.
 /// @dev Inherits from IAccount (ERC-4337), BaseAccount (Openfort core logic), ERC165, ERC1271, and token receiver interfaces for ERC721 and ERC1155.
-abstract contract BaseOPF7702Upgradeable is
+abstract contract BaseOPF7702UPG is
     IERC165,
     IERC1271,
     IERC7821,

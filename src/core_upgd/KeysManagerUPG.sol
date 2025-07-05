@@ -19,13 +19,13 @@ import {KeyHashLib} from "src/libs/KeyHashLib.sol";
 import {SpendLimit} from "src/utils/SpendLimit.sol";
 import {ValidationLib} from "src/libs/ValidationLib.sol";
 import {IKeysManager} from "src/interfaces/IKeysManager.sol";
-import {BaseOPF7702Upgradeable} from "src/core_upgr/BaseOPF7702Upgradeable.sol";
+import {BaseOPF7702UPG} from "src/core_upgd/BaseOPF7702UPG.sol";
 
 /// @title KeysManager
 /// @author Openfort@0xkoiner
 /// @notice Manages registration, revocation, and querying of keys (WebAuthn/P256/EOA) with spending limits and whitelisting support.
 /// @dev Inherits BaseOPF7702 for account abstraction, IKey interface, and SpendLimit for token/ETH limits.
-abstract contract KeysManagerUpgradeable is BaseOPF7702Upgradeable, IKey, SpendLimit {
+abstract contract KeysManagerUPG is BaseOPF7702UPG, IKey, SpendLimit {
     using KeyHashLib for Key;
     using ValidationLib for *;
 

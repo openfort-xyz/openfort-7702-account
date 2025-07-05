@@ -99,7 +99,7 @@ deploy-7702-proxy:
 	--constructor-args 0x4337084D9E255Ff0702461CF8895CE9E3b5Ff108 0xeD43b3a3D00d791BC0B353666b5780B0F9245CC1 172800 604800 129600 43200
 
 deploy-proxy: 
-	forge create src/upgradeable/OPF7702Proxy.sol:OPF7702Proxy \
+	forge create src/upgradeable/OPF7702Proxy.sol:SimpleEIP7702Deployer \
 	--rpc-url $(SEPOLIA_RPC_URL) \
 	--account BURNER_KEY \
 	--verify \
@@ -108,7 +108,7 @@ deploy-proxy:
 	--constructor-args 0x4337084D9E255Ff0702461CF8895CE9E3b5Ff108 0xeD43b3a3D00d791BC0B353666b5780B0F9245CC1
 
 deploy-proxy-test:
-	forge create src/upgradeable/OPF7702Test.sol:OPF7702Test \
+	forge create src/upgradeable/OPF7702FreshDeployer.sol:OPF7702FreshDeployer \
 	--rpc-url $(SEPOLIA_RPC_URL) \
 	--account BURNER_KEY \
 	--verify \
@@ -126,3 +126,24 @@ simple-mainnet:
 
 push:
 	git push -u origin OPF7702_ALPHA
+
+script-proxy:
+	forge script script/Deploy.s.sol:Deploy \
+	--rpc-url $(SEPOLIA_RPC_URL) \
+	--account BURNER_KEY \
+	--verify \
+	--etherscan-api-key $(ETHERSCAN_KEY) \
+	--broadcast 
+
+script-init:
+	forge script script/Init.s.sol:Init \
+	--rpc-url $(SEPOLIA_RPC_URL) \
+	--private-key $(PRIVATE_KEY_PROXY) \
+	--broadcast \
+	-vvvv
+
+script-mint:
+	forge script script/MintScript.s.sol:MintScript \
+	--rpc-url $(SEPOLIA_RPC_URL) \
+	--private-key $(PRIVATE_KEY_PROXY) \
+	-vvvv

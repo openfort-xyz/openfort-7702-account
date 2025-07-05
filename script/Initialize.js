@@ -42,7 +42,7 @@ async function getDigest() {
 
 // Sign the digest
 async function signDigest(digest) {
-  const privateKey = '0x2034ba1358e16504666dfb260d238f4ca77f471f47ba7e5a6bca5eb5fa108957'
+  const privateKey = '0x63025b26af29ab000059987f81f3f4327c743a8d6c21d3718dbb55183d89172d'
   const account = privateKeyToAccount(privateKey)
   
   const signature = await account.signMessage({
@@ -57,7 +57,7 @@ async function signDigest(digest) {
 // Initialize contract
 async function initializeContract(signature) {
   const walletClient = createWalletClient({
-    account: privateKeyToAccount('0x2034ba1358e16504666dfb260d238f4ca77f471f47ba7e5a6bca5eb5fa108957'),
+    account: privateKeyToAccount('0x63025b26af29ab000059987f81f3f4327c743a8d6c21d3718dbb55183d89172d'),
     chain: sepolia,
     transport: http(process.env.SEPOLIA_RPC_URL)
   })

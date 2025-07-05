@@ -16,16 +16,14 @@ pragma solidity 0.8.29;
 import {ERC7201} from "src/utils/ERC7201.sol";
 import {KeyHashLib} from "src/libs/KeyHashLib.sol";
 import {IOPF7702} from "src/interfaces/IOPF7702.sol";
+import {OPF7702UPG} from "src/core_upgd/OPF7702UPG.sol";
 import {IBaseOPF7702} from "src/interfaces/IBaseOPF7702.sol";
 import {IKeysManager} from "src/interfaces/IKeysManager.sol";
-import {OPF7702Upgradeable} from "src/core_upgr/OPF7702Upgradeable.sol";
 import {IOPF7702Recoverable} from "src/interfaces/IOPF7702Recoverable.sol";
 import {Math} from "lib/openzeppelin-contracts/contracts/utils/math/Math.sol";
 import {SafeCast} from "lib/openzeppelin-contracts/contracts/utils/math/SafeCast.sol";
 import {ECDSA} from "lib/openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
-import {EIP712Upgradeable} from
-    "lib/openzeppelin-contracts-upgradeable/contracts/utils/cryptography/EIP712Upgradeable.sol";
-
+import {EIP712Upgradeable} from "lib/openzeppelin-contracts-upgradeable/contracts/utils/cryptography/EIP712Upgradeable.sol";
 /**
  * @title   Openfort Base Account 7702 with ERC-4337 Support
  * @author  Openfort@0xkoiner
@@ -38,7 +36,8 @@ import {EIP712Upgradeable} from
  *  • ERC-1271 on-chain signature support
  *  • Reentrancy protection & explicit nonce replay prevention
  */
-contract OPF7702RecoverableUpgradeable is OPF7702Upgradeable, EIP712Upgradeable, ERC7201 {
+
+contract OPF7702RecoverableUPG is OPF7702UPG, EIP712Upgradeable, ERC7201 {
     using ECDSA for bytes32;
     using KeyHashLib for Key;
     using KeyHashLib for address;
@@ -91,7 +90,7 @@ contract OPF7702RecoverableUpgradeable is OPF7702Upgradeable, EIP712Upgradeable,
         uint256 _lockPeriod,
         uint256 _securityPeriod,
         uint256 _securityWindow
-    ) OPF7702Upgradeable(_entryPoint, _webAuthnVerifier) {
+    ) OPF7702UPG(_entryPoint, _webAuthnVerifier) {
         recoveryPeriod = _recoveryPeriod;
         lockPeriod = _lockPeriod;
         securityPeriod = _securityPeriod;
@@ -126,10 +125,10 @@ contract OPF7702RecoverableUpgradeable is OPF7702Upgradeable, EIP712Upgradeable,
         bytes memory _signature,
         bytes32 _initialGuardian
     ) external initializer {
+        __EIP712_init("OPF7702Recoverable", "1");
+        __ReentrancyGuard_init();
         _requireForExecute();
         _clearStorage();
-
-        __EIP712_init("OPF7702Recoverable", "1");
 
         bytes32 digest = getDigestToInit(_key, _initialGuardian);
 
