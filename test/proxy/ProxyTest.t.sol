@@ -9,7 +9,8 @@ import {WebAuthnVerifier} from "src/utils/WebAuthnVerifier.sol";
 import {LibEIP7702} from "lib/solady/src/accounts/LibEIP7702.sol";
 import {Test, console2 as console} from "lib/forge-std/src/Test.sol";
 import {IEntryPoint} from "lib/account-abstraction/contracts/interfaces/IEntryPoint.sol";
-import {MessageHashUtils} from "lib/openzeppelin-contracts/contracts/utils/cryptography/MessageHashUtils.sol";
+import {MessageHashUtils} from
+    "lib/openzeppelin-contracts/contracts/utils/cryptography/MessageHashUtils.sol";
 
 contract ProxyTest is Base {
     OPF7702 public opf;
@@ -29,8 +30,9 @@ contract ProxyTest is Base {
 
     bytes internal code;
 
-    bytes32 private constant TYPE_HASH =
-        keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
+    bytes32 private constant TYPE_HASH = keccak256(
+        "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
+    );
 
     function setUp() public {
         vm.startPrank(sender);
@@ -135,7 +137,11 @@ contract ProxyTest is Base {
         string memory name = "OPF7702Recoverable";
         string memory version = "1";
 
-        bytes32 domainSeparator = keccak256(abi.encode(TYPE_HASH, keccak256(bytes(name)), keccak256(bytes(version)), block.chainid, owner));
+        bytes32 domainSeparator = keccak256(
+            abi.encode(
+                TYPE_HASH, keccak256(bytes(name)), keccak256(bytes(version)), block.chainid, owner
+            )
+        );
         bytes32 digest = MessageHashUtils.toTypedDataHash(domainSeparator, structHash);
 
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPk, digest);
