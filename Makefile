@@ -98,5 +98,13 @@ simple-mainnet:
 	--broadcast \
 	--constructor-args 0x4337084D9E255Ff0702461CF8895CE9E3b5Ff108 
 
+script-deploy-upgradeable:
+	forge script script/DeployUpgradeable.s.sol:DeployUpgradeable \
+	--rpc-url $(SEPOLIA_RPC_URL) \
+	--account BURNER_KEY \
+	--verify \
+	--etherscan-api-key $(ETHERSCAN_KEY) \
+	--broadcast
+
 push:
 	git push -u origin OPF7702_ALPHA

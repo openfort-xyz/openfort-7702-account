@@ -19,7 +19,6 @@ import {IWebAuthnVerifier} from "src/interfaces/IWebAuthnVerifier.sol";
 import {EfficientHashLib} from "lib/solady/src/utils/EfficientHashLib.sol";
 import {KeyDataValidationLib as KeyValidation} from "src/libs/KeyDataValidationLib.sol";
 import {ECDSA} from "lib/openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
-import {Initializable} from "lib/openzeppelin-contracts/contracts/proxy/utils/Initializable.sol";
 import {PackedUserOperation} from
     "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
 import {
@@ -41,7 +40,7 @@ import {
  *  • Reentrancy protection & explicit nonce replay prevention
  *
  */
-contract OPF7702 is Execution, Initializable {
+contract OPF7702 is Execution {
     using ECDSA for bytes32;
     using KeyHashLib for Key;
     using KeyHashLib for PubKey;
