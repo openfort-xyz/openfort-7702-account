@@ -31,29 +31,11 @@ jobs:
       fail-fast: true
 
     steps:
-      # 1) checkout without any submodules
-      - name: Checkout repository (no submodules)
+      # 1) checkout with all submodules recursively
+      - name: Checkout repository with all submodules
         uses: actions/checkout@v4
         with:
-          submodules: false
-
-      # 2) manually init all necessary submodules including dependencies
-      - name: Init necessary submodules
-        run: |
-          git submodule sync --recursive
-          git submodule update --init --depth=1 \
-            lib/account-abstraction \
-            lib/forge-std \
-            lib/openzeppelin-contracts \
-            lib/openzeppelin-contracts-upgradeable \
-            lib/solady \
-            lib/webauthn-sol
-          
-          # Initialize webauthn-sol dependencies
-          cd lib/webauthn-sol
-          git submodule sync --recursive
-          git submodule update --init --depth=1 lib/FreshCryptoLib
-          cd ../..
+          submodules: recursive
 
       # 3) install Foundry toolchain
       - name: Install Foundry
