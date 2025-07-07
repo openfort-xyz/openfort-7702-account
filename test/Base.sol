@@ -16,6 +16,9 @@ contract Base is Test, IKey {
     }
     /* ───────────────────────────────────────────────────────────── constants ── */
 
+    bytes32 constant TYPE_HASH = keccak256(
+        "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
+    );
     address constant SEPOLIA_ENTRYPOINT = 0x4337084D9E255Ff0702461CF8895CE9E3b5Ff108;
     address constant SEPOLIA_WEBAUTHN = 0x83b7acb5A6aa8A34A97bdA13182aEA787AC3f10d;
     address constant TOKEN = 0x9C0b94fb071Ed4066d7C18F4b68968e311A66209;

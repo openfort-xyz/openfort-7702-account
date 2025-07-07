@@ -1,20 +1,20 @@
 {
     "eth" : {
-        "challenge": "0x61c7a6bbd018fb0c3d54425572328b4e094d3bf558c070945f8ce3bf2b41c068",
+        "challenge": "0x6836580e602218f7114264741dea0d9e9bd5c8ca9601ad4a54417b1331f76951",
         
-            "x": "0x02bdda4c99b214b9542f1ed3af749fca3edc07e8c733dd655c84b3fa02e64df2",
-            "y": "0x3b33d50cfe6138420e7ff967a3a6c70b17ac8a3df2bf891981460366f3eb38f3",
+            "x": "0xbb6fc82d51eedfc6b422ec897413a4f80779157dd953176c8d13f15addc99af3",
+            "y": "0x5e64a914bd09447c74ead4300027537a3a36572776d8663676bc503b5da671e3",
             
                 "metadata": {
                     "authenticatorData": "0x49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d97631d00000000",
-                    "clientDataJSON": "{\"type\":\"webauthn.get\",\"challenge\":\"Ycemu9AY-ww9VEJVcjKLTglNO_VYwHCUX4zjvytBwGg\",\"origin\":\"http://localhost:5173\",\"crossOrigin\":false}",
+                    "clientDataJSON": "{\"type\":\"webauthn.get\",\"challenge\":\"aDZYDmAiGPcRQmR0HeoNnpvVyMqWAa1KVEF7EzH3aVE\",\"origin\":\"http://localhost:5173\",\"crossOrigin\":false,\"other_keys_can_be_added_here\":\"do not compare clientDataJSON against a template. See https://goo.gl/yabPex\"}",
                     "challengeIndex": 23,
                     "typeIndex": 1,
                     "userVerificationRequired": true
                 },
                 "signature": {
-                    "r": "0xd8de94eb57f71dcc96b78515af54e887475414372d90420b20100e6bea5680aa",
-                    "s": "0x4ca905f26b0e5e8575a7026f22197566aaa902c7302ea99c2045aa1eafe6c94d"
+                    "r": "0x6b294e9c36d483bd5c24d6508f377a4098210a3d812aef62bb7765a915d05a0c",
+                    "s": "0x4bf18f3ff3d27922b540226b16575b28d8763a0eb42f5e60eb9bf1e995763986"
                 }
             
         

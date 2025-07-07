@@ -17,6 +17,8 @@ import {IKey} from "src/interfaces/IKey.sol";
 import {WebAuthnVerifier} from "src/utils/WebAuthnVerifier.sol";
 import {PackedUserOperation} from
     "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
+import {MessageHashUtils} from
+    "lib/openzeppelin-contracts/contracts/utils/cryptography/MessageHashUtils.sol";
 
 contract RegistartionTest is Base {
     /* ───────────────────────────────────────────────────────────── contracts ── */
@@ -509,8 +511,31 @@ contract RegistartionTest is Base {
         });
 
         /* sign arbitrary message so initialise() passes sig check */
-        bytes32 msgHash = account.getDigestToInit(keyMK, initialGuardian);
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPk, msgHash);
+        bytes32 initialGuardian = keccak256(abi.encodePacked(sender));
+
+        bytes32 structHash = keccak256(
+            abi.encode(
+                RECOVER_TYPEHASH,
+                keyMK.pubKey.x,
+                keyMK.pubKey.y,
+                keyMK.eoaAddress,
+                keyMK.keyType,
+                initialGuardian
+            )
+        );
+
+        string memory name = "OPF7702Recoverable";
+        string memory version = "1";
+
+        bytes32 domainSeparator = keccak256(
+            abi.encode(
+                TYPE_HASH, keccak256(bytes(name)), keccak256(bytes(version)), block.chainid, owner
+            )
+        );
+        bytes32 digest = MessageHashUtils.toTypedDataHash(domainSeparator, structHash);
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPk, digest);
+
         bytes memory sig = abi.encodePacked(r, s, v);
 
         vm.prank(address(entryPoint));

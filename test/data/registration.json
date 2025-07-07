@@ -1,22 +1,22 @@
 {
     "registration" : {
-        "challenge": "0x47484e4f6ad89e2e2a7e365599243cfde768c2a96a9f81b0a0c35fcc4bbf77cc",
+        "challenge": "0x7dd080648dedb8a7e6fd3502675f2471ac3886e89f808238fc7f699af580e3eb",
         
-            "x": "0xfab10cbd58eeb1f64e72c4c099580fe67b486bc9bdd7088ebfe6d26b4c211cd3",
-            "y": "0x231b83a168cbf27bb0a4cde918d6bf8464a1e226ebe5184b290fc7c7f690f29b",
+            "x": "0x1a0b944bca1dd7ced19d36a5d4ef60564789bd611a445ae39f79aa7e384f0d19",
+            "y": "0x783aa6d5e41a41b1531c3240e0732a3cdc8fd62e4292223fe3ca3716856679c1",
             
                 "metadata": {
                     "authenticatorData": "0x49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d97631d00000000",
-                    "clientDataJSON": "{\"type\":\"webauthn.get\",\"challenge\":\"R0hOT2rYni4qfjZVmSQ8_edowqlqn4GwoMNfzEu_d8w\",\"origin\":\"http://localhost:5173\",\"crossOrigin\":false}",
+                    "clientDataJSON": "{\"type\":\"webauthn.get\",\"challenge\":\"fdCAZI3tuKfm_TUCZ18kcaw4huifgII4_H9pmvWA4-s\",\"origin\":\"http://localhost:5173\",\"crossOrigin\":false}",
                     "challengeIndex": 23,
                     "typeIndex": 1,
                     "userVerificationRequired": true
                 },
                 "signature": {
-                    "r": "0xd61e36e2dc9b21320e56061b56d01f2f98f0c03a9bf1b61f165f9c09257bdaa8",
-                    "s": "0x4c8ab682ddddf1b533e8e413e2a5456320e36cc907736ce7d0489173be81e3c7"
-                }
-            
+                    "r": "0x31e977b3858acbcab05d5568898a706e8cfd42bd030da6ddeb24ff89a59968b1",
+                    "s": "0x0c5b96d4965d3d37ddea35b184fd1db21f9ae9d60c9f4f5dd48bf9c6981e129e"
+                
+            }
         
     }
 }

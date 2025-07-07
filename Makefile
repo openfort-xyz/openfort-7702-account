@@ -106,5 +106,11 @@ script-deploy-upgradeable:
 	--etherscan-api-key $(ETHERSCAN_KEY) \
 	--broadcast
 
+script-init:
+	forge script script/InitProxy.s.sol:InitProxy \
+	--rpc-url $(SEPOLIA_RPC_URL) \
+	--private-key $(PRIVATE_KEY_PROXY) \
+	-vvvv
+
 push:
 	git push -u origin OPF7702_ALPHA

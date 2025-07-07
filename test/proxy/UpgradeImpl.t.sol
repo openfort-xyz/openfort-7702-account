@@ -12,7 +12,7 @@ import {IEntryPoint} from "lib/account-abstraction/contracts/interfaces/IEntryPo
 import {MessageHashUtils} from
     "lib/openzeppelin-contracts/contracts/utils/cryptography/MessageHashUtils.sol";
 
-contract ProxyTest is Base {
+contract UpgradeImpl is Base {
     OPF7702 public opf;
     address public proxy;
     address public impl;
@@ -79,6 +79,27 @@ contract ProxyTest is Base {
             console.log("v", v);
             console.logBytes(res);
         }
+    }
+
+    function test_Upgrade() external {
+        address newImpl = address(
+            new OPF7702(
+                SEPOLIA_ENTRYPOINT,
+                SEPOLIA_WEBAUTHN,
+                RECOVERY_PERIOD,
+                LOCK_PERIOD,
+                SECURITY_PERIOD,
+                SECURITY_WINDOW
+            )
+        );
+        address oldImpl = account._OPENFORT_CONTRACT_ADDRESS();
+
+        vm.etch(owner, code);
+        vm.prank(owner);
+        account.upgradeProxyDelegation(newImpl);
+
+        address afterUpg = account._OPENFORT_CONTRACT_ADDRESS();
+        assert(afterUpg != oldImpl);
     }
 
     function _initializeAccount() internal {
