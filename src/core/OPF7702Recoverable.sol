@@ -132,9 +132,9 @@ contract OPF7702Recoverable is OPF7702, EIP712Upgradeable, ERC7201 {
         bytes memory _signature,
         bytes32 _initialGuardian
     ) external initializer {
-        _requireForExecute();
         __EIP712_init("OPF7702Recoverable", "1");
         __ReentrancyGuard_init();
+        _requireForExecute();
         _clearStorage();
 
         bytes32 digest = getDigestToInit(_key, _initialGuardian);
