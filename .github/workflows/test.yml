@@ -37,7 +37,7 @@ jobs:
         with:
           submodules: false
 
-      # 2) manually init only the submodules you actually need
+      # 2) manually init all necessary submodules including dependencies
       - name: Init necessary submodules
         run: |
           git submodule sync --recursive
@@ -45,8 +45,15 @@ jobs:
             lib/account-abstraction \
             lib/forge-std \
             lib/openzeppelin-contracts \
+            lib/openzeppelin-contracts-upgradeable \
             lib/solady \
             lib/webauthn-sol
+          
+          # Initialize webauthn-sol dependencies
+          cd lib/webauthn-sol
+          git submodule sync --recursive
+          git submodule update --init --depth=1 lib/FreshCryptoLib
+          cd ../..
 
       # 3) install Foundry toolchain
       - name: Install Foundry

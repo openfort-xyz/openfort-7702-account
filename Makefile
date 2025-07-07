@@ -113,4 +113,4 @@ script-init:
 	-vvvv
 
 push:
-	git push -u origin OPF7702_ALPHA
+	git push -u origin OPF7702_PROXY
