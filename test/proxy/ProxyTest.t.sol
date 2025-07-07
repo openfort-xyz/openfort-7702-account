@@ -9,6 +9,7 @@ import {WebAuthnVerifier} from "src/utils/WebAuthnVerifier.sol";
 import {LibEIP7702} from "lib/solady/src/accounts/LibEIP7702.sol";
 import {Test, console2 as console} from "lib/forge-std/src/Test.sol";
 import {IEntryPoint} from "lib/account-abstraction/contracts/interfaces/IEntryPoint.sol";
+import {MessageHashUtils} from "lib/openzeppelin-contracts/contracts/utils/cryptography/MessageHashUtils.sol";
 
 contract ProxyTest is Base {
     OPF7702 public opf;
@@ -22,7 +23,14 @@ contract ProxyTest is Base {
     PubKey internal pubKeyMK;
     KeyReg internal keyData;
 
+    Key internal keySK;
+    PubKey internal pubKeySK;
+    KeyReg internal keyDataSK;
+
     bytes internal code;
+
+    bytes32 private constant TYPE_HASH =
+        keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
 
     function setUp() public {
         vm.startPrank(sender);
@@ -51,8 +59,8 @@ contract ProxyTest is Base {
         vm.stopPrank();
         _initializeAccount();
 
-        vm.prank(sender);
-        entryPoint.depositTo{value: 0.1e18}(owner);
+        // vm.prank(sender);
+        // entryPoint.depositTo{value: 0.1e18}(owner);
     }
 
     function test_AfterInit() public {
@@ -95,12 +103,45 @@ contract ProxyTest is Base {
             ethLimit: 0
         });
 
-        /* sign arbitrary message so initialise() passes sig check */
-        bytes32 msgHash = account.getDigestToInit(keyMK, initialGuardian);
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPk, msgHash);
+        pubKeySK = PubKey({x: MINT_P256_PUBLIC_KEY_X, y: MINT_P256_PUBLIC_KEY_Y});
+        keySK = Key({pubKey: pubKeySK, eoaAddress: address(0), keyType: KeyType.P256});
+        uint48 validUntil = uint48(1795096759);
+        uint48 limit = uint48(20);
+
+        keyDataSK = KeyReg({
+            validUntil: validUntil,
+            validAfter: 0,
+            limit: limit,
+            whitelisting: true,
+            contractAddress: TOKEN,
+            spendTokenInfo: spendInfo,
+            allowedSelectors: _allowedSelectors(),
+            ethLimit: 1e18
+        });
+
+        bytes32 initialGuardian = keccak256(abi.encodePacked(sender));
+
+        bytes32 structHash = keccak256(
+            abi.encode(
+                RECOVER_TYPEHASH,
+                keyMK.pubKey.x,
+                keyMK.pubKey.y,
+                keyMK.eoaAddress,
+                keyMK.keyType,
+                initialGuardian
+            )
+        );
+
+        string memory name = "OPF7702Recoverable";
+        string memory version = "1";
+
+        bytes32 domainSeparator = keccak256(abi.encode(TYPE_HASH, keccak256(bytes(name)), keccak256(bytes(version)), block.chainid, owner));
+        bytes32 digest = MessageHashUtils.toTypedDataHash(domainSeparator, structHash);
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPk, digest);
         bytes memory sig = abi.encodePacked(r, s, v);
 
         vm.prank(address(entryPoint));
-        account.initialize(keyMK, keyData, sig, initialGuardian);
+        account.initialize(keyMK, keyData, keySK, keyDataSK, sig, initialGuardian);
     }
 }
