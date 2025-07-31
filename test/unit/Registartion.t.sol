@@ -70,7 +70,7 @@ contract RegistartionTest is Base {
         _register_KeyP256();
         _register_KeyP256NonKey();
         _deal();
-        
+
         vm.prank(sender);
         entryPoint.depositTo{value: 0.09e18}(owner);
     }

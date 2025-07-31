@@ -59,7 +59,7 @@ contract P256Test is Base {
         _initializeAccount();
         _register_KeyP256();
         _deal();
-        
+
         vm.prank(sender);
         entryPoint.depositTo{value: 0.09e18}(owner);
     }
