@@ -33,14 +33,14 @@ contract Base is Test, IKey {
     uint256 constant SECURITY_WINDOW = 0.5 days;
 
     /* ─────────────────────────────────────────────────────────── actors/keys ── */
-    uint256 internal senderPk = vm.envUint("PRIVATE_KEY_SENDER");
-    address internal sender = vm.addr(senderPk);
+    uint256 internal senderPk;
+    address internal sender;
 
-    uint256 internal ownerPk = vm.envUint("PRIVATE_KEY_OPENFORT_USER_7702");
-    address internal owner = vm.addr(ownerPk);
+    uint256 internal ownerPk;
+    address internal owner;
 
-    uint256 internal sessionKeyPk = vm.envUint("PRIVATE_KEY_SESSIONKEY");
-    address internal sessionKey = vm.addr(sessionKeyPk);
+    uint256 internal sessionKeyPk;
+    address internal sessionKey;
 
     /* ───────────────────────────────────────────────────────────── master key ── */
     bytes32 constant VALID_PUBLIC_KEY_X =
@@ -203,8 +203,8 @@ contract Base is Test, IKey {
     Key internal keyGuardianEOA;
     PubKey internal pubKeyGuardianEOA;
 
-    uint256 public GUARDIAN_EOA_PRIVATE_KEY = vm.envUint("GUARDIAN_EOA_PRIVATE_KEY");
-    address internal GUARDIAN_EOA_ADDRESS = vm.addr(GUARDIAN_EOA_PRIVATE_KEY);
+    uint256 public GUARDIAN_EOA_PRIVATE_KEY;
+    address internal GUARDIAN_EOA_ADDRESS;
 
     bytes32 internal initialGuardian;
     uint256 internal guardianB_PK;
@@ -343,6 +343,5 @@ contract Base is Test, IKey {
 
         address initialAddr = makeAddr("initialGuardian");
         initialGuardian = keccak256(abi.encodePacked(initialAddr));
-        (guardianB, guardianB_PK) = makeAddrAndKey("guardianB");
     }
 }

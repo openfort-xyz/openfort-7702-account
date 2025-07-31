@@ -36,7 +36,10 @@ contract KeysTest is Base {
     /* ─────────────────────────────────────────────────────────────── setup ──── */
     function setUp() public {
         vm.startPrank(sender);
-
+        (owner, ownerPk) = makeAddrAndKey("owner");
+        (sender, senderPk) = makeAddrAndKey("sender");
+        (sessionKey, sessionKeyPk) = makeAddrAndKey("sessionKey");
+        (GUARDIAN_EOA_ADDRESS, GUARDIAN_EOA_PRIVATE_KEY) = makeAddrAndKey("GUARDIAN_EOA_ADDRESS");
         // forkId = vm.createFork(SEPOLIA_RPC_URL);
         // vm.selectFork(forkId);
 
@@ -63,7 +66,7 @@ contract KeysTest is Base {
         _register_KeyEOA();
         _register_KeyP256();
         _register_KeyP256NonKey();
-
+        _deal();
         vm.prank(sender);
         entryPoint.depositTo{value: 0.08e18}(owner);
     }
