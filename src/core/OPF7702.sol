@@ -428,7 +428,7 @@ contract OPF7702 is Execution {
      * @notice ERC-1271 on-chain signature validation.
      * @dev `isValidSignature` used only in case of RootKey/Master Key (EOA/WebAuthn) signer.
      *  • EOA (ECDSA) path recovers `signer`. If `signer == this`, return `isValidSignature.selector`.
-     *    Else, load `key = keys[keyHash]` and enforce:
+     *    Else packed WebAuthn signature, load `key = keys[keyHash]` and enforce:
      *      - (masterKey)
      * @dev The session key does not undergo ERC-1271 validation, preventing granted roles
      *      from utilizing Permit2 to bypass the established spending policy limits defined in the signature.

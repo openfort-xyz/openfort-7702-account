@@ -221,6 +221,8 @@ abstract contract KeysManager is BaseOPF7702, IKey, SpendLimit {
 
         delete sKey.allowedSelectors;
         delete sKey.spendTokenInfo;
+
+        delete sKey.pubKey;
     }
 
     // =============================================================
