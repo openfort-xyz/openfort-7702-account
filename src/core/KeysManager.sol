@@ -205,7 +205,13 @@ abstract contract KeysManager is BaseOPF7702, IKey, SpendLimit {
     /**
      * @notice Internal helper to revoke a key’s data.
      * @dev Clears all `KeyData` struct fields, marks it inactive, resets limits and whitelists.
-     *
+     * @dev Sets `isActive = false`, zeroes validity windows and spend limits, deletes
+     *      `allowedSelectors` and `spendTokenInfo`, and **deletes the stored public key** (`pubKey`).
+     * @dev Intentionally **does not** clear `whitelisting`. If this key ever had whitelisting
+     *      enabled, the flag remains `true` as a tombstone so that any attempt to re-register the same
+     *      keyId will revert in the registration path (see `KeyManager__ReactivationForbiddenDueToWhitelist`).
+     *      The `whitelist` mapping itself cannot be deleted in Solidity; keeping the flag set prevents
+     *      any residual entries from being reactivated.
      * @param sKey Storage reference to the `KeyData` being revoked.
      */
     function _revokeKey(KeyData storage sKey) internal {
@@ -221,6 +227,8 @@ abstract contract KeysManager is BaseOPF7702, IKey, SpendLimit {
 
         delete sKey.allowedSelectors;
         delete sKey.spendTokenInfo;
+
+        delete sKey.pubKey;
     }
 
     // =============================================================
