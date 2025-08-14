@@ -1153,10 +1153,10 @@ contract Execution7821 is Base {
             MINT_P256_SIGNATURE_R, MINT_P256_SIGNATURE_S, pubKeyExecuteBatch, KeyType.P256
         );
 
-        bytes4 magicValue = account.isValidSignature(userOpHash, _signature);
-        bool usedChallenge = account.usedChallenges(userOpHash);
-        console.log("usedChallenge", usedChallenge);
-        console.logBytes4(magicValue);
+        // bytes4 magicValue = account.isValidSignature(userOpHash, _signature);
+        // bool usedChallenge = account.usedChallenges(userOpHash);
+        // console.log("usedChallenge", usedChallenge);
+        // console.logBytes4(magicValue);
 
         bool isValid = webAuthn.verifyP256Signature(
             userOpHash,
@@ -1266,10 +1266,10 @@ contract Execution7821 is Base {
             P256_SIGNATURE_R, P256_SIGNATURE_S, pubKeyExecuteBatch, KeyType.P256
         );
 
-        bytes4 magicValue = account.isValidSignature(userOpHash, _signature);
-        bool usedChallenge = account.usedChallenges(userOpHash);
-        console.log("usedChallenge", usedChallenge);
-        console.logBytes4(magicValue);
+        // bytes4 magicValue = account.isValidSignature(userOpHash, _signature);
+        // bool usedChallenge = account.usedChallenges(userOpHash);
+        // console.log("usedChallenge", usedChallenge);
+        // console.logBytes4(magicValue);
 
         bool isValid = webAuthn.verifyP256Signature(
             userOpHash, P256_SIGNATURE_R, P256_SIGNATURE_S, P256_PUBLIC_KEY_X, P256_PUBLIC_KEY_Y
@@ -1374,10 +1374,10 @@ contract Execution7821 is Base {
             KeyType.P256NONKEY
         );
 
-        bytes4 magicValue = account.isValidSignature(userOpHash, _signature);
-        bool usedChallenge = account.usedChallenges(userOpHash);
-        console.log("usedChallenge", usedChallenge);
-        console.logBytes4(magicValue);
+        // bytes4 magicValue = account.isValidSignature(userOpHash, _signature);
+        // bool usedChallenge = account.usedChallenges(userOpHash);
+        // console.log("usedChallenge", usedChallenge);
+        // console.logBytes4(magicValue);
 
         bytes32 _hash = EfficientHashLib.sha2(userOpHash);
         console.logBytes32(_hash);
@@ -1489,10 +1489,10 @@ contract Execution7821 is Base {
             P256NOKEY_SIGNATURE_R, P256NOKEY_SIGNATURE_S, pubKeyExecuteBatch, KeyType.P256NONKEY
         );
 
-        bytes4 magicValue = account.isValidSignature(userOpHash, _signature);
-        bool usedChallenge = account.usedChallenges(userOpHash);
-        console.log("usedChallenge", usedChallenge);
-        console.logBytes4(magicValue);
+        // bytes4 magicValue = account.isValidSignature(userOpHash, _signature);
+        // bool usedChallenge = account.usedChallenges(userOpHash);
+        // console.log("usedChallenge", usedChallenge);
+        // console.logBytes4(magicValue);
 
         bytes32 _hash = EfficientHashLib.sha2(userOpHash);
         console.logBytes32(_hash);

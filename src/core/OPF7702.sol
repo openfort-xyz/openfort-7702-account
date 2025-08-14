@@ -426,18 +426,16 @@ contract OPF7702 is Execution {
 
     /**
      * @notice ERC-1271 on-chain signature validation.
-     * @dev
-     *  • Read the first 32 bytes of `_signature` to detect `KeyType`.
-     *  • Dispatch to `_validateWebAuthnSignature` or `_validateP256Signature`, or ECDSA path.
+     * @dev `isValidSignature` used only in case of RootKey/Master Key (EOA/WebAuthn) signer.
      *  • EOA (ECDSA) path recovers `signer`. If `signer == this`, return `isValidSignature.selector`.
      *    Else, load `key = keys[keyHash]` and enforce:
-     *      - validUntil > now ≥ validAfter
-     *      - (masterKey or limit≥1)
+     *      - (masterKey)
+     * @dev The session key does not undergo ERC-1271 validation, preventing granted roles 
+     *      from utilizing Permit2 to bypass the established spending policy limits defined in the signature.
      * @param _hash       The hash that was signed.
      * @param _signature  The signature blob to verify.
      * @return `this.isValidSignature.selector` if valid; otherwise `0xffffffff`.
      */
-     /// Todo: Remove session key validation from the function.
     function isValidSignature(bytes32 _hash, bytes memory _signature)
         external
         view
@@ -447,23 +445,11 @@ contract OPF7702 is Execution {
             return bytes4(0xffffffff);
         }
 
-        // read the leading 32 bytes to know KeyType
-        uint256 keyTypeWord;
-        assembly {
-            keyTypeWord := mload(add(_signature, 32))
-        }
-
-        if (keyTypeWord == uint256(KeyType.WEBAUTHN)) {
-            return _validateWebAuthnSignature(_signature, _hash);
-        }
-        if (keyTypeWord == uint256(KeyType.P256) || keyTypeWord == uint256(KeyType.P256NONKEY)) {
-            return _validateP256Signature(_signature, _hash);
-        }
-        // otherwise, assume ECDSA
         if (_signature.length == 64 || _signature.length == 65) {
             return _validateEOASignature(_signature, _hash);
+        } else {
+            return _validateWebAuthnSignature(_signature, _hash);
         }
-        return bytes4(0xffffffff);
     }
 
     /**
@@ -490,11 +476,7 @@ contract OPF7702 is Execution {
 
         if (sKey.masterKey) return this.isValidSignature.selector;
 
-        // validity window
-        if (!sKey.passesBaseChecks() || !sKey.hasQuota()) {
-            return bytes4(0xffffffff);
-        }
-        return this.isValidSignature.selector;
+        return bytes4(0xffffffff);
     }
 
     /**
@@ -546,48 +528,7 @@ contract OPF7702 is Execution {
 
         if (sKey.masterKey) return this.isValidSignature.selector;
 
-        if (!sKey.passesBaseChecks() || !sKey.hasQuota()) {
-            return bytes4(0xffffffff);
-        }
-        return this.isValidSignature.selector;
-    }
-
-    /**
-     * @notice Validate a P-256 / P-256NONKEY signature on-chain via ERC-1271.
-     * @param _signature  ABI-encoded: (KeyType, bytes(inner: r, s, PubKey))
-     * @param _hash       The hash to verify.
-     * @return `this.isValidSignature.selector` if valid; otherwise `0xffffffff`.
-     */
-    function _validateP256Signature(bytes memory _signature, bytes32 _hash)
-        internal
-        view
-        returns (bytes4)
-    {
-        (KeyType kt, bytes memory inner) = abi.decode(_signature, (KeyType, bytes));
-        (bytes32 r, bytes32 s, PubKey memory pubKey) = abi.decode(inner, (bytes32, bytes32, PubKey));
-
-        if (usedChallenges[_hash]) {
-            return bytes4(0xffffffff);
-        }
-
-        bytes32 hashToCheck = _hash;
-        if (kt == KeyType.P256NONKEY) {
-            hashToCheck = EfficientHashLib.sha2(_hash);
-        }
-
-        bool sigOk = IWebAuthnVerifier(webAuthnVerifier()).verifyP256Signature(
-            hashToCheck, r, s, pubKey.x, pubKey.y
-        );
-        if (!sigOk) {
-            return bytes4(0xffffffff);
-        }
-
-        bytes32 keyHash = pubKey.computeKeyId();
-        KeyData storage sKey = keys[keyHash];
-        if (!sKey.passesBaseChecks() || !sKey.hasQuota()) {
-            return bytes4(0xffffffff);
-        }
-        return this.isValidSignature.selector;
+        return bytes4(0xffffffff);
     }
 
     /**

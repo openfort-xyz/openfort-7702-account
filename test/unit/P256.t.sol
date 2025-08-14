@@ -111,8 +111,8 @@ contract P256Test is Base {
         bytes memory _signature = account.encodeP256Signature(
             MINT_P256_SIGNATURE_R, MINT_P256_SIGNATURE_S, pubKey, KeyType.P256
         );
-        console.log("isValidSignature:");
-        console.logBytes4(account.isValidSignature(userOpHash, _signature));
+        // console.log("isValidSignature:");
+        // console.logBytes4(account.isValidSignature(userOpHash, _signature));
 
         userOp.signature = _signature;
 

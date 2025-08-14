@@ -454,10 +454,10 @@ contract DepositAndTransferETH is Base {
             ETH_P256_SIGNATURE_R, ETH_P256_SIGNATURE_S, pubKeyExecuteBatch, KeyType.P256
         );
 
-        bytes4 magicValue = account.isValidSignature(userOpHash, _signature);
-        bool usedChallenge = account.usedChallenges(userOpHash);
-        console.log("usedChallenge", usedChallenge);
-        console.logBytes4(magicValue);
+        // bytes4 magicValue = account.isValidSignature(userOpHash, _signature);
+        // bool usedChallenge = account.usedChallenges(userOpHash);
+        // console.log("usedChallenge", usedChallenge);
+        // console.logBytes4(magicValue);
 
         bool isValid = webAuthn.verifyP256Signature(
             userOpHash,
@@ -545,10 +545,10 @@ contract DepositAndTransferETH is Base {
             KeyType.P256NONKEY
         );
 
-        bytes4 magicValue = account.isValidSignature(userOpHash, _signature);
-        bool usedChallenge = account.usedChallenges(userOpHash);
-        console.log("usedChallenge", usedChallenge);
-        console.logBytes4(magicValue);
+        // bytes4 magicValue = account.isValidSignature(userOpHash, _signature);
+        // bool usedChallenge = account.usedChallenges(userOpHash);
+        // console.log("usedChallenge", usedChallenge);
+        // console.logBytes4(magicValue);
 
         bytes32 _hash = EfficientHashLib.sha2(userOpHash);
         console.logBytes32(_hash);
