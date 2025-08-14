@@ -377,6 +377,15 @@ contract OPF7702 is Execution {
     /**
      * @notice Validates a token transfer against the key’s token spend limit.
      * @dev Loads `value` from the last 32 bytes of `innerData` (standard ERC-20 `_transfer(address,uint256)` signature).
+     * @dev Out of scope (not supported): Extended/alternative token interfaces where spend cannot be
+     *      inferred from the trailing 32 bytes, including but not limited to:
+     *        - ERC-777 (`send`, operator functions and hooks)
+     *        - ERC-1363 (`transferAndCall`, etc.)
+     *        - ERC-4626 vaults (`deposit`, `mint`, `withdraw`, `redeem`, etc.)
+     *        - Allowance changes (`approve`, `increaseAllowance`, `decreaseAllowance`)
+     *        - Permit-style signatures (EIP-2612) or any function where the amount is not the last arg.
+     *      Calls to those selectors MUST be blocked elsewhere (e.g., via `allowedSelectors`) because
+     *      this function will not correctly measure spend and may produce misleading deductions.
      * @param sKey      Storage reference of the KeyData
      * @param innerData The full encoded call data to the token contract.
      * @return True if `value ≤ sKey.spendTokenInfo.limit`; false if it exceeds or is invalid.
