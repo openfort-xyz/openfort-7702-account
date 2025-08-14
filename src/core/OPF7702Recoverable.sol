@@ -94,6 +94,12 @@ contract OPF7702Recoverable is OPF7702, EIP712Upgradeable, ERC7201 {
         uint256 _securityPeriod,
         uint256 _securityWindow
     ) OPF7702(_entryPoint, _webAuthnVerifier) {
+        /// Todo: add checker 
+        /**
+            if (_lockPeriod < _recoveryPeriod || _recoveryPeriod < _securityPeriod + _securityWindow) {
+                revert InsecurePeriod();
+            }
+         */
         recoveryPeriod = _recoveryPeriod;
         lockPeriod = _lockPeriod;
         securityPeriod = _securityPeriod;
@@ -365,8 +371,6 @@ contract OPF7702Recoverable is OPF7702, EIP712Upgradeable, ERC7201 {
         _requireRecovery(false);
         if (isLocked()) revert IOPF7702Recoverable.OPF7702Recoverable__AccountLocked();
 
-        // bool hasAddress = _recoveryKey.eoaAddress != address(0);
-        // bool hasPubKey = _recoveryKey.pubKey.x != bytes32(0) || _recoveryKey.pubKey.y != bytes32(0);
         if (_recoveryKey.checkKey()) {
             revert IOPF7702Recoverable.OPF7702Recoverable__AddressCantBeZero();
         }

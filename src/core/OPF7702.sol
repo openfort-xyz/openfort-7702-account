@@ -275,6 +275,7 @@ contract OPF7702 is Execution {
      * @param _callData  The calldata (starting with selector).
      * @return True if permitted, false otherwise.
      */
+     /// Todo: Update natspec
     function isValidKey(bytes calldata _callData, KeyData storage sKey)
         internal
         virtual
@@ -436,6 +437,7 @@ contract OPF7702 is Execution {
      * @param _signature  The signature blob to verify.
      * @return `this.isValidSignature.selector` if valid; otherwise `0xffffffff`.
      */
+     /// Todo: Remove session key validation from the function.
     function isValidSignature(bytes32 _hash, bytes memory _signature)
         external
         view
