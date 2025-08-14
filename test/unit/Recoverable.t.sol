@@ -379,7 +379,7 @@ contract Recoverable is Base {
 
         _confirmGuardian();
         _startRecovery();
-        
+
         (Key memory k, uint64 executeAfter, uint32 guardiansRequired) = account.recoveryData();
         console.log("r.key.eoaAddress", k.eoaAddress);
         console.log("executeAfter", executeAfter);

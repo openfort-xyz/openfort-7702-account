@@ -38,26 +38,21 @@ contract Deploy7702 is Script {
             )
         );
 
-        address payable deployedAddress; 
+        address payable deployedAddress;
         assembly {
-            deployedAddress := create2(
-                0,                  
-                add(byteCode, 0x20), 
-                mload(byteCode),     
-                SALT                  
-            )
+            deployedAddress := create2(0, add(byteCode, 0x20), mload(byteCode), SALT)
         }
-        
+
         require(deployedAddress != address(0), "CREATE2 deployment failed");
 
         return OPFMain(deployedAddress);
     }
 }
 
-// forge script Deploy7702 --rpc-url https://eth-sepolia.g.alchemy.com/v2/EIOmdDtOw7ulufI5S27isOfZfW51PQXB --account BURNER_KEY --verify --etherscan-api-key $ETHERSCAN_KEY --broadcast 
-// forge script Deploy7702 --rpc-url https://opt-sepolia.g.alchemy.com/v2/EIOmdDtOw7ulufI5S27isOfZfW51PQXB --account BURNER_KEY --verify --etherscan-api-key $ETHERSCAN_KEY --broadcast 
-// forge script Deploy7702 --rpc-url https://arb-sepolia.g.alchemy.com/v2/EIOmdDtOw7ulufI5S27isOfZfW51PQXB --account BURNER_KEY --verify --etherscan-api-key $ETHERSCAN_KEY --broadcast 
-// forge script Deploy7702 --rpc-url https://base-sepolia.g.alchemy.com/v2/EIOmdDtOw7ulufI5S27isOfZfW51PQXB --account BURNER_KEY --verify --etherscan-api-key $ETHERSCAN_KEY --broadcast 
+// forge script Deploy7702 --rpc-url https://eth-sepolia.g.alchemy.com/v2/EIOmdDtOw7ulufI5S27isOfZfW51PQXB --account BURNER_KEY --verify --etherscan-api-key $ETHERSCAN_KEY --broadcast
+// forge script Deploy7702 --rpc-url https://opt-sepolia.g.alchemy.com/v2/EIOmdDtOw7ulufI5S27isOfZfW51PQXB --account BURNER_KEY --verify --etherscan-api-key $ETHERSCAN_KEY --broadcast
+// forge script Deploy7702 --rpc-url https://arb-sepolia.g.alchemy.com/v2/EIOmdDtOw7ulufI5S27isOfZfW51PQXB --account BURNER_KEY --verify --etherscan-api-key $ETHERSCAN_KEY --broadcast
+// forge script Deploy7702 --rpc-url https://base-sepolia.g.alchemy.com/v2/EIOmdDtOw7ulufI5S27isOfZfW51PQXB --account BURNER_KEY --verify --etherscan-api-key $ETHERSCAN_KEY --broadcast
 
 // forge verify-contract --watch --chain 11155111 --verifier etherscan 0xb4C8cd302d061311373D0e6C11780F208bAA9220 src/core/OPFMain.sol:OPFMain -e QNAZY35DJPVNWFA9G1Y1ITGQ4H4YK8WB1J -a v2 --constructor-args 0000000000000000000000004337084d9e255ff0702461cf8895ce9e3b5ff10800000000000000000000000083b7acb5a6aa8a34a97bda13182aea787ac3f10d000000000000000000000000000000000000000000000000000000000002a3000000000000000000000000000000000000000000000000000000000000069780000000000000000000000000000000000000000000000000000000000001fa40000000000000000000000000000000000000000000000000000000000000a8c0
 // forge verify-contract --watch --chain 11155420 --verifier etherscan 0xb4C8cd302d061311373D0e6C11780F208bAA9220 src/core/OPFMain.sol:OPFMain -e QNAZY35DJPVNWFA9G1Y1ITGQ4H4YK8WB1J -a v2 --constructor-args 0000000000000000000000004337084d9e255ff0702461cf8895ce9e3b5ff10800000000000000000000000083b7acb5a6aa8a34a97bda13182aea787ac3f10d000000000000000000000000000000000000000000000000000000000002a3000000000000000000000000000000000000000000000000000000000000069780000000000000000000000000000000000000000000000000000000000001fa40000000000000000000000000000000000000000000000000000000000000a8c0

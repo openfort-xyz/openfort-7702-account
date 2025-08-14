@@ -275,7 +275,7 @@ contract OPF7702 is Execution {
      * @param _callData  The calldata (starting with selector).
      * @return True if permitted, false otherwise.
      */
-     /// Todo: Update natspec
+    /// Todo: Update natspec
     function isValidKey(bytes calldata _callData, KeyData storage sKey)
         internal
         virtual
@@ -430,7 +430,7 @@ contract OPF7702 is Execution {
      *  • EOA (ECDSA) path recovers `signer`. If `signer == this`, return `isValidSignature.selector`.
      *    Else, load `key = keys[keyHash]` and enforce:
      *      - (masterKey)
-     * @dev The session key does not undergo ERC-1271 validation, preventing granted roles 
+     * @dev The session key does not undergo ERC-1271 validation, preventing granted roles
      *      from utilizing Permit2 to bypass the established spending policy limits defined in the signature.
      * @param _hash       The hash that was signed.
      * @param _signature  The signature blob to verify.
