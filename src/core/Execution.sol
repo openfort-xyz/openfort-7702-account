@@ -15,7 +15,8 @@ pragma solidity ^0.8.29;
 
 import {KeysManager} from "src/core/KeysManager.sol";
 import {IExecution} from "src/interfaces/IExecution.sol";
-import {ReentrancyGuard} from "lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
+import {ReentrancyGuardUpgradeable} from
+    "lib/openzeppelin-contracts-upgradeable/contracts/utils/ReentrancyGuardUpgradeable.sol";
 
 /// @title Execution
 /// @author Openfort@0xkoiner
@@ -23,7 +24,7 @@ import {ReentrancyGuard} from "lib/openzeppelin-contracts/contracts/utils/Reentr
 ///         protection against auth‑bypass, re‑entrancy and gas‑grief.
 /// @dev    Inherits from `KeysManager` for key‑based access control and
 ///         `ReentrancyGuard` for one‑shot external entry protection.
-abstract contract Execution is KeysManager, ReentrancyGuard {
+abstract contract Execution is KeysManager, ReentrancyGuardUpgradeable {
     /* ────────────────────────────────────────────────────────────── */
     /*  CONSTANTS                                                    */
     /* ────────────────────────────────────────────────────────────── */

@@ -24,7 +24,8 @@ import {IOPF7702Recoverable} from "src/interfaces/IOPF7702Recoverable.sol";
 import {Math} from "lib/openzeppelin-contracts/contracts/utils/math/Math.sol";
 import {SafeCast} from "lib/openzeppelin-contracts/contracts/utils/math/SafeCast.sol";
 import {ECDSA} from "lib/openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
-import {EIP712} from "lib/openzeppelin-contracts/contracts/utils/cryptography/EIP712.sol";
+import {EIP712Upgradeable} from
+    "lib/openzeppelin-contracts-upgradeable/contracts/utils/cryptography/EIP712Upgradeable.sol";
 /**
  * @title   Openfort Base Account 7702 with ERC-4337 Support
  * @author  Openfort@0xkoiner
@@ -38,7 +39,7 @@ import {EIP712} from "lib/openzeppelin-contracts/contracts/utils/cryptography/EI
  *  • Reentrancy protection & explicit nonce replay prevention
  */
 
-contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
+contract OPF7702Recoverable is OPF7702, EIP712Upgradeable, ERC7201 {
     using ECDSA for bytes32;
     using KeyHashLib for Key;
     using KeyHashLib for address;
@@ -92,7 +93,13 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
         uint256 _lockPeriod,
         uint256 _securityPeriod,
         uint256 _securityWindow
-    ) OPF7702(_entryPoint, _webAuthnVerifier) EIP712("OPF7702Recoverable", "1") {
+    ) OPF7702(_entryPoint, _webAuthnVerifier) {
+        /// Todo: add checker
+        /**
+         * if (_lockPeriod < _recoveryPeriod || _recoveryPeriod < _securityPeriod + _securityWindow) {
+         *             revert InsecurePeriod();
+         *         }
+         */
         recoveryPeriod = _recoveryPeriod;
         lockPeriod = _lockPeriod;
         securityPeriod = _securityPeriod;
@@ -131,6 +138,8 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
         bytes memory _signature,
         bytes32 _initialGuardian
     ) external initializer {
+        __EIP712_init("OPF7702Recoverable", "1");
+        __ReentrancyGuard_init();
         _requireForExecute();
         _clearStorage();
 
@@ -362,8 +371,6 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
         _requireRecovery(false);
         if (isLocked()) revert IOPF7702Recoverable.OPF7702Recoverable__AccountLocked();
 
-        // bool hasAddress = _recoveryKey.eoaAddress != address(0);
-        // bool hasPubKey = _recoveryKey.pubKey.x != bytes32(0) || _recoveryKey.pubKey.y != bytes32(0);
         if (_recoveryKey.checkKey()) {
             revert IOPF7702Recoverable.OPF7702Recoverable__AddressCantBeZero();
         }

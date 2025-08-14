@@ -1,24 +1,21 @@
 {
     "change" : {
-        "challenge": "0x79506d4530e73e98c858dadc0b73c8ff30941b4dbee45b477d6ad964fccde85e",
+        "challenge": "0xf2b51c145adc44f3d44588642840a01376e70a3029a9df8f85a0e6a70ddc7c82",
         
-            "x": "0x876c28f0a473b96fc839ec566891a2f14489c2a46bba6dbe5b433a826848304e",
-            "y": "0x665e7a5ea66d5e287926aa02592fe3f8d36695f0ef750950c61c5453377fd429",
+            "x": "0xe9a2e1e0f3d3688222fbb02872abea0b3a0a1a70db91d5fa8b81c7e64f2ef7b2",
+            "y": "0x32d64692518dd4dbd238843ed2c42bf02ba0ea7cac4e3bcc6a2beb57546d745b",
             
                 "metadata": {
                     "authenticatorData": "0x49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d97631d00000000",
-                    "clientDataJSON": "{\"type\":\"webauthn.get\",\"challenge\":\"eVBtRTDnPpjIWNrcC3PI_zCUG02-5FtHfWrZZPzN6F4\",\"origin\":\"http://localhost:5173\",\"crossOrigin\":false}",
+                    "clientDataJSON": "{\"type\":\"webauthn.get\",\"challenge\":\"It2yLSh-X3VoKxt-i7onk-2Ua_s8QpKxOoukfMp5yCg\",\"origin\":\"http://localhost:5173\",\"crossOrigin\":false}",
                     "challengeIndex": 23,
                     "typeIndex": 1,
                     "userVerificationRequired": true
                 },
                 "signature": {
-                    "r": "0x9617c37d1171d10fb6e51016c960d8c70ca708b4acb6919e6fea7baa89458f0b",
-                    "s": "0x2c63ee96484484047acf419c7cab4c80e39851760dfc1165f37481c2ca8a4e77"
-                
-            }
-        
+                    "r": "0xa9f097e52c0505765148ce33849cba870d748b87788ebd49a87dfc8466eeafc2",
+                    "s": "0x4a84cd3d1277820676be8ff233663f253d48da9554c134408d174ad00668c121"
+                }
             
-        
             }
 }

@@ -158,6 +158,7 @@ abstract contract KeysManager is BaseOPF7702, IKey, SpendLimit {
      * @param _key             Struct containing key information (PubKey or EOA).
      * @param _keyData KeyReg data structure containing permissions and limits
      */
+    /// Todo: enfore to check the if _keyData.whitelisting = true
     function _addKey(KeyData storage sKey, Key memory _key, KeyReg memory _keyData) internal {
         sKey.pubKey = _key.pubKey;
         sKey.isActive = true;

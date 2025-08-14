@@ -28,22 +28,22 @@ test-upgrade-addresses:
 	forge test --mp test/unit/UpgradeAddresses.t.sol -vv --rpc-url $(SEPOLIA_RPC_URL)
 
 test-P256:
-	node script/P256_Single_Mint.ts && forge test --mp test/unit/P256.t.sol -vv --rpc-url $(SEPOLIA_RPC_URL)
+	npx tsx --experimental-global-webcrypto script/P256_Single_Mint.ts && forge test --mp test/unit/P256.t.sol -vv --rpc-url $(SEPOLIA_RPC_URL)
 
 test-registartion:
 	forge test --mp test/unit/Registartion.t.sol -vv --rpc-url $(SEPOLIA_RPC_URL)
 
 test-eth:
-	node script/P256_ETH.ts && forge test --mp test/unit/DepositAndTransferETH.t.sol -vv --rpc-url $(SEPOLIA_RPC_URL)
+	npx tsx --experimental-global-webcrypto script/P256_ETH.ts && forge test --mp test/unit/DepositAndTransferETH.t.sol -vv --rpc-url $(SEPOLIA_RPC_URL)
 
 test-execution:
-	node script/P256_Single_Mint.ts && node script/P256.ts && forge test --mp test/unit/Execution.t.sol -vv --rpc-url $(SEPOLIA_RPC_URL)
+	npx tsx --experimental-global-webcrypto script/P256_Single_Mint.ts && npx tsx --experimental-global-webcrypto script/P256.ts && forge test --mp test/unit/Execution.t.sol -vv --rpc-url $(SEPOLIA_RPC_URL)
 
 test-recovery:
 	forge test --mp test/unit/Recoverable.t.sol --rpc-url $(SEPOLIA_RPC_URL) -vv 
 	
 test-all:
-	node script/P256_Single_Mint.ts && node script/P256_ETH.ts && node script/P256.ts && forge test -vv --rpc-url $(SEPOLIA_RPC_URL)
+	npx tsx --experimental-global-webcrypto  script/P256_Single_Mint.ts && npx tsx --experimental-global-webcrypto  script/P256_ETH.ts && npx tsx --experimental-global-webcrypto  script/P256.ts && forge test -vv --rpc-url $(SEPOLIA_RPC_URL)
 
 coverage:
 	forge coverage --ir-minimum --rpc-url $(SEPOLIA_RPC_URL) >> coverage.txt
@@ -79,7 +79,7 @@ deploy-7702-base:
 	--broadcast \
 	--constructor-args 0x4337084D9E255Ff0702461CF8895CE9E3b5Ff108 0xeD43b3a3D00d791BC0B353666b5780B0F9245CC1 172800 604800 129600 43200
 
-# 0x9cab09f5b22e6C7812cEeAEF081BEF62b91BF8F2
+# 0xDCeaC68C8463Ed6b1026a47fe935dBC41392490f
 deploy-7702-mainnet:
 	forge create src/core/OPFMain.sol:OPFMain \
 	--rpc-url $(SEPOLIA_RPC_URL) \
@@ -98,5 +98,19 @@ simple-mainnet:
 	--broadcast \
 	--constructor-args 0x4337084D9E255Ff0702461CF8895CE9E3b5Ff108 
 
+script-deploy-upgradeable:
+	forge script script/DeployUpgradeable.s.sol:DeployUpgradeable \
+	--rpc-url $(SEPOLIA_RPC_URL) \
+	--account BURNER_KEY \
+	--verify \
+	--etherscan-api-key $(ETHERSCAN_KEY) \
+	--broadcast
+
+script-init:
+	forge script script/InitProxy.s.sol:InitProxy \
+	--rpc-url $(SEPOLIA_RPC_URL) \
+	--private-key $(PRIVATE_KEY_PROXY) \
+	-vvvv
+
 push:
-	git push -u origin OPF7702_ALPHA
+	git push -u origin OPF7702_PROXY_After_Audit

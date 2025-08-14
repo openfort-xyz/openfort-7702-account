@@ -2,8 +2,6 @@ name: CI
 
 # Global environment variables
 env:
-  # Remove or comment this line to use default profile
-  # FOUNDRY_PROFILE: ci
   ETHERSCAN_KEY: ${{ secrets.ETHERSCAN_KEY }}
   SEPOLIA_RPC_URL: ${{ secrets.SEPOLIA_RPC_URL }}
   ETHERSCAN_KEY_BASE: ${{ secrets.ETHERSCAN_KEY_BASE }}
@@ -31,24 +29,13 @@ jobs:
       fail-fast: true
 
     steps:
-      # 1) checkout without any submodules
-      - name: Checkout repository (no submodules)
+      # 1) checkout with all submodules
+      - name: Checkout repository with submodules
         uses: actions/checkout@v4
         with:
-          submodules: false
+          submodules: recursive
 
-      # 2) manually init only the submodules you actually need
-      - name: Init necessary submodules
-        run: |
-          git submodule sync --recursive
-          git submodule update --init --depth=1 \
-            lib/account-abstraction \
-            lib/forge-std \
-            lib/openzeppelin-contracts \
-            lib/solady \
-            lib/webauthn-sol
-
-      # 3) install Foundry toolchain
+      # 2) INSTALL FOUNDRY FIRST (this was missing!)
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
 

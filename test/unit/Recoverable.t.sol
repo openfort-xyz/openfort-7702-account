@@ -21,6 +21,8 @@ import {IKey} from "src/interfaces/IKey.sol";
 import {WebAuthnVerifier} from "src/utils/WebAuthnVerifier.sol";
 import {PackedUserOperation} from
     "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
+import {MessageHashUtils} from
+    "lib/openzeppelin-contracts/contracts/utils/cryptography/MessageHashUtils.sol";
 
 contract Recoverable is Base {
     using KeyHashLib for address;
@@ -49,6 +51,11 @@ contract Recoverable is Base {
     /* ─────────────────────────────────────────────────────────────── setup ──── */
     function setUp() public {
         vm.startPrank(sender);
+        (owner, ownerPk) = makeAddrAndKey("owner");
+        (sender, senderPk) = makeAddrAndKey("sender");
+        (sessionKey, sessionKeyPk) = makeAddrAndKey("sessionKey");
+        (GUARDIAN_EOA_ADDRESS, GUARDIAN_EOA_PRIVATE_KEY) = makeAddrAndKey("GUARDIAN_EOA_ADDRESS");
+        (guardianB, guardianB_PK) = makeAddrAndKey("guardianB");
 
         // forkId = vm.createFork(SEPOLIA_RPC_URL);
         // vm.selectFork(forkId);
@@ -77,6 +84,7 @@ contract Recoverable is Base {
         _register_KeyP256();
         _register_KeyP256NonKey();
         _poroposeGuardian();
+        _deal();
 
         vm.prank(sender);
         entryPoint.depositTo{value: 0.09e18}(owner);
@@ -435,13 +443,13 @@ contract Recoverable is Base {
 
         bytes memory sig = abi.encodePacked(r, s, v);
 
-        sigs[0] = sig;
+        sigs[1] = sig;
 
         (uint8 v_B, bytes32 r_B, bytes32 s_B) = vm.sign(guardianB_PK, digest);
 
         bytes memory sig_B = abi.encodePacked(r_B, s_B, v_B);
 
-        sigs[1] = sig_B;
+        sigs[0] = sig_B;
 
         vm.warp(block.timestamp + RECOVERY_PERIOD + 1);
 
@@ -515,13 +523,13 @@ contract Recoverable is Base {
 
         bytes memory sig = abi.encodePacked(r, s, v);
 
-        sigs[0] = sig;
+        sigs[1] = sig;
 
         (uint8 v_B, bytes32 r_B, bytes32 s_B) = vm.sign(guardianB_PK, digest);
 
         bytes memory sig_B = abi.encodePacked(r_B, s_B, v_B);
 
-        sigs[1] = sig_B;
+        sigs[0] = sig_B;
 
         vm.warp(block.timestamp + RECOVERY_PERIOD + 1);
 
@@ -864,8 +872,28 @@ contract Recoverable is Base {
         keySK = Key({pubKey: pubKeyMK, eoaAddress: address(0), keyType: KeyType.WEBAUTHN});
 
         /* sign arbitrary message so initialise() passes sig check */
-        bytes32 msgHash = account.getDigestToInit(keyMK, initialGuardian);
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPk, msgHash);
+        bytes32 structHash = keccak256(
+            abi.encode(
+                RECOVER_TYPEHASH,
+                keyMK.pubKey.x,
+                keyMK.pubKey.y,
+                keyMK.eoaAddress,
+                keyMK.keyType,
+                initialGuardian
+            )
+        );
+
+        string memory name = "OPF7702Recoverable";
+        string memory version = "1";
+
+        bytes32 domainSeparator = keccak256(
+            abi.encode(
+                TYPE_HASH, keccak256(bytes(name)), keccak256(bytes(version)), block.chainid, owner
+            )
+        );
+        bytes32 digest = MessageHashUtils.toTypedDataHash(domainSeparator, structHash);
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPk, digest);
         bytes memory sig = abi.encodePacked(r, s, v);
 
         vm.prank(address(entryPoint));
