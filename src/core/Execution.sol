@@ -149,7 +149,7 @@ abstract contract Execution is KeysManager, ReentrancyGuardUpgradeable {
     /* ────────────────────────────────────────────────────────────── */
 
     /// @dev Derive a small integer ID from the 10‑byte execution mode.
-    ///      0: unsupported, 
+    ///      0: unsupported,
     ///      1: flat batch,
     ///      3: batch‑of‑batches.
     function _executionModeId(bytes32 mode) internal pure returns (uint256 id) {
