@@ -143,6 +143,8 @@ contract OPF7702Recoverable is OPF7702, EIP712Upgradeable, ERC7201 {
         _requireForExecute();
         _clearStorage();
 
+        _masterKeyValidation(_keyData);
+        
         bytes32 digest = getDigestToInit(_key, _initialGuardian);
 
         if (!_checkSignature(digest, _signature)) {
