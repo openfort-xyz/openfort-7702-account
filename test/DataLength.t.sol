@@ -15,4 +15,12 @@ contract DataLength is Test {
         console.log("webAuthnStubSignature", webAuthnStubSignature.length);
         console.log("P256StubSignature", P256StubSignature.length);
     }
+
+    function test_GetInitHash() public pure {
+        bytes32 hash = keccak256(
+            "InitializionData(uint256 x,uint256 y,address eoaAddress,KeyType keyType,address _initialGuardian)"
+        );
+
+        console.logBytes32(hash);
+    }
 }

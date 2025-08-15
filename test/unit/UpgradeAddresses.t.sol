@@ -571,7 +571,7 @@ contract DepositAndTransferETH is Base {
 
         bytes32 structHash = keccak256(
             abi.encode(
-                RECOVER_TYPEHASH,
+                INIT_TYPEHASH,
                 keyMK.pubKey.x,
                 keyMK.pubKey.y,
                 keyMK.eoaAddress,
