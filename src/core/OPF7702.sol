@@ -27,6 +27,7 @@ import {
     SIG_VALIDATION_SUCCESS,
     _packValidationData
 } from "lib/account-abstraction/contracts/core/Helpers.sol";
+import {Initializable} from "lib/openzeppelin-contracts/contracts/proxy/utils/Initializable.sol";
 
 /**
  * @title   Openfort Base Account 7702 with ERC-4337 Support
@@ -41,7 +42,7 @@ import {
  *  • Reentrancy protection & explicit nonce replay prevention
  *
  */
-contract OPF7702 is Execution {
+contract OPF7702 is Execution, Initializable {
     using ECDSA for bytes32;
     using KeyHashLib for Key;
     using KeyHashLib for PubKey;
