@@ -92,7 +92,6 @@ library UpgradeAddress {
         assembly {
             sstore(_EP_SLOT, packed)
         }
-        emit EntryPointUpdated(oldEp, newEp);
     }
 
     /// @notice Permanently overrides the WebAuthnVerifier address.
@@ -110,7 +109,6 @@ library UpgradeAddress {
         assembly {
             sstore(_VERIFIER_SLOT, packed)
         }
-        emit WebAuthnVerifierUpdated(oldV, newV);
     }
 
     /* --------------------------------------------------------------------- */
