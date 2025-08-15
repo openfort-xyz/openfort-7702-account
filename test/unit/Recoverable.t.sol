@@ -862,7 +862,7 @@ contract Recoverable is Base {
             validAfter: 0,
             limit: 0,
             whitelisting: false,
-            contractAddress: 0xDeaDbeefdEAdbeefdEadbEEFdeadbeEFdEaDbeeF,
+            contractAddress: address(0),
             spendTokenInfo: spendInfo,
             allowedSelectors: _allowedSelectors(),
             ethLimit: 0
