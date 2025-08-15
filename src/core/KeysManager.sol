@@ -35,8 +35,6 @@ abstract contract KeysManager is BaseOPF7702, IKey, SpendLimit {
 
     /// @notice Maximum number of allowed function selectors per key
     uint256 internal constant MAX_SELECTORS = 10;
-    /// @notice “Burn” address used as placeholder
-    address internal constant DEAD_ADDRESS = 0xDeaDbeefdEAdbeefdEadbEEFdeadbeEFdEaDbeeF;
 
     // =============================================================
     //                          STATE VARIABLES

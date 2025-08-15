@@ -120,7 +120,7 @@ contract OPF7702Recoverable is OPF7702, EIP712Upgradeable, ERC7201 {
      *     - validAfter  = 0
      *     - limit       = 0  (master)
      *     - whitelisting = false
-     *     - DEAD_ADDRESS placeholder in whitelistedContracts
+     *     - address(0) placeholder in whitelistedContracts
      *  • Emits `Initialized(_key)`.
      *
      * @param _key              The Key struct (master key).
@@ -455,7 +455,7 @@ contract OPF7702Recoverable is OPF7702, EIP712Upgradeable, ERC7201 {
             revert IKeysManager.KeyManager__KeyRegistered();
         }
 
-        SpendTokenInfo memory _spendTokenInfo = SpendTokenInfo({token: DEAD_ADDRESS, limit: 0});
+        SpendTokenInfo memory _spendTokenInfo = SpendTokenInfo({token: address(0), limit: 0});
         bytes4[] memory _allowedSelectors = new bytes4[](3);
 
         emit IOPF7702Recoverable.RecoveryCompleted();
@@ -465,7 +465,7 @@ contract OPF7702Recoverable is OPF7702, EIP712Upgradeable, ERC7201 {
             validAfter: 0,
             limit: 0,
             whitelisting: false,
-            contractAddress: DEAD_ADDRESS,
+            contractAddress: address(0),
             spendTokenInfo: _spendTokenInfo,
             allowedSelectors: _allowedSelectors,
             ethLimit: 0
