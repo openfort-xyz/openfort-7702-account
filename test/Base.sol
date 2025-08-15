@@ -27,6 +27,8 @@ contract Base is Test, IKey {
     uint256 constant ETH_LIMIT = 1e18;
     bytes32 constant RECOVER_TYPEHASH =
         0x9f7aca777caf11405930359f601a4db01fad1b2d79ef3f2f9e93c835e9feffa5;
+    bytes32 constant INIT_TYPEHASH =
+        0x82dc6262fca76342c646d126714aa4005dfcd866448478747905b2e7b9837183;
     uint256 constant RECOVERY_PERIOD = 2 days;
     uint256 constant LOCK_PERIOD = 5 days;
     uint256 constant SECURITY_PERIOD = 1.5 days;

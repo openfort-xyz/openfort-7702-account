@@ -1835,7 +1835,7 @@ contract Execution7821 is Base {
         /* sign arbitrary message so initialise() passes sig check */
         bytes32 structHash = keccak256(
             abi.encode(
-                RECOVER_TYPEHASH,
+                INIT_TYPEHASH,
                 keyMK.pubKey.x,
                 keyMK.pubKey.y,
                 keyMK.eoaAddress,

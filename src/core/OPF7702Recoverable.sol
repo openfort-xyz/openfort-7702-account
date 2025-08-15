@@ -51,7 +51,9 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
     /// @dev EIP‑712 type hash for the Recovery struct.
     bytes32 private constant RECOVER_TYPEHASH =
         0x9f7aca777caf11405930359f601a4db01fad1b2d79ef3f2f9e93c835e9feffa5;
-
+    /// @dev EIP‑712 type hash for the Initialize struct.
+    bytes32 private constant INIT_TYPEHASH =
+        0x82dc6262fca76342c646d126714aa4005dfcd866448478747905b2e7b9837183;
     // ──────────────────────────────────────────────────────────────────────────────
     //                              Immutable vars
     // ──────────────────────────────────────────────────────────────────────────────
@@ -609,7 +611,7 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
     {
         bytes32 structHash = keccak256(
             abi.encode(
-                RECOVER_TYPEHASH,
+                INIT_TYPEHASH,
                 _key.pubKey.x,
                 _key.pubKey.y,
                 _key.eoaAddress,
