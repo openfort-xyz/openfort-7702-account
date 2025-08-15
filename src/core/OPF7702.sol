@@ -27,6 +27,7 @@ import {
     SIG_VALIDATION_SUCCESS,
     _packValidationData
 } from "lib/account-abstraction/contracts/core/Helpers.sol";
+import {Initializable} from "lib/openzeppelin-contracts/contracts/proxy/utils/Initializable.sol";
 
 /**
  * @title   Openfort Base Account 7702 with ERC-4337 Support
@@ -41,7 +42,7 @@ import {
  *  • Reentrancy protection & explicit nonce replay prevention
  *
  */
-contract OPF7702 is Execution {
+contract OPF7702 is Execution, Initializable {
     using ECDSA for bytes32;
     using KeyHashLib for Key;
     using KeyHashLib for PubKey;
@@ -91,7 +92,7 @@ contract OPF7702 is Execution {
         if (sigType == KeyType.P256 || sigType == KeyType.P256NONKEY) {
             return _validateKeyTypeP256(sigData, userOpHash, userOp.callData, sigType);
         }
-        return SIG_VALIDATION_FAILED;
+        revert IKeysManager.KeyManager__InvalidKeyType(sigType);
     }
 
     /// @dev validate and enforces per-key-type length bounds, uses to avoid
@@ -124,9 +125,7 @@ contract OPF7702 is Execution {
         returns (uint256)
     {
         address signer = ECDSA.recover(userOpHash, sigData);
-        if (signer == address(0)) {
-            return SIG_VALIDATION_FAILED;
-        }
+
         // if masterKey (this contract) signed it, immediate success
         if (signer == address(this)) {
             return SIG_VALIDATION_SUCCESS;
@@ -184,7 +183,7 @@ contract OPF7702 is Execution {
         );
 
         if (usedChallenges[userOpHash]) {
-            return SIG_VALIDATION_FAILED;
+            revert IKeysManager.KeyManager__UsedChallenge();
         }
         usedChallenges[userOpHash] = true; // mark challenge as used
 
@@ -245,7 +244,7 @@ contract OPF7702 is Execution {
             abi.decode(sigData, (bytes32, bytes32, PubKey));
 
         if (usedChallenges[userOpHash]) {
-            return SIG_VALIDATION_FAILED;
+            revert IKeysManager.KeyManager__UsedChallenge();
         }
         usedChallenges[userOpHash] = true;
 
@@ -494,9 +493,7 @@ contract OPF7702 is Execution {
         returns (bytes4)
     {
         address signer = ECDSA.recover(_hash, _signature);
-        if (signer == address(0)) {
-            return bytes4(0xffffffff);
-        }
+
         if (signer == address(this)) {
             return this.isValidSignature.selector;
         }
