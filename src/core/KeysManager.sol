@@ -169,7 +169,8 @@ abstract contract KeysManager is BaseOPF7702, IKey, SpendLimit {
 
         // Only enforce limits if _limit > 0
         if (_keyData.limit > 0) {
-            sKey.whitelisting = _keyData.whitelisting;
+            sKey.whitelisting = true;
+            /// Session Key enforced to be whitelisting
             sKey.ethLimit = _keyData.ethLimit;
 
             // Whitelist contract and token if requested
@@ -229,6 +230,14 @@ abstract contract KeysManager is BaseOPF7702, IKey, SpendLimit {
         delete sKey.spendTokenInfo;
 
         delete sKey.pubKey;
+    }
+
+    /// @dev Master key must have: validUntil = max(uint48), validAfter = 0, limit = 0, whitelisting = false.
+    function _masterKeyValidation(KeyReg calldata _kReg) internal pure {
+        if (
+            _kReg.limit != 0 || _kReg.whitelisting // must be false
+                || _kReg.validAfter != 0 || _kReg.validUntil != type(uint48).max
+        ) revert IKeysManager.KeyManager__InvalidMasterKeyReg(_kReg);
     }
 
     // =============================================================
