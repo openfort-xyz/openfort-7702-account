@@ -92,7 +92,7 @@ contract OPF7702 is Execution, Initializable {
         if (sigType == KeyType.P256 || sigType == KeyType.P256NONKEY) {
             return _validateKeyTypeP256(sigData, userOpHash, userOp.callData, sigType);
         }
-        return SIG_VALIDATION_FAILED;
+        revert IKeysManager.KeyManager__InvalidKeyType(sigType);
     }
 
     /// @dev validate and enforces per-key-type length bounds, uses to avoid
@@ -125,9 +125,7 @@ contract OPF7702 is Execution, Initializable {
         returns (uint256)
     {
         address signer = ECDSA.recover(userOpHash, sigData);
-        if (signer == address(0)) {
-            return SIG_VALIDATION_FAILED;
-        }
+
         // if masterKey (this contract) signed it, immediate success
         if (signer == address(this)) {
             return SIG_VALIDATION_SUCCESS;
@@ -185,7 +183,7 @@ contract OPF7702 is Execution, Initializable {
         );
 
         if (usedChallenges[userOpHash]) {
-            return SIG_VALIDATION_FAILED;
+            revert IKeysManager.KeyManager__UsedChallenge();
         }
         usedChallenges[userOpHash] = true; // mark challenge as used
 
@@ -246,7 +244,7 @@ contract OPF7702 is Execution, Initializable {
             abi.decode(sigData, (bytes32, bytes32, PubKey));
 
         if (usedChallenges[userOpHash]) {
-            return SIG_VALIDATION_FAILED;
+            revert IKeysManager.KeyManager__UsedChallenge();
         }
         usedChallenges[userOpHash] = true;
 
@@ -495,9 +493,7 @@ contract OPF7702 is Execution, Initializable {
         returns (bytes4)
     {
         address signer = ECDSA.recover(_hash, _signature);
-        if (signer == address(0)) {
-            return bytes4(0xffffffff);
-        }
+
         if (signer == address(this)) {
             return this.isValidSignature.selector;
         }

@@ -29,6 +29,11 @@ interface IKeysManager is IKey {
     error KeyManager__InvalidSignatureLength();
     /// @notice Thrown when KeyReg of MasterKey incorrect
     error KeyManager__InvalidMasterKeyReg(KeyReg _keyData);
+    /// @notice Thrown when KeyType incorrect
+    error KeyManager__InvalidKeyType(KeyType sigType);
+    /// @notice Thrown when challenge was already used
+    error KeyManager__UsedChallenge();
+
     // =============================================================
     //                             EVENTS
     // =============================================================
