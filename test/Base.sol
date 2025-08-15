@@ -302,10 +302,13 @@ contract Base is Test, IKey {
     bytes32 public ERC1271_PUBLIC_KEY_X = stdJson.readBytes32(json_erc1271, ".isValidSignature.x");
     bytes32 public ERC1271_PUBLIC_KEY_Y = stdJson.readBytes32(json_erc1271, ".isValidSignature.y");
 
-    bytes32 public ERC1271_CHALLENGE = stdJson.readBytes32(json_erc1271, ".isValidSignature.challenge");
+    bytes32 public ERC1271_CHALLENGE =
+        stdJson.readBytes32(json_erc1271, ".isValidSignature.challenge");
 
-    bytes32 public ERC1271_SIGNATURE_R = stdJson.readBytes32(json_erc1271, ".isValidSignature.signature.r");
-    bytes32 public ERC1271_SIGNATURE_S = stdJson.readBytes32(json_erc1271, ".isValidSignature.signature.s");
+    bytes32 public ERC1271_SIGNATURE_R =
+        stdJson.readBytes32(json_erc1271, ".isValidSignature.signature.r");
+    bytes32 public ERC1271_SIGNATURE_S =
+        stdJson.readBytes32(json_erc1271, ".isValidSignature.signature.s");
 
     bytes public ERC1271_AUTHENTICATOR_DATA =
         stdJson.readBytes(json_erc1271, ".isValidSignature.metadata.authenticatorData");
