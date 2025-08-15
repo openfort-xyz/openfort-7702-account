@@ -455,8 +455,8 @@ contract OPF7702Recoverable is OPF7702, EIP712Upgradeable, ERC7201 {
             revert IKeysManager.KeyManager__KeyRegistered();
         }
 
-        SpendTokenInfo memory _spendTokenInfo = SpendTokenInfo({token: address(0), limit: 0});
-        bytes4[] memory _allowedSelectors = new bytes4[](3);
+        SpendTokenInfo memory _spendTokenInfo;
+        bytes4[] memory _allowedSelectors;
 
         emit IOPF7702Recoverable.RecoveryCompleted();
 
