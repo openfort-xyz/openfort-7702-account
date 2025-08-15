@@ -15,6 +15,7 @@ pragma solidity ^0.8.29;
 
 import {Execution} from "src/core/Execution.sol";
 import {KeyHashLib} from "src/libs/KeyHashLib.sol";
+import {IKeysManager} from "src/interfaces/IKeysManager.sol";
 import {IWebAuthnVerifier} from "src/interfaces/IWebAuthnVerifier.sol";
 import {EfficientHashLib} from "lib/solady/src/utils/EfficientHashLib.sol";
 import {KeyDataValidationLib as KeyValidation} from "src/libs/KeyDataValidationLib.sol";
@@ -79,6 +80,8 @@ contract OPF7702 is Execution {
         // decode signature envelope: first word is KeyType, second is the raw payload
         (KeyType sigType, bytes memory sigData) = abi.decode(userOp.signature, (KeyType, bytes));
 
+        _checkValidSignatureLength(sigType, userOp.signature.length);
+
         if (sigType == KeyType.EOA) {
             return _validateKeyTypeEOA(sigData, userOpHash, userOp.callData);
         }
@@ -89,6 +92,24 @@ contract OPF7702 is Execution {
             return _validateKeyTypeP256(sigData, userOpHash, userOp.callData, sigType);
         }
         return SIG_VALIDATION_FAILED;
+    }
+
+    /// @dev validate and enforces per-key-type length bounds, uses to avoid
+    ///      copying attacker-supplied padding before the check.
+    function _checkValidSignatureLength(KeyType sigType, uint256 sigLength) private pure {
+        if (sigType == KeyType.EOA) {
+            if (sigLength > 192) {
+                revert IKeysManager.KeyManager__InvalidSignatureLength();
+            }
+        } else if (sigType == KeyType.WEBAUTHN) {
+            if (sigLength > 608) {
+                revert IKeysManager.KeyManager__InvalidSignatureLength();
+            }
+        } else if (sigType == KeyType.P256 || sigType == KeyType.P256NONKEY) {
+            if (sigLength > 224) {
+                revert IKeysManager.KeyManager__InvalidSignatureLength();
+            }
+        }
     }
 
     /**
@@ -490,7 +511,7 @@ contract OPF7702 is Execution {
 
     /**
      * @notice Validate a WebAuthn signature on-chain via ERC-1271.
-     * @param _signature  ABI-encoded: (KeyType, bool UV, bytes authData, string cDataJSON, uint256 cIdx, uint256 tIdx, bytes32 r, bytes32 s, PubKey pubKey)
+     * @param _signature  ABI-encoded: (bool UV, bytes authData, string cDataJSON, uint256 cIdx, uint256 tIdx, bytes32 r, bytes32 s, PubKey pubKey)
      * @param _hash       The hash to verify.
      * @return `this.isValidSignature.selector` if valid; otherwise `0xffffffff`.
      */
@@ -500,7 +521,6 @@ contract OPF7702 is Execution {
         returns (bytes4)
     {
         (
-            ,
             bool requireUV,
             bytes memory authenticatorData,
             string memory clientDataJSON,
@@ -510,7 +530,7 @@ contract OPF7702 is Execution {
             bytes32 s,
             PubKey memory pubKey
         ) = abi.decode(
-            _signature, (KeyType, bool, bytes, string, uint256, uint256, bytes32, bytes32, PubKey)
+            _signature, (bool, bytes, string, uint256, uint256, bytes32, bytes32, PubKey)
         );
 
         if (usedChallenges[_hash]) {

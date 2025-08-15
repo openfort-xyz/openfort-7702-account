@@ -296,6 +296,26 @@ contract Base is Test, IKey {
     string public CHANGE_CLIENT_DATA_JSON =
         stdJson.readString(json_change, ".change.metadata.clientDataJSON");
 
+    /* ───────────────────────────────────────────────────────────── master key ── */
+    string public json_erc1271 = vm.readFile("test/data/isValidSignature.json");
+
+    bytes32 public ERC1271_PUBLIC_KEY_X = stdJson.readBytes32(json_erc1271, ".isValidSignature.x");
+    bytes32 public ERC1271_PUBLIC_KEY_Y = stdJson.readBytes32(json_erc1271, ".isValidSignature.y");
+
+    bytes32 public ERC1271_CHALLENGE =
+        stdJson.readBytes32(json_erc1271, ".isValidSignature.challenge");
+
+    bytes32 public ERC1271_SIGNATURE_R =
+        stdJson.readBytes32(json_erc1271, ".isValidSignature.signature.r");
+    bytes32 public ERC1271_SIGNATURE_S =
+        stdJson.readBytes32(json_erc1271, ".isValidSignature.signature.s");
+
+    bytes public ERC1271_AUTHENTICATOR_DATA =
+        stdJson.readBytes(json_erc1271, ".isValidSignature.metadata.authenticatorData");
+
+    string public ERC1271_CLIENT_DATA_JSON =
+        stdJson.readString(json_erc1271, ".isValidSignature.metadata.clientDataJSON");
+
     function _allowedSelectors() internal pure returns (bytes4[] memory sel) {
         sel = new bytes4[](3);
         sel[0] = 0xa9059cbb;
