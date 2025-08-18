@@ -16,23 +16,23 @@ abstract contract SpendLimit {
     }
 
     /**
-    * @notice Validates and debits ERC-20 token spend for a session key.
-    * @dev Calldata expectation: `innerData` is ABI-encoded for an ERC-20 method
-    *      whose **last parameter is the token amount (uint256)**, e.g.:
-    *        - transfer(address to, uint256 amount)          // selector 0xa9059cbb
-    *        - transferFrom(address from, address to, uint256 amount) // 0x23b872dd
-    *
-    *      We read the final 32-byte word of `innerData` as `amount`, require
-    *      `amount <= key.spendTokenInfo.limit`, and then decrement the limit by `amount`.
-    *
-    *      Out of scope (not interpreted here): ERC-777, ERC-1363, ERC-4626, permit flows,
-    *      or any function where the amount is not the last argument. Such selectors must be
-    *      blocked elsewhere (e.g., via allowed selectors) to avoid mis-accounting.
-    *
-    * @param key       Storage reference to the key’s data (limit is read/decremented).
-    * @param innerData Full ABI-encoded token call; last 32 bytes must be `amount`.
-    * @return True if within limit and debited; false if it exceeds.
-    */
+     * @notice Validates and debits ERC-20 token spend for a session key.
+     * @dev Calldata expectation: `innerData` is ABI-encoded for an ERC-20 method
+     *      whose **last parameter is the token amount (uint256)**, e.g.:
+     *        - transfer(address to, uint256 amount)          // selector 0xa9059cbb
+     *        - transferFrom(address from, address to, uint256 amount) // 0x23b872dd
+     *
+     *      We read the final 32-byte word of `innerData` as `amount`, require
+     *      `amount <= key.spendTokenInfo.limit`, and then decrement the limit by `amount`.
+     *
+     *      Out of scope (not interpreted here): ERC-777, ERC-1363, ERC-4626, permit flows,
+     *      or any function where the amount is not the last argument. Such selectors must be
+     *      blocked elsewhere (e.g., via allowed selectors) to avoid mis-accounting.
+     *
+     * @param key       Storage reference to the key’s data (limit is read/decremented).
+     * @param innerData Full ABI-encoded token call; last 32 bytes must be `amount`.
+     * @return True if within limit and debited; false if it exceeds.
+     */
     function _validateTokenSpend(IKey.KeyData storage key, bytes memory innerData)
         internal
         virtual

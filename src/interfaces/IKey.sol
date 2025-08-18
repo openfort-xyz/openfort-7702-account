@@ -6,16 +6,16 @@ import {SpendLimit} from "src/utils/SpendLimit.sol";
 
 interface IKey {
     /**
-    * @notice Types of keys supported by the account.
-    * @dev
-    * - EOA:        secp256k1 ECDSA signatures (r,s,v). Standard Ethereum accounts.
-    * - WEBAUTHN:   FIDO2/WebAuthn P-256 (secp256r1) with authenticatorData/clientDataJSON;
-    *               validated via the WebAuthn verifier.
-    * - P256:       Raw P-256 (secp256r1) signatures over the message, using an extractable
-    *               public key provided on registration (`PubKey{x,y}`).
-    * - P256NONKEY: P-256 signatures produced by non-extractable WebCrypto keys; message is
-    *               prehashed on-chain with SHA-256 before verification to match the key’s usage.
-    */
+     * @notice Types of keys supported by the account.
+     * @dev
+     * - EOA:        secp256k1 ECDSA signatures (r,s,v). Standard Ethereum accounts.
+     * - WEBAUTHN:   FIDO2/WebAuthn P-256 (secp256r1) with authenticatorData/clientDataJSON;
+     *               validated via the WebAuthn verifier.
+     * - P256:       Raw P-256 (secp256r1) signatures over the message, using an extractable
+     *               public key provided on registration (`PubKey{x,y}`).
+     * - P256NONKEY: P-256 signatures produced by non-extractable WebCrypto keys; message is
+     *               prehashed on-chain with SHA-256 before verification to match the key’s usage.
+     */
     enum KeyType {
         EOA,
         WEBAUTHN,
