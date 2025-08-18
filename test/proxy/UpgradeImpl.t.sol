@@ -147,17 +147,47 @@ contract UpgradeImpl is Base {
 
         bytes32 initialGuardian = keccak256(abi.encodePacked(sender));
 
+        bytes memory keyEnc =
+            abi.encode(keyMK.pubKey.x, keyMK.pubKey.y, keyMK.eoaAddress, keyMK.keyType);
+
+        bytes memory keyDataEnc = abi.encode(
+            keyData.validUntil,
+            keyData.validAfter,
+            keyData.limit,
+            keyData.whitelisting,
+            keyData.contractAddress,
+            keyData.spendTokenInfo.token,
+            keyData.spendTokenInfo.limit,
+            keyData.allowedSelectors,
+            keyData.ethLimit
+        );
+
+        bytes memory skEnc = abi.encode(
+            keySK.pubKey.x, keySK.pubKey.y, keySK.eoaAddress, keySK.keyType
+        );
+
+        bytes memory skDataEnc = abi.encode(
+            keyDataSK.validUntil,
+            keyDataSK.validAfter,
+            keyDataSK.limit,
+            keyDataSK.whitelisting,
+            keyDataSK.contractAddress,
+            keyDataSK.spendTokenInfo.token,
+            keyDataSK.spendTokenInfo.limit,
+            keyDataSK.allowedSelectors
+        );
+
         bytes32 structHash = keccak256(
             abi.encode(
                 INIT_TYPEHASH,
-                keyMK.pubKey.x,
-                keyMK.pubKey.y,
-                keyMK.eoaAddress,
-                keyMK.keyType,
+                keyEnc,
+                keyDataEnc,
+                skEnc,
+                skDataEnc,
                 initialGuardian
             )
         );
-
+        
         string memory name = "OPF7702Recoverable";
         string memory version = "1";
 
