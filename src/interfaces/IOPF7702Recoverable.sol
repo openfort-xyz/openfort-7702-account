@@ -50,6 +50,8 @@ interface IOPF7702Recoverable is IOPF7702 {
     error OPF7702Recoverable__AccountLocked();
     /// @dev Thrown when a guardian revocation is unknown for the given guardian.
     error OPF7702Recoverable__UnknownRevoke();
+    /// @notice Thrown when setUp incorrect of recovery time settings
+    error OPF7702Recoverable_InsecurePeriod();
     /// @dev Thrown when the caller must be an active guardian but is not.
     error OPF7702Recoverable__MustBeGuardian();
     /// @dev Thrown when a guardian addition proposal is unknown.
