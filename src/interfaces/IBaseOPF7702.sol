@@ -20,8 +20,6 @@ interface IBaseOPF7702 is IAccount, IERC1271, IERC165, IERC721Receiver, IERC1155
     error OpenfortBaseAccount7702V1__InvalidSignature();
     /// @notice msg.sender not from address(this) and nit from Entry Point
     error OpenfortBaseAccount7702V1_UnauthorizedCaller();
-    /// @notice Thrown when setUp incorrect of recovery time settings
-    error OpenfortBaseAccount7702V1_InsecurePeriod();
 
     // =============================================================
     //                             EVENTS
