@@ -276,7 +276,7 @@ contract OPF7702 is Execution, Initializable {
     /// @return isValid True if key is both registered and active, false otherwise
     function _keyValidation(KeyData storage sKey) internal view returns (bool isValid) {
         // Check if key is valid and active
-        if (!sKey.isRegistered() || !sKey.isActive) {
+        if (!(sKey.isRegistered() && sKey.isActive)) {
             return false; // Early return for invalid key
         }
 
@@ -380,7 +380,7 @@ contract OPF7702 is Execution, Initializable {
             if (!validSpend) return false;
         }
 
-        if (!sKey.whitelisting || !sKey.whitelist[call.target]) {
+        if (!(sKey.whitelisting && sKey.whitelist[call.target])) {
             return false;
         }
         return true;
@@ -417,7 +417,9 @@ contract OPF7702 is Execution, Initializable {
             return false;
         }
         if (value > 0) {
-            sKey.spendTokenInfo.limit -= value;
+            unchecked {
+                sKey.spendTokenInfo.limit -= value;
+            }
         }
         return true;
     }
