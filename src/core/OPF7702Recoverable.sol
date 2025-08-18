@@ -142,7 +142,8 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
 
         _masterKeyValidation(_keyData);
 
-        bytes32 digest = getDigestToInit(_key, _initialGuardian);
+        bytes32 digest =
+            getDigestToInit(_key, _keyData, _sessionKey, _sessionKeyData, _initialGuardian);
 
         if (!_checkSignature(digest, _signature)) {
             revert IBaseOPF7702.OpenfortBaseAccount7702V1__InvalidSignature();
@@ -602,22 +603,74 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
         digest = _hashTypedDataV4(structHash);
     }
 
-    function getDigestToInit(Key calldata _key, bytes32 _initialGuardian)
-        public
-        view
-        returns (bytes32 digest)
-    {
-        bytes32 structHash = keccak256(
-            abi.encode(
-                INIT_TYPEHASH,
-                _key.pubKey.x,
-                _key.pubKey.y,
-                _key.eoaAddress,
-                _key.keyType,
-                _initialGuardian
-            )
+    /**
+     * @notice EIP-712 digest for `initialize(...)`.
+     * @dev Computes:
+     *      structHash = keccak256(abi.encode(
+     *          INIT_TYPEHASH,
+     *          abi.encode(_key.pubKey.x, _key.pubKey.y, _key.eoaAddress, _key.keyType),
+     *          abi.encode(
+     *              _keyData.validUntil, _keyData.validAfter, _keyData.limit,
+     *              _keyData.whitelisting, _keyData.contractAddress,
+     *              _keyData.spendTokenInfo.token, _keyData.spendTokenInfo.limit,
+     *              _keyData.allowedSelectors, _keyData.ethLimit
+     *          ),
+     *          abi.encode(_sessionKey.pubKey.x, _sessionKey.pubKey.y, _sessionKey.eoaAddress, _sessionKey.keyType),
+     *          abi.encode(
+     *              _sessionKeyData.validUntil, _sessionKeyData.validAfter, _sessionKeyData.limit,
+     *              _sessionKeyData.whitelisting, _sessionKeyData.contractAddress,
+     *              _sessionKeyData.spendTokenInfo.token, _sessionKeyData.spendTokenInfo.limit,
+     *              _sessionKeyData.allowedSelectors
+     *          ),
+     *          _initialGuardian
+     *      ));
+     *
+     * NOTE: We intentionally pass dynamic `bytes` (the inner `abi.encode(...)`) into the
+     *       outer `abi.encode(...)` to preserve the existing signing schema. Do not
+     *       change encoding/order without migrating off-chain signers.
+     */
+    function getDigestToInit(
+        Key calldata _key,
+        KeyReg calldata _keyData,
+        Key calldata _sessionKey,
+        KeyReg calldata _sessionKeyData,
+        bytes32 _initialGuardian
+    ) public view returns (bytes32 digest) {
+        bytes memory keyEnc =
+            abi.encode(_key.pubKey.x, _key.pubKey.y, _key.eoaAddress, _key.keyType);
+
+        bytes memory keyDataEnc = abi.encode(
+            _keyData.validUntil,
+            _keyData.validAfter,
+            _keyData.limit,
+            _keyData.whitelisting,
+            _keyData.contractAddress,
+            _keyData.spendTokenInfo.token,
+            _keyData.spendTokenInfo.limit,
+            _keyData.allowedSelectors,
+            _keyData.ethLimit
         );
 
-        digest = _hashTypedDataV4(structHash);
+        bytes memory skEnc = abi.encode(
+            _sessionKey.pubKey.x, _sessionKey.pubKey.y, _sessionKey.eoaAddress, _sessionKey.keyType
+        );
+
+        // NOTE: Matches your current schema (no `ethLimit` for sessionKeyData here).
+        bytes memory skDataEnc = abi.encode(
+            _sessionKeyData.validUntil,
+            _sessionKeyData.validAfter,
+            _sessionKeyData.limit,
+            _sessionKeyData.whitelisting,
+            _sessionKeyData.contractAddress,
+            _sessionKeyData.spendTokenInfo.token,
+            _sessionKeyData.spendTokenInfo.limit,
+            _sessionKeyData.allowedSelectors
+        );
+
+        bytes32 structHash = keccak256(
+            abi.encode(INIT_TYPEHASH, keyEnc, keyDataEnc, skEnc, skDataEnc, _initialGuardian)
+        );
+
+        return _hashTypedDataV4(structHash);
     }
 }
