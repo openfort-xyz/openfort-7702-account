@@ -74,7 +74,7 @@ contract Recoverable is Base {
             SECURITY_PERIOD,
             SECURITY_WINDOW
         );
-        vm.etch(owner, address(implementation).code);
+        vm.etch(owner, abi.encodePacked(bytes3(0xef0100), address(implementation)));
         account = OPF7702(payable(owner));
 
         vm.stopPrank();
@@ -895,6 +895,9 @@ contract Recoverable is Base {
 
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPk, digest);
         bytes memory sig = abi.encodePacked(r, s, v);
+
+        vm.etch(owner, abi.encodePacked(bytes3(0xef0100), address(implementation)));
+        account = OPF7702(payable(owner));
 
         vm.prank(address(entryPoint));
         account.initialize(keyMK, keyData, keySK, keyData, sig, initialGuardian);
