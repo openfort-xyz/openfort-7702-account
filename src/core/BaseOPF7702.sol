@@ -35,7 +35,6 @@ abstract contract BaseOPF7702 is
     IERC165,
     IERC1271,
     IERC7821,
-    IAccount,
     BaseAccount,
     ERC721Holder,
     ERC1155Holder,

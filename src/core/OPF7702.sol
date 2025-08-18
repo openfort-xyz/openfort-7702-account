@@ -404,7 +404,6 @@ contract OPF7702 is Execution, Initializable {
      */
     function _validateTokenSpend(KeyData storage sKey, bytes memory innerData)
         internal
-        override
         returns (bool)
     {
         uint256 len = innerData.length;

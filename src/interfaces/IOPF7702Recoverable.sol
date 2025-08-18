@@ -3,7 +3,6 @@ pragma solidity 0.8.29;
 
 import {IKey} from "./IKey.sol";
 import {IOPF7702} from "./IOPF7702.sol";
-import {SpendLimit} from "../utils/SpendLimit.sol";
 
 /// @title Interface for OPF7702Recoverable
 /// @notice Extends the core IOPF7702 with guardian‐based recovery functions.

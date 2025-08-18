@@ -12,8 +12,8 @@ import {IEntryPoint} from "lib/account-abstraction/contracts/interfaces/IEntryPo
 import {OPFMain as OPF7702} from "src/core/OPFMain.sol";
 import {BaseOPF7702} from "src/core/BaseOPF7702.sol";
 import {MockERC20} from "src/mocks/MockERC20.sol";
-import {SpendLimit} from "src/utils/SpendLimit.sol";
 import {IKey} from "src/interfaces/IKey.sol";
+import {ISpendLimit} from "src/interfaces/ISpendLimit.sol";
 import {WebAuthnVerifier} from "src/utils/WebAuthnVerifier.sol";
 import {PackedUserOperation} from
     "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
@@ -457,8 +457,8 @@ contract DepositAndTransferETH is Base {
 
         keySK = Key({pubKey: pubKeySK, eoaAddress: sessionKey, keyType: KeyType.EOA});
 
-        SpendLimit.SpendTokenInfo memory spendInfo =
-            SpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000e18});
+        ISpendLimit.SpendTokenInfo memory spendInfo =
+            ISpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000e18});
 
         keyData = KeyReg({
             validUntil: validUntil,
@@ -488,8 +488,8 @@ contract DepositAndTransferETH is Base {
 
         keySK = Key({pubKey: pubKeySK, eoaAddress: address(0), keyType: KeyType.P256});
 
-        SpendLimit.SpendTokenInfo memory spendInfo =
-            SpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000e18});
+        ISpendLimit.SpendTokenInfo memory spendInfo =
+            ISpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000e18});
 
         keyData = KeyReg({
             validUntil: validUntil,
@@ -519,8 +519,8 @@ contract DepositAndTransferETH is Base {
 
         keySK = Key({pubKey: pubKeySK, eoaAddress: address(0), keyType: KeyType.P256NONKEY});
 
-        SpendLimit.SpendTokenInfo memory spendInfo =
-            SpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000e18});
+        ISpendLimit.SpendTokenInfo memory spendInfo =
+            ISpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000e18});
 
         keyData = KeyReg({
             validUntil: validUntil,
@@ -550,8 +550,8 @@ contract DepositAndTransferETH is Base {
 
         keyMK = Key({pubKey: pubKeyMK, eoaAddress: address(0), keyType: KeyType.WEBAUTHN});
 
-        SpendLimit.SpendTokenInfo memory spendInfo =
-            SpendLimit.SpendTokenInfo({token: TOKEN, limit: 0});
+        ISpendLimit.SpendTokenInfo memory spendInfo =
+            ISpendLimit.SpendTokenInfo({token: TOKEN, limit: 0});
 
         keyData = KeyReg({
             validUntil: type(uint48).max,
