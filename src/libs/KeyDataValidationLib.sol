@@ -71,11 +71,13 @@ library KeyDataValidationLib {
         ok = hasQuota(sKey) && withinEthLimit(sKey, weiValue);
     }
 
-    /// @return ok True when the key not Empty.
+    /// @return ok True if neither an EOA address nor a public key is set.
     function checkKey(IKey.Key memory sKey) internal pure returns (bool ok) {
+        // Key is non-empty if it has an EOA address...
         bool hasAddress = sKey.eoaAddress != address(0);
+        // ...or any non-zero pubkey coordinate.
         bool hasPubKey = sKey.pubKey.x != bytes32(0) || sKey.pubKey.y != bytes32(0);
 
-        ok = !hasAddress && !hasPubKey; // Returns true when BOTH are false (empty)
+        ok = !hasAddress && !hasPubKey; // Returns only when both representations are absent.
     }
 }

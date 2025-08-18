@@ -190,10 +190,9 @@ abstract contract KeysManager is BaseOPF7702, IKey, SpendLimit {
                         ++i;
                     }
                 }
-            } else {
-                // Even if not whitelisting contracts, we must still validate token
-                _keyData.spendTokenInfo.token.ensureNotZero();
             }
+
+            _keyData.spendTokenInfo.token.ensureNotZero();
 
             // Configure spendTokenInfo regardless of whitelisting
             sKey.spendTokenInfo.token = _keyData.spendTokenInfo.token;

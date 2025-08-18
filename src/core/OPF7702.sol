@@ -276,32 +276,23 @@ contract OPF7702 is Execution, Initializable {
     /// @return isValid True if key is both registered and active, false otherwise
     function _keyValidation(KeyData storage sKey) internal view returns (bool isValid) {
         // Check if key is valid and active
-        if (!sKey.isRegistered() || !sKey.isActive) {
+        if (!(sKey.isRegistered() && sKey.isActive)) {
             return false; // Early return for invalid key
         }
 
         return true;
     }
 
-    /**
-     * @notice Determines if a given key may perform `execute` or `executeBatch`.
-     * @dev
-     *  • Loads the correct `KeyData` based on `KeyType`:
-     *      – WEBAUTHN/P256/P256NONKEY/EOA → `keys[keccak(pubKey.x,pubKey.y)]`
-     *  • Checks: validUntil != 0, isActive.
-     *  • Extracts the first 4 bytes of `_callData` and calls:
-     *      – `_validateExecuteCall(...)`
-     *      – `_validateExecuteBatchCall(...)`
-     * @param _callData  The calldata (starting with selector).
-     * @return True if permitted, false otherwise.
-     */
-    /// Todo: Update natspec
+    /// @dev Authorizes `_callData` for `sKey`.
+    ///      Supports only `execute(bytes32,bytes)` (selector 0xe9ae5c53) and
+    ///      defers granular checks to `_validateExecuteCall(...)`.
+    ///      Unknown selectors return false. May consume per-key quotas/limits downstream.
     function isValidKey(bytes calldata _callData, KeyData storage sKey)
         internal
         virtual
         returns (bool)
     {
-        // Extract function selector from callData
+        // Extract function selector from callData execute(bytes32,bytes)
         bytes4 funcSelector = bytes4(_callData[:4]);
 
         if (funcSelector == 0xe9ae5c53) {
@@ -313,7 +304,7 @@ contract OPF7702 is Execution, Initializable {
     /**
      * @notice Validates a single `execute(target, value, data)` call.
      * @dev
-     *  • Decode `(address toContract, uint256 amount, bytes innerData)`.
+     *  • Decode `execute(bytes32,bytes)`.
      *  • If `toContract == address(this)`, revert.
      *  • If `masterKey`, immediate true.
      *  • Else enforce:
@@ -322,6 +313,7 @@ contract OPF7702 is Execution, Initializable {
      *      - `bytes4(innerData)` ∈ `allowedSelectors`
      *      - Decrement `limit` and subtract `amount` from `ethLimit`
      *      - If `spendTokenInfo.token == toContract`, call `_validateTokenSpend(...)`
+     *      - If whitelisting enable and target is whitelisted
      *      - If `whitelisting`, ensure `toContract` ∈ `whitelist`
      *
      * @param sKey       Storage reference of the KeyData
@@ -388,7 +380,7 @@ contract OPF7702 is Execution, Initializable {
             if (!validSpend) return false;
         }
 
-        if (!sKey.whitelisting || !sKey.whitelist[call.target]) {
+        if (!(sKey.whitelisting && sKey.whitelist[call.target])) {
             return false;
         }
         return true;
@@ -425,7 +417,9 @@ contract OPF7702 is Execution, Initializable {
             return false;
         }
         if (value > 0) {
-            sKey.spendTokenInfo.limit -= value;
+            unchecked {
+                sKey.spendTokenInfo.limit -= value;
+            }
         }
         return true;
     }
