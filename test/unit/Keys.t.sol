@@ -318,9 +318,8 @@ contract KeysTest is Base {
             keyData.ethLimit
         );
 
-        bytes memory skEnc = abi.encode(
-            keySK.pubKey.x, keySK.pubKey.y, keySK.eoaAddress, keySK.keyType
-        );
+        bytes memory skEnc =
+            abi.encode(keySK.pubKey.x, keySK.pubKey.y, keySK.eoaAddress, keySK.keyType);
 
         bytes memory skDataEnc = abi.encode(
             keyData.validUntil,
@@ -334,14 +333,7 @@ contract KeysTest is Base {
         );
 
         bytes32 structHash = keccak256(
-            abi.encode(
-                INIT_TYPEHASH,
-                keyEnc,
-                keyDataEnc,
-                skEnc,
-                skDataEnc,
-                initialGuardian
-            )
+            abi.encode(INIT_TYPEHASH, keyEnc, keyDataEnc, skEnc, skDataEnc, initialGuardian)
         );
 
         string memory name = "OPF7702Recoverable";
