@@ -2,7 +2,6 @@
 pragma solidity 0.8.29;
 
 import {IKey} from "src/interfaces/IKey.sol";
-import {SpendLimit} from "src/utils/SpendLimit.sol";
 
 /// @title IKeysManager
 /// @notice Interface for `KeysManager`, which handles registration, revocation, and querying of keys (WebAuthn/P256/EOA) with spending limits and whitelisting support.

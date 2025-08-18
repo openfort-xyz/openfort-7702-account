@@ -3,8 +3,8 @@
 pragma solidity 0.8.29;
 
 import {Base} from "test/Base.sol";
-import {SpendLimit} from "src/utils/SpendLimit.sol";
 import {OPFMain as OPF7702} from "src/core/OPFMain.sol";
+import {ISpendLimit} from "src/interfaces/ISpendLimit.sol";
 import {WebAuthnVerifier} from "src/utils/WebAuthnVerifier.sol";
 import {LibEIP7702} from "lib/solady/src/accounts/LibEIP7702.sol";
 import {Test, console2 as console} from "lib/forge-std/src/Test.sol";
@@ -115,8 +115,8 @@ contract UpgradeImpl is Base {
 
         keyMK = Key({pubKey: pubKeyMK, eoaAddress: address(0), keyType: KeyType.WEBAUTHN});
 
-        SpendLimit.SpendTokenInfo memory spendInfo =
-            SpendLimit.SpendTokenInfo({token: TOKEN, limit: 0});
+        ISpendLimit.SpendTokenInfo memory spendInfo =
+            ISpendLimit.SpendTokenInfo({token: TOKEN, limit: 0});
 
         keyData = KeyReg({
             validUntil: type(uint48).max,

@@ -16,16 +16,16 @@ pragma solidity ^0.8.29;
 
 import {IKey} from "src/interfaces/IKey.sol";
 import {KeyHashLib} from "src/libs/KeyHashLib.sol";
-import {SpendLimit} from "src/utils/SpendLimit.sol";
 import {BaseOPF7702} from "src/core/BaseOPF7702.sol";
 import {ValidationLib} from "src/libs/ValidationLib.sol";
+import {ISpendLimit} from "src/interfaces/ISpendLimit.sol";
 import {IKeysManager} from "src/interfaces/IKeysManager.sol";
 
 /// @title KeysManager
 /// @author Openfort@0xkoiner
 /// @notice Manages registration, revocation, and querying of keys (WebAuthn/P256/EOA) with spending limits and whitelisting support.
 /// @dev Inherits BaseOPF7702 for account abstraction, IKey interface, and SpendLimit for token/ETH limits.
-abstract contract KeysManager is BaseOPF7702, IKey, SpendLimit {
+abstract contract KeysManager is BaseOPF7702, IKey, ISpendLimit {
     using KeyHashLib for Key;
     using ValidationLib for *;
 

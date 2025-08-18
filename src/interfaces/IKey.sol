@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.29;
 
-import {SpendLimit} from "src/utils/SpendLimit.sol";
+import {ISpendLimit} from "src/interfaces/ISpendLimit.sol";
 
 interface IKey {
     /**
@@ -68,7 +68,7 @@ interface IKey {
         bool masterKey;
         bool whitelisting;
         mapping(address contractAddress => bool allowed) whitelist;
-        SpendLimit.SpendTokenInfo spendTokenInfo;
+        ISpendLimit.SpendTokenInfo spendTokenInfo;
         bytes4[] allowedSelectors;
         uint256 ethLimit;
     }
@@ -90,7 +90,7 @@ interface IKey {
         uint48 limit;
         bool whitelisting;
         address contractAddress;
-        SpendLimit.SpendTokenInfo spendTokenInfo;
+        ISpendLimit.SpendTokenInfo spendTokenInfo;
         bytes4[] allowedSelectors;
         uint256 ethLimit;
     }

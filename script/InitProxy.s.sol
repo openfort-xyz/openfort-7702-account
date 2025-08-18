@@ -5,7 +5,7 @@ pragma solidity 0.8.29;
 import {Base} from "test/Base.sol";
 import "lib/forge-std/src/StdJson.sol";
 import {IKey} from "src/interfaces/IKey.sol";
-import {SpendLimit} from "src/utils/SpendLimit.sol";
+import {ISpendLimit} from "src/interfaces/ISpendLimit.sol";
 import {OPFMain as OPF7702} from "src/core/OPFMain.sol";
 import {Script, console2 as console} from "lib/forge-std/src/Script.sol";
 import {MessageHashUtils} from
@@ -55,8 +55,8 @@ contract InitProxy is Script, IKey {
         opf = OPF7702(payable(owner));
         pubKeyMK = PubKey({x: REG_PUBLIC_KEY_X, y: REG_PUBLIC_KEY_Y});
         keyMK = Key({pubKey: pubKeyMK, eoaAddress: address(0), keyType: KeyType.WEBAUTHN});
-        SpendLimit.SpendTokenInfo memory spendInfo =
-            SpendLimit.SpendTokenInfo({token: TOKEN, limit: 0});
+        ISpendLimit.SpendTokenInfo memory spendInfo =
+            ISpendLimit.SpendTokenInfo({token: TOKEN, limit: 0});
 
         keyData = KeyReg({
             validUntil: type(uint48).max,
@@ -74,8 +74,8 @@ contract InitProxy is Script, IKey {
         uint48 validUntil = uint48(1795096759);
         uint48 limit = uint48(20);
 
-        SpendLimit.SpendTokenInfo memory spendInfoSK =
-            SpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000e18});
+        ISpendLimit.SpendTokenInfo memory spendInfoSK =
+            ISpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000e18});
 
         keyDataSK = KeyReg({
             validUntil: validUntil,
