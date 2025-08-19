@@ -16,6 +16,7 @@ interface IUserOpPolicy is IPolicy {
     error GasPolicy_PerOpCostHigh();
     error GasPolicy_PerOpCostOverflow();
     error GasPolicy__AccountMustBeSender();
+    error GasPolicy__IdExistAlready();
 
     struct InitData {
         uint128 gasLimit;

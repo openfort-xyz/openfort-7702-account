@@ -105,10 +105,12 @@ contract GasPolicy is IUserOpPolicy {
         external
     {
         require(account == msg.sender, GasPolicy__AccountMustBeSender());
+        GasLimitConfig storage cfg = gasLimitConfigs[configId][msg.sender][account];
+        if (cfg.gasLimit > 0) revert GasPolicy__IdExistAlready();
+
         InitData memory d = abi.decode(initData, (InitData));
         require(d.gasLimit != 0 && d.costLimit != 0, GasPolicy__ZeroBudgets());
 
-        GasLimitConfig storage cfg = gasLimitConfigs[configId][msg.sender][account];
         _applyManualConfig(cfg, d);
     }
 
@@ -128,6 +130,8 @@ contract GasPolicy is IUserOpPolicy {
      */
     function initializeWithMultiplexer(address account, bytes32 configId, uint256 limit) external {
         require(account == msg.sender, GasPolicy__AccountMustBeSender());
+        GasLimitConfig storage cfg = gasLimitConfigs[configId][msg.sender][account];
+        if (cfg.gasLimit > 0) revert GasPolicy__IdExistAlready();
         require(limit > 0 && limit <= type(uint32).max, GasPolicy__BadLimit());
 
         // 1) Envelope units per op with safety (includes PM legs so it also covers sponsored ops)
@@ -165,7 +169,6 @@ contract GasPolicy is IUserOpPolicy {
             require(gasLimit256 <= type(uint128).max, GasPolicy_GasLimitHigh());
             require(costLimit256 <= type(uint128).max, GasPolicy_CostLimitHigh());
 
-            GasLimitConfig storage cfg = gasLimitConfigs[configId][msg.sender][account];
             _applyAutoConfig(
                 cfg,
                 uint128(gasLimit256),
