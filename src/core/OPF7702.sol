@@ -122,10 +122,11 @@ contract OPF7702 is Execution, Initializable {
      * @param userOp      The packed user operation coming from EntryPoint.
      * @return Packed validation output, or SIG_VALIDATION_FAILED.
      */
-    function _validateKeyTypeEOA(bytes memory sigData, bytes32 userOpHash, PackedUserOperation calldata userOp)
-        private
-        returns (uint256)
-    {
+    function _validateKeyTypeEOA(
+        bytes memory sigData,
+        bytes32 userOpHash,
+        PackedUserOperation calldata userOp
+    ) private returns (uint256) {
         address signer = ECDSA.recover(userOpHash, sigData);
 
         // if masterKey (this contract) signed it, immediate success
@@ -145,8 +146,9 @@ contract OPF7702 is Execution, Initializable {
             return SIG_VALIDATION_SUCCESS;
         }
 
-        uint256 isValidGas = IUserOpPolicy(GAS_POLICY).checkUserOpPolicy(signer.computeKeyId(), userOp);
-        
+        uint256 isValidGas =
+            IUserOpPolicy(GAS_POLICY).checkUserOpPolicy(signer.computeKeyId(), userOp);
+
         if (isValidGas == 1) revert IKeysManager.KeyManager__RevertGasPolicy();
 
         if (isValidKey(userOp.callData, sKey)) {
@@ -171,7 +173,7 @@ contract OPF7702 is Execution, Initializable {
     function _validateKeyTypeWEBAUTHN(
         bytes32 userOpHash,
         bytes calldata signature,
-         PackedUserOperation calldata userOp
+        PackedUserOperation calldata userOp
     ) private returns (uint256) {
         // decode everything in one shot
         (
@@ -220,8 +222,9 @@ contract OPF7702 is Execution, Initializable {
             return SIG_VALIDATION_SUCCESS;
         }
 
-        uint256 isValidGas = IUserOpPolicy(GAS_POLICY).checkUserOpPolicy(pubKey.computeKeyId(), userOp);
-        
+        uint256 isValidGas =
+            IUserOpPolicy(GAS_POLICY).checkUserOpPolicy(pubKey.computeKeyId(), userOp);
+
         if (isValidGas == 1) revert IKeysManager.KeyManager__RevertGasPolicy();
 
         if (isValidKey(userOp.callData, sKey)) {
@@ -275,8 +278,9 @@ contract OPF7702 is Execution, Initializable {
 
         if (!isValid) return SIG_VALIDATION_FAILED;
 
-        uint256 isValidGas = IUserOpPolicy(GAS_POLICY).checkUserOpPolicy(pubKey.computeKeyId(), userOp);
-        
+        uint256 isValidGas =
+            IUserOpPolicy(GAS_POLICY).checkUserOpPolicy(pubKey.computeKeyId(), userOp);
+
         if (isValidGas == 1) revert IKeysManager.KeyManager__RevertGasPolicy();
 
         if (isValidKey(userOp.callData, sKey)) {

@@ -368,7 +368,9 @@ contract Execution7821 is Base {
     }
 
     function test_ExecuteBatchOfBatches7821Reverts() public {
-        console.log("/* -------------------------------- test_ExecuteBatchOfBatches7821Reverts -------- */");
+        console.log(
+            "/* -------------------------------- test_ExecuteBatchOfBatches7821Reverts -------- */"
+        );
 
         // Create first batch - minting operations
         Call[] memory mintBatch = new Call[](10);
@@ -532,7 +534,9 @@ contract Execution7821 is Base {
         // uint256 allowance = IERC20(TOKEN).allowance(owner, address(0x456));
         // assertEq(allowance, 1e18, "Approval should be 1e18");
 
-        console.log("/* -------------------------------- test_ExecuteBatchOfBatches7821Reverts -------- */");
+        console.log(
+            "/* -------------------------------- test_ExecuteBatchOfBatches7821Reverts -------- */"
+        );
     }
 
     function test_ExecuteSKEOA7821() public {
@@ -1473,7 +1477,7 @@ contract Execution7821 is Base {
             nonce: nonce,
             initCode: hex"7702",
             callData: callData,
-            accountGasLimits:_packAccountGasLimits(360_000, 240_000),
+            accountGasLimits: _packAccountGasLimits(360_000, 240_000),
             preVerificationGas: 110_000,
             gasFees: _packGasFees(2 gwei, 50 gwei),
             paymasterAndData: hex"",
