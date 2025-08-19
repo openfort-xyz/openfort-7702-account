@@ -98,9 +98,9 @@ contract P256Test is Base {
             nonce: nonce,
             initCode: hex"7702",
             callData: callData,
-            accountGasLimits: _packAccountGasLimits(600000, 400000),
-            preVerificationGas: 800000,
-            gasFees: _packGasFees(80 gwei, 15 gwei),
+            accountGasLimits: _packAccountGasLimits(360_000, 240_000),
+            preVerificationGas: 110_000,
+            gasFees: _packGasFees(2 gwei, 50 gwei),
             paymasterAndData: hex"",
             signature: hex""
         });

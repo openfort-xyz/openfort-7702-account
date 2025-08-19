@@ -29,7 +29,6 @@ import {
     _packValidationData
 } from "lib/account-abstraction/contracts/core/Helpers.sol";
 import {Initializable} from "lib/openzeppelin-contracts/contracts/proxy/utils/Initializable.sol";
-import {Test, console2 as console} from "lib/forge-std/src/Test.sol";
 
 /**
  * @title   Openfort Base Account 7702 with ERC-4337 Support
@@ -106,8 +105,7 @@ contract OPF7702 is Execution, Initializable {
                 revert IKeysManager.KeyManager__InvalidSignatureLength();
             }
         } else if (sigType == KeyType.WEBAUTHN) {
-            if (sigLength > 608) {
-                console.log(sigLength);
+            if (sigLength > 704) {
                 revert IKeysManager.KeyManager__InvalidSignatureLength();
             }
         } else if (sigType == KeyType.P256 || sigType == KeyType.P256NONKEY) {

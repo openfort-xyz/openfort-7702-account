@@ -3,7 +3,6 @@ pragma solidity ^0.8.29;
 
 import "src/interfaces/IPolicy.sol";
 import "lib/account-abstraction/contracts/core/UserOperationLib.sol";
-import {console2 as console} from "lib/forge-std/src/Test.sol";
 
 contract GasPolicy is IUserOpPolicy {
     using UserOperationLib for PackedUserOperation;

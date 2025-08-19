@@ -21,7 +21,7 @@ import {PackedUserOperation} from
 import {MessageHashUtils} from
     "lib/openzeppelin-contracts/contracts/utils/cryptography/MessageHashUtils.sol";
 
-contract DepositAndTransferETH is Base {
+contract UpgradeAddresses is Base {
     error NotFromEntryPoint();
 
     /* ───────────────────────────────────────────────────────────── contracts ── */
