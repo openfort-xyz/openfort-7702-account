@@ -46,7 +46,8 @@ contract OPFMain is OPF7702Recoverable layout at 1075889956141881797914526638246
         uint256 _recoveryPeriod,
         uint256 _lockPeriod,
         uint256 _securityPeriod,
-        uint256 _securityWindow
+        uint256 _securityWindow,
+        address _gasPolicy
     )
         OPF7702Recoverable(
             _entryPoint,
@@ -54,7 +55,8 @@ contract OPFMain is OPF7702Recoverable layout at 1075889956141881797914526638246
             _recoveryPeriod,
             _lockPeriod,
             _securityPeriod,
-            _securityWindow
+            _securityWindow,
+            _gasPolicy
         )
     {}
 

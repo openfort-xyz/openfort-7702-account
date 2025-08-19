@@ -3,6 +3,7 @@
 pragma solidity 0.8.29;
 
 import {Base} from "test/Base.sol";
+import {GasPolicy} from "src/utils/GasPolicy.sol";
 import {OPFMain as OPF7702} from "src/core/OPFMain.sol";
 import {ISpendLimit} from "src/interfaces/ISpendLimit.sol";
 import {WebAuthnVerifier} from "src/utils/WebAuthnVerifier.sol";
@@ -19,6 +20,7 @@ contract UpgradeImpl is Base {
     IEntryPoint public entryPoint;
     WebAuthnVerifier public webAuthn;
     OPF7702 public account;
+    GasPolicy public gasPolicy;
 
     Key internal keyMK;
     PubKey internal pubKeyMK;
@@ -40,6 +42,7 @@ contract UpgradeImpl is Base {
 
         entryPoint = IEntryPoint(payable(SEPOLIA_ENTRYPOINT));
         webAuthn = WebAuthnVerifier(payable(SEPOLIA_WEBAUTHN));
+        gasPolicy = new GasPolicy();
         _createInitialGuradian();
 
         opf = new OPF7702(
@@ -48,7 +51,8 @@ contract UpgradeImpl is Base {
             RECOVERY_PERIOD,
             LOCK_PERIOD,
             SECURITY_PERIOD,
-            SECURITY_WINDOW
+            SECURITY_WINDOW,
+            address(gasPolicy)
         );
 
         impl = address(opf);
@@ -96,7 +100,8 @@ contract UpgradeImpl is Base {
                 RECOVERY_PERIOD,
                 LOCK_PERIOD,
                 SECURITY_PERIOD,
-                SECURITY_WINDOW
+                SECURITY_WINDOW,
+                address(gasPolicy)
             )
         );
         address oldImpl = account._OPENFORT_CONTRACT_ADDRESS();

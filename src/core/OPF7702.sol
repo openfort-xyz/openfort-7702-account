@@ -15,6 +15,7 @@ pragma solidity ^0.8.29;
 
 import {Execution} from "src/core/Execution.sol";
 import {KeyHashLib} from "src/libs/KeyHashLib.sol";
+import {IUserOpPolicy} from "src/interfaces/IPolicy.sol";
 import {IKeysManager} from "src/interfaces/IKeysManager.sol";
 import {IWebAuthnVerifier} from "src/interfaces/IWebAuthnVerifier.sol";
 import {EfficientHashLib} from "lib/solady/src/utils/EfficientHashLib.sol";
@@ -28,6 +29,7 @@ import {
     _packValidationData
 } from "lib/account-abstraction/contracts/core/Helpers.sol";
 import {Initializable} from "lib/openzeppelin-contracts/contracts/proxy/utils/Initializable.sol";
+import {Test, console2 as console} from "lib/forge-std/src/Test.sol";
 
 /**
  * @title   Openfort Base Account 7702 with ERC-4337 Support
@@ -52,9 +54,10 @@ contract OPF7702 is Execution, Initializable {
     /// @notice Address of this implementation contract
     address public immutable _OPENFORT_CONTRACT_ADDRESS;
 
-    constructor(address _entryPoint, address _webAuthnVerifier) {
+    constructor(address _entryPoint, address _webAuthnVerifier, address _gasPolicy) {
         ENTRY_POINT = _entryPoint;
         WEBAUTHN_VERIFIER = _webAuthnVerifier;
+        GAS_POLICY = _gasPolicy;
         _OPENFORT_CONTRACT_ADDRESS = address(this);
         _disableInitializers();
     }
@@ -84,13 +87,13 @@ contract OPF7702 is Execution, Initializable {
         _checkValidSignatureLength(sigType, userOp.signature.length);
 
         if (sigType == KeyType.EOA) {
-            return _validateKeyTypeEOA(sigData, userOpHash, userOp.callData);
+            return _validateKeyTypeEOA(sigData, userOpHash, userOp);
         }
         if (sigType == KeyType.WEBAUTHN) {
-            return _validateKeyTypeWEBAUTHN(userOpHash, userOp.signature, userOp.callData);
+            return _validateKeyTypeWEBAUTHN(userOpHash, userOp.signature, userOp);
         }
         if (sigType == KeyType.P256 || sigType == KeyType.P256NONKEY) {
-            return _validateKeyTypeP256(sigData, userOpHash, userOp.callData, sigType);
+            return _validateKeyTypeP256(sigData, userOpHash, userOp, sigType);
         }
         revert IKeysManager.KeyManager__InvalidKeyType(sigType);
     }
@@ -104,6 +107,7 @@ contract OPF7702 is Execution, Initializable {
             }
         } else if (sigType == KeyType.WEBAUTHN) {
             if (sigLength > 608) {
+                console.log(sigLength);
                 revert IKeysManager.KeyManager__InvalidSignatureLength();
             }
         } else if (sigType == KeyType.P256 || sigType == KeyType.P256NONKEY) {
@@ -117,10 +121,10 @@ contract OPF7702 is Execution, Initializable {
      * @notice Validates an EOA (ECDSA) key signature.
      * @param sigData     Raw signature bytes (64 or 65 bytes).
      * @param userOpHash  The user operation hash.
-     * @param callData    The calldata to be executed if approved.
+     * @param userOp      The packed user operation coming from EntryPoint.
      * @return Packed validation output, or SIG_VALIDATION_FAILED.
      */
-    function _validateKeyTypeEOA(bytes memory sigData, bytes32 userOpHash, bytes calldata callData)
+    function _validateKeyTypeEOA(bytes memory sigData, bytes32 userOpHash, PackedUserOperation calldata userOp)
         private
         returns (uint256)
     {
@@ -143,7 +147,11 @@ contract OPF7702 is Execution, Initializable {
             return SIG_VALIDATION_SUCCESS;
         }
 
-        if (isValidKey(callData, sKey)) {
+        uint256 isValidGas = IUserOpPolicy(GAS_POLICY).checkUserOpPolicy(signer.computeKeyId(), userOp);
+        
+        if (isValidGas == 1) revert IKeysManager.KeyManager__RevertGasPolicy();
+
+        if (isValidKey(userOp.callData, sKey)) {
             return _packValidationData(false, sKey.validUntil, sKey.validAfter);
         }
         return SIG_VALIDATION_FAILED;
@@ -159,13 +167,13 @@ contract OPF7702 is Execution, Initializable {
      *
      * @param userOpHash  The userOp hash (served as challenge).
      * @param signature   ABI-encoded payload: (KeyType, bool requireUV, bytes authData, string clientDataJSON, uint256 challengeIdx, uint256 typeIdx, bytes32 r, bytes32 s, PubKey pubKey).
-     * @param callData    The calldata to authorize.
+     * @param userOp      The packed user operation coming from EntryPoint.
      * @return Packed validation output, or SIG_VALIDATION_FAILED.
      */
     function _validateKeyTypeWEBAUTHN(
         bytes32 userOpHash,
         bytes calldata signature,
-        bytes calldata callData
+         PackedUserOperation calldata userOp
     ) private returns (uint256) {
         // decode everything in one shot
         (
@@ -214,7 +222,11 @@ contract OPF7702 is Execution, Initializable {
             return SIG_VALIDATION_SUCCESS;
         }
 
-        if (isValidKey(callData, sKey)) {
+        uint256 isValidGas = IUserOpPolicy(GAS_POLICY).checkUserOpPolicy(pubKey.computeKeyId(), userOp);
+        
+        if (isValidGas == 1) revert IKeysManager.KeyManager__RevertGasPolicy();
+
+        if (isValidKey(userOp.callData, sKey)) {
             return _packValidationData(false, sKey.validUntil, sKey.validAfter);
         }
         return SIG_VALIDATION_FAILED;
@@ -230,14 +242,14 @@ contract OPF7702 is Execution, Initializable {
      *
      * @param sigData     Encoded bytes: (r, s, PubKey).
      * @param userOpHash  The original userOp hash.
-     * @param callData    The calldata to authorize.
+     * @param userOp      The packed user operation coming from EntryPoint.
      * @param sigType     KeyType.P256 or KeyType.P256NONKEY.
      * @return Packed validation output, or SIG_VALIDATION_FAILED.
      */
     function _validateKeyTypeP256(
         bytes memory sigData,
         bytes32 userOpHash,
-        bytes calldata callData,
+        PackedUserOperation calldata userOp,
         KeyType sigType
     ) private returns (uint256) {
         (bytes32 r, bytes32 sSig, PubKey memory pubKey) =
@@ -265,7 +277,11 @@ contract OPF7702 is Execution, Initializable {
 
         if (!isValid) return SIG_VALIDATION_FAILED;
 
-        if (isValidKey(callData, sKey)) {
+        uint256 isValidGas = IUserOpPolicy(GAS_POLICY).checkUserOpPolicy(pubKey.computeKeyId(), userOp);
+        
+        if (isValidGas == 1) revert IKeysManager.KeyManager__RevertGasPolicy();
+
+        if (isValidKey(userOp.callData, sKey)) {
             return _packValidationData(false, sKey.validUntil, sKey.validAfter);
         }
         return SIG_VALIDATION_FAILED;

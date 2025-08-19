@@ -33,6 +33,8 @@ interface IKeysManager is IKey {
     /// @notice Thrown when challenge was already used
     error KeyManager__UsedChallenge();
 
+    error KeyManager__RevertGasPolicy();
+
     // =============================================================
     //                             EVENTS
     // =============================================================

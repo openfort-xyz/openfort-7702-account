@@ -3,6 +3,7 @@
 pragma solidity ^0.8.29;
 
 import {Base} from "test/Base.sol";
+import {GasPolicy} from "src/utils/GasPolicy.sol";
 import {Test, console2 as console} from "lib/forge-std/src/Test.sol";
 import {EfficientHashLib} from "lib/solady/src/utils/EfficientHashLib.sol";
 import {EntryPoint} from "lib/account-abstraction/contracts/core/EntryPoint.sol";
@@ -25,6 +26,7 @@ contract DepositAndTransferETH is Base {
     WebAuthnVerifier public webAuthn;
     OPF7702 public implementation;
     OPF7702 public account; // clone deployed at `owner`
+    GasPolicy public gasPolicy;
 
     /* ──────────────────────────────────────────────────────── key structures ── */
     Key internal keyMK;
@@ -47,6 +49,7 @@ contract DepositAndTransferETH is Base {
         /* live contracts on fork */
         entryPoint = IEntryPoint(payable(SEPOLIA_ENTRYPOINT));
         webAuthn = WebAuthnVerifier(payable(SEPOLIA_WEBAUTHN));
+        gasPolicy = new GasPolicy();
 
         _createInitialGuradian();
         /* deploy implementation & bake it into `owner` address */
@@ -56,7 +59,8 @@ contract DepositAndTransferETH is Base {
             RECOVERY_PERIOD,
             LOCK_PERIOD,
             SECURITY_PERIOD,
-            SECURITY_WINDOW
+            SECURITY_WINDOW,
+            address(gasPolicy)
         );
         vm.etch(owner, abi.encodePacked(bytes3(0xef0100), address(implementation)));
         account = OPF7702(payable(owner));

@@ -3,6 +3,7 @@ pragma solidity ^0.8.29;
 
 import "src/interfaces/IPolicy.sol";
 import "lib/account-abstraction/contracts/core/UserOperationLib.sol";
+import {console2 as console} from "lib/forge-std/src/Test.sol";
 
 contract GasPolicy is IUserOpPolicy {
     using UserOperationLib for PackedUserOperation;
@@ -13,9 +14,9 @@ contract GasPolicy is IUserOpPolicy {
 
     // -------- Defaults for auto-initialization (tweak to your stack) --------
     // Gas legs per op (units)
-    uint256 private constant DEFAULT_PVG = 100_000; // packaging/bytes for P-256/WebAuthn-ish signatures
-    uint256 private constant DEFAULT_VGL = 120_000; // validation (session key checks, EIP-1271/P-256 parsing)
-    uint256 private constant DEFAULT_CGL = 120_000; // ERC20 transfer/batch-ish execution
+    uint256 private constant DEFAULT_PVG = 110_000; // packaging/bytes for P-256/WebAuthn-ish signatures
+    uint256 private constant DEFAULT_VGL = 360_000; // validation (session key checks, EIP-1271/P-256 parsing)
+    uint256 private constant DEFAULT_CGL = 240_000; // ERC20 transfer/batch-ish execution
     uint256 private constant DEFAULT_PMV = 60_000; // paymaster validate (if used)
     uint256 private constant DEFAULT_PO = 60_000; // postOp (token charge/refund)
 
@@ -104,6 +105,7 @@ contract GasPolicy is IUserOpPolicy {
     function initializeWithMultiplexer(address account, bytes32 configId, bytes calldata initData)
         external
     {
+        require(account == msg.sender, GasPolicy__AccountMustBeSender());
         InitData memory d = abi.decode(initData, (InitData));
         require(d.gasLimit != 0 && d.costLimit != 0, GasPolicy__ZeroBudgets());
 

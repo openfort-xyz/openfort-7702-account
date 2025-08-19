@@ -3,6 +3,7 @@
 pragma solidity ^0.8.29;
 
 import {Base} from "test/Base.sol";
+import {GasPolicy} from "src/utils/GasPolicy.sol";
 import {Test, console2 as console} from "lib/forge-std/src/Test.sol";
 import {EfficientHashLib} from "lib/solady/src/utils/EfficientHashLib.sol";
 import {EntryPoint} from "lib/account-abstraction/contracts/core/EntryPoint.sol";
@@ -25,6 +26,7 @@ contract Execution7821 is Base {
     WebAuthnVerifier public webAuthn;
     OPF7702 public implementation;
     OPF7702 public account; // clone deployed at `owner`
+    GasPolicy public gasPolicy;
 
     /* ──────────────────────────────────────────────────────── key structures ── */
     Key internal keyMK;
@@ -57,6 +59,7 @@ contract Execution7821 is Base {
         /* live contracts on fork */
         entryPoint = IEntryPoint(payable(SEPOLIA_ENTRYPOINT));
         webAuthn = WebAuthnVerifier(payable(SEPOLIA_WEBAUTHN));
+        gasPolicy = new GasPolicy();
 
         _createInitialGuradian();
         /* deploy implementation & bake it into `owner` address */
@@ -66,7 +69,8 @@ contract Execution7821 is Base {
             RECOVERY_PERIOD,
             LOCK_PERIOD,
             SECURITY_PERIOD,
-            SECURITY_WINDOW
+            SECURITY_WINDOW,
+            address(gasPolicy)
         );
         vm.etch(owner, abi.encodePacked(bytes3(0xef0100), address(implementation)));
         account = OPF7702(payable(owner));
@@ -75,9 +79,6 @@ contract Execution7821 is Base {
 
         _deal();
         _initializeAccount();
-        _register_MKMint();
-        _register_MKBatch();
-        _register_MKBatchs();
         _register_SessionKeyEOA();
         _register_SessionKeyP256();
         _register_SessionKeyP256NonKey();
@@ -130,9 +131,9 @@ contract Execution7821 is Base {
             nonce: nonce,
             initCode: hex"7702",
             callData: callData,
-            accountGasLimits: _packAccountGasLimits(600000, 400000),
-            preVerificationGas: 800000,
-            gasFees: _packGasFees(80 gwei, 15 gwei),
+            accountGasLimits: _packAccountGasLimits(480_000, 520_000),
+            preVerificationGas: 130_000,
+            gasFees: _packGasFees(2 gwei, 50 gwei),
             paymasterAndData: hex"",
             signature: hex""
         });
@@ -197,9 +198,9 @@ contract Execution7821 is Base {
             nonce: nonce,
             initCode: hex"7702",
             callData: callData,
-            accountGasLimits: _packAccountGasLimits(600000, 400000),
-            preVerificationGas: 800000,
-            gasFees: _packGasFees(80 gwei, 15 gwei),
+            accountGasLimits: _packAccountGasLimits(480_000, 520_000),
+            preVerificationGas: 130_000,
+            gasFees: _packGasFees(2 gwei, 50 gwei),
             paymasterAndData: hex"",
             signature: hex""
         });
@@ -302,9 +303,9 @@ contract Execution7821 is Base {
             nonce: nonce,
             initCode: hex"7702",
             callData: callData,
-            accountGasLimits: _packAccountGasLimits(600000, 400000),
-            preVerificationGas: 800000,
-            gasFees: _packGasFees(80 gwei, 15 gwei),
+            accountGasLimits: _packAccountGasLimits(480_000, 520_000),
+            preVerificationGas: 130_000,
+            gasFees: _packGasFees(2 gwei, 50 gwei),
             paymasterAndData: hex"",
             signature: hex""
         });
@@ -367,7 +368,7 @@ contract Execution7821 is Base {
     }
 
     function test_ExecuteBatchOfBatches7821Reverts() public {
-        console.log("/* -------------------------------- test_ExecuteBatchOfBatches -------- */");
+        console.log("/* -------------------------------- test_ExecuteBatchOfBatches7821Reverts -------- */");
 
         // Create first batch - minting operations
         Call[] memory mintBatch = new Call[](10);
@@ -470,9 +471,9 @@ contract Execution7821 is Base {
             nonce: nonce,
             initCode: hex"7702",
             callData: callData,
-            accountGasLimits: _packAccountGasLimits(600000, 400000),
-            preVerificationGas: 800000,
-            gasFees: _packGasFees(80 gwei, 15 gwei),
+            accountGasLimits: _packAccountGasLimits(480_000, 520_000),
+            preVerificationGas: 130_000,
+            gasFees: _packGasFees(2 gwei, 50 gwei),
             paymasterAndData: hex"",
             signature: hex""
         });
@@ -531,7 +532,7 @@ contract Execution7821 is Base {
         // uint256 allowance = IERC20(TOKEN).allowance(owner, address(0x456));
         // assertEq(allowance, 1e18, "Approval should be 1e18");
 
-        console.log("/* -------------------------------- test_ExecuteBatchOfBatches -------- */");
+        console.log("/* -------------------------------- test_ExecuteBatchOfBatches7821Reverts -------- */");
     }
 
     function test_ExecuteSKEOA7821() public {
@@ -560,9 +561,9 @@ contract Execution7821 is Base {
             nonce: nonce,
             initCode: hex"7702",
             callData: callData,
-            accountGasLimits: _packAccountGasLimits(600000, 400000),
-            preVerificationGas: 800000,
-            gasFees: _packGasFees(80 gwei, 15 gwei),
+            accountGasLimits: _packAccountGasLimits(180_000, 220_000),
+            preVerificationGas: 90_000,
+            gasFees: _packGasFees(2 gwei, 50 gwei),
             paymasterAndData: hex"",
             signature: hex""
         });
@@ -627,9 +628,9 @@ contract Execution7821 is Base {
             nonce: nonce,
             initCode: hex"7702",
             callData: callData,
-            accountGasLimits: _packAccountGasLimits(600000, 400000),
-            preVerificationGas: 800000,
-            gasFees: _packGasFees(80 gwei, 15 gwei),
+            accountGasLimits: _packAccountGasLimits(180_000, 220_000),
+            preVerificationGas: 90_000,
+            gasFees: _packGasFees(2 gwei, 50 gwei),
             paymasterAndData: hex"",
             signature: hex""
         });
@@ -694,9 +695,9 @@ contract Execution7821 is Base {
             nonce: nonce,
             initCode: hex"7702",
             callData: callData,
-            accountGasLimits: _packAccountGasLimits(600000, 400000),
-            preVerificationGas: 800000,
-            gasFees: _packGasFees(80 gwei, 15 gwei),
+            accountGasLimits: _packAccountGasLimits(180_000, 220_000),
+            preVerificationGas: 90_000,
+            gasFees: _packGasFees(2 gwei, 50 gwei),
             paymasterAndData: hex"",
             signature: hex""
         });
@@ -793,9 +794,9 @@ contract Execution7821 is Base {
             nonce: nonce,
             initCode: hex"7702",
             callData: callData,
-            accountGasLimits: _packAccountGasLimits(600000, 400000),
-            preVerificationGas: 800000,
-            gasFees: _packGasFees(80 gwei, 15 gwei),
+            accountGasLimits: _packAccountGasLimits(180_000, 220_000),
+            preVerificationGas: 90_000,
+            gasFees: _packGasFees(2 gwei, 50 gwei),
             paymasterAndData: hex"",
             signature: hex""
         });
@@ -1026,7 +1027,7 @@ contract Execution7821 is Base {
         console.logBytes32(userOpHash);
 
         IKey.PubKey memory pubKeyExecuteBatch =
-            IKey.PubKey({x: BATCHS_VALID_PUBLIC_KEY_X, y: BATCHS_VALID_PUBLIC_KEY_Y});
+            IKey.PubKey({x: BATCH_VALID_PUBLIC_KEY_X, y: BATCH_VALID_PUBLIC_KEY_Y});
 
         bytes memory _signature = account.encodeWebAuthnSignature(
             true,
@@ -1053,8 +1054,8 @@ contract Execution7821 is Base {
             BATCHS_TYPE_INDEX,
             BATCHS_VALID_SIGNATURE_R,
             BATCHS_VALID_SIGNATURE_S,
-            BATCHS_VALID_PUBLIC_KEY_X,
-            BATCHS_VALID_PUBLIC_KEY_Y
+            BATCH_VALID_PUBLIC_KEY_X,
+            BATCH_VALID_PUBLIC_KEY_Y
         );
         console.log("isValid", isValid);
 
@@ -1136,9 +1137,9 @@ contract Execution7821 is Base {
             nonce: nonce,
             initCode: hex"7702",
             callData: callData,
-            accountGasLimits: _packAccountGasLimits(600000, 400000),
-            preVerificationGas: 800000,
-            gasFees: _packGasFees(80 gwei, 15 gwei),
+            accountGasLimits: _packAccountGasLimits(360_000, 240_000),
+            preVerificationGas: 110_000,
+            gasFees: _packGasFees(2 gwei, 50 gwei),
             paymasterAndData: hex"",
             signature: hex""
         });
@@ -1249,9 +1250,9 @@ contract Execution7821 is Base {
             nonce: nonce,
             initCode: hex"7702",
             callData: callData,
-            accountGasLimits: _packAccountGasLimits(600000, 400000),
-            preVerificationGas: 800000,
-            gasFees: _packGasFees(80 gwei, 15 gwei),
+            accountGasLimits: _packAccountGasLimits(360_000, 240_000),
+            preVerificationGas: 110_000,
+            gasFees: _packGasFees(2 gwei, 50 gwei),
             paymasterAndData: hex"",
             signature: hex""
         });
@@ -1354,9 +1355,9 @@ contract Execution7821 is Base {
             nonce: nonce,
             initCode: hex"7702",
             callData: callData,
-            accountGasLimits: _packAccountGasLimits(600000, 400000),
-            preVerificationGas: 800000,
-            gasFees: _packGasFees(80 gwei, 15 gwei),
+            accountGasLimits: _packAccountGasLimits(360_000, 240_000),
+            preVerificationGas: 110_000,
+            gasFees: _packGasFees(2 gwei, 50 gwei),
             paymasterAndData: hex"",
             signature: hex""
         });
@@ -1472,9 +1473,9 @@ contract Execution7821 is Base {
             nonce: nonce,
             initCode: hex"7702",
             callData: callData,
-            accountGasLimits: _packAccountGasLimits(600000, 400000),
-            preVerificationGas: 800000,
-            gasFees: _packGasFees(80 gwei, 15 gwei),
+            accountGasLimits:_packAccountGasLimits(360_000, 240_000),
+            preVerificationGas: 110_000,
+            gasFees: _packGasFees(2 gwei, 50 gwei),
             paymasterAndData: hex"",
             signature: hex""
         });
@@ -1707,111 +1708,10 @@ contract Execution7821 is Base {
         account.registerKey(keySK, keyData);
     }
 
-    function _register_MKMint() internal {
-        uint48 validUntil = type(uint48).max;
-        uint48 limit = uint48(50);
-
-        /* sample WebAuthn public key – replace with a real one if needed */
-        pubKeyMK_Mint = PubKey({x: MINT_VALID_PUBLIC_KEY_X, y: MINT_VALID_PUBLIC_KEY_Y});
-
-        keyMK_Mint = Key({pubKey: pubKeyMK_Mint, eoaAddress: address(0), keyType: KeyType.WEBAUTHN});
-
-        ISpendLimit.SpendTokenInfo memory spendInfo_Mint =
-            ISpendLimit.SpendTokenInfo({token: TOKEN, limit: 10000e18});
-
-        keyData = KeyReg({
-            validUntil: validUntil,
-            validAfter: 0,
-            limit: limit,
-            whitelisting: true,
-            contractAddress: TOKEN,
-            spendTokenInfo: spendInfo_Mint,
-            allowedSelectors: _allowedSelectors(),
-            ethLimit: ETH_LIMIT
-        });
-
-        bytes memory code = abi.encodePacked(
-            bytes3(0xef0100),
-            address(implementation) // or your logic contract
-        );
-        vm.etch(owner, code);
-
-        vm.prank(address(entryPoint));
-        account.registerKey(keyMK_Mint, keyData);
-    }
-
-    function _register_MKBatch() internal {
-        uint48 validUntil = type(uint48).max;
-        uint48 limit = uint48(50);
-
-        /* sample WebAuthn public key – replace with a real one if needed */
-        pubKeyMK_BATCH = PubKey({x: BATCH_VALID_PUBLIC_KEY_X, y: BATCH_VALID_PUBLIC_KEY_Y});
-
-        keyMK_BATCH =
-            Key({pubKey: pubKeyMK_BATCH, eoaAddress: address(0), keyType: KeyType.WEBAUTHN});
-
-        ISpendLimit.SpendTokenInfo memory spendInfo_BATCH =
-            ISpendLimit.SpendTokenInfo({token: TOKEN, limit: 100000e18});
-
-        keyData = KeyReg({
-            validUntil: validUntil,
-            validAfter: 0,
-            limit: limit,
-            whitelisting: true,
-            contractAddress: TOKEN,
-            spendTokenInfo: spendInfo_BATCH,
-            allowedSelectors: _allowedSelectors(),
-            ethLimit: ETH_LIMIT
-        });
-
-        bytes memory code = abi.encodePacked(
-            bytes3(0xef0100),
-            address(implementation) // or your logic contract
-        );
-        vm.etch(owner, code);
-
-        vm.prank(address(entryPoint));
-        account.registerKey(keyMK_BATCH, keyData);
-    }
-
-    function _register_MKBatchs() internal {
-        uint48 validUntil = type(uint48).max;
-        uint48 limit = uint48(100);
-
-        /* sample WebAuthn public key – replace with a real one if needed */
-        pubKeyMK_BATCHS = PubKey({x: BATCHS_VALID_PUBLIC_KEY_X, y: BATCHS_VALID_PUBLIC_KEY_Y});
-
-        keyMK_BATCHS =
-            Key({pubKey: pubKeyMK_BATCHS, eoaAddress: address(0), keyType: KeyType.WEBAUTHN});
-
-        ISpendLimit.SpendTokenInfo memory spendInfo_BATCH =
-            ISpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000000000e18});
-
-        keyData = KeyReg({
-            validUntil: validUntil,
-            validAfter: 0,
-            limit: limit,
-            whitelisting: true,
-            contractAddress: TOKEN,
-            spendTokenInfo: spendInfo_BATCH,
-            allowedSelectors: _allowedSelectors(),
-            ethLimit: ETH_LIMIT
-        });
-
-        bytes memory code = abi.encodePacked(
-            bytes3(0xef0100),
-            address(implementation) // or your logic contract
-        );
-        vm.etch(owner, code);
-
-        vm.prank(address(entryPoint));
-        account.registerKey(keyMK_BATCHS, keyData);
-    }
-
     /* ─────────────────────────────────────────────────────────── helpers ──── */
     function _initializeAccount() internal {
         /* sample WebAuthn public key – replace with a real one if needed */
-        pubKeyMK = PubKey({x: REG_PUBLIC_KEY_X, y: REG_PUBLIC_KEY_Y});
+        pubKeyMK = PubKey({x: BATCH_VALID_PUBLIC_KEY_X, y: BATCH_VALID_PUBLIC_KEY_Y});
 
         keyMK = Key({pubKey: pubKeyMK, eoaAddress: address(0), keyType: KeyType.WEBAUTHN});
 

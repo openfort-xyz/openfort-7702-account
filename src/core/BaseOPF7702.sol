@@ -55,6 +55,8 @@ abstract contract BaseOPF7702 is
     /// @notice The WebAuthn Verifier singleton contract used to verify WebAuthn and P256 signatures.
     address public immutable WEBAUTHN_VERIFIER;
 
+    address public immutable GAS_POLICY;
+
     // =============================================================
     //                       RECEIVE / FALLBACK
     // =============================================================

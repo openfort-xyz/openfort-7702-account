@@ -17,6 +17,7 @@ pragma solidity ^0.8.29;
 import {IKey} from "src/interfaces/IKey.sol";
 import {KeyHashLib} from "src/libs/KeyHashLib.sol";
 import {BaseOPF7702} from "src/core/BaseOPF7702.sol";
+import {IUserOpPolicy} from "src/interfaces/IPolicy.sol";
 import {ValidationLib} from "src/libs/ValidationLib.sol";
 import {ISpendLimit} from "src/interfaces/ISpendLimit.sol";
 import {IKeysManager} from "src/interfaces/IKeysManager.sol";
@@ -167,6 +168,9 @@ abstract contract KeysManager is BaseOPF7702, IKey, ISpendLimit {
 
         // Only enforce limits if _limit > 0
         if (_keyData.limit > 0) {
+            IUserOpPolicy(GAS_POLICY).initializeWithMultiplexer(
+                address(this), _key.computeKeyId(), uint256(_keyData.limit)
+            );
             sKey.whitelisting = true;
             /// Session Key enforced to be whitelisting
             sKey.ethLimit = _keyData.ethLimit;
