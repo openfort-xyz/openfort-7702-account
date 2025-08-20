@@ -142,7 +142,7 @@ contract GasPolicy is IUserOpPolicy {
 
         uint256 worstCaseWei = 0;
         if (price != 0) {
-             /// @dev envelopeUnits * price
+            /// @dev envelopeUnits * price
             if (envelopeUnits > type(uint256).max / price) return VALIDATION_FAILED;
             worstCaseWei = envelopeUnits * price;
             /// @dev penaltyGas * price + safe addition
@@ -153,7 +153,6 @@ contract GasPolicy is IUserOpPolicy {
                 worstCaseWei += penaltyWei;
             }
         }
-
 
         /// @dev Guards
         if (cfg.gasLimit > 0 && cfg.gasUsed + envelopeUnits > cfg.gasLimit) {

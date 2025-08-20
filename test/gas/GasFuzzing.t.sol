@@ -7,7 +7,7 @@ import {Test, console2 as console} from "lib/forge-std/src/Test.sol";
 import {PackedUserOperation} from
     "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
 
-contract GasFuzzing is Test{
+contract GasFuzzing is Test {
     GasPolicy gP;
     address account;
 
@@ -15,7 +15,7 @@ contract GasFuzzing is Test{
     uint256 constant DEFAULT_VGL = 360_000;
     uint256 constant DEFAULT_CGL = 240_000;
     uint256 constant DEFAULT_PMV = 60_000;
-    uint256 constant DEFAULT_PO  = 60_000;
+    uint256 constant DEFAULT_PO = 60_000;
 
     function setUp() public {
         gP = new GasPolicy(DEFAULT_PVG, DEFAULT_VGL, DEFAULT_CGL, DEFAULT_PMV, DEFAULT_PO);
@@ -33,7 +33,11 @@ contract GasFuzzing is Test{
         return bytes32((verificationGasLimit << 128) | callGasLimit);
     }
 
-    function _packGasFees(uint256 maxFeePerGas, uint256 maxPriorityFeePerGas) internal pure returns (bytes32) {
+    function _packGasFees(uint256 maxFeePerGas, uint256 maxPriorityFeePerGas)
+        internal
+        pure
+        returns (bytes32)
+    {
         return bytes32((maxFeePerGas << 128) | maxPriorityFeePerGas);
     }
 
@@ -77,7 +81,8 @@ contract GasFuzzing is Test{
     function test_initialize_and_getters() public {
         bytes32 configId = keccak256(abi.encodePacked(uint256(1)));
         _initAuto(configId, 3);
-        (uint128 gasLimit, uint128 gasUsed, uint128 costLimit, uint128 costUsed) = gP.getGasConfig(configId, account);
+        (uint128 gasLimit, uint128 gasUsed, uint128 costLimit, uint128 costUsed) =
+            gP.getGasConfig(configId, account);
         console.log(gasLimit, gasUsed, costLimit, costUsed);
         assertGt(gasLimit, 0);
         assertEq(gasUsed, 0);
@@ -87,7 +92,8 @@ contract GasFuzzing is Test{
 
     function test_uninitialized_fails() public {
         bytes32 configId = keccak256(abi.encodePacked(uint256(2)));
-        PackedUserOperation memory uo = _mkUserOp(account, 50_000, 100_000, 100_000, 1 gwei, 1 gwei, hex"");
+        PackedUserOperation memory uo =
+            _mkUserOp(account, 50_000, 100_000, 100_000, 1 gwei, 1 gwei, hex"");
         vm.prank(account);
         uint256 res = gP.checkUserOpPolicy(configId, uo);
         assertEq(res, 1);
@@ -97,7 +103,8 @@ contract GasFuzzing is Test{
         bytes32 configId = keccak256(abi.encodePacked(uint256(3)));
         _initAuto(configId, 1);
         address attacker = makeAddr("attacker");
-        PackedUserOperation memory uo = _mkUserOp(account, 50_000, 100_000, 100_000, 1 gwei, 1 gwei, hex"");
+        PackedUserOperation memory uo =
+            _mkUserOp(account, 50_000, 100_000, 100_000, 1 gwei, 1 gwei, hex"");
         vm.prank(attacker);
         uint256 res = gP.checkUserOpPolicy(configId, uo);
         assertEq(res, 1);
@@ -106,7 +113,8 @@ contract GasFuzzing is Test{
     function test_basic_accept_no_paymaster() public {
         bytes32 configId = keccak256(abi.encodePacked(uint256(4)));
         _initAuto(configId, 3);
-        PackedUserOperation memory uo = _mkUserOp(account, 90_000, 200_000, 200_000, 1 gwei, 1 gwei, hex"");
+        PackedUserOperation memory uo =
+            _mkUserOp(account, 90_000, 200_000, 200_000, 1 gwei, 1 gwei, hex"");
         for (uint256 i = 0; i < 3; i++) {
             vm.prank(account);
             uint256 res = gP.checkUserOpPolicy(configId, uo);
@@ -117,7 +125,8 @@ contract GasFuzzing is Test{
     function test_tx_limit_exceeded() public {
         bytes32 configId = keccak256(abi.encodePacked(uint256(5)));
         _initAuto(configId, 2);
-        PackedUserOperation memory uo = _mkUserOp(account, 90_000, 200_000, 200_000, 1 gwei, 1 gwei, hex"");
+        PackedUserOperation memory uo =
+            _mkUserOp(account, 90_000, 200_000, 200_000, 1 gwei, 1 gwei, hex"");
         vm.prank(account);
         assertEq(gP.checkUserOpPolicy(configId, uo), 0);
         vm.prank(account);
@@ -135,7 +144,7 @@ contract GasFuzzing is Test{
             uint256 res = gP.checkUserOpPolicy(configId, uo);
             assertEq(res, 0);
         }
-        (,, , uint128 costUsed) = gP.getGasConfig(configId, account);
+        (,,, uint128 costUsed) = gP.getGasConfig(configId, account);
         assertEq(costUsed, 0);
     }
 
@@ -145,23 +154,26 @@ contract GasFuzzing is Test{
         _initAuto(configIdA, 1);
         _initAuto(configIdB, 1);
 
-        PackedUserOperation memory below = _mkUserOp(account, 10_000, 10_000, 39_999, 1 gwei, 1 gwei, hex"");
-        PackedUserOperation memory atThr = _mkUserOp(account, 10_000, 10_000, 40_000, 1 gwei, 1 gwei, hex"");
+        PackedUserOperation memory below =
+            _mkUserOp(account, 10_000, 10_000, 39_999, 1 gwei, 1 gwei, hex"");
+        PackedUserOperation memory atThr =
+            _mkUserOp(account, 10_000, 10_000, 40_000, 1 gwei, 1 gwei, hex"");
 
         vm.prank(account);
         assertEq(gP.checkUserOpPolicy(configIdA, below), 0);
         vm.prank(account);
         assertEq(gP.checkUserOpPolicy(configIdB, atThr), 0);
 
-        (, , , uint128 costBelow) = gP.getGasConfig(configIdA, account);
-        (, , , uint128 costAtThr) = gP.getGasConfig(configIdB, account);
+        (,,, uint128 costBelow) = gP.getGasConfig(configIdA, account);
+        (,,, uint128 costAtThr) = gP.getGasConfig(configIdB, account);
         assertLt(costBelow, costAtThr);
     }
 
     function test_perOpMaxCostWei_cap_triggers() public {
         bytes32 configId = keccak256(abi.encodePacked(uint256(9)));
         _initAuto(configId, 3);
-        PackedUserOperation memory uo = _mkUserOp(account, 110_000, 300_000, 300_000, 10 gwei, 10 gwei, hex"");
+        PackedUserOperation memory uo =
+            _mkUserOp(account, 110_000, 300_000, 300_000, 10 gwei, 10 gwei, hex"");
         vm.prank(account);
         uint256 res = gP.checkUserOpPolicy(configId, uo);
         assertEq(res, 1);
@@ -172,16 +184,15 @@ contract GasFuzzing is Test{
         _initAuto(configId, 2);
 
         vm.fee(1 gwei); // basefee
-        PackedUserOperation memory uo = _mkUserOp(
-            account,
-            90_000, 200_000, 200_000,
-            2 gwei, 1 gwei,
-            hex""
-        );
+        PackedUserOperation memory uo =
+            _mkUserOp(account, 90_000, 200_000, 200_000, 2 gwei, 1 gwei, hex"");
 
-        vm.prank(account); assertEq(gP.checkUserOpPolicy(configId, uo), 0);
-        vm.prank(account); assertEq(gP.checkUserOpPolicy(configId, uo), 0);
-        vm.prank(account); assertEq(gP.checkUserOpPolicy(configId, uo), 1); 
+        vm.prank(account);
+        assertEq(gP.checkUserOpPolicy(configId, uo), 0);
+        vm.prank(account);
+        assertEq(gP.checkUserOpPolicy(configId, uo), 0);
+        vm.prank(account);
+        assertEq(gP.checkUserOpPolicy(configId, uo), 1);
     }
 
     function test_fuzz_accept_within_auto_limits(
@@ -212,17 +223,16 @@ contract GasFuzzing is Test{
             assertEq(res, 0);
 
             uint256 envelope = uint256(pvg) + uint256(vgl) + uint256(cgl);
-            uint256 price    = _calcPrice(maxFee, tip);
+            uint256 price = _calcPrice(maxFee, tip);
 
-            uint256 penaltyGas = cgl >= 40_000
-                ? (uint256(cgl) * 1000 + 9_999) / 10_000
-                : 0;
+            uint256 penaltyGas = cgl >= 40_000 ? (uint256(cgl) * 1000 + 9_999) / 10_000 : 0;
 
             accGas += envelope;
             accWei += price * (envelope + penaltyGas);
         }
 
-        (uint128 gasLimit, uint128 gasUsed, uint128 costLimit, uint128 costUsed) = gP.getGasConfig(configId, account);
+        (uint128 gasLimit, uint128 gasUsed, uint128 costLimit, uint128 costUsed) =
+            gP.getGasConfig(configId, account);
         assertLe(gasUsed, gasLimit);
         assertLe(costUsed, costLimit);
         assertEq(gasUsed, uint128(accGas));
@@ -233,7 +243,8 @@ contract GasFuzzing is Test{
         bytes32 configId = keccak256(abi.encodePacked(uint256(12)));
         _initAuto(configId, 1);
         bytes memory pmd = hex"01";
-        PackedUserOperation memory uo = _mkUserOp(account, 50_000, 100_000, 100_000, 1 gwei, 1 gwei, pmd);
+        PackedUserOperation memory uo =
+            _mkUserOp(account, 50_000, 100_000, 100_000, 1 gwei, 1 gwei, pmd);
         vm.prank(account);
         uint256 res = gP.checkUserOpPolicy(configId, uo);
         assertEq(res, 0);
@@ -242,8 +253,10 @@ contract GasFuzzing is Test{
     function test_with_paymaster_blob_sample() public {
         bytes32 configId = keccak256(abi.encodePacked(uint256(13)));
         _initAuto(configId, 1);
-        bytes memory pmd = hex"888888888888ec68a58ab8094cc1ad20ba3d24020000000000000000000000000000912d0000000000000000000000000000000101000068a45c8b0000000000004ba7d7cb7cb2b66d62ac6fc35b13ef9e57baf1fe65f6a9fca6d3594c4fbb7f5c540b12df258c93df4206a846980479cd9e6baa05dff4b9ac5328c94d4cd1d51c1c";
-        PackedUserOperation memory uo = _mkUserOp(account, 93_673, 0xf091, 0x141e7, 0x11b98, 0xdd8ec0, pmd);
+        bytes memory pmd =
+            hex"888888888888ec68a58ab8094cc1ad20ba3d24020000000000000000000000000000912d0000000000000000000000000000000101000068a45c8b0000000000004ba7d7cb7cb2b66d62ac6fc35b13ef9e57baf1fe65f6a9fca6d3594c4fbb7f5c540b12df258c93df4206a846980479cd9e6baa05dff4b9ac5328c94d4cd1d51c1c";
+        PackedUserOperation memory uo =
+            _mkUserOp(account, 93_673, 0xf091, 0x141e7, 0x11b98, 0xdd8ec0, pmd);
         vm.prank(account);
         uint256 res = gP.checkUserOpPolicy(configId, uo);
         assertEq(res, 0);
