@@ -19,6 +19,31 @@ interface IUserOpPolicy is IPolicy {
     error GasPolicy__AccountMustBeSender();
     error GasPolicy__InitializationIncorrect();
 
+    // ---------------------- Events ----------------------
+    event GasPolicyInitialized(
+        bytes32 indexed configId,
+        address indexed account,
+        uint256 gasLimit,
+        uint256 costLimit,
+        uint256 perOpMaxCostWei,
+        uint256 txLimit,
+        uint256 penaltyBps,
+        uint256 penaltyThreshold,
+        bool    autoInit
+    );
+
+    event GasPolicyAccounted(
+        bytes32 indexed configId,
+        address indexed account,
+        uint256 envelopeUnits,
+        uint256 priceWei,
+        uint256 penaltyGas,
+        uint256 worstCaseWei,
+        uint256 gasUsedTotal,
+        uint256 costUsedTotal,
+        uint256 txUsedTotal
+    );
+    
     struct InitData {
         uint128 gasLimit;
         uint128 costLimit;

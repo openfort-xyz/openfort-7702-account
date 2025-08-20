@@ -177,6 +177,18 @@ contract GasPolicy is IUserOpPolicy {
             cfg.txUsed += 1;
         }
 
+        emit GasPolicyAccounted(
+            id,
+            userOp.sender,
+            envelopeUnits,
+            price,
+            penaltyGas,
+            worstCaseWei,
+            cfg.gasUsed,
+            cfg.costUsed,
+            cfg.txUsed
+        );
+
         return VALIDATION_SUCCESS;
     }
 
@@ -199,6 +211,18 @@ contract GasPolicy is IUserOpPolicy {
         require(d.gasLimit != 0 && d.costLimit != 0, GasPolicy__ZeroBudgets());
 
         _applyManualConfig(cfg, d);
+
+        emit GasPolicyInitialized(
+            configId,
+            account,
+            cfg.gasLimit,
+            cfg.costLimit,
+            cfg.perOpMaxCostWei,
+            cfg.txLimit,
+            cfg.penaltyBps,
+            cfg.penaltyThreshold,
+            false
+        );
     }
 
     // ---------------------- INITIALIZATION (AUTO / DEFAULTS) ----------------------
@@ -262,6 +286,18 @@ contract GasPolicy is IUserOpPolicy {
                 uint128(costLimit256),
                 uint128(perOpMaxCostWei256),
                 uint32(limit)
+            );
+
+            emit GasPolicyInitialized(
+                configId,
+                account,
+                cfg.gasLimit,
+                cfg.costLimit,
+                cfg.perOpMaxCostWei,
+                cfg.txLimit,
+                cfg.penaltyBps,
+                cfg.penaltyThreshold,
+                true
             );
         }
     }
