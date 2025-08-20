@@ -73,7 +73,8 @@ contract GasPolicyTest is Test {
         pure
         returns (bytes32)
     {
-        return bytes32((callGasLimit << 128) | verificationGasLimit);
+        // lib expects (verificationGasLimit << 128) | callGasLimit
+        return bytes32((verificationGasLimit << 128) | callGasLimit);
     }
 
     function _packGasFees(uint256 maxFeePerGas, uint256 maxPriorityFeePerGas)

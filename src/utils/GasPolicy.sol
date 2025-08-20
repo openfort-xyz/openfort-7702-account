@@ -140,14 +140,20 @@ contract GasPolicy is IUserOpPolicy {
             ? (penaltyBasisGas * penaltyBps + BPS_CEIL_ROUNDING) / BPS_DENOMINATOR
             : 0;
 
-        /// @dev envelopeUnits * price
-        if (price != 0 && envelopeUnits > type(uint256).max / price) return VALIDATION_FAILED;
-        uint256 worstCaseWei = envelopeUnits * price;
-        /// @dev penaltyGas * price
-        if (penaltyGas != 0) {
-            if (penaltyGas > type(uint256).max / price) return VALIDATION_FAILED;
-            worstCaseWei += penaltyGas * price;
+        uint256 worstCaseWei = 0;
+        if (price != 0) {
+             /// @dev envelopeUnits * price
+            if (envelopeUnits > type(uint256).max / price) return VALIDATION_FAILED;
+            worstCaseWei = envelopeUnits * price;
+            /// @dev penaltyGas * price + safe addition
+            if (penaltyGas != 0) {
+                if (penaltyGas > type(uint256).max / price) return VALIDATION_FAILED;
+                uint256 penaltyWei = penaltyGas * price;
+                if (worstCaseWei > type(uint256).max - penaltyWei) return VALIDATION_FAILED;
+                worstCaseWei += penaltyWei;
+            }
         }
+
 
         /// @dev Guards
         if (cfg.gasLimit > 0 && cfg.gasUsed + envelopeUnits > cfg.gasLimit) {
