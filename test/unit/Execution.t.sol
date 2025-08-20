@@ -59,7 +59,7 @@ contract Execution7821 is Base {
         /* live contracts on fork */
         entryPoint = IEntryPoint(payable(SEPOLIA_ENTRYPOINT));
         webAuthn = WebAuthnVerifier(payable(SEPOLIA_WEBAUTHN));
-        gasPolicy = new GasPolicy();
+        gasPolicy = new GasPolicy(DEFAULT_PVG, DEFAULT_VGL, DEFAULT_CGL, DEFAULT_PMV, DEFAULT_PO);
 
         _createInitialGuradian();
         /* deploy implementation & bake it into `owner` address */

@@ -42,7 +42,7 @@ contract UpgradeImpl is Base {
 
         entryPoint = IEntryPoint(payable(SEPOLIA_ENTRYPOINT));
         webAuthn = WebAuthnVerifier(payable(SEPOLIA_WEBAUTHN));
-        gasPolicy = new GasPolicy();
+        gasPolicy = new GasPolicy(DEFAULT_PVG, DEFAULT_VGL, DEFAULT_CGL, DEFAULT_PMV, DEFAULT_PO);
         _createInitialGuradian();
 
         opf = new OPF7702(

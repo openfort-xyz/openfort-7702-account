@@ -13,7 +13,7 @@ contract GasPolicyTest is Test {
     address account;
 
     function setUp() public {
-        gP = new GasPolicy();
+        gP = new GasPolicy(110_000,360_000, 240_000, 60_000, 60_000);
 
         account = makeAddr("account");
 

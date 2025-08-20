@@ -7,17 +7,25 @@ import "lib/account-abstraction/contracts/core/UserOperationLib.sol";
 contract GasPolicy is IUserOpPolicy {
     using UserOperationLib for PackedUserOperation;
 
-    // Validation output
-    uint256 private constant VALIDATION_FAILED = 1;
+    // ---------------------- Validation return codes ----------------------
+    uint256 private constant VALIDATION_FAILED  = 1;
     uint256 private constant VALIDATION_SUCCESS = 0;
 
-    // -------- Defaults for auto-initialization (tweak to your stack) --------
-    // Gas legs per op (units)
-    uint256 private constant DEFAULT_PVG = 110_000; // packaging/bytes for P-256/WebAuthn-ish signatures
-    uint256 private constant DEFAULT_VGL = 360_000; // validation (session key checks, EIP-1271/P-256 parsing)
-    uint256 private constant DEFAULT_CGL = 240_000; // ERC20 transfer/batch-ish execution
-    uint256 private constant DEFAULT_PMV = 60_000; // paymaster validate (if used)
-    uint256 private constant DEFAULT_PO = 60_000; // postOp (token charge/refund)
+    // ---------------------- % and BPS helpers ----------------------
+    // Percent arithmetic
+    uint256 private constant PERCENT_DENOMINATOR = 100;
+    uint256 private constant PERCENT_70          = 70;
+
+    // Basis-points arithmetic (x * bps / 10_000), often with ceil
+    uint256 private constant BPS_DENOMINATOR   = 10_000;
+    uint256 private constant BPS_CEIL_ROUNDING = 9_999;
+
+    // -------- Defaults for auto-initialization --------
+    uint256 private immutable DEFAULT_PVG; // packaging/bytes for P-256/WebAuthn signatures
+    uint256 private immutable DEFAULT_VGL; // validation (session key checks, EIP-1271/P-256 parsing)
+    uint256 private immutable DEFAULT_CGL; // ERC20 transfer/batch execution
+    uint256 private immutable DEFAULT_PMV; // paymaster validate
+    uint256 private immutable DEFAULT_PO; // postOp (token charge/refund)
 
     uint256 private constant DEFAULT_PRICE_FLOOR_WEI = 2 gwei; // at least 2 gwei assumed
     uint256 private constant PRICE_SAFETY_BPS = 11000; // +10% headroom on price
@@ -31,27 +39,37 @@ contract GasPolicy is IUserOpPolicy {
     mapping(bytes32 id => mapping(address mux => mapping(address account => GasLimitConfig)))
         internal gasLimitConfigs;
 
+    constructor(uint256 _defaultPVG, uint256 _defaultVGL, uint256 _defaultCGL, uint256 _defaultPMV, uint256 _defaultPO) {
+        if (_defaultPVG == 0 || _defaultVGL == 0 || _defaultCGL == 0 || _defaultPMV == 0 || _defaultPO == 0) revert GasPolicy__InitializationIncorrect();
+        DEFAULT_PVG = _defaultPVG;
+        DEFAULT_VGL = _defaultVGL;
+        DEFAULT_CGL = _defaultCGL;
+        DEFAULT_PMV = _defaultPMV;
+        DEFAULT_PO = _defaultPO;
+    }
+
     // ---------------------- POLICY CHECK ----------------------
     function checkUserOpPolicy(bytes32 id, PackedUserOperation calldata userOp)
         external
         returns (uint256)
-    {
+    {   
         GasLimitConfig storage cfg = gasLimitConfigs[id][msg.sender][userOp.sender];
         if (!cfg.initialized) return VALIDATION_FAILED;
 
         // 1) Unpack gas envelope
-        uint256 pvg = userOp.preVerificationGas;
-        uint256 vgl = UserOperationLib.unpackVerificationGasLimit(userOp);
+        uint256 envelopeUnits;
+
+        envelopeUnits += userOp.preVerificationGas;
+        envelopeUnits += UserOperationLib.unpackVerificationGasLimit(userOp);
         uint256 cgl = UserOperationLib.unpackCallGasLimit(userOp);
 
-        uint256 pmVerif = 0;
         uint256 postOp = 0;
         if (userOp.paymasterAndData.length >= UserOperationLib.PAYMASTER_DATA_OFFSET) {
-            pmVerif = UserOperationLib.unpackPaymasterVerificationGasLimit(userOp);
+            envelopeUnits += UserOperationLib.unpackPaymasterVerificationGasLimit(userOp);
             postOp = UserOperationLib.unpackPostOpGasLimit(userOp);
         }
 
-        uint256 envelopeUnits = pvg + vgl + cgl + pmVerif + postOp;
+        envelopeUnits = cgl + postOp;
 
         // 2) Worst-case WEI (v0.8 semantics)
         uint256 price = userOp.gasPrice(); // min(maxFeePerGas, basefee + maxPriority)
@@ -61,7 +79,7 @@ contract GasPolicy is IUserOpPolicy {
 
         uint256 penaltyBasisGas = cgl + postOp;
         uint256 penaltyGas =
-            penaltyBasisGas >= threshold ? (penaltyBasisGas * penaltyBps + 9999) / 10000 : 0;
+            penaltyBasisGas >= threshold ? (penaltyBasisGas * penaltyBps + BPS_CEIL_ROUNDING) / BPS_DENOMINATOR : 0;
 
         if (price != 0 && envelopeUnits > type(uint256).max / price) return VALIDATION_FAILED;
         uint256 worstCaseWei = envelopeUnits * price;
@@ -134,26 +152,26 @@ contract GasPolicy is IUserOpPolicy {
         if (cfg.gasLimit > 0) revert GasPolicy__IdExistAlready();
         require(limit > 0 && limit <= type(uint32).max, GasPolicy__BadLimit());
 
-        // 1) Envelope units per op with safety (includes PM legs so it also covers sponsored ops)
+        /// @dev Envelope units per op with safety (includes PM legs so it also covers sponsored ops)
         uint256 rawEnvelope = DEFAULT_PVG + DEFAULT_VGL + DEFAULT_CGL + DEFAULT_PMV + DEFAULT_PO;
-        uint256 perOpEnvelopeUnits = (rawEnvelope * SAFETY_BPS + 9999) / 10000;
+        uint256 perOpEnvelopeUnits = (rawEnvelope * SAFETY_BPS + BPS_CEIL_ROUNDING) / BPS_DENOMINATOR;
 
-        // 2) Conservative penalty basis: assume most of the envelope is execution/postOp
-        //    Use 70% of the envelope OR the DEFAULT_CGL+DEFAULT_PO, whichever is larger.
-        uint256 seventyPct = (perOpEnvelopeUnits * 70) / 100;
+        /// @dev Conservative penalty basis: assume most of the envelope is execution/postOp
+        ///      Use 70% of the envelope OR the DEFAULT_CGL+DEFAULT_PO, whichever is larger.
+        uint256 seventyPct = (perOpEnvelopeUnits * PERCENT_70) / PERCENT_DENOMINATOR;
         uint256 execSideAssumed =
             seventyPct > (DEFAULT_CGL + DEFAULT_PO) ? seventyPct : (DEFAULT_CGL + DEFAULT_PO);
 
         uint256 perOpPenaltyGas = execSideAssumed >= DEFAULT_PENALTY_THR
-            ? (execSideAssumed * DEFAULT_PENALTY_BPS + 9999) / 10000
+            ? (execSideAssumed * DEFAULT_PENALTY_BPS + BPS_CEIL_ROUNDING) / BPS_DENOMINATOR
             : 0;
 
-        // 3) Price assumption: basefee + 1 gwei, but at least 2 gwei, then +10% safety
+        /// @dev Price assumption: basefee + 1 gwei, but at least 2 gwei, then +10% safety
         uint256 priceAssumption = block.basefee + DEFAULT_PRIORITY_FEE_WEI;
         if (priceAssumption < DEFAULT_PRICE_FLOOR_WEI) priceAssumption = DEFAULT_PRICE_FLOOR_WEI;
-        priceAssumption = (priceAssumption * PRICE_SAFETY_BPS + 9999) / 10000;
+        priceAssumption = (priceAssumption * PRICE_SAFETY_BPS + BPS_CEIL_ROUNDING) / BPS_DENOMINATOR;
 
-        // 4) Per-op max wei (overflow-checked)
+        /// @dev Per-op max wei (overflow-checked)
         unchecked {
             uint256 unitsPlusPenalty = perOpEnvelopeUnits + perOpPenaltyGas;
             if (priceAssumption != 0 && unitsPlusPenalty > type(uint256).max / priceAssumption) {

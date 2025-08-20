@@ -19,7 +19,7 @@ contract DeployUpgradeable is Script {
 
     function run() public {
         vm.startBroadcast();
-        gasPolicy = new GasPolicy();
+        gasPolicy = new GasPolicy(110_000,360_000, 240_000, 60_000, 60_000);
 
         OPFMain opf = new OPFMain(
             SEPOLIA_ENTRYPOINT,
