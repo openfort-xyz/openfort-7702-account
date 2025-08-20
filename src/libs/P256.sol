@@ -35,7 +35,8 @@ library P256 {
     uint256 internal constant N = 0xFFFFFFFF00000000FFFFFFFFFFFFFFFFBCE6FAADA7179E84F3B9CAC2FC632551;
 
     /// @dev `N/2`. Used for checking the malleability of the signature.
-    uint256 private constant _HALF_N = 0x7fffffff800000007fffffffffffffffde737d56d38bcf4279dce5617e3192a8;
+    uint256 private constant _HALF_N =
+        0x7fffffff800000007fffffffffffffffde737d56d38bcf4279dce5617e3192a8;
 
     /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
     /*                P256 VERIFICATION OPERATIONS                */
@@ -49,11 +50,7 @@ library P256 {
         bytes32 s,
         bytes32 x,
         bytes32 y
-    )
-        internal
-        view
-        returns (bool isValid)
-    {
+    ) internal view returns (bool isValid) {
         /// @solidity memory-safe-assembly
         assembly {
             let m := mload(0x40)
@@ -81,13 +78,7 @@ library P256 {
 
     /// @dev Returns if the signature (`r`, `s`) is valid for `hash` and public key (`x`, `y`).
     /// Includes the malleability check.
-    function verifySignature(
-        bytes32 hash,
-        bytes32 r,
-        bytes32 s,
-        bytes32 x,
-        bytes32 y
-    )
+    function verifySignature(bytes32 hash, bytes32 r, bytes32 s, bytes32 x, bytes32 y)
         internal
         view
         returns (bool isValid)
@@ -143,7 +134,11 @@ library P256 {
 
     /// @dev Helper function for `abi.decode(encoded, (bytes32, bytes32))`.
     /// If `encoded.length < 64`, `(x, y)` will be `(0, 0)`, which is an invalid point.
-    function tryDecodePointCalldata(bytes calldata encoded) internal pure returns (bytes32 x, bytes32 y) {
+    function tryDecodePointCalldata(bytes calldata encoded)
+        internal
+        pure
+        returns (bytes32 x, bytes32 y)
+    {
         /// @solidity memory-safe-assembly
         assembly {
             let t := gt(encoded.length, 0x3f)

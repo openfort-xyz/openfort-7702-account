@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.29;
 
-import { IKey } from "src/interfaces/IKey.sol";
+import {IKey} from "src/interfaces/IKey.sol";
 
 /**
  * @title KeyHashLib

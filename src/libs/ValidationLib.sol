@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.29;
 
-import { IKeysManager } from "src/interfaces/IKeysManager.sol";
+import {IKeysManager} from "src/interfaces/IKeysManager.sol";
 
 /**
  * @title ValidationLib

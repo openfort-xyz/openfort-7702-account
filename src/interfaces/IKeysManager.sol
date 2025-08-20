@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.29;
 
-import { IKey } from "src/interfaces/IKey.sol";
+import {IKey} from "src/interfaces/IKey.sol";
 
 /// @title IKeysManager
 /// @notice Interface for `KeysManager`, which handles registration, revocation, and querying of keys
@@ -142,10 +142,7 @@ interface IKeysManager is IKey {
         bytes32 r,
         bytes32 s,
         IKey.PubKey memory pubKey
-    )
-        external
-        pure
-        returns (bytes memory);
+    ) external pure returns (bytes memory);
 
     /**
      * @notice Encodes a P-256 signature payload (KeyType.P256).
@@ -155,10 +152,7 @@ interface IKeysManager is IKey {
         bytes32 s,
         IKey.PubKey memory pubKey,
         IKey.KeyType _keyType
-    )
-        external
-        pure
-        returns (bytes memory);
+    ) external pure returns (bytes memory);
 
     /**
      * @notice Encodes an EOA signature for KeyType.EOA.

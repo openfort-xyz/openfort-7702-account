@@ -2,8 +2,8 @@
 
 pragma solidity ^0.8.29;
 
-import { OPFMain } from "src/core/OPFMain.sol";
-import { Script, console2 as console } from "lib/forge-std/src/Script.sol";
+import {OPFMain} from "src/core/OPFMain.sol";
+import {Script, console2 as console} from "lib/forge-std/src/Script.sol";
 
 contract Deploy7702 is Script {
     address constant WEBAUTHN_VERIFIER = 0x83b7acb5A6aa8A34A97bdA13182aEA787AC3f10d;
@@ -28,7 +28,14 @@ contract Deploy7702 is Script {
 
         bytes memory byteCode = abi.encodePacked(
             type(OPFMain).creationCode,
-            abi.encode(entryPoint, WEBAUTHN_VERIFIER, RECOVERY_PERIOD, LOCK_PERIOD, SECURITY_PERIOD, SECURITY_WINDOW)
+            abi.encode(
+                entryPoint,
+                WEBAUTHN_VERIFIER,
+                RECOVERY_PERIOD,
+                LOCK_PERIOD,
+                SECURITY_PERIOD,
+                SECURITY_WINDOW
+            )
         );
 
         address payable deployedAddress;

@@ -14,10 +14,7 @@ interface IWebAuthnVerifier {
         bytes32 s,
         bytes32 x,
         bytes32 y
-    )
-        external
-        view
-        returns (bool isValid);
+    ) external view returns (bool isValid);
 
     function verifyEncodedSignature(
         bytes memory challenge,
@@ -25,10 +22,7 @@ interface IWebAuthnVerifier {
         bytes memory encodedAuth,
         bytes32 x,
         bytes32 y
-    )
-        external
-        view
-        returns (bool isValid);
+    ) external view returns (bool isValid);
 
     function verifyCompactSignature(
         bytes memory challenge,
@@ -36,18 +30,9 @@ interface IWebAuthnVerifier {
         bytes memory encodedAuth,
         bytes32 x,
         bytes32 y
-    )
-        external
-        view
-        returns (bool isValid);
+    ) external view returns (bool isValid);
 
-    function verifyP256Signature(
-        bytes32 hash,
-        bytes32 r,
-        bytes32 s,
-        bytes32 x,
-        bytes32 y
-    )
+    function verifyP256Signature(bytes32 hash, bytes32 r, bytes32 s, bytes32 x, bytes32 y)
         external
         view
         returns (bool isValid);

@@ -1,20 +1,22 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.29;
 
-import { Test, console2 as console } from "lib/forge-std/src/Test.sol";
-import { Base } from "test/Base.sol";
-import { GasPolicy } from "src/utils/GasPolicy.sol";
-import { IEntryPoint } from "lib/account-abstraction/contracts/interfaces/IEntryPoint.sol";
-import { EntryPoint } from "lib/account-abstraction/contracts/core/EntryPoint.sol";
-import { IERC20 } from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
+import {Test, console2 as console} from "lib/forge-std/src/Test.sol";
+import {Base} from "test/Base.sol";
+import {GasPolicy} from "src/utils/GasPolicy.sol";
+import {IEntryPoint} from "lib/account-abstraction/contracts/interfaces/IEntryPoint.sol";
+import {EntryPoint} from "lib/account-abstraction/contracts/core/EntryPoint.sol";
+import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 
-import { OPFMain as OPF7702 } from "src/core/OPFMain.sol";
-import { MockERC20 } from "src/mocks/MockERC20.sol";
-import { ISpendLimit } from "src/interfaces/ISpendLimit.sol";
-import { IKey } from "src/interfaces/IKey.sol";
-import { WebAuthnVerifier } from "src/utils/WebAuthnVerifier.sol";
-import { PackedUserOperation } from "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
-import { MessageHashUtils } from "lib/openzeppelin-contracts/contracts/utils/cryptography/MessageHashUtils.sol";
+import {OPFMain as OPF7702} from "src/core/OPFMain.sol";
+import {MockERC20} from "src/mocks/MockERC20.sol";
+import {ISpendLimit} from "src/interfaces/ISpendLimit.sol";
+import {IKey} from "src/interfaces/IKey.sol";
+import {WebAuthnVerifier} from "src/utils/WebAuthnVerifier.sol";
+import {PackedUserOperation} from
+    "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
+import {MessageHashUtils} from
+    "lib/openzeppelin-contracts/contracts/utils/cryptography/MessageHashUtils.sol";
 
 contract P256Test is Base {
     /* ───────────────────────────────────────────────────────────── contracts ── */
@@ -63,7 +65,7 @@ contract P256Test is Base {
         _deal();
 
         vm.prank(sender);
-        entryPoint.depositTo{ value: 0.09e18 }(owner);
+        entryPoint.depositTo{value: 0.09e18}(owner);
     }
 
     function test_ExecuteBatchSKP256() public {
@@ -73,10 +75,11 @@ contract P256Test is Base {
         Call[] memory calls = new Call[](2);
 
         bytes memory dataHex = abi.encodeWithSelector(MockERC20.mint.selector, owner, 10e18);
-        bytes memory dataHex2 = abi.encodeWithSelector(IERC20(TOKEN).transfer.selector, sender, 5e18);
+        bytes memory dataHex2 =
+            abi.encodeWithSelector(IERC20(TOKEN).transfer.selector, sender, 5e18);
 
-        calls[0] = Call({ target: TOKEN, value: 0, data: dataHex });
-        calls[1] = Call({ target: TOKEN, value: 0, data: dataHex2 });
+        calls[0] = Call({target: TOKEN, value: 0, data: dataHex});
+        calls[1] = Call({target: TOKEN, value: 0, data: dataHex2});
 
         // ERC-7821 mode for batch execution (still mode ID = 1)
         bytes32 mode = bytes32(uint256(0x01000000000000000000) << (22 * 8));
@@ -85,7 +88,8 @@ contract P256Test is Base {
         bytes memory executionData = abi.encode(calls);
 
         // Create the callData for the ERC-7821 execute function
-        bytes memory callData = abi.encodeWithSelector(bytes4(keccak256("execute(bytes32,bytes)")), mode, executionData);
+        bytes memory callData =
+            abi.encodeWithSelector(bytes4(keccak256("execute(bytes32,bytes)")), mode, executionData);
 
         uint256 nonce = entryPoint.getNonce(owner, 1);
 
@@ -105,10 +109,12 @@ contract P256Test is Base {
         console.log("userOpHash:");
         console.logBytes32(userOpHash);
 
-        IKey.PubKey memory pubKey = IKey.PubKey({ x: MINT_P256_PUBLIC_KEY_X, y: MINT_P256_PUBLIC_KEY_Y });
+        IKey.PubKey memory pubKey =
+            IKey.PubKey({x: MINT_P256_PUBLIC_KEY_X, y: MINT_P256_PUBLIC_KEY_Y});
 
-        bytes memory _signature =
-            account.encodeP256Signature(MINT_P256_SIGNATURE_R, MINT_P256_SIGNATURE_S, pubKey, KeyType.P256);
+        bytes memory _signature = account.encodeP256Signature(
+            MINT_P256_SIGNATURE_R, MINT_P256_SIGNATURE_S, pubKey, KeyType.P256
+        );
         // console.log("isValidSignature:");
         // console.logBytes4(account.isValidSignature(userOpHash, _signature));
 
@@ -137,11 +143,12 @@ contract P256Test is Base {
         uint48 validUntil = uint48(block.timestamp + 1 days);
         uint48 limit = 3;
 
-        pubKeySK = PubKey({ x: MINT_P256_PUBLIC_KEY_X, y: MINT_P256_PUBLIC_KEY_Y });
+        pubKeySK = PubKey({x: MINT_P256_PUBLIC_KEY_X, y: MINT_P256_PUBLIC_KEY_Y});
 
-        keySK = Key({ pubKey: pubKeySK, eoaAddress: address(0), keyType: KeyType.P256 });
+        keySK = Key({pubKey: pubKeySK, eoaAddress: address(0), keyType: KeyType.P256});
 
-        ISpendLimit.SpendTokenInfo memory spendInfo = ISpendLimit.SpendTokenInfo({ token: TOKEN, limit: 1000e18 });
+        ISpendLimit.SpendTokenInfo memory spendInfo =
+            ISpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000e18});
 
         keyData = KeyReg({
             validUntil: validUntil,
@@ -162,11 +169,12 @@ contract P256Test is Base {
     }
 
     function _initializeAccount() internal {
-        pubKeyMK = PubKey({ x: VALID_PUBLIC_KEY_X, y: VALID_PUBLIC_KEY_Y });
+        pubKeyMK = PubKey({x: VALID_PUBLIC_KEY_X, y: VALID_PUBLIC_KEY_Y});
 
-        keyMK = Key({ pubKey: pubKeyMK, eoaAddress: address(0), keyType: KeyType.WEBAUTHN });
+        keyMK = Key({pubKey: pubKeyMK, eoaAddress: address(0), keyType: KeyType.WEBAUTHN});
 
-        ISpendLimit.SpendTokenInfo memory spendInfo = ISpendLimit.SpendTokenInfo({ token: TOKEN, limit: 0 });
+        ISpendLimit.SpendTokenInfo memory spendInfo =
+            ISpendLimit.SpendTokenInfo({token: TOKEN, limit: 0});
 
         keyData = KeyReg({
             validUntil: type(uint48).max,
@@ -179,10 +187,11 @@ contract P256Test is Base {
             ethLimit: 0
         });
 
-        pubKeyMK = PubKey({ x: bytes32(0), y: bytes32(0) });
-        keySK = Key({ pubKey: pubKeyMK, eoaAddress: address(0), keyType: KeyType.WEBAUTHN });
+        pubKeyMK = PubKey({x: bytes32(0), y: bytes32(0)});
+        keySK = Key({pubKey: pubKeyMK, eoaAddress: address(0), keyType: KeyType.WEBAUTHN});
 
-        bytes memory keyEnc = abi.encode(keyMK.pubKey.x, keyMK.pubKey.y, keyMK.eoaAddress, keyMK.keyType);
+        bytes memory keyEnc =
+            abi.encode(keyMK.pubKey.x, keyMK.pubKey.y, keyMK.eoaAddress, keyMK.keyType);
 
         bytes memory keyDataEnc = abi.encode(
             keyData.validUntil,
@@ -196,7 +205,8 @@ contract P256Test is Base {
             keyData.ethLimit
         );
 
-        bytes memory skEnc = abi.encode(keySK.pubKey.x, keySK.pubKey.y, keySK.eoaAddress, keySK.keyType);
+        bytes memory skEnc =
+            abi.encode(keySK.pubKey.x, keySK.pubKey.y, keySK.eoaAddress, keySK.keyType);
 
         bytes memory skDataEnc = abi.encode(
             keyData.validUntil,
@@ -209,13 +219,18 @@ contract P256Test is Base {
             keyData.allowedSelectors
         );
 
-        bytes32 structHash = keccak256(abi.encode(INIT_TYPEHASH, keyEnc, keyDataEnc, skEnc, skDataEnc, initialGuardian));
+        bytes32 structHash = keccak256(
+            abi.encode(INIT_TYPEHASH, keyEnc, keyDataEnc, skEnc, skDataEnc, initialGuardian)
+        );
 
         string memory name = "OPF7702Recoverable";
         string memory version = "1";
 
-        bytes32 domainSeparator =
-            keccak256(abi.encode(TYPE_HASH, keccak256(bytes(name)), keccak256(bytes(version)), block.chainid, owner));
+        bytes32 domainSeparator = keccak256(
+            abi.encode(
+                TYPE_HASH, keccak256(bytes(name)), keccak256(bytes(version)), block.chainid, owner
+            )
+        );
         bytes32 digest = MessageHashUtils.toTypedDataHash(domainSeparator, structHash);
 
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPk, digest);

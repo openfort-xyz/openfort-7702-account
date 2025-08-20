@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.29;
 
-import { IKey } from "src/interfaces/IKey.sol"; // Brings in KeyData / SpendTokenInfo structs
+import {IKey} from "src/interfaces/IKey.sol"; // Brings in KeyData / SpendTokenInfo structs
 
 /**
  * @title KeyDataValidationLib
@@ -27,7 +27,8 @@ library KeyDataValidationLib {
     /// @return true when the key is flagged active *and* still inside its [after, until] window.
     function isLive(IKey.KeyData storage sKey) internal view returns (bool) {
         //             ─────── registered ───────      ─ current window ─
-        return sKey.isActive && block.timestamp >= sKey.validAfter && block.timestamp <= sKey.validUntil;
+        return sKey.isActive && block.timestamp >= sKey.validAfter
+            && block.timestamp <= sKey.validUntil;
     }
 
     /// @dev Master‑keys have unlimited tx budget; sub‑keys consume one unit per tx.
@@ -37,7 +38,11 @@ library KeyDataValidationLib {
     }
 
     /// @return true if `weiValue` is within the key’s ETH spend allowance.
-    function withinEthLimit(IKey.KeyData storage sKey, uint256 weiValue) internal view returns (bool) {
+    function withinEthLimit(IKey.KeyData storage sKey, uint256 weiValue)
+        internal
+        view
+        returns (bool)
+    {
         return sKey.ethLimit >= weiValue;
     }
 
@@ -58,7 +63,11 @@ library KeyDataValidationLib {
     }
 
     /// @return ok True when the key survives *every* guard used by `_validateCall`.
-    function passesCallGuards(IKey.KeyData storage sKey, uint256 weiValue) internal view returns (bool ok) {
+    function passesCallGuards(IKey.KeyData storage sKey, uint256 weiValue)
+        internal
+        view
+        returns (bool ok)
+    {
         ok = hasQuota(sKey) && withinEthLimit(sKey, weiValue);
     }
 

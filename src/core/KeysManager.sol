@@ -14,13 +14,13 @@
 
 pragma solidity ^0.8.29;
 
-import { IKey } from "src/interfaces/IKey.sol";
-import { KeyHashLib } from "src/libs/KeyHashLib.sol";
-import { BaseOPF7702 } from "src/core/BaseOPF7702.sol";
-import { IUserOpPolicy } from "src/interfaces/IPolicy.sol";
-import { ValidationLib } from "src/libs/ValidationLib.sol";
-import { ISpendLimit } from "src/interfaces/ISpendLimit.sol";
-import { IKeysManager } from "src/interfaces/IKeysManager.sol";
+import {IKey} from "src/interfaces/IKey.sol";
+import {KeyHashLib} from "src/libs/KeyHashLib.sol";
+import {BaseOPF7702} from "src/core/BaseOPF7702.sol";
+import {IUserOpPolicy} from "src/interfaces/IPolicy.sol";
+import {ValidationLib} from "src/libs/ValidationLib.sol";
+import {ISpendLimit} from "src/interfaces/ISpendLimit.sol";
+import {IKeysManager} from "src/interfaces/IKeysManager.sol";
 
 /// @title KeysManager
 /// @author Openfort@0xkoiner
@@ -171,7 +171,9 @@ abstract contract KeysManager is BaseOPF7702, IKey, ISpendLimit {
 
         // Only enforce limits if _limit > 0
         if (_keyData.limit > 0) {
-            IUserOpPolicy(GAS_POLICY).initializeGasPolicy(address(this), _key.computeKeyId(), uint256(_keyData.limit));
+            IUserOpPolicy(GAS_POLICY).initializeGasPolicy(
+                address(this), _key.computeKeyId(), uint256(_keyData.limit)
+            );
             sKey.whitelisting = true;
             /// Session Key enforced to be whitelisting
             sKey.ethLimit = _keyData.ethLimit;
@@ -252,7 +254,11 @@ abstract contract KeysManager is BaseOPF7702, IKey, ISpendLimit {
      * @return keyType       The type of the key that was registered.
      * @return isActive      Whether the key is currently active.
      */
-    function getKeyRegistrationInfo(uint256 _id) external view returns (KeyType keyType, bool isActive) {
+    function getKeyRegistrationInfo(uint256 _id)
+        external
+        view
+        returns (KeyType keyType, bool isActive)
+    {
         Key memory k = idKeys[_id];
         bytes32 keyId = k.computeKeyId();
 
@@ -319,11 +325,7 @@ abstract contract KeysManager is BaseOPF7702, IKey, ISpendLimit {
         bytes32 r,
         bytes32 s,
         PubKey memory pubKey
-    )
-        external
-        pure
-        returns (bytes memory)
-    {
+    ) external pure returns (bytes memory) {
         return abi.encode(
             KeyType.WEBAUTHN,
             requireUserVerification,
@@ -345,12 +347,7 @@ abstract contract KeysManager is BaseOPF7702, IKey, ISpendLimit {
      * @param _keyType  KeyType of key.
      * @return ABI‐encoded payload as: KeyType.P256, abi.encode(r, s, pubKey).
      */
-    function encodeP256Signature(
-        bytes32 r,
-        bytes32 s,
-        PubKey memory pubKey,
-        KeyType _keyType
-    )
+    function encodeP256Signature(bytes32 r, bytes32 s, PubKey memory pubKey, KeyType _keyType)
         external
         pure
         returns (bytes memory)

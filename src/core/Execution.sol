@@ -13,9 +13,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.29;
 
-import { KeysManager } from "src/core/KeysManager.sol";
-import { IExecution } from "src/interfaces/IExecution.sol";
-import { ReentrancyGuard } from "lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
+import {KeysManager} from "src/core/KeysManager.sol";
+import {IExecution} from "src/interfaces/IExecution.sol";
+import {ReentrancyGuard} from "lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 
 /// @title Execution
 /// @author Openfort@0xkoiner
@@ -25,7 +25,7 @@ import { ReentrancyGuard } from "lib/openzeppelin-contracts/contracts/utils/Reen
 ///         `ReentrancyGuard` for one‑shot external entry protection.
 abstract contract Execution is KeysManager, ReentrancyGuard {
     /* ────────────────────────────────────────────────────────────── */
-    /*  CONSTANTS                                                    */
+    /*  CONSTANTS                                                     */
     /* ────────────────────────────────────────────────────────────── */
 
     /// @notice Maximum **total** low‑level calls allowed per *outer*
@@ -36,7 +36,7 @@ abstract contract Execution is KeysManager, ReentrancyGuard {
     bytes32 internal constant mode_3 = bytes32(uint256(0x01000000000078210002) << (22 * 8));
 
     /* ────────────────────────────────────────────────────────────── */
-    /*  PUBLIC ENTRY – one per user‑op / tx                          */
+    /*  PUBLIC ENTRY – one per user‑op / tx                           */
     /* ────────────────────────────────────────────────────────────── */
 
     /// @notice Execute a batch (or batch‑of‑batches) described by
@@ -44,7 +44,12 @@ abstract contract Execution is KeysManager, ReentrancyGuard {
     /// @param  mode Execution‑mode word (see ERC‑7821 draft).
     /// @param  executionData ABI‑encoded payload whose shape depends on
     ///         `mode`.
-    function execute(bytes32 mode, bytes memory executionData) public payable virtual nonReentrant {
+    function execute(bytes32 mode, bytes memory executionData)
+        public
+        payable
+        virtual
+        nonReentrant
+    {
         // Authenticate *once* for the whole recursive run.
         _requireForExecute();
 
@@ -53,7 +58,7 @@ abstract contract Execution is KeysManager, ReentrancyGuard {
     }
 
     /* ────────────────────────────────────────────────────────────── */
-    /*  ERC‑165 helper                                               */
+    /*  ERC‑165 helper                                                */
     /* ────────────────────────────────────────────────────────────── */
 
     /// @dev Convenience helper for wallets / bundlers to pre‑check
@@ -63,7 +68,7 @@ abstract contract Execution is KeysManager, ReentrancyGuard {
     }
 
     /* ────────────────────────────────────────────────────────────── */
-    /*  INTERNAL RECURSIVE WORKER                                    */
+    /*  INTERNAL RECURSIVE WORKER                                     */
     /* ────────────────────────────────────────────────────────────── */
 
     /// @dev Recursively process `executionData`.
@@ -125,12 +130,12 @@ abstract contract Execution is KeysManager, ReentrancyGuard {
     }
 
     /* ────────────────────────────────────────────────────────────── */
-    /*  LOW-LEVEL EXECUTION PRIMITIVES                               */
+    /*  LOW-LEVEL EXECUTION PRIMITIVES                                */
     /* ────────────────────────────────────────────────────────────── */
 
     /// @dev Perform the actual call; bubble up any revert reason.
     function _execute(address to, uint256 value, bytes memory data) internal virtual {
-        (bool success, bytes memory result) = to.call{ value: value }(data);
+        (bool success, bytes memory result) = to.call{value: value}(data);
         if (success) return;
         /// @solidity memory-safe-assembly
         assembly {
@@ -139,7 +144,7 @@ abstract contract Execution is KeysManager, ReentrancyGuard {
     }
 
     /* ────────────────────────────────────────────────────────────── */
-    /*  HELPERS                                                      */
+    /*  HELPERS                                                       */
     /* ────────────────────────────────────────────────────────────── */
 
     /// @dev Derive a small integer ID from the 10‑byte execution mode.

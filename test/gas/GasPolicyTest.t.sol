@@ -2,9 +2,10 @@
 
 pragma solidity ^0.8.29;
 
-import { GasPolicy } from "src/utils/GasPolicy.sol";
-import { Test, console2 as console } from "lib/forge-std/src/Test.sol";
-import { PackedUserOperation } from "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
+import {GasPolicy} from "src/utils/GasPolicy.sol";
+import {Test, console2 as console} from "lib/forge-std/src/Test.sol";
+import {PackedUserOperation} from
+    "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
 
 contract GasPolicyTest is Test {
     GasPolicy gP;
@@ -28,7 +29,8 @@ contract GasPolicyTest is Test {
         bytes32 configId = keccak256(abi.encodePacked(bytes32(0), bytes32(0)));
         _initGas(configId);
 
-        (uint128 gasLimit, uint128 gasUsed, uint128 costLimit, uint128 costUsed) = gP.getGasConfig(configId, account);
+        (uint128 gasLimit, uint128 gasUsed, uint128 costLimit, uint128 costUsed) =
+            gP.getGasConfig(configId, account);
         console.log(gasLimit);
         console.log(gasUsed);
         console.log(costLimit);
@@ -66,10 +68,7 @@ contract GasPolicyTest is Test {
         gP.initializeGasPolicy(account, configId, 3);
     }
 
-    function _packAccountGasLimits(
-        uint256 callGasLimit,
-        uint256 verificationGasLimit
-    )
+    function _packAccountGasLimits(uint256 callGasLimit, uint256 verificationGasLimit)
         internal
         pure
         returns (bytes32)
@@ -78,7 +77,11 @@ contract GasPolicyTest is Test {
         return bytes32((verificationGasLimit << 128) | callGasLimit);
     }
 
-    function _packGasFees(uint256 maxFeePerGas, uint256 maxPriorityFeePerGas) internal pure returns (bytes32) {
+    function _packGasFees(uint256 maxFeePerGas, uint256 maxPriorityFeePerGas)
+        internal
+        pure
+        returns (bytes32)
+    {
         return bytes32((maxFeePerGas << 128) | maxPriorityFeePerGas);
     }
 }

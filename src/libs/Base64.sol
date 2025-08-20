@@ -4,14 +4,17 @@ pragma solidity ^0.8.4;
 /// @notice Library to encode strings in Base64.
 /// @author Solady (https://github.com/vectorized/solady/blob/main/src/utils/Base64.sol)
 /// @author Modified from Solmate (https://github.com/transmissions11/solmate/blob/main/src/utils/Base64.sol)
-/// @author Modified from (https://github.com/Brechtpd/base64/blob/main/base64.sol) by Brecht Devos -
-/// <brecht@loopring.org>.
+/// @author Modified from (https://github.com/Brechtpd/base64/blob/main/base64.sol) by Brecht Devos - <brecht@loopring.org>.
 library Base64 {
     /// @dev Encodes `data` using the base64 encoding described in RFC 4648.
     /// See: https://datatracker.ietf.org/doc/html/rfc4648
     /// @param fileSafe  Whether to replace '+' with '-' and '/' with '_'.
     /// @param noPadding Whether to strip away the padding.
-    function encode(bytes memory data, bool fileSafe, bool noPadding) internal pure returns (string memory result) {
+    function encode(bytes memory data, bool fileSafe, bool noPadding)
+        internal
+        pure
+        returns (string memory result)
+    {
         /// @solidity memory-safe-assembly
         assembly {
             let dataLength := mload(data)
@@ -41,7 +44,7 @@ library Base64 {
                 mstore(dataEnd, 0x00) // Zeroize the `dataEnd` slot to clear dirty bits.
 
                 // Run over the input, 3 bytes at a time.
-                for { } 1 { } {
+                for {} 1 {} {
                     data := add(data, 3) // Advance 3 bytes.
                     let input := mload(data)
 
@@ -77,7 +80,11 @@ library Base64 {
 
     /// @dev Encodes `data` using the base64 encoding described in RFC 4648.
     /// Equivalent to `encode(data, fileSafe, false)`.
-    function encode(bytes memory data, bool fileSafe) internal pure returns (string memory result) {
+    function encode(bytes memory data, bool fileSafe)
+        internal
+        pure
+        returns (string memory result)
+    {
         result = encode(data, fileSafe, false);
     }
 
@@ -103,7 +110,7 @@ library Base64 {
             if dataLength {
                 let decodedLength := mul(shr(2, dataLength), 3)
 
-                for { } 1 { } {
+                for {} 1 {} {
                     // If padded.
                     if iszero(and(dataLength, 3)) {
                         let t := xor(mload(add(data, dataLength)), 0x3d3d)
@@ -135,7 +142,7 @@ library Base64 {
                 mstore(0x3b, 0x04080c1014181c2024282c3034383c4044484c5054585c6064)
                 mstore(0x1a, 0xf8fcf800fcd0d4d8dce0e4e8ecf0f4)
 
-                for { } 1 { } {
+                for {} 1 {} {
                     // Read 4 bytes.
                     data := add(data, 4)
                     let input := mload(data)

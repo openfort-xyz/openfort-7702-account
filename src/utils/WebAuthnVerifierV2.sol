@@ -2,8 +2,8 @@
 
 pragma solidity ^0.8.29;
 
-import { P256 } from "src/libs/P256.sol";
-import { WebAuthn } from "lib/webauthn-sol/src/WebAuthn.sol";
+import {P256} from "src/libs/P256.sol";
+import {WebAuthn} from "lib/webauthn-sol/src/WebAuthn.sol";
 
 /**
  * @title WebAuthnVerifier
@@ -37,11 +37,7 @@ contract WebAuthnVerifierV2 {
         bytes32 s,
         bytes32 x,
         bytes32 y
-    )
-        external
-        view
-        returns (bool isValid)
-    {
+    ) external view returns (bool isValid) {
         uint256 rUint = uint256(r);
         uint256 sUint = uint256(s);
         uint256 xUint = uint256(x);
@@ -71,13 +67,7 @@ contract WebAuthnVerifierV2 {
      * @param y The y-coordinate of the public key
      * @return isValid Whether the signature is valid
      */
-    function verifyP256Signature(
-        bytes32 hash,
-        bytes32 r,
-        bytes32 s,
-        bytes32 x,
-        bytes32 y
-    )
+    function verifyP256Signature(bytes32 hash, bytes32 r, bytes32 s, bytes32 x, bytes32 y)
         external
         view
         returns (bool isValid)

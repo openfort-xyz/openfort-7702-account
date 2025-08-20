@@ -4,8 +4,8 @@ pragma solidity ^0.8.29;
 
 /* ───────────────────────────────────────────────────────────── imports ──── */
 import "lib/forge-std/src/StdJson.sol";
-import { IKey } from "src/interfaces/IKey.sol";
-import { Test, console2 as console } from "lib/forge-std/src/Test.sol";
+import {IKey} from "src/interfaces/IKey.sol";
+import {Test, console2 as console} from "lib/forge-std/src/Test.sol";
 
 /* ──────────────────────────────────────────────────────────────── base ──── */
 contract Base is Test, IKey {
@@ -16,16 +16,19 @@ contract Base is Test, IKey {
     }
     /* ───────────────────────────────────────────────────────────── constants ── */
 
-    bytes32 constant TYPE_HASH =
-        keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
+    bytes32 constant TYPE_HASH = keccak256(
+        "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
+    );
     address constant SEPOLIA_ENTRYPOINT = 0x4337084D9E255Ff0702461CF8895CE9E3b5Ff108;
     address constant SEPOLIA_WEBAUTHN = 0x83b7acb5A6aa8A34A97bdA13182aEA787AC3f10d;
     address constant TOKEN = 0x9C0b94fb071Ed4066d7C18F4b68968e311A66209;
     address constant ETH_RECIVE = 0xCdB635ee58926769ee2789fA0942Ef04A4ae9d16;
     address constant WEBAUTHN_VERIFIER = 0x83b7acb5A6aa8A34A97bdA13182aEA787AC3f10d;
     uint256 constant ETH_LIMIT = 1e18;
-    bytes32 constant RECOVER_TYPEHASH = 0x9f7aca777caf11405930359f601a4db01fad1b2d79ef3f2f9e93c835e9feffa5;
-    bytes32 constant INIT_TYPEHASH = 0x82dc6262fca76342c646d126714aa4005dfcd866448478747905b2e7b9837183;
+    bytes32 constant RECOVER_TYPEHASH =
+        0x9f7aca777caf11405930359f601a4db01fad1b2d79ef3f2f9e93c835e9feffa5;
+    bytes32 constant INIT_TYPEHASH =
+        0x82dc6262fca76342c646d126714aa4005dfcd866448478747905b2e7b9837183;
     uint256 constant RECOVERY_PERIOD = 2 days;
     uint256 constant LOCK_PERIOD = 5 days;
     uint256 constant SECURITY_PERIOD = 1.5 days;
@@ -48,13 +51,18 @@ contract Base is Test, IKey {
     address internal sessionKey;
 
     /* ───────────────────────────────────────────────────────────── master key ── */
-    bytes32 constant VALID_PUBLIC_KEY_X = hex"f014cc9fb4edba3c439a22423f580ad29cb177dbd5af224e4d068ef6374df083";
-    bytes32 constant VALID_PUBLIC_KEY_Y = hex"f4c5322095ffa8db8344b7675f82eeadd2a17af4d9db9d4d4c582e8839ca391e";
+    bytes32 constant VALID_PUBLIC_KEY_X =
+        hex"f014cc9fb4edba3c439a22423f580ad29cb177dbd5af224e4d068ef6374df083";
+    bytes32 constant VALID_PUBLIC_KEY_Y =
+        hex"f4c5322095ffa8db8344b7675f82eeadd2a17af4d9db9d4d4c582e8839ca391e";
 
-    bytes public constant CHALLENGE = hex"cea3e080968320575bc01fbe2293a690683e321ac28cfb95a234e4b959e4fcfa";
+    bytes public constant CHALLENGE =
+        hex"cea3e080968320575bc01fbe2293a690683e321ac28cfb95a234e4b959e4fcfa";
 
-    bytes32 public constant VALID_SIGNATURE_R = hex"cf1d727573eee8b3d301ab94aec432c1b7953969dcdf71388d14385630378a80";
-    bytes32 public constant VALID_SIGNATURE_S = hex"417d9bafa3acecdbba348f851c1efc93c7ed780e2eddc7046767a1998db4f0c8";
+    bytes32 public constant VALID_SIGNATURE_R =
+        hex"cf1d727573eee8b3d301ab94aec432c1b7953969dcdf71388d14385630378a80";
+    bytes32 public constant VALID_SIGNATURE_S =
+        hex"417d9bafa3acecdbba348f851c1efc93c7ed780e2eddc7046767a1998db4f0c8";
 
     bytes public constant AUTHENTICATOR_DATA =
         hex"49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d97631d00000000";
@@ -76,17 +84,23 @@ contract Base is Test, IKey {
     bytes32 public REG_SIGNATURE_R = stdJson.readBytes32(json_reg, ".registration.signature.r");
     bytes32 public REG_SIGNATURE_S = stdJson.readBytes32(json_reg, ".registration.signature.s");
 
-    bytes public REG_AUTHENTICATOR_DATA = stdJson.readBytes(json_reg, ".registration.metadata.authenticatorData");
-    string public REG_CLIENT_DATA_JSON = stdJson.readString(json_reg, ".registration.metadata.clientDataJSON");
+    bytes public REG_AUTHENTICATOR_DATA =
+        stdJson.readBytes(json_reg, ".registration.metadata.authenticatorData");
+    string public REG_CLIENT_DATA_JSON =
+        stdJson.readString(json_reg, ".registration.metadata.clientDataJSON");
 
-    uint256 public REG_CHALLENGE_INDEX = stdJson.readUint(json_reg, ".registration.metadata.challengeIndex");
+    uint256 public REG_CHALLENGE_INDEX =
+        stdJson.readUint(json_reg, ".registration.metadata.challengeIndex");
     uint256 public REG_TYPE_INDEX = stdJson.readUint(json_reg, ".registration.metadata.typeIndex");
 
     /* ───────────────────────────────────────────────────────────── master key ── */
-    bytes32 constant MINT_VALID_PUBLIC_KEY_X = hex"4d1a5e0a438f91389c9695b0c68c51840062c184710c7ac2c90a2e70a3aa21a7";
-    bytes32 constant MINT_VALID_PUBLIC_KEY_Y = hex"c6df07a5b82c2c1751a58059f4477d91c15f17d173679560c52ff8aa5bc0ab4c";
+    bytes32 constant MINT_VALID_PUBLIC_KEY_X =
+        hex"4d1a5e0a438f91389c9695b0c68c51840062c184710c7ac2c90a2e70a3aa21a7";
+    bytes32 constant MINT_VALID_PUBLIC_KEY_Y =
+        hex"c6df07a5b82c2c1751a58059f4477d91c15f17d173679560c52ff8aa5bc0ab4c";
 
-    bytes32 public constant MINT_CHALLENGE = hex"04b322462d12d579d02558a0b54208c8cef6edbe848bd9cdce7b11dd93764698";
+    bytes32 public constant MINT_CHALLENGE =
+        hex"04b322462d12d579d02558a0b54208c8cef6edbe848bd9cdce7b11dd93764698";
 
     bytes32 public constant MINT_VALID_SIGNATURE_R =
         hex"73b4561ba91fa50d8a27f554232b6b6958ba0ee475a5cf84248c13067e326074";
@@ -113,9 +127,11 @@ contract Base is Test, IKey {
     bytes32 public BATCH_VALID_SIGNATURE_R = stdJson.readBytes32(json_batch, ".batch.signature.r");
     bytes32 public BATCH_VALID_SIGNATURE_S = stdJson.readBytes32(json_batch, ".batch.signature.s");
 
-    bytes public BATCH_AUTHENTICATOR_DATA = stdJson.readBytes(json_batch, ".batch.metadata.authenticatorData");
+    bytes public BATCH_AUTHENTICATOR_DATA =
+        stdJson.readBytes(json_batch, ".batch.metadata.authenticatorData");
 
-    string public BATCH_CLIENT_DATA_JSON = stdJson.readString(json_batch, ".batch.metadata.clientDataJSON");
+    string public BATCH_CLIENT_DATA_JSON =
+        stdJson.readString(json_batch, ".batch.metadata.clientDataJSON");
 
     uint256 public BATCH_CHALLENGE_INDEX = 23;
     uint256 public BATCH_TYPE_INDEX = 1;
@@ -131,9 +147,11 @@ contract Base is Test, IKey {
     bytes32 public ETH_SIGNATURE_R = stdJson.readBytes32(json_eth_dep, ".eth.signature.r");
     bytes32 public ETH_SIGNATURE_S = stdJson.readBytes32(json_eth_dep, ".eth.signature.s");
 
-    bytes public ETH_AUTHENTICATOR_DATA = stdJson.readBytes(json_eth_dep, ".eth.metadata.authenticatorData");
+    bytes public ETH_AUTHENTICATOR_DATA =
+        stdJson.readBytes(json_eth_dep, ".eth.metadata.authenticatorData");
 
-    string public ETH_CLIENT_DATA_JSON = stdJson.readString(json_eth_dep, ".eth.metadata.clientDataJSON");
+    string public ETH_CLIENT_DATA_JSON =
+        stdJson.readString(json_eth_dep, ".eth.metadata.clientDataJSON");
 
     /* ──────────────────────────────────────────────────────────────── P256 ──── */
     string public json = vm.readFile("test/data/p256.json");
@@ -164,8 +182,10 @@ contract Base is Test, IKey {
     bytes32 ETH_P256NOKEY_PUBLIC_KEY_X = stdJson.readBytes32(json_eth, ".result2.P256NONKEY_xHex");
     bytes32 ETH_P256NOKEY_PUBLIC_KEY_Y = stdJson.readBytes32(json_eth, ".result2.P256NONKEY_yHex");
 
-    bytes32 public ETH_P256NOKEY_SIGNATURE_R = stdJson.readBytes32(json_eth, ".result2.P256NONKEY_rHex");
-    bytes32 public ETH_P256NOKEY_SIGNATURE_S = stdJson.readBytes32(json_eth, ".result2.P256NONKEY_sHex");
+    bytes32 public ETH_P256NOKEY_SIGNATURE_R =
+        stdJson.readBytes32(json_eth, ".result2.P256NONKEY_rHex");
+    bytes32 public ETH_P256NOKEY_SIGNATURE_S =
+        stdJson.readBytes32(json_eth, ".result2.P256NONKEY_sHex");
 
     // /* ──────────────────────────────────────────────────────────────── P256 ──── */
     string public json_single_mint = vm.readFile("test/data/p256_single_mint.json");
@@ -177,11 +197,15 @@ contract Base is Test, IKey {
     bytes32 MINT_P256_SIGNATURE_S = stdJson.readBytes32(json_single_mint, ".result.P256_lowSS");
 
     /* ──────────────────────────────────────────────────────────── P256NONKEY ──── */
-    bytes32 MINT_P256NOKEY_PUBLIC_KEY_X = stdJson.readBytes32(json_single_mint, ".result2.P256NONKEY_xHex");
-    bytes32 MINT_P256NOKEY_PUBLIC_KEY_Y = stdJson.readBytes32(json_single_mint, ".result2.P256NONKEY_yHex");
+    bytes32 MINT_P256NOKEY_PUBLIC_KEY_X =
+        stdJson.readBytes32(json_single_mint, ".result2.P256NONKEY_xHex");
+    bytes32 MINT_P256NOKEY_PUBLIC_KEY_Y =
+        stdJson.readBytes32(json_single_mint, ".result2.P256NONKEY_yHex");
 
-    bytes32 public MINT_P256NOKEY_SIGNATURE_R = stdJson.readBytes32(json_single_mint, ".result2.P256NONKEY_rHex");
-    bytes32 public MINT_P256NOKEY_SIGNATURE_S = stdJson.readBytes32(json_single_mint, ".result2.P256NONKEY_sHex");
+    bytes32 public MINT_P256NOKEY_SIGNATURE_R =
+        stdJson.readBytes32(json_single_mint, ".result2.P256NONKEY_rHex");
+    bytes32 public MINT_P256NOKEY_SIGNATURE_S =
+        stdJson.readBytes32(json_single_mint, ".result2.P256NONKEY_sHex");
 
     /* ───────────────────────────────────────────────────────────── recovery key ── */
     Key internal keyGuardianEOA;
@@ -196,13 +220,18 @@ contract Base is Test, IKey {
 
     Key internal keyGuardianWebAuthn;
     PubKey internal pubKeyGuardianWebAuthn;
-    bytes32 constant GUARDIAN_PUBLIC_KEY_X = hex"e52e02ebbc3a44f64536b1fcd75912bdd10e60b81a266c85b5521ef70b14181a";
-    bytes32 constant GUARDIAN_PUBLIC_KEY_Y = hex"750ee32269162f0bd710e4ed4820da9ef1265f7cf9c8f44ffc3235cf041d84fd";
+    bytes32 constant GUARDIAN_PUBLIC_KEY_X =
+        hex"e52e02ebbc3a44f64536b1fcd75912bdd10e60b81a266c85b5521ef70b14181a";
+    bytes32 constant GUARDIAN_PUBLIC_KEY_Y =
+        hex"750ee32269162f0bd710e4ed4820da9ef1265f7cf9c8f44ffc3235cf041d84fd";
 
-    bytes public constant GUARDIAN_CHALLENGE = hex"dd901464b06d62c1602eac47f402261c733d97bed67bae107e6f783a28e3220c";
+    bytes public constant GUARDIAN_CHALLENGE =
+        hex"dd901464b06d62c1602eac47f402261c733d97bed67bae107e6f783a28e3220c";
 
-    bytes32 public constant GUARDIAN_SIGNATURE_R = hex"d28a5af88ed7b32eb2e1634c0bf7548fc6d731d8b732f05277f60f7dabf1abad";
-    bytes32 public constant GUARDIAN_SIGNATURE_S = hex"5f4dae7d1683232fb1b070b90aa70583e69ca74d1356d904384a0347b039601a";
+    bytes32 public constant GUARDIAN_SIGNATURE_R =
+        hex"d28a5af88ed7b32eb2e1634c0bf7548fc6d731d8b732f05277f60f7dabf1abad";
+    bytes32 public constant GUARDIAN_SIGNATURE_S =
+        hex"5f4dae7d1683232fb1b070b90aa70583e69ca74d1356d904384a0347b039601a";
 
     bytes public constant GUARDIAN_AUTHENTICATOR_DATA =
         hex"49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d97631d00000000";
@@ -214,13 +243,18 @@ contract Base is Test, IKey {
     uint256 public constant GUARDIAN_TYPE_INDEX = 1;
 
     /* ───────────────────────────────────────────────────────────── master key ── */
-    bytes32 constant G_VALID_PUBLIC_KEY_X = hex"a45baf6070dec66ca140b5152e6c9947c4a3fcec322e0626e6ce393e18b0ee81";
-    bytes32 constant G_VALID_PUBLIC_KEY_Y = hex"a1a3260ee81d1036cf9fea854c55f1d02cc869d365340d900a1191a9e32e7eee";
+    bytes32 constant G_VALID_PUBLIC_KEY_X =
+        hex"a45baf6070dec66ca140b5152e6c9947c4a3fcec322e0626e6ce393e18b0ee81";
+    bytes32 constant G_VALID_PUBLIC_KEY_Y =
+        hex"a1a3260ee81d1036cf9fea854c55f1d02cc869d365340d900a1191a9e32e7eee";
 
-    bytes32 public constant G_CHALLENGE = hex"ba609dbeed0e0f8c94f3c69042c0a1b93aab17685eadcb2e45ad95e066062b68";
+    bytes32 public constant G_CHALLENGE =
+        hex"ba609dbeed0e0f8c94f3c69042c0a1b93aab17685eadcb2e45ad95e066062b68";
 
-    bytes32 public constant G_VALID_SIGNATURE_R = hex"546ac03d0190caab0cec299508e937e40fb0ef56a8794e368f806ed47aa19d29";
-    bytes32 public constant G_VALID_SIGNATURE_S = hex"77c92c666860f01042879f72d7518fe7b5d03c0b79d5be0e4a0d0580d0e6c2c2";
+    bytes32 public constant G_VALID_SIGNATURE_R =
+        hex"546ac03d0190caab0cec299508e937e40fb0ef56a8794e368f806ed47aa19d29";
+    bytes32 public constant G_VALID_SIGNATURE_S =
+        hex"77c92c666860f01042879f72d7518fe7b5d03c0b79d5be0e4a0d0580d0e6c2c2";
 
     bytes public constant G_AUTHENTICATOR_DATA =
         hex"49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d97631d00000000";
@@ -239,13 +273,16 @@ contract Base is Test, IKey {
 
     bytes32 public BATCHS_CHALLENGE = stdJson.readBytes32(json_b_of_b, ".batchofbatches.challenge");
 
-    bytes32 public BATCHS_VALID_SIGNATURE_R = stdJson.readBytes32(json_b_of_b, ".batchofbatches.signature.r");
-    bytes32 public BATCHS_VALID_SIGNATURE_S = stdJson.readBytes32(json_b_of_b, ".batchofbatches.signature.s");
+    bytes32 public BATCHS_VALID_SIGNATURE_R =
+        stdJson.readBytes32(json_b_of_b, ".batchofbatches.signature.r");
+    bytes32 public BATCHS_VALID_SIGNATURE_S =
+        stdJson.readBytes32(json_b_of_b, ".batchofbatches.signature.s");
 
     bytes public BATCHS_AUTHENTICATOR_DATA =
         stdJson.readBytes(json_b_of_b, ".batchofbatches.metadata.authenticatorData");
 
-    string public BATCHS_CLIENT_DATA_JSON = stdJson.readString(json_b_of_b, ".batchofbatches.metadata.clientDataJSON");
+    string public BATCHS_CLIENT_DATA_JSON =
+        stdJson.readString(json_b_of_b, ".batchofbatches.metadata.clientDataJSON");
 
     uint256 public BATCHS_CHALLENGE_INDEX = 23;
     uint256 public BATCHS_TYPE_INDEX = 1;
@@ -261,9 +298,11 @@ contract Base is Test, IKey {
     bytes32 public CHANGE_SIGNATURE_R = stdJson.readBytes32(json_change, ".change.signature.r");
     bytes32 public CHANGE_SIGNATURE_S = stdJson.readBytes32(json_change, ".change.signature.s");
 
-    bytes public CHANGE_AUTHENTICATOR_DATA = stdJson.readBytes(json_change, ".change.metadata.authenticatorData");
+    bytes public CHANGE_AUTHENTICATOR_DATA =
+        stdJson.readBytes(json_change, ".change.metadata.authenticatorData");
 
-    string public CHANGE_CLIENT_DATA_JSON = stdJson.readString(json_change, ".change.metadata.clientDataJSON");
+    string public CHANGE_CLIENT_DATA_JSON =
+        stdJson.readString(json_change, ".change.metadata.clientDataJSON");
 
     /* ───────────────────────────────────────────────────────────── master key ── */
     string public json_erc1271 = vm.readFile("test/data/isValidSignature.json");
@@ -271,10 +310,13 @@ contract Base is Test, IKey {
     bytes32 public ERC1271_PUBLIC_KEY_X = stdJson.readBytes32(json_erc1271, ".isValidSignature.x");
     bytes32 public ERC1271_PUBLIC_KEY_Y = stdJson.readBytes32(json_erc1271, ".isValidSignature.y");
 
-    bytes32 public ERC1271_CHALLENGE = stdJson.readBytes32(json_erc1271, ".isValidSignature.challenge");
+    bytes32 public ERC1271_CHALLENGE =
+        stdJson.readBytes32(json_erc1271, ".isValidSignature.challenge");
 
-    bytes32 public ERC1271_SIGNATURE_R = stdJson.readBytes32(json_erc1271, ".isValidSignature.signature.r");
-    bytes32 public ERC1271_SIGNATURE_S = stdJson.readBytes32(json_erc1271, ".isValidSignature.signature.s");
+    bytes32 public ERC1271_SIGNATURE_R =
+        stdJson.readBytes32(json_erc1271, ".isValidSignature.signature.r");
+    bytes32 public ERC1271_SIGNATURE_S =
+        stdJson.readBytes32(json_erc1271, ".isValidSignature.signature.s");
 
     bytes public ERC1271_AUTHENTICATOR_DATA =
         stdJson.readBytes(json_erc1271, ".isValidSignature.metadata.authenticatorData");
@@ -294,10 +336,7 @@ contract Base is Test, IKey {
         sel[0] = 0x00000000;
     }
 
-    function _packAccountGasLimits(
-        uint256 callGasLimit,
-        uint256 verificationGasLimit
-    )
+    function _packAccountGasLimits(uint256 callGasLimit, uint256 verificationGasLimit)
         internal
         pure
         returns (bytes32)
@@ -305,7 +344,11 @@ contract Base is Test, IKey {
         return bytes32((callGasLimit << 128) | verificationGasLimit);
     }
 
-    function _packGasFees(uint256 maxFeePerGas, uint256 maxPriorityFeePerGas) internal pure returns (bytes32) {
+    function _packGasFees(uint256 maxFeePerGas, uint256 maxPriorityFeePerGas)
+        internal
+        pure
+        returns (bytes32)
+    {
         return bytes32((maxFeePerGas << 128) | maxPriorityFeePerGas);
     }
 
@@ -319,10 +362,12 @@ contract Base is Test, IKey {
             x: 0x0000000000000000000000000000000000000000000000000000000000000000,
             y: 0x0000000000000000000000000000000000000000000000000000000000000000
         });
-        keyGuardianEOA = Key({ pubKey: pubKeyGuardianEOA, eoaAddress: GUARDIAN_EOA_ADDRESS, keyType: KeyType.EOA });
+        keyGuardianEOA =
+            Key({pubKey: pubKeyGuardianEOA, eoaAddress: GUARDIAN_EOA_ADDRESS, keyType: KeyType.EOA});
 
-        pubKeyGuardianWebAuthn = PubKey({ x: GUARDIAN_PUBLIC_KEY_X, y: GUARDIAN_PUBLIC_KEY_Y });
-        keyGuardianWebAuthn = Key({ pubKey: pubKeyGuardianWebAuthn, eoaAddress: address(0), keyType: KeyType.WEBAUTHN });
+        pubKeyGuardianWebAuthn = PubKey({x: GUARDIAN_PUBLIC_KEY_X, y: GUARDIAN_PUBLIC_KEY_Y});
+        keyGuardianWebAuthn =
+            Key({pubKey: pubKeyGuardianWebAuthn, eoaAddress: address(0), keyType: KeyType.WEBAUTHN});
 
         address initialAddr = makeAddr("initialGuardian");
         initialGuardian = keccak256(abi.encodePacked(initialAddr));
