@@ -36,7 +36,7 @@ jobs:
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
-          # You can pin to your local exact version instead (e.g. nightly-2025-07-10)
+          # Use the same version you have locally, e.g. nightly-2025-07-10
           version: nightly
 
       - name: Show Forge version
