@@ -8,16 +8,16 @@ contract GasPolicy is IUserOpPolicy {
     using UserOperationLib for PackedUserOperation;
 
     // ---------------------- Validation return codes ----------------------
-    uint256 private constant VALIDATION_FAILED  = 1;
+    uint256 private constant VALIDATION_FAILED = 1;
     uint256 private constant VALIDATION_SUCCESS = 0;
 
     // ---------------------- % and BPS helpers ----------------------
     // Percent arithmetic
     uint256 private constant PERCENT_DENOMINATOR = 100;
-    uint256 private constant PERCENT_70          = 70;
+    uint256 private constant PERCENT_70 = 70;
 
     // Basis-points arithmetic (x * bps / 10_000), often with ceil
-    uint256 private constant BPS_DENOMINATOR   = 10_000;
+    uint256 private constant BPS_DENOMINATOR = 10_000;
     uint256 private constant BPS_CEIL_ROUNDING = 9_999;
 
     // -------- Defaults for auto-initialization --------
@@ -39,8 +39,17 @@ contract GasPolicy is IUserOpPolicy {
     mapping(bytes32 id => mapping(address mux => mapping(address account => GasLimitConfig)))
         internal gasLimitConfigs;
 
-    constructor(uint256 _defaultPVG, uint256 _defaultVGL, uint256 _defaultCGL, uint256 _defaultPMV, uint256 _defaultPO) {
-        if (_defaultPVG == 0 || _defaultVGL == 0 || _defaultCGL == 0 || _defaultPMV == 0 || _defaultPO == 0) revert GasPolicy__InitializationIncorrect();
+    constructor(
+        uint256 _defaultPVG,
+        uint256 _defaultVGL,
+        uint256 _defaultCGL,
+        uint256 _defaultPMV,
+        uint256 _defaultPO
+    ) {
+        if (
+            _defaultPVG == 0 || _defaultVGL == 0 || _defaultCGL == 0 || _defaultPMV == 0
+                || _defaultPO == 0
+        ) revert GasPolicy__InitializationIncorrect();
         DEFAULT_PVG = _defaultPVG;
         DEFAULT_VGL = _defaultVGL;
         DEFAULT_CGL = _defaultCGL;
@@ -52,7 +61,7 @@ contract GasPolicy is IUserOpPolicy {
     function checkUserOpPolicy(bytes32 id, PackedUserOperation calldata userOp)
         external
         returns (uint256)
-    {   
+    {
         GasLimitConfig storage cfg = gasLimitConfigs[id][msg.sender][userOp.sender];
         if (!cfg.initialized) return VALIDATION_FAILED;
 
@@ -69,7 +78,7 @@ contract GasPolicy is IUserOpPolicy {
             postOp = UserOperationLib.unpackPostOpGasLimit(userOp);
         }
 
-        envelopeUnits = cgl + postOp;
+        envelopeUnits += cgl + postOp;
 
         // 2) Worst-case WEI (v0.8 semantics)
         uint256 price = userOp.gasPrice(); // min(maxFeePerGas, basefee + maxPriority)
@@ -78,8 +87,9 @@ contract GasPolicy is IUserOpPolicy {
         uint32 threshold = cfg.penaltyThreshold == 0 ? DEFAULT_PENALTY_THR : cfg.penaltyThreshold;
 
         uint256 penaltyBasisGas = cgl + postOp;
-        uint256 penaltyGas =
-            penaltyBasisGas >= threshold ? (penaltyBasisGas * penaltyBps + BPS_CEIL_ROUNDING) / BPS_DENOMINATOR : 0;
+        uint256 penaltyGas = penaltyBasisGas >= threshold
+            ? (penaltyBasisGas * penaltyBps + BPS_CEIL_ROUNDING) / BPS_DENOMINATOR
+            : 0;
 
         if (price != 0 && envelopeUnits > type(uint256).max / price) return VALIDATION_FAILED;
         uint256 worstCaseWei = envelopeUnits * price;
@@ -124,7 +134,7 @@ contract GasPolicy is IUserOpPolicy {
     {
         require(account == msg.sender, GasPolicy__AccountMustBeSender());
         GasLimitConfig storage cfg = gasLimitConfigs[configId][msg.sender][account];
-        if (cfg.gasLimit > 0) revert GasPolicy__IdExistAlready();
+        if (cfg.initialized) revert GasPolicy__IdExistAlready();
 
         InitData memory d = abi.decode(initData, (InitData));
         require(d.gasLimit != 0 && d.costLimit != 0, GasPolicy__ZeroBudgets());
@@ -149,12 +159,13 @@ contract GasPolicy is IUserOpPolicy {
     function initializeWithMultiplexer(address account, bytes32 configId, uint256 limit) external {
         require(account == msg.sender, GasPolicy__AccountMustBeSender());
         GasLimitConfig storage cfg = gasLimitConfigs[configId][msg.sender][account];
-        if (cfg.gasLimit > 0) revert GasPolicy__IdExistAlready();
+        if (cfg.initialized) revert GasPolicy__IdExistAlready();
         require(limit > 0 && limit <= type(uint32).max, GasPolicy__BadLimit());
 
         /// @dev Envelope units per op with safety (includes PM legs so it also covers sponsored ops)
         uint256 rawEnvelope = DEFAULT_PVG + DEFAULT_VGL + DEFAULT_CGL + DEFAULT_PMV + DEFAULT_PO;
-        uint256 perOpEnvelopeUnits = (rawEnvelope * SAFETY_BPS + BPS_CEIL_ROUNDING) / BPS_DENOMINATOR;
+        uint256 perOpEnvelopeUnits =
+            (rawEnvelope * SAFETY_BPS + BPS_CEIL_ROUNDING) / BPS_DENOMINATOR;
 
         /// @dev Conservative penalty basis: assume most of the envelope is execution/postOp
         ///      Use 70% of the envelope OR the DEFAULT_CGL+DEFAULT_PO, whichever is larger.
