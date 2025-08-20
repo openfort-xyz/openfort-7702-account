@@ -292,4 +292,20 @@ contract GasFuzzing is Test {
         uint256 res = gP.checkUserOpPolicy(configId, uo);
         assertTrue(res == 0 || res == 1);
     }
+
+    function test_auto_init_handles_extreme_u64_basefee() public {
+        bytes32 configId = keccak256(abi.encodePacked(uint256(14)));
+        // stay within CI’s limit
+        vm.fee(type(uint64).max - 1);
+        vm.prank(account);
+        gP.initializeGasPolicy(account, configId, 1);
+
+        (uint128 gasLimit, uint128 gasUsed, uint128 costLimit, uint128 costUsed) =
+            gP.getGasConfig(configId, account);
+
+        assertGt(gasLimit, 0);
+        assertEq(gasUsed, 0);
+        assertGt(costLimit, 0);
+        assertEq(costUsed, 0);
+    }
 }
