@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.29;
 
-import {IKey} from "src/interfaces/IKey.sol";
+import { IKey } from "src/interfaces/IKey.sol";
 
 /// @title IKeysManager
-/// @notice Interface for `KeysManager`, which handles registration, revocation, and querying of keys (WebAuthn/P256/EOA) with spending limits and whitelisting support.
+/// @notice Interface for `KeysManager`, which handles registration, revocation, and querying of keys
+/// (WebAuthn/P256/EOA) with spending limits and whitelisting support.
 /// @dev Declares all externally‐visible functions, events, state getters, and errors.
-///      Note: KeyData structs contain mappings, so individual field getters or composite “getKeyData” functions are exposed instead of returning the full struct.
+///      Note: KeyData structs contain mappings, so individual field getters or composite “getKeyData” functions are
+/// exposed instead of returning the full struct.
 interface IKeysManager is IKey {
     // =============================================================
     //                            ERRORS
@@ -140,7 +142,10 @@ interface IKeysManager is IKey {
         bytes32 r,
         bytes32 s,
         IKey.PubKey memory pubKey
-    ) external pure returns (bytes memory);
+    )
+        external
+        pure
+        returns (bytes memory);
 
     /**
      * @notice Encodes a P-256 signature payload (KeyType.P256).
@@ -150,7 +155,10 @@ interface IKeysManager is IKey {
         bytes32 s,
         IKey.PubKey memory pubKey,
         IKey.KeyType _keyType
-    ) external pure returns (bytes memory);
+    )
+        external
+        pure
+        returns (bytes memory);
 
     /**
      * @notice Encodes an EOA signature for KeyType.EOA.

@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.29;
 
-import {KeysManager} from "src/core/KeysManager.sol";
+import { KeysManager } from "src/core/KeysManager.sol";
 
 /// @title IExecution
-/// @notice Interface for the `Execution` abstract contract, which provides single‐ and batch‐transaction execution functionality.
+/// @notice Interface for the `Execution` abstract contract, which provides single‐ and batch‐transaction execution
+/// functionality.
 /// @dev Declares all externally‐visible functions, events, and errors. Uses `KeysManager.Call` for transaction data.
 interface IExecution {
     // =============================================================

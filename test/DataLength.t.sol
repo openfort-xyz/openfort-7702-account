@@ -2,10 +2,10 @@
 
 pragma solidity ^0.8.29;
 
-import {Test, console2 as console} from "lib/forge-std/src/Test.sol";
+import { Test, console2 as console } from "lib/forge-std/src/Test.sol";
 
 contract DataLength is Test {
-    function setUp() public {}
+    function setUp() public { }
 
     function test_Length() public pure {
         bytes memory webAuthnStubSignature =

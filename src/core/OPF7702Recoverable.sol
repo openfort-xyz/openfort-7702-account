@@ -13,18 +13,18 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.29;
 
-import {OPF7702} from "src/core/OPF7702.sol";
-import {ERC7201} from "src/utils/ERC7201.sol";
-import {KeyHashLib} from "src/libs/KeyHashLib.sol";
-import {IOPF7702} from "src/interfaces/IOPF7702.sol";
-import {IBaseOPF7702} from "src/interfaces/IBaseOPF7702.sol";
-import {IKeysManager} from "src/interfaces/IKeysManager.sol";
-import {KeyDataValidationLib} from "src/libs/KeyDataValidationLib.sol";
-import {IOPF7702Recoverable} from "src/interfaces/IOPF7702Recoverable.sol";
-import {Math} from "lib/openzeppelin-contracts/contracts/utils/math/Math.sol";
-import {SafeCast} from "lib/openzeppelin-contracts/contracts/utils/math/SafeCast.sol";
-import {ECDSA} from "lib/openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
-import {EIP712} from "lib/openzeppelin-contracts/contracts/utils/cryptography/EIP712.sol";
+import { OPF7702 } from "src/core/OPF7702.sol";
+import { ERC7201 } from "src/utils/ERC7201.sol";
+import { KeyHashLib } from "src/libs/KeyHashLib.sol";
+import { IOPF7702 } from "src/interfaces/IOPF7702.sol";
+import { IBaseOPF7702 } from "src/interfaces/IBaseOPF7702.sol";
+import { IKeysManager } from "src/interfaces/IKeysManager.sol";
+import { KeyDataValidationLib } from "src/libs/KeyDataValidationLib.sol";
+import { IOPF7702Recoverable } from "src/interfaces/IOPF7702Recoverable.sol";
+import { Math } from "lib/openzeppelin-contracts/contracts/utils/math/Math.sol";
+import { SafeCast } from "lib/openzeppelin-contracts/contracts/utils/math/SafeCast.sol";
+import { ECDSA } from "lib/openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
+import { EIP712 } from "lib/openzeppelin-contracts/contracts/utils/cryptography/EIP712.sol";
 
 /**
  * @title   Openfort Base Account 7702 with ERC-4337 Support
@@ -49,11 +49,9 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
     // ──────────────────────────────────────────────────────────────────────────────
 
     /// @dev EIP‑712 type hash for the Recovery struct.
-    bytes32 private constant RECOVER_TYPEHASH =
-        0x9f7aca777caf11405930359f601a4db01fad1b2d79ef3f2f9e93c835e9feffa5;
+    bytes32 private constant RECOVER_TYPEHASH = 0x9f7aca777caf11405930359f601a4db01fad1b2d79ef3f2f9e93c835e9feffa5;
     /// @dev EIP‑712 type hash for the Initialize struct.
-    bytes32 private constant INIT_TYPEHASH =
-        0x82dc6262fca76342c646d126714aa4005dfcd866448478747905b2e7b9837183;
+    bytes32 private constant INIT_TYPEHASH = 0x82dc6262fca76342c646d126714aa4005dfcd866448478747905b2e7b9837183;
     // ──────────────────────────────────────────────────────────────────────────────
     //                              Immutable vars
     // ──────────────────────────────────────────────────────────────────────────────
@@ -95,7 +93,10 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
         uint256 _securityPeriod,
         uint256 _securityWindow,
         address _gasPolicy
-    ) OPF7702(_entryPoint, _webAuthnVerifier, _gasPolicy) EIP712("OPF7702Recoverable", "1") {
+    )
+        OPF7702(_entryPoint, _webAuthnVerifier, _gasPolicy)
+        EIP712("OPF7702Recoverable", "1")
+    {
         if (_lockPeriod < _recoveryPeriod || _recoveryPeriod < _securityPeriod + _securityWindow) {
             revert IOPF7702Recoverable.OPF7702Recoverable_InsecurePeriod();
         }
@@ -137,14 +138,16 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
         KeyReg calldata _sessionKeyData,
         bytes memory _signature,
         bytes32 _initialGuardian
-    ) external initializer {
+    )
+        external
+        initializer
+    {
         _requireForExecute();
         _clearStorage();
 
         _masterKeyValidation(_keyData);
 
-        bytes32 digest =
-            getDigestToInit(_key, _keyData, _sessionKey, _sessionKeyData, _initialGuardian);
+        bytes32 digest = getDigestToInit(_key, _keyData, _sessionKey, _sessionKeyData, _initialGuardian);
 
         if (!_checkSignature(digest, _signature)) {
             revert IBaseOPF7702.OpenfortBaseAccount7702V1__InvalidSignature();
@@ -411,10 +414,7 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
             revert IOPF7702Recoverable.OPF7702Recoverable__OngoingRecovery();
         }
 
-        require(
-            r.guardiansRequired > 0,
-            IOPF7702Recoverable.OPF7702Recoverable__NoGuardiansSetOnWallet()
-        );
+        require(r.guardiansRequired > 0, IOPF7702Recoverable.OPF7702Recoverable__NoGuardiansSetOnWallet());
         if (r.guardiansRequired != _signatures.length) {
             revert IOPF7702Recoverable.OPF7702Recoverable__InvalidSignatureAmount();
         }
@@ -593,12 +593,7 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
      */
     function getDigestToSign() public view returns (bytes32 digest) {
         bytes32 structHash = keccak256(
-            abi.encode(
-                RECOVER_TYPEHASH,
-                recoveryData.key,
-                recoveryData.executeAfter,
-                recoveryData.guardiansRequired
-            )
+            abi.encode(RECOVER_TYPEHASH, recoveryData.key, recoveryData.executeAfter, recoveryData.guardiansRequired)
         );
 
         digest = _hashTypedDataV4(structHash);
@@ -636,9 +631,12 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
         Key calldata _sessionKey,
         KeyReg calldata _sessionKeyData,
         bytes32 _initialGuardian
-    ) public view returns (bytes32 digest) {
-        bytes memory keyEnc =
-            abi.encode(_key.pubKey.x, _key.pubKey.y, _key.eoaAddress, _key.keyType);
+    )
+        public
+        view
+        returns (bytes32 digest)
+    {
+        bytes memory keyEnc = abi.encode(_key.pubKey.x, _key.pubKey.y, _key.eoaAddress, _key.keyType);
 
         bytes memory keyDataEnc = abi.encode(
             _keyData.validUntil,
@@ -652,9 +650,8 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
             _keyData.ethLimit
         );
 
-        bytes memory skEnc = abi.encode(
-            _sessionKey.pubKey.x, _sessionKey.pubKey.y, _sessionKey.eoaAddress, _sessionKey.keyType
-        );
+        bytes memory skEnc =
+            abi.encode(_sessionKey.pubKey.x, _sessionKey.pubKey.y, _sessionKey.eoaAddress, _sessionKey.keyType);
 
         // NOTE: Matches your current schema (no `ethLimit` for sessionKeyData here).
         bytes memory skDataEnc = abi.encode(
@@ -668,9 +665,8 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
             _sessionKeyData.allowedSelectors
         );
 
-        bytes32 structHash = keccak256(
-            abi.encode(INIT_TYPEHASH, keyEnc, keyDataEnc, skEnc, skDataEnc, _initialGuardian)
-        );
+        bytes32 structHash =
+            keccak256(abi.encode(INIT_TYPEHASH, keyEnc, keyDataEnc, skEnc, skDataEnc, _initialGuardian));
 
         return _hashTypedDataV4(structHash);
     }

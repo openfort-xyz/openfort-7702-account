@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.29;
 
-import {IAccount} from "lib/account-abstraction/contracts/interfaces/IAccount.sol";
-import {IEntryPoint} from "lib/account-abstraction/contracts/interfaces/IEntryPoint.sol";
+import { IAccount } from "lib/account-abstraction/contracts/interfaces/IAccount.sol";
+import { IEntryPoint } from "lib/account-abstraction/contracts/interfaces/IEntryPoint.sol";
 import "lib/openzeppelin-contracts/contracts/interfaces/IERC1271.sol";
 import "lib/openzeppelin-contracts/contracts/utils/introspection/IERC165.sol";
 import "lib/openzeppelin-contracts/contracts/token/ERC721/utils/ERC721Holder.sol";
@@ -76,7 +76,5 @@ interface IBaseOPF7702 is IAccount, IERC1271, IERC165, IERC721Receiver, IERC1155
     function supportsInterface(bytes4 interfaceId) external view returns (bool);
 
     /// @notice Called by an ERC777 token contract whenever tokens are being moved or created into this account
-    function tokensReceived(address, address, address, uint256, bytes calldata, bytes calldata)
-        external
-        pure;
+    function tokensReceived(address, address, address, uint256, bytes calldata, bytes calldata) external pure;
 }

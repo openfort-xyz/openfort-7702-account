@@ -2,7 +2,7 @@
 pragma solidity ^0.8.29;
 
 import "lib/openzeppelin-contracts/contracts/access/Ownable.sol";
-import {ReentrancyGuard} from "lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
+import { ReentrancyGuard } from "lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 
 contract SimpleContract is ReentrancyGuard, Ownable {
     /// @notice Emitted when deposit is added for gas fees
@@ -11,7 +11,7 @@ contract SimpleContract is ReentrancyGuard, Ownable {
     /// @notice Emitted when withdrawal is made
     event WithdrawalMade(address indexed to, uint256 amount);
 
-    constructor(address initialOwner) Ownable(initialOwner) {}
+    constructor(address initialOwner) Ownable(initialOwner) { }
 
     fallback() external payable {
         emit DepositAdded(msg.sender, msg.value);
@@ -27,7 +27,7 @@ contract SimpleContract is ReentrancyGuard, Ownable {
         uint256 withdrawAmount = amount == 0 ? address(this).balance : amount;
         require(withdrawAmount <= address(this).balance, "Insufficient balance");
 
-        (bool success,) = payable(owner()).call{value: withdrawAmount}("");
+        (bool success,) = payable(owner()).call{ value: withdrawAmount }("");
         require(success, "Withdrawal failed");
 
         emit WithdrawalMade(owner(), withdrawAmount);

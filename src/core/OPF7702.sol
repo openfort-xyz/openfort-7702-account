@@ -13,22 +13,21 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.29;
 
-import {Execution} from "src/core/Execution.sol";
-import {KeyHashLib} from "src/libs/KeyHashLib.sol";
-import {IUserOpPolicy} from "src/interfaces/IPolicy.sol";
-import {IKeysManager} from "src/interfaces/IKeysManager.sol";
-import {IWebAuthnVerifier} from "src/interfaces/IWebAuthnVerifier.sol";
-import {EfficientHashLib} from "lib/solady/src/utils/EfficientHashLib.sol";
-import {KeyDataValidationLib as KeyValidation} from "src/libs/KeyDataValidationLib.sol";
-import {ECDSA} from "lib/openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
-import {PackedUserOperation} from
-    "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
+import { Execution } from "src/core/Execution.sol";
+import { KeyHashLib } from "src/libs/KeyHashLib.sol";
+import { IUserOpPolicy } from "src/interfaces/IPolicy.sol";
+import { IKeysManager } from "src/interfaces/IKeysManager.sol";
+import { IWebAuthnVerifier } from "src/interfaces/IWebAuthnVerifier.sol";
+import { EfficientHashLib } from "lib/solady/src/utils/EfficientHashLib.sol";
+import { KeyDataValidationLib as KeyValidation } from "src/libs/KeyDataValidationLib.sol";
+import { ECDSA } from "lib/openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
+import { PackedUserOperation } from "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
 import {
     SIG_VALIDATION_FAILED,
     SIG_VALIDATION_SUCCESS,
     _packValidationData
 } from "lib/account-abstraction/contracts/core/Helpers.sol";
-import {Initializable} from "lib/openzeppelin-contracts/contracts/proxy/utils/Initializable.sol";
+import { Initializable } from "lib/openzeppelin-contracts/contracts/proxy/utils/Initializable.sol";
 
 /**
  * @title   Openfort Base Account 7702 with ERC-4337 Support
@@ -74,7 +73,10 @@ contract OPF7702 is Execution, Initializable {
      * @param userOpHash  The precomputed hash of `userOp`.
      * @return Packed validation data (`_packValidationData`) or `SIG_VALIDATION_FAILED`.
      */
-    function _validateSignature(PackedUserOperation calldata userOp, bytes32 userOpHash)
+    function _validateSignature(
+        PackedUserOperation calldata userOp,
+        bytes32 userOpHash
+    )
         internal
         virtual
         override
@@ -126,7 +128,10 @@ contract OPF7702 is Execution, Initializable {
         bytes memory sigData,
         bytes32 userOpHash,
         PackedUserOperation calldata userOp
-    ) private returns (uint256) {
+    )
+        private
+        returns (uint256)
+    {
         address signer = ECDSA.recover(userOpHash, sigData);
 
         // if masterKey (this contract) signed it, immediate success
@@ -146,8 +151,7 @@ contract OPF7702 is Execution, Initializable {
             return SIG_VALIDATION_SUCCESS;
         }
 
-        uint256 isValidGas =
-            IUserOpPolicy(GAS_POLICY).checkUserOpPolicy(signer.computeKeyId(), userOp);
+        uint256 isValidGas = IUserOpPolicy(GAS_POLICY).checkUserOpPolicy(signer.computeKeyId(), userOp);
 
         if (isValidGas == 1) revert IKeysManager.KeyManager__RevertGasPolicy();
 
@@ -166,7 +170,8 @@ contract OPF7702 is Execution, Initializable {
      *  • Otherwise, call `isValidKey(...)`.
      *
      * @param userOpHash  The userOp hash (served as challenge).
-     * @param signature   ABI-encoded payload: (KeyType, bool requireUV, bytes authData, string clientDataJSON, uint256 challengeIdx, uint256 typeIdx, bytes32 r, bytes32 s, PubKey pubKey).
+     * @param signature   ABI-encoded payload: (KeyType, bool requireUV, bytes authData, string clientDataJSON, uint256
+     * challengeIdx, uint256 typeIdx, bytes32 r, bytes32 s, PubKey pubKey).
      * @param userOp      The packed user operation coming from EntryPoint.
      * @return Packed validation output, or SIG_VALIDATION_FAILED.
      */
@@ -174,7 +179,10 @@ contract OPF7702 is Execution, Initializable {
         bytes32 userOpHash,
         bytes calldata signature,
         PackedUserOperation calldata userOp
-    ) private returns (uint256) {
+    )
+        private
+        returns (uint256)
+    {
         // decode everything in one shot
         (
             ,
@@ -186,9 +194,7 @@ contract OPF7702 is Execution, Initializable {
             bytes32 r,
             bytes32 s,
             PubKey memory pubKey
-        ) = abi.decode(
-            signature, (KeyType, bool, bytes, string, uint256, uint256, bytes32, bytes32, PubKey)
-        );
+        ) = abi.decode(signature, (KeyType, bool, bytes, string, uint256, uint256, bytes32, bytes32, PubKey));
 
         if (usedChallenges[userOpHash]) {
             revert IKeysManager.KeyManager__UsedChallenge();
@@ -222,8 +228,7 @@ contract OPF7702 is Execution, Initializable {
             return SIG_VALIDATION_SUCCESS;
         }
 
-        uint256 isValidGas =
-            IUserOpPolicy(GAS_POLICY).checkUserOpPolicy(pubKey.computeKeyId(), userOp);
+        uint256 isValidGas = IUserOpPolicy(GAS_POLICY).checkUserOpPolicy(pubKey.computeKeyId(), userOp);
 
         if (isValidGas == 1) revert IKeysManager.KeyManager__RevertGasPolicy();
 
@@ -252,9 +257,11 @@ contract OPF7702 is Execution, Initializable {
         bytes32 userOpHash,
         PackedUserOperation calldata userOp,
         KeyType sigType
-    ) private returns (uint256) {
-        (bytes32 r, bytes32 sSig, PubKey memory pubKey) =
-            abi.decode(sigData, (bytes32, bytes32, PubKey));
+    )
+        private
+        returns (uint256)
+    {
+        (bytes32 r, bytes32 sSig, PubKey memory pubKey) = abi.decode(sigData, (bytes32, bytes32, PubKey));
 
         if (usedChallenges[userOpHash]) {
             revert IKeysManager.KeyManager__UsedChallenge();
@@ -265,9 +272,7 @@ contract OPF7702 is Execution, Initializable {
             userOpHash = EfficientHashLib.sha2(userOpHash);
         }
 
-        bool sigOk = IWebAuthnVerifier(webAuthnVerifier()).verifyP256Signature(
-            userOpHash, r, sSig, pubKey.x, pubKey.y
-        );
+        bool sigOk = IWebAuthnVerifier(webAuthnVerifier()).verifyP256Signature(userOpHash, r, sSig, pubKey.x, pubKey.y);
         if (!sigOk) {
             return SIG_VALIDATION_FAILED;
         }
@@ -278,8 +283,7 @@ contract OPF7702 is Execution, Initializable {
 
         if (!isValid) return SIG_VALIDATION_FAILED;
 
-        uint256 isValidGas =
-            IUserOpPolicy(GAS_POLICY).checkUserOpPolicy(pubKey.computeKeyId(), userOp);
+        uint256 isValidGas = IUserOpPolicy(GAS_POLICY).checkUserOpPolicy(pubKey.computeKeyId(), userOp);
 
         if (isValidGas == 1) revert IKeysManager.KeyManager__RevertGasPolicy();
 
@@ -305,11 +309,7 @@ contract OPF7702 is Execution, Initializable {
     ///      Supports only `execute(bytes32,bytes)` (selector 0xe9ae5c53) and
     ///      defers granular checks to `_validateExecuteCall(...)`.
     ///      Unknown selectors return false. May consume per-key quotas/limits downstream.
-    function isValidKey(bytes calldata _callData, KeyData storage sKey)
-        internal
-        virtual
-        returns (bool)
-    {
+    function isValidKey(bytes calldata _callData, KeyData storage sKey) internal virtual returns (bool) {
         // Extract function selector from callData execute(bytes32,bytes)
         bytes4 funcSelector = bytes4(_callData[:4]);
 
@@ -338,10 +338,7 @@ contract OPF7702 is Execution, Initializable {
      * @param _callData  Encoded as: `execute(address,uint256,bytes)`
      * @return True if allowed, false otherwise.
      */
-    function _validateExecuteCall(KeyData storage sKey, bytes calldata _callData)
-        internal
-        returns (bool)
-    {
+    function _validateExecuteCall(KeyData storage sKey, bytes calldata _callData) internal returns (bool) {
         bytes32 mode;
         bytes memory executionData;
         (mode, executionData) = abi.decode(_callData[4:], (bytes32, bytes));
@@ -406,7 +403,8 @@ contract OPF7702 is Execution, Initializable {
 
     /**
      * @notice Validates a token transfer against the key’s token spend limit.
-     * @dev Loads `value` from the last 32 bytes of `innerData` (standard ERC-20 `_transfer(address,uint256)` signature).
+     * @dev Loads `value` from the last 32 bytes of `innerData` (standard ERC-20 `_transfer(address,uint256)`
+     * signature).
      * @dev Out of scope (not supported): Extended/alternative token interfaces where spend cannot be
      *      inferred from the trailing 32 bytes, including but not limited to:
      *        - ERC-777 (`send`, operator functions and hooks)
@@ -420,10 +418,7 @@ contract OPF7702 is Execution, Initializable {
      * @param innerData The full encoded call data to the token contract.
      * @return True if `value ≤ sKey.spendTokenInfo.limit`; false if it exceeds or is invalid.
      */
-    function _validateTokenSpend(KeyData storage sKey, bytes memory innerData)
-        internal
-        returns (bool)
-    {
+    function _validateTokenSpend(KeyData storage sKey, bytes memory innerData) internal returns (bool) {
         uint256 len = innerData.length;
         // load the last 32 bytes from innerData
         uint256 value;
@@ -447,11 +442,7 @@ contract OPF7702 is Execution, Initializable {
      * @param selector  The 4-byte function selector to check.
      * @return True if found; false otherwise.
      */
-    function _isAllowedSelector(bytes4[] storage selectors, bytes4 selector)
-        internal
-        view
-        returns (bool)
-    {
+    function _isAllowedSelector(bytes4[] storage selectors, bytes4 selector) internal view returns (bool) {
         uint256 len = selectors.length;
         for (uint256 i = 0; i < len;) {
             if (selectors[i] == selector) {
@@ -476,11 +467,7 @@ contract OPF7702 is Execution, Initializable {
      * @param _signature  The signature blob to verify.
      * @return `this.isValidSignature.selector` if valid; otherwise `0xffffffff`.
      */
-    function isValidSignature(bytes32 _hash, bytes memory _signature)
-        external
-        view
-        returns (bytes4)
-    {
+    function isValidSignature(bytes32 _hash, bytes memory _signature) external view returns (bytes4) {
         if (_signature.length < 32) {
             return bytes4(0xffffffff);
         }
@@ -498,11 +485,7 @@ contract OPF7702 is Execution, Initializable {
      * @param _hash       The hash to verify.
      * @return `this.isValidSignature.selector` if valid; otherwise `0xffffffff`.
      */
-    function _validateEOASignature(bytes memory _signature, bytes32 _hash)
-        internal
-        view
-        returns (bytes4)
-    {
+    function _validateEOASignature(bytes memory _signature, bytes32 _hash) internal view returns (bytes4) {
         address signer = ECDSA.recover(_hash, _signature);
 
         if (signer == address(this)) {
@@ -519,15 +502,12 @@ contract OPF7702 is Execution, Initializable {
 
     /**
      * @notice Validate a WebAuthn signature on-chain via ERC-1271.
-     * @param _signature  ABI-encoded: (bool UV, bytes authData, string cDataJSON, uint256 cIdx, uint256 tIdx, bytes32 r, bytes32 s, PubKey pubKey)
+     * @param _signature  ABI-encoded: (bool UV, bytes authData, string cDataJSON, uint256 cIdx, uint256 tIdx, bytes32
+     * r, bytes32 s, PubKey pubKey)
      * @param _hash       The hash to verify.
      * @return `this.isValidSignature.selector` if valid; otherwise `0xffffffff`.
      */
-    function _validateWebAuthnSignature(bytes memory _signature, bytes32 _hash)
-        internal
-        view
-        returns (bytes4)
-    {
+    function _validateWebAuthnSignature(bytes memory _signature, bytes32 _hash) internal view returns (bytes4) {
         (
             bool requireUV,
             bytes memory authenticatorData,
@@ -537,24 +517,13 @@ contract OPF7702 is Execution, Initializable {
             bytes32 r,
             bytes32 s,
             PubKey memory pubKey
-        ) = abi.decode(
-            _signature, (bool, bytes, string, uint256, uint256, bytes32, bytes32, PubKey)
-        );
+        ) = abi.decode(_signature, (bool, bytes, string, uint256, uint256, bytes32, bytes32, PubKey));
 
         if (usedChallenges[_hash]) {
             return bytes4(0xffffffff);
         }
         bool sigOk = IWebAuthnVerifier(webAuthnVerifier()).verifySignature(
-            _hash,
-            requireUV,
-            authenticatorData,
-            clientDataJSON,
-            challengeIndex,
-            typeIndex,
-            r,
-            s,
-            pubKey.x,
-            pubKey.y
+            _hash, requireUV, authenticatorData, clientDataJSON, challengeIndex, typeIndex, r, s, pubKey.x, pubKey.y
         );
         if (!sigOk) {
             return bytes4(0xffffffff);

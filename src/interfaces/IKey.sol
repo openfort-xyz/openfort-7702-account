@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.29;
 
-import {ISpendLimit} from "src/interfaces/ISpendLimit.sol";
+import { ISpendLimit } from "src/interfaces/ISpendLimit.sol";
 
 interface IKey {
     /**

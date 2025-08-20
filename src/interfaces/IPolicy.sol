@@ -3,10 +3,9 @@
 pragma solidity ^0.8.29;
 
 import "lib/openzeppelin-contracts/contracts/utils/introspection/IERC165.sol";
-import {PackedUserOperation} from
-    "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
+import { PackedUserOperation } from "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
 
-interface IPolicy is IERC165 {}
+interface IPolicy is IERC165 { }
 
 interface IUserOpPolicy is IPolicy {
     error GasPolicy__BadLimit();
@@ -41,22 +40,19 @@ interface IUserOpPolicy is IPolicy {
         bool initialized;
     }
 
-    function checkUserOpPolicy(bytes32 id, PackedUserOperation calldata userOp)
-        external
-        returns (uint256);
+    function checkUserOpPolicy(bytes32 id, PackedUserOperation calldata userOp) external returns (uint256);
 
     function initializeGasPolicy(address account, bytes32 configId, uint256 limit) external;
 
-    function initializeGasPolicy(address account, bytes32 configId, bytes calldata initData)
-        external;
+    function initializeGasPolicy(address account, bytes32 configId, bytes calldata initData) external;
 
-    function getGasConfig(bytes32 configId, address userOpSender)
+    function getGasConfig(
+        bytes32 configId,
+        address userOpSender
+    )
         external
         view
         returns (uint128 gasLimit, uint128 gasUsed, uint128 costLimit, uint128 costUsed);
 
-    function getGasConfigEx(bytes32 configId, address userOpSender)
-        external
-        view
-        returns (GasLimitConfig memory);
+    function getGasConfigEx(bytes32 configId, address userOpSender) external view returns (GasLimitConfig memory);
 }

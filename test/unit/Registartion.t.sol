@@ -2,24 +2,22 @@
 
 pragma solidity ^0.8.29;
 
-import {Base} from "test/Base.sol";
-import {GasPolicy} from "src/utils/GasPolicy.sol";
-import {Test, console2 as console} from "lib/forge-std/src/Test.sol";
-import {EfficientHashLib} from "lib/solady/src/utils/EfficientHashLib.sol";
-import {EntryPoint} from "lib/account-abstraction/contracts/core/EntryPoint.sol";
-import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
-import {IEntryPoint} from "lib/account-abstraction/contracts/interfaces/IEntryPoint.sol";
+import { Base } from "test/Base.sol";
+import { GasPolicy } from "src/utils/GasPolicy.sol";
+import { Test, console2 as console } from "lib/forge-std/src/Test.sol";
+import { EfficientHashLib } from "lib/solady/src/utils/EfficientHashLib.sol";
+import { EntryPoint } from "lib/account-abstraction/contracts/core/EntryPoint.sol";
+import { IERC20 } from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
+import { IEntryPoint } from "lib/account-abstraction/contracts/interfaces/IEntryPoint.sol";
 
-import {OPFMain as OPF7702} from "src/core/OPFMain.sol";
-import {MockERC20} from "src/mocks/MockERC20.sol";
-import {KeysManager} from "src/core/KeysManager.sol";
-import {ISpendLimit} from "src/interfaces/ISpendLimit.sol";
-import {IKey} from "src/interfaces/IKey.sol";
-import {WebAuthnVerifier} from "src/utils/WebAuthnVerifier.sol";
-import {PackedUserOperation} from
-    "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
-import {MessageHashUtils} from
-    "lib/openzeppelin-contracts/contracts/utils/cryptography/MessageHashUtils.sol";
+import { OPFMain as OPF7702 } from "src/core/OPFMain.sol";
+import { MockERC20 } from "src/mocks/MockERC20.sol";
+import { KeysManager } from "src/core/KeysManager.sol";
+import { ISpendLimit } from "src/interfaces/ISpendLimit.sol";
+import { IKey } from "src/interfaces/IKey.sol";
+import { WebAuthnVerifier } from "src/utils/WebAuthnVerifier.sol";
+import { PackedUserOperation } from "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
+import { MessageHashUtils } from "lib/openzeppelin-contracts/contracts/utils/cryptography/MessageHashUtils.sol";
 
 contract RegistartionTest is Base {
     /* ───────────────────────────────────────────────────────────── contracts ── */
@@ -77,7 +75,7 @@ contract RegistartionTest is Base {
         _deal();
 
         vm.prank(sender);
-        entryPoint.depositTo{value: 0.09e18}(owner);
+        entryPoint.depositTo{ value: 0.09e18 }(owner);
     }
 
     /* ─────────────────────────────────────────────────────────────── tests ──── */
@@ -106,7 +104,7 @@ contract RegistartionTest is Base {
 
     function test_RegisterKeyEOAWithMK() public {
         console.log("/* ------------------------- test_RegisterKeyWithMK -------- */");
-        uint48 validUntil = uint48(1795096759);
+        uint48 validUntil = uint48(1_795_096_759);
         uint48 limit = uint48(3);
         pubKeySK = PubKey({
             x: 0x0000000000000000000000000000000000000000000000000000000000000000,
@@ -114,10 +112,9 @@ contract RegistartionTest is Base {
         });
 
         address skAddress = makeAddr("skAddress");
-        keySK = Key({pubKey: pubKeySK, eoaAddress: skAddress, keyType: KeyType.WEBAUTHN});
+        keySK = Key({ pubKey: pubKeySK, eoaAddress: skAddress, keyType: KeyType.WEBAUTHN });
 
-        ISpendLimit.SpendTokenInfo memory spendInfo =
-            ISpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000e18});
+        ISpendLimit.SpendTokenInfo memory spendInfo = ISpendLimit.SpendTokenInfo({ token: TOKEN, limit: 1000e18 });
 
         bytes memory callData = abi.encodeWithSelector(
             KeysManager.registerKey.selector,
@@ -138,8 +135,8 @@ contract RegistartionTest is Base {
             nonce: nonce,
             initCode: hex"7702",
             callData: callData,
-            accountGasLimits: _packAccountGasLimits(600000, 400000),
-            preVerificationGas: 800000,
+            accountGasLimits: _packAccountGasLimits(600_000, 400_000),
+            preVerificationGas: 800_000,
             gasFees: _packGasFees(80 gwei, 15 gwei),
             paymasterAndData: hex"",
             signature: hex""
@@ -148,8 +145,7 @@ contract RegistartionTest is Base {
         bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
         console.logBytes32(userOpHash);
 
-        IKey.PubKey memory pubKeyExecuteBatch =
-            IKey.PubKey({x: REG_PUBLIC_KEY_X, y: REG_PUBLIC_KEY_Y});
+        IKey.PubKey memory pubKeyExecuteBatch = IKey.PubKey({ x: REG_PUBLIC_KEY_X, y: REG_PUBLIC_KEY_Y });
 
         bytes memory _signature = account.encodeWebAuthnSignature(
             true,
@@ -202,14 +198,13 @@ contract RegistartionTest is Base {
 
     function test_RegisterKeyP256WithMK() public {
         console.log("/* ----------------------- test_RegisterKeyP256WithMK -------- */");
-        uint48 validUntil = uint48(1795096759);
+        uint48 validUntil = uint48(1_795_096_759);
         uint48 limit = uint48(3);
-        pubKeySK = PubKey({x: P256_PUBLIC_KEY_X, y: P256_PUBLIC_KEY_Y});
+        pubKeySK = PubKey({ x: P256_PUBLIC_KEY_X, y: P256_PUBLIC_KEY_Y });
 
-        keySK = Key({pubKey: pubKeySK, eoaAddress: address(0), keyType: KeyType.P256});
+        keySK = Key({ pubKey: pubKeySK, eoaAddress: address(0), keyType: KeyType.P256 });
 
-        ISpendLimit.SpendTokenInfo memory spendInfo =
-            ISpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000e18});
+        ISpendLimit.SpendTokenInfo memory spendInfo = ISpendLimit.SpendTokenInfo({ token: TOKEN, limit: 1000e18 });
 
         bytes memory callData = abi.encodeWithSelector(
             KeysManager.registerKey.selector,
@@ -230,8 +225,8 @@ contract RegistartionTest is Base {
             nonce: nonce,
             initCode: hex"7702",
             callData: callData,
-            accountGasLimits: _packAccountGasLimits(600000, 400000),
-            preVerificationGas: 800000,
+            accountGasLimits: _packAccountGasLimits(600_000, 400_000),
+            preVerificationGas: 800_000,
             gasFees: _packGasFees(80 gwei, 15 gwei),
             paymasterAndData: hex"",
             signature: hex""
@@ -240,8 +235,7 @@ contract RegistartionTest is Base {
         bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
         console.logBytes32(userOpHash);
 
-        IKey.PubKey memory pubKeyExecuteBatch =
-            IKey.PubKey({x: REG_PUBLIC_KEY_X, y: REG_PUBLIC_KEY_Y});
+        IKey.PubKey memory pubKeyExecuteBatch = IKey.PubKey({ x: REG_PUBLIC_KEY_X, y: REG_PUBLIC_KEY_Y });
 
         bytes memory _signature = account.encodeWebAuthnSignature(
             true,
@@ -295,14 +289,13 @@ contract RegistartionTest is Base {
 
     function test_RegisterKeyP256NonKeyWithMK() public {
         console.log("/* ----------------------- test_RegisterKeyP256NonKeyWithMK -------- */");
-        uint48 validUntil = uint48(1795096759);
+        uint48 validUntil = uint48(1_795_096_759);
         uint48 limit = uint48(3);
-        pubKeySK = PubKey({x: P256NOKEY_PUBLIC_KEY_X, y: P256NOKEY_PUBLIC_KEY_Y});
+        pubKeySK = PubKey({ x: P256NOKEY_PUBLIC_KEY_X, y: P256NOKEY_PUBLIC_KEY_Y });
 
-        keySK = Key({pubKey: pubKeySK, eoaAddress: address(0), keyType: KeyType.P256NONKEY});
+        keySK = Key({ pubKey: pubKeySK, eoaAddress: address(0), keyType: KeyType.P256NONKEY });
 
-        ISpendLimit.SpendTokenInfo memory spendInfo =
-            ISpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000e18});
+        ISpendLimit.SpendTokenInfo memory spendInfo = ISpendLimit.SpendTokenInfo({ token: TOKEN, limit: 1000e18 });
 
         bytes memory callData = abi.encodeWithSelector(
             KeysManager.registerKey.selector,
@@ -323,8 +316,8 @@ contract RegistartionTest is Base {
             nonce: nonce,
             initCode: hex"7702",
             callData: callData,
-            accountGasLimits: _packAccountGasLimits(600000, 400000),
-            preVerificationGas: 800000,
+            accountGasLimits: _packAccountGasLimits(600_000, 400_000),
+            preVerificationGas: 800_000,
             gasFees: _packGasFees(80 gwei, 15 gwei),
             paymasterAndData: hex"",
             signature: hex""
@@ -333,8 +326,7 @@ contract RegistartionTest is Base {
         bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
         console.logBytes32(userOpHash);
 
-        IKey.PubKey memory pubKeyExecuteBatch =
-            IKey.PubKey({x: REG_PUBLIC_KEY_X, y: REG_PUBLIC_KEY_Y});
+        IKey.PubKey memory pubKeyExecuteBatch = IKey.PubKey({ x: REG_PUBLIC_KEY_X, y: REG_PUBLIC_KEY_Y });
 
         bytes memory _signature = account.encodeWebAuthnSignature(
             true,
@@ -394,10 +386,9 @@ contract RegistartionTest is Base {
             y: 0x0000000000000000000000000000000000000000000000000000000000000000
         });
 
-        keySK = Key({pubKey: pubKeySK, eoaAddress: sessionKey, keyType: KeyType.EOA});
+        keySK = Key({ pubKey: pubKeySK, eoaAddress: sessionKey, keyType: KeyType.EOA });
 
-        ISpendLimit.SpendTokenInfo memory spendInfo =
-            ISpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000e18});
+        ISpendLimit.SpendTokenInfo memory spendInfo = ISpendLimit.SpendTokenInfo({ token: TOKEN, limit: 1000e18 });
 
         keyData = KeyReg({
             validUntil: validUntil,
@@ -423,12 +414,11 @@ contract RegistartionTest is Base {
     function _register_KeyP256() internal {
         uint48 validUntil = uint48(block.timestamp + 1 days);
         uint48 limit = uint48(3);
-        pubKeySK = PubKey({x: P256_PUBLIC_KEY_X, y: P256_PUBLIC_KEY_Y});
+        pubKeySK = PubKey({ x: P256_PUBLIC_KEY_X, y: P256_PUBLIC_KEY_Y });
 
-        keySK = Key({pubKey: pubKeySK, eoaAddress: address(0), keyType: KeyType.P256});
+        keySK = Key({ pubKey: pubKeySK, eoaAddress: address(0), keyType: KeyType.P256 });
 
-        ISpendLimit.SpendTokenInfo memory spendInfo =
-            ISpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000e18});
+        ISpendLimit.SpendTokenInfo memory spendInfo = ISpendLimit.SpendTokenInfo({ token: TOKEN, limit: 1000e18 });
 
         keyData = KeyReg({
             validUntil: validUntil,
@@ -454,12 +444,11 @@ contract RegistartionTest is Base {
     function _register_KeyP256NonKey() internal {
         uint48 validUntil = uint48(block.timestamp + 1 days);
         uint48 limit = uint48(3);
-        pubKeySK = PubKey({x: P256NOKEY_PUBLIC_KEY_X, y: P256NOKEY_PUBLIC_KEY_Y});
+        pubKeySK = PubKey({ x: P256NOKEY_PUBLIC_KEY_X, y: P256NOKEY_PUBLIC_KEY_Y });
 
-        keySK = Key({pubKey: pubKeySK, eoaAddress: address(0), keyType: KeyType.P256NONKEY});
+        keySK = Key({ pubKey: pubKeySK, eoaAddress: address(0), keyType: KeyType.P256NONKEY });
 
-        ISpendLimit.SpendTokenInfo memory spendInfo =
-            ISpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000e18});
+        ISpendLimit.SpendTokenInfo memory spendInfo = ISpendLimit.SpendTokenInfo({ token: TOKEN, limit: 1000e18 });
 
         keyData = KeyReg({
             validUntil: validUntil,
@@ -485,12 +474,11 @@ contract RegistartionTest is Base {
     /* ─────────────────────────────────────────────────────────── helpers ──── */
     function _initializeAccount() internal {
         /* sample WebAuthn public key – replace with a real one if needed */
-        pubKeyMK = PubKey({x: REG_PUBLIC_KEY_X, y: REG_PUBLIC_KEY_Y});
+        pubKeyMK = PubKey({ x: REG_PUBLIC_KEY_X, y: REG_PUBLIC_KEY_Y });
 
-        keyMK = Key({pubKey: pubKeyMK, eoaAddress: address(0), keyType: KeyType.WEBAUTHN});
+        keyMK = Key({ pubKey: pubKeyMK, eoaAddress: address(0), keyType: KeyType.WEBAUTHN });
 
-        ISpendLimit.SpendTokenInfo memory spendInfo =
-            ISpendLimit.SpendTokenInfo({token: TOKEN, limit: 0});
+        ISpendLimit.SpendTokenInfo memory spendInfo = ISpendLimit.SpendTokenInfo({ token: TOKEN, limit: 0 });
 
         keyData = KeyReg({
             validUntil: type(uint48).max,
@@ -503,9 +491,9 @@ contract RegistartionTest is Base {
             ethLimit: 0
         });
 
-        pubKeySK = PubKey({x: MINT_P256_PUBLIC_KEY_X, y: MINT_P256_PUBLIC_KEY_Y});
-        keySK = Key({pubKey: pubKeySK, eoaAddress: address(0), keyType: KeyType.P256});
-        uint48 validUntil = uint48(1795096759);
+        pubKeySK = PubKey({ x: MINT_P256_PUBLIC_KEY_X, y: MINT_P256_PUBLIC_KEY_Y });
+        keySK = Key({ pubKey: pubKeySK, eoaAddress: address(0), keyType: KeyType.P256 });
+        uint48 validUntil = uint48(1_795_096_759);
         uint48 limit = uint48(20);
 
         keyDataSK = KeyReg({
@@ -522,8 +510,7 @@ contract RegistartionTest is Base {
         /* sign arbitrary message so initialise() passes sig check */
         bytes32 initialGuardian = keccak256(abi.encodePacked(sender));
 
-        bytes memory keyEnc =
-            abi.encode(keyMK.pubKey.x, keyMK.pubKey.y, keyMK.eoaAddress, keyMK.keyType);
+        bytes memory keyEnc = abi.encode(keyMK.pubKey.x, keyMK.pubKey.y, keyMK.eoaAddress, keyMK.keyType);
 
         bytes memory keyDataEnc = abi.encode(
             keyData.validUntil,
@@ -537,8 +524,7 @@ contract RegistartionTest is Base {
             keyData.ethLimit
         );
 
-        bytes memory skEnc =
-            abi.encode(keySK.pubKey.x, keySK.pubKey.y, keySK.eoaAddress, keySK.keyType);
+        bytes memory skEnc = abi.encode(keySK.pubKey.x, keySK.pubKey.y, keySK.eoaAddress, keySK.keyType);
 
         bytes memory skDataEnc = abi.encode(
             keyDataSK.validUntil,
@@ -551,18 +537,13 @@ contract RegistartionTest is Base {
             keyDataSK.allowedSelectors
         );
 
-        bytes32 structHash = keccak256(
-            abi.encode(INIT_TYPEHASH, keyEnc, keyDataEnc, skEnc, skDataEnc, initialGuardian)
-        );
+        bytes32 structHash = keccak256(abi.encode(INIT_TYPEHASH, keyEnc, keyDataEnc, skEnc, skDataEnc, initialGuardian));
 
         string memory name = "OPF7702Recoverable";
         string memory version = "1";
 
-        bytes32 domainSeparator = keccak256(
-            abi.encode(
-                TYPE_HASH, keccak256(bytes(name)), keccak256(bytes(version)), block.chainid, owner
-            )
-        );
+        bytes32 domainSeparator =
+            keccak256(abi.encode(TYPE_HASH, keccak256(bytes(name)), keccak256(bytes(version)), block.chainid, owner));
         bytes32 digest = MessageHashUtils.toTypedDataHash(domainSeparator, structHash);
 
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPk, digest);

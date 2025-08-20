@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.29;
 
-import {IKey} from "./IKey.sol";
-import {IOPF7702} from "./IOPF7702.sol";
+import { IKey } from "./IKey.sol";
+import { IOPF7702 } from "./IOPF7702.sol";
 
 /// @title Interface for OPF7702Recoverable
 /// @notice Extends the core IOPF7702 with guardian‐based recovery functions.
@@ -127,7 +127,8 @@ interface IOPF7702Recoverable is IOPF7702 {
         KeyReg calldata _keyData,
         bytes memory _signature,
         bytes32 _initialGuardian
-    ) external;
+    )
+        external;
 
     /// @notice Propose a new guardian (after securityPeriod)
     function proposeGuardian(bytes32 _guardian) external;

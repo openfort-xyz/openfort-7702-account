@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.29;
 
-import {IExecution} from "src/interfaces/IExecution.sol";
-import {IKeysManager} from "src/interfaces/IKeysManager.sol";
-import {IERC1271} from "lib/openzeppelin-contracts/contracts/interfaces/IERC1271.sol";
-import {IERC165} from "lib/openzeppelin-contracts/contracts/utils/introspection/IERC165.sol";
+import { IExecution } from "src/interfaces/IExecution.sol";
+import { IKeysManager } from "src/interfaces/IKeysManager.sol";
+import { IERC1271 } from "lib/openzeppelin-contracts/contracts/interfaces/IERC1271.sol";
+import { IERC165 } from "lib/openzeppelin-contracts/contracts/utils/introspection/IERC165.sol";
 
 /// @title IOPF7702
 /// @notice Interface for the `OPF7702` contract, combining execution, key‐management, and ERC-1271 logic.
@@ -31,8 +31,5 @@ interface IOPF7702 is IExecution, IKeysManager, IERC1271, IERC165 {
      * @param _signature  The signature blob to verify.
      * @return Magic value (`0x1626ba7e`) if valid; otherwise `0xffffffff`.
      */
-    function isValidSignature(bytes32 _hash, bytes calldata _signature)
-        external
-        view
-        returns (bytes4);
+    function isValidSignature(bytes32 _hash, bytes calldata _signature) external view returns (bytes4);
 }

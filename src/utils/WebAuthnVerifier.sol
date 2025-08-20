@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.29;
 
-import {WebAuthn} from "src/libs/WebAuthn.sol";
-import {P256} from "src/libs/P256.sol";
+import { WebAuthn } from "src/libs/WebAuthn.sol";
+import { P256 } from "src/libs/P256.sol";
 
 /**
  * @title WebAuthnVerifier
@@ -36,7 +36,11 @@ contract WebAuthnVerifier {
         bytes32 s,
         bytes32 x,
         bytes32 y
-    ) external view returns (bool isValid) {
+    )
+        external
+        view
+        returns (bool isValid)
+    {
         WebAuthn.WebAuthnAuth memory auth = WebAuthn.WebAuthnAuth({
             authenticatorData: authenticatorData,
             clientDataJSON: clientDataJSON,
@@ -67,7 +71,11 @@ contract WebAuthnVerifier {
         bytes memory encodedAuth,
         bytes32 x,
         bytes32 y
-    ) public view returns (bool isValid) {
+    )
+        public
+        view
+        returns (bool isValid)
+    {
         WebAuthn.WebAuthnAuth memory auth = WebAuthn.tryDecodeAuth(encodedAuth);
 
         isValid = WebAuthn.verify(challenge, requireUserVerification, auth, x, y);
@@ -90,7 +98,11 @@ contract WebAuthnVerifier {
         bytes memory encodedAuth,
         bytes32 x,
         bytes32 y
-    ) external view returns (bool isValid) {
+    )
+        external
+        view
+        returns (bool isValid)
+    {
         WebAuthn.WebAuthnAuth memory auth = WebAuthn.tryDecodeAuthCompact(encodedAuth);
 
         isValid = WebAuthn.verify(challenge, requireUserVerification, auth, x, y);
@@ -107,7 +119,13 @@ contract WebAuthnVerifier {
      * @param y The y-coordinate of the public key
      * @return isValid Whether the signature is valid
      */
-    function verifyP256Signature(bytes32 hash, bytes32 r, bytes32 s, bytes32 x, bytes32 y)
+    function verifyP256Signature(
+        bytes32 hash,
+        bytes32 r,
+        bytes32 s,
+        bytes32 x,
+        bytes32 y
+    )
         external
         view
         returns (bool isValid)

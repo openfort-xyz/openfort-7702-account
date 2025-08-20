@@ -25,12 +25,10 @@ library UpgradeAddress {
     /* --------------------------------------------------------------------- */
 
     //  _EP_SLOT = (keccak256("openfort.entrypoint.storage") - 1) & ~0xff
-    bytes32 internal constant _EP_SLOT =
-        0x4e696bb2fc09e5383cb7d4063d5fb8f6e0701a72d9523e5f996ae73b7c89e800;
+    bytes32 internal constant _EP_SLOT = 0x4e696bb2fc09e5383cb7d4063d5fb8f6e0701a72d9523e5f996ae73b7c89e800;
 
     //  _VERIFIER_SLOT = (keccak256("openfort.webauthnverifier.storage") - 1) & ~0xff
-    bytes32 internal constant _VERIFIER_SLOT =
-        0xfd39baddba6b1a9197cb18b09396db32f340e9b468af2bcc8f997735c03db200;
+    bytes32 internal constant _VERIFIER_SLOT = 0xfd39baddba6b1a9197cb18b09396db32f340e9b468af2bcc8f997735c03db200;
     // flage if overriden
     uint256 internal constant _OVERRIDDEN_FLAG = 1 << 255;
 

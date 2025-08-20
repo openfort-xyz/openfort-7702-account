@@ -2,23 +2,21 @@
 
 pragma solidity ^0.8.29;
 
-import {Base} from "test/Base.sol";
-import {GasPolicy} from "src/utils/GasPolicy.sol";
-import {Test, console2 as console} from "lib/forge-std/src/Test.sol";
-import {EfficientHashLib} from "lib/solady/src/utils/EfficientHashLib.sol";
-import {EntryPoint} from "lib/account-abstraction/contracts/core/EntryPoint.sol";
-import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
-import {IEntryPoint} from "lib/account-abstraction/contracts/interfaces/IEntryPoint.sol";
+import { Base } from "test/Base.sol";
+import { GasPolicy } from "src/utils/GasPolicy.sol";
+import { Test, console2 as console } from "lib/forge-std/src/Test.sol";
+import { EfficientHashLib } from "lib/solady/src/utils/EfficientHashLib.sol";
+import { EntryPoint } from "lib/account-abstraction/contracts/core/EntryPoint.sol";
+import { IERC20 } from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
+import { IEntryPoint } from "lib/account-abstraction/contracts/interfaces/IEntryPoint.sol";
 
-import {OPFMain as OPF7702} from "src/core/OPFMain.sol";
-import {MockERC20} from "src/mocks/MockERC20.sol";
-import {ISpendLimit} from "src/interfaces/ISpendLimit.sol";
-import {IKey} from "src/interfaces/IKey.sol";
-import {WebAuthnVerifier} from "src/utils/WebAuthnVerifier.sol";
-import {PackedUserOperation} from
-    "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
-import {MessageHashUtils} from
-    "lib/openzeppelin-contracts/contracts/utils/cryptography/MessageHashUtils.sol";
+import { OPFMain as OPF7702 } from "src/core/OPFMain.sol";
+import { MockERC20 } from "src/mocks/MockERC20.sol";
+import { ISpendLimit } from "src/interfaces/ISpendLimit.sol";
+import { IKey } from "src/interfaces/IKey.sol";
+import { WebAuthnVerifier } from "src/utils/WebAuthnVerifier.sol";
+import { PackedUserOperation } from "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
+import { MessageHashUtils } from "lib/openzeppelin-contracts/contracts/utils/cryptography/MessageHashUtils.sol";
 
 contract DepositAndTransferETH is Base {
     /* ───────────────────────────────────────────────────────────── contracts ── */
@@ -74,7 +72,7 @@ contract DepositAndTransferETH is Base {
         _register_KeyP256NonKey();
 
         vm.prank(sender);
-        entryPoint.depositTo{value: 0.09e18}(owner);
+        entryPoint.depositTo{ value: 0.09e18 }(owner);
     }
 
     function test_ExecuteOwnerCall() public {
@@ -84,7 +82,7 @@ contract DepositAndTransferETH is Base {
 
         bytes memory dataHex = hex"";
 
-        calls[0] = Call({target: sessionKey, value: 2e18, data: dataHex});
+        calls[0] = Call({ target: sessionKey, value: 2e18, data: dataHex });
 
         // ERC-7821 mode for single execution (mode ID = 1)
         // The mode value should have the pattern at position 22*8 bits
@@ -93,8 +91,7 @@ contract DepositAndTransferETH is Base {
         // Encode the execution data as Call[] array
         bytes memory executionData = abi.encode(calls);
 
-        bytes memory callData =
-            abi.encodeWithSelector(bytes4(keccak256("execute(bytes32,bytes)")), mode, executionData);
+        bytes memory callData = abi.encodeWithSelector(bytes4(keccak256("execute(bytes32,bytes)")), mode, executionData);
 
         uint256 nonce = entryPoint.getNonce(owner, 1);
 
@@ -103,8 +100,8 @@ contract DepositAndTransferETH is Base {
             nonce: nonce,
             initCode: hex"7702",
             callData: callData,
-            accountGasLimits: _packAccountGasLimits(600000, 400000),
-            preVerificationGas: 800000,
+            accountGasLimits: _packAccountGasLimits(600_000, 400_000),
+            preVerificationGas: 800_000,
             gasFees: _packGasFees(80 gwei, 15 gwei),
             paymasterAndData: hex"",
             signature: hex""
@@ -148,8 +145,8 @@ contract DepositAndTransferETH is Base {
         bytes memory dataHex = hex"";
         bytes memory dataHex2 = hex"";
 
-        calls[0] = Call({target: sessionKey, value: 2e18, data: dataHex});
-        calls[1] = Call({target: sessionKey, value: 2e18, data: dataHex2});
+        calls[0] = Call({ target: sessionKey, value: 2e18, data: dataHex });
+        calls[1] = Call({ target: sessionKey, value: 2e18, data: dataHex2 });
 
         // ERC-7821 mode for batch execution (still mode ID = 1)
         bytes32 mode = bytes32(uint256(0x01000000000000000000) << (22 * 8));
@@ -158,8 +155,7 @@ contract DepositAndTransferETH is Base {
         bytes memory executionData = abi.encode(calls);
 
         // Create the callData for the ERC-7821 execute function
-        bytes memory callData =
-            abi.encodeWithSelector(bytes4(keccak256("execute(bytes32,bytes)")), mode, executionData);
+        bytes memory callData = abi.encodeWithSelector(bytes4(keccak256("execute(bytes32,bytes)")), mode, executionData);
 
         uint256 nonce = entryPoint.getNonce(owner, 1);
 
@@ -168,8 +164,8 @@ contract DepositAndTransferETH is Base {
             nonce: nonce,
             initCode: hex"7702",
             callData: callData,
-            accountGasLimits: _packAccountGasLimits(600000, 400000),
-            preVerificationGas: 800000,
+            accountGasLimits: _packAccountGasLimits(600_000, 400_000),
+            preVerificationGas: 800_000,
             gasFees: _packGasFees(80 gwei, 15 gwei),
             paymasterAndData: hex"",
             signature: hex""
@@ -212,7 +208,7 @@ contract DepositAndTransferETH is Base {
         uint256 balanceOwnerBefore = owner.balance;
 
         vm.prank(sender);
-        (bool s,) = owner.call{value: 2e18}("");
+        (bool s,) = owner.call{ value: 2e18 }("");
 
         uint256 balanceAfter = sender.balance;
         uint256 balanceOwnerAfter = owner.balance;
@@ -231,7 +227,7 @@ contract DepositAndTransferETH is Base {
         uint256 balanceOwnerBefore = owner.balance;
 
         vm.prank(owner);
-        (bool s,) = sender.call{value: 2e18}("");
+        (bool s,) = sender.call{ value: 2e18 }("");
 
         uint256 balanceAfter = sender.balance;
         uint256 balanceOwnerAfter = owner.balance;
@@ -248,7 +244,7 @@ contract DepositAndTransferETH is Base {
 
         bytes memory dataHex = hex"";
 
-        calls[0] = Call({target: sessionKey, value: value, data: dataHex});
+        calls[0] = Call({ target: sessionKey, value: value, data: dataHex });
 
         // ERC-7821 mode for single execution (mode ID = 1)
         // The mode value should have the pattern at position 22*8 bits
@@ -257,8 +253,7 @@ contract DepositAndTransferETH is Base {
         // Encode the execution data as Call[] array
         bytes memory executionData = abi.encode(calls);
 
-        bytes memory callData =
-            abi.encodeWithSelector(bytes4(keccak256("execute(bytes32,bytes)")), mode, executionData);
+        bytes memory callData = abi.encodeWithSelector(bytes4(keccak256("execute(bytes32,bytes)")), mode, executionData);
 
         uint256 nonce = entryPoint.getNonce(owner, 1);
 
@@ -267,8 +262,8 @@ contract DepositAndTransferETH is Base {
             nonce: nonce,
             initCode: hex"7702",
             callData: callData,
-            accountGasLimits: _packAccountGasLimits(600000, 400000),
-            preVerificationGas: 800000,
+            accountGasLimits: _packAccountGasLimits(600_000, 400_000),
+            preVerificationGas: 800_000,
             gasFees: _packGasFees(80 gwei, 15 gwei),
             paymasterAndData: hex"",
             signature: hex""
@@ -277,8 +272,7 @@ contract DepositAndTransferETH is Base {
         bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
         console.logBytes32(userOpHash);
 
-        IKey.PubKey memory pubKeyExecuteBatch =
-            IKey.PubKey({x: ETH_PUBLIC_KEY_X, y: ETH_PUBLIC_KEY_Y});
+        IKey.PubKey memory pubKeyExecuteBatch = IKey.PubKey({ x: ETH_PUBLIC_KEY_X, y: ETH_PUBLIC_KEY_Y });
 
         bytes memory _signature = account.encodeWebAuthnSignature(
             true,
@@ -349,8 +343,8 @@ contract DepositAndTransferETH is Base {
 
         uint256 value = 0.1e18;
 
-        calls[0] = Call({target: ETH_RECIVE, value: value, data: dataHex});
-        calls[1] = Call({target: ETH_RECIVE, value: value, data: dataHex2});
+        calls[0] = Call({ target: ETH_RECIVE, value: value, data: dataHex });
+        calls[1] = Call({ target: ETH_RECIVE, value: value, data: dataHex2 });
 
         // ERC-7821 mode for batch execution (still mode ID = 1)
         bytes32 mode = bytes32(uint256(0x01000000000000000000) << (22 * 8));
@@ -359,8 +353,7 @@ contract DepositAndTransferETH is Base {
         bytes memory executionData = abi.encode(calls);
 
         // Create the callData for the ERC-7821 execute function
-        bytes memory callData =
-            abi.encodeWithSelector(bytes4(keccak256("execute(bytes32,bytes)")), mode, executionData);
+        bytes memory callData = abi.encodeWithSelector(bytes4(keccak256("execute(bytes32,bytes)")), mode, executionData);
 
         uint256 nonce = entryPoint.getNonce(owner, 1);
 
@@ -421,8 +414,8 @@ contract DepositAndTransferETH is Base {
         bytes memory dataHex = hex"";
         bytes memory dataHex2 = hex"";
         uint256 value = 0.1e18;
-        calls[0] = Call({target: ETH_RECIVE, value: value, data: dataHex});
-        calls[1] = Call({target: ETH_RECIVE, value: value, data: dataHex2});
+        calls[0] = Call({ target: ETH_RECIVE, value: value, data: dataHex });
+        calls[1] = Call({ target: ETH_RECIVE, value: value, data: dataHex2 });
 
         // ERC-7821 mode for batch execution (still mode ID = 1)
         bytes32 mode = bytes32(uint256(0x01000000000000000000) << (22 * 8));
@@ -431,8 +424,7 @@ contract DepositAndTransferETH is Base {
         bytes memory executionData = abi.encode(calls);
 
         // Create the callData for the ERC-7821 execute function
-        bytes memory callData =
-            abi.encodeWithSelector(bytes4(keccak256("execute(bytes32,bytes)")), mode, executionData);
+        bytes memory callData = abi.encodeWithSelector(bytes4(keccak256("execute(bytes32,bytes)")), mode, executionData);
 
         uint256 nonce = entryPoint.getNonce(owner, 1);
 
@@ -451,12 +443,10 @@ contract DepositAndTransferETH is Base {
         bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
         console.logBytes32(userOpHash);
 
-        IKey.PubKey memory pubKeyExecuteBatch =
-            IKey.PubKey({x: ETH_P256_PUBLIC_KEY_X, y: ETH_P256_PUBLIC_KEY_Y});
+        IKey.PubKey memory pubKeyExecuteBatch = IKey.PubKey({ x: ETH_P256_PUBLIC_KEY_X, y: ETH_P256_PUBLIC_KEY_Y });
 
-        bytes memory _signature = account.encodeP256Signature(
-            ETH_P256_SIGNATURE_R, ETH_P256_SIGNATURE_S, pubKeyExecuteBatch, KeyType.P256
-        );
+        bytes memory _signature =
+            account.encodeP256Signature(ETH_P256_SIGNATURE_R, ETH_P256_SIGNATURE_S, pubKeyExecuteBatch, KeyType.P256);
 
         // bytes4 magicValue = account.isValidSignature(userOpHash, _signature);
         // bool usedChallenge = account.usedChallenges(userOpHash);
@@ -464,11 +454,7 @@ contract DepositAndTransferETH is Base {
         // console.logBytes4(magicValue);
 
         bool isValid = webAuthn.verifyP256Signature(
-            userOpHash,
-            ETH_P256_SIGNATURE_R,
-            ETH_P256_SIGNATURE_S,
-            P256_PUBLIC_KEY_X,
-            P256_PUBLIC_KEY_Y
+            userOpHash, ETH_P256_SIGNATURE_R, ETH_P256_SIGNATURE_S, P256_PUBLIC_KEY_X, P256_PUBLIC_KEY_Y
         );
         console.log("isValid", isValid);
 
@@ -498,9 +484,7 @@ contract DepositAndTransferETH is Base {
     }
 
     function test_ExecuteBatchSKP256NonKey() public {
-        console.log(
-            "/* ---------------------------------- test_ExecuteBatchSKP256NonKey -------- */"
-        );
+        console.log("/* ---------------------------------- test_ExecuteBatchSKP256NonKey -------- */");
 
         // Create the Call array with multiple transactions
         Call[] memory calls = new Call[](2);
@@ -509,8 +493,8 @@ contract DepositAndTransferETH is Base {
         bytes memory dataHex2 = hex"";
         uint256 value = 0.1e18;
 
-        calls[0] = Call({target: ETH_RECIVE, value: value, data: dataHex});
-        calls[1] = Call({target: ETH_RECIVE, value: value, data: dataHex2});
+        calls[0] = Call({ target: ETH_RECIVE, value: value, data: dataHex });
+        calls[1] = Call({ target: ETH_RECIVE, value: value, data: dataHex2 });
 
         // ERC-7821 mode for batch execution (still mode ID = 1)
         bytes32 mode = bytes32(uint256(0x01000000000000000000) << (22 * 8));
@@ -519,8 +503,7 @@ contract DepositAndTransferETH is Base {
         bytes memory executionData = abi.encode(calls);
 
         // Create the callData for the ERC-7821 execute function
-        bytes memory callData =
-            abi.encodeWithSelector(bytes4(keccak256("execute(bytes32,bytes)")), mode, executionData);
+        bytes memory callData = abi.encodeWithSelector(bytes4(keccak256("execute(bytes32,bytes)")), mode, executionData);
 
         uint256 nonce = entryPoint.getNonce(owner, 1);
 
@@ -540,13 +523,10 @@ contract DepositAndTransferETH is Base {
         console.logBytes32(userOpHash);
 
         IKey.PubKey memory pubKeyExecuteBatch =
-            IKey.PubKey({x: ETH_P256NOKEY_PUBLIC_KEY_X, y: ETH_P256NOKEY_PUBLIC_KEY_Y});
+            IKey.PubKey({ x: ETH_P256NOKEY_PUBLIC_KEY_X, y: ETH_P256NOKEY_PUBLIC_KEY_Y });
 
         bytes memory _signature = account.encodeP256Signature(
-            ETH_P256NOKEY_SIGNATURE_R,
-            ETH_P256NOKEY_SIGNATURE_S,
-            pubKeyExecuteBatch,
-            KeyType.P256NONKEY
+            ETH_P256NOKEY_SIGNATURE_R, ETH_P256NOKEY_SIGNATURE_S, pubKeyExecuteBatch, KeyType.P256NONKEY
         );
 
         // bytes4 magicValue = account.isValidSignature(userOpHash, _signature);
@@ -588,9 +568,7 @@ contract DepositAndTransferETH is Base {
         console.log("balanceSenderBefore", balanceSenderBefore);
         console.log("balanceSenderAfter", balanceSenderAfter);
         assertEq(balanceOfBefore - (value * 2), balanceOfAfter);
-        console.log(
-            "/* ---------------------------------- test_ExecuteBatchSKP256NonKey -------- */"
-        );
+        console.log("/* ---------------------------------- test_ExecuteBatchSKP256NonKey -------- */");
     }
 
     function _register_KeyEOA() internal {
@@ -601,10 +579,9 @@ contract DepositAndTransferETH is Base {
             y: 0x0000000000000000000000000000000000000000000000000000000000000000
         });
 
-        keySK = Key({pubKey: pubKeySK, eoaAddress: sessionKey, keyType: KeyType.EOA});
+        keySK = Key({ pubKey: pubKeySK, eoaAddress: sessionKey, keyType: KeyType.EOA });
 
-        ISpendLimit.SpendTokenInfo memory spendInfo =
-            ISpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000e18});
+        ISpendLimit.SpendTokenInfo memory spendInfo = ISpendLimit.SpendTokenInfo({ token: TOKEN, limit: 1000e18 });
 
         keyData = KeyReg({
             validUntil: validUntil,
@@ -630,12 +607,11 @@ contract DepositAndTransferETH is Base {
     function _register_KeyP256() internal {
         uint48 validUntil = uint48(block.timestamp + 1 days);
         uint48 limit = uint48(3);
-        pubKeySK = PubKey({x: ETH_P256_PUBLIC_KEY_X, y: ETH_P256_PUBLIC_KEY_Y});
+        pubKeySK = PubKey({ x: ETH_P256_PUBLIC_KEY_X, y: ETH_P256_PUBLIC_KEY_Y });
 
-        keySK = Key({pubKey: pubKeySK, eoaAddress: address(0), keyType: KeyType.P256});
+        keySK = Key({ pubKey: pubKeySK, eoaAddress: address(0), keyType: KeyType.P256 });
 
-        ISpendLimit.SpendTokenInfo memory spendInfo =
-            ISpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000e18});
+        ISpendLimit.SpendTokenInfo memory spendInfo = ISpendLimit.SpendTokenInfo({ token: TOKEN, limit: 1000e18 });
 
         keyData = KeyReg({
             validUntil: validUntil,
@@ -661,12 +637,11 @@ contract DepositAndTransferETH is Base {
     function _register_KeyP256NonKey() internal {
         uint48 validUntil = uint48(block.timestamp + 1 days);
         uint48 limit = uint48(3);
-        pubKeySK = PubKey({x: ETH_P256NOKEY_PUBLIC_KEY_X, y: ETH_P256NOKEY_PUBLIC_KEY_Y});
+        pubKeySK = PubKey({ x: ETH_P256NOKEY_PUBLIC_KEY_X, y: ETH_P256NOKEY_PUBLIC_KEY_Y });
 
-        keySK = Key({pubKey: pubKeySK, eoaAddress: address(0), keyType: KeyType.P256NONKEY});
+        keySK = Key({ pubKey: pubKeySK, eoaAddress: address(0), keyType: KeyType.P256NONKEY });
 
-        ISpendLimit.SpendTokenInfo memory spendInfo =
-            ISpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000e18});
+        ISpendLimit.SpendTokenInfo memory spendInfo = ISpendLimit.SpendTokenInfo({ token: TOKEN, limit: 1000e18 });
 
         keyData = KeyReg({
             validUntil: validUntil,
@@ -692,12 +667,11 @@ contract DepositAndTransferETH is Base {
     /* ─────────────────────────────────────────────────────────── helpers ──── */
     function _initializeAccount() internal {
         /* sample WebAuthn public key – replace with a real one if needed */
-        pubKeyMK = PubKey({x: ETH_PUBLIC_KEY_X, y: ETH_PUBLIC_KEY_Y});
+        pubKeyMK = PubKey({ x: ETH_PUBLIC_KEY_X, y: ETH_PUBLIC_KEY_Y });
 
-        keyMK = Key({pubKey: pubKeyMK, eoaAddress: address(0), keyType: KeyType.WEBAUTHN});
+        keyMK = Key({ pubKey: pubKeyMK, eoaAddress: address(0), keyType: KeyType.WEBAUTHN });
 
-        ISpendLimit.SpendTokenInfo memory spendInfo =
-            ISpendLimit.SpendTokenInfo({token: TOKEN, limit: 0});
+        ISpendLimit.SpendTokenInfo memory spendInfo = ISpendLimit.SpendTokenInfo({ token: TOKEN, limit: 0 });
 
         keyData = KeyReg({
             validUntil: type(uint48).max,
@@ -710,12 +684,11 @@ contract DepositAndTransferETH is Base {
             ethLimit: 0
         });
 
-        pubKeyMK = PubKey({x: bytes32(0), y: bytes32(0)});
-        keySK = Key({pubKey: pubKeyMK, eoaAddress: address(0), keyType: KeyType.WEBAUTHN});
+        pubKeyMK = PubKey({ x: bytes32(0), y: bytes32(0) });
+        keySK = Key({ pubKey: pubKeyMK, eoaAddress: address(0), keyType: KeyType.WEBAUTHN });
 
         /* sign arbitrary message so initialise() passes sig check */
-        bytes memory keyEnc =
-            abi.encode(keyMK.pubKey.x, keyMK.pubKey.y, keyMK.eoaAddress, keyMK.keyType);
+        bytes memory keyEnc = abi.encode(keyMK.pubKey.x, keyMK.pubKey.y, keyMK.eoaAddress, keyMK.keyType);
 
         bytes memory keyDataEnc = abi.encode(
             keyData.validUntil,
@@ -729,8 +702,7 @@ contract DepositAndTransferETH is Base {
             keyData.ethLimit
         );
 
-        bytes memory skEnc =
-            abi.encode(keySK.pubKey.x, keySK.pubKey.y, keySK.eoaAddress, keySK.keyType);
+        bytes memory skEnc = abi.encode(keySK.pubKey.x, keySK.pubKey.y, keySK.eoaAddress, keySK.keyType);
 
         bytes memory skDataEnc = abi.encode(
             keyData.validUntil,
@@ -743,18 +715,13 @@ contract DepositAndTransferETH is Base {
             keyData.allowedSelectors
         );
 
-        bytes32 structHash = keccak256(
-            abi.encode(INIT_TYPEHASH, keyEnc, keyDataEnc, skEnc, skDataEnc, initialGuardian)
-        );
+        bytes32 structHash = keccak256(abi.encode(INIT_TYPEHASH, keyEnc, keyDataEnc, skEnc, skDataEnc, initialGuardian));
 
         string memory name = "OPF7702Recoverable";
         string memory version = "1";
 
-        bytes32 domainSeparator = keccak256(
-            abi.encode(
-                TYPE_HASH, keccak256(bytes(name)), keccak256(bytes(version)), block.chainid, owner
-            )
-        );
+        bytes32 domainSeparator =
+            keccak256(abi.encode(TYPE_HASH, keccak256(bytes(name)), keccak256(bytes(version)), block.chainid, owner));
         bytes32 digest = MessageHashUtils.toTypedDataHash(domainSeparator, structHash);
 
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPk, digest);

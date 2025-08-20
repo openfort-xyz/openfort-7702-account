@@ -13,9 +13,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.29;
 
-import {KeysManager} from "src/core/KeysManager.sol";
-import {IExecution} from "src/interfaces/IExecution.sol";
-import {ReentrancyGuard} from "lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
+import { KeysManager } from "src/core/KeysManager.sol";
+import { IExecution } from "src/interfaces/IExecution.sol";
+import { ReentrancyGuard } from "lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 
 /// @title Execution
 /// @author Openfort@0xkoiner
@@ -44,12 +44,7 @@ abstract contract Execution is KeysManager, ReentrancyGuard {
     /// @param  mode Execution‑mode word (see ERC‑7821 draft).
     /// @param  executionData ABI‑encoded payload whose shape depends on
     ///         `mode`.
-    function execute(bytes32 mode, bytes memory executionData)
-        public
-        payable
-        virtual
-        nonReentrant
-    {
+    function execute(bytes32 mode, bytes memory executionData) public payable virtual nonReentrant {
         // Authenticate *once* for the whole recursive run.
         _requireForExecute();
 
@@ -135,7 +130,7 @@ abstract contract Execution is KeysManager, ReentrancyGuard {
 
     /// @dev Perform the actual call; bubble up any revert reason.
     function _execute(address to, uint256 value, bytes memory data) internal virtual {
-        (bool success, bytes memory result) = to.call{value: value}(data);
+        (bool success, bytes memory result) = to.call{ value: value }(data);
         if (success) return;
         /// @solidity memory-safe-assembly
         assembly {

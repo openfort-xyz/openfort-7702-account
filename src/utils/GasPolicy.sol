@@ -37,7 +37,7 @@ contract GasPolicy is IUserOpPolicy {
     /// @dev Denominator for basis points arithmetic.
     uint256 private constant BPS_DENOMINATOR = 10_000;
     /// @dev Addend to achieve ceil division for positive integers in BPS math.
-    uint256 private constant BPS_CEIL_ROUNDING = 9_999;
+    uint256 private constant BPS_CEIL_ROUNDING = 9999;
 
     // -------- Defaults for auto-initialization --------
     uint256 private immutable DEFAULT_PVG; // packaging/bytes for P-256/WebAuthn signatures
@@ -49,11 +49,11 @@ contract GasPolicy is IUserOpPolicy {
     /// @dev Minimum gas price assumption in wei for auto-init.
     uint256 private constant DEFAULT_PRICE_FLOOR_WEI = 2 gwei; // at least 2 gwei assumed
     /// @dev Extra headroom on price, expressed in BPS (e.g., 11000 = +10%).
-    uint256 private constant PRICE_SAFETY_BPS = 11000; // +10% headroom on price
+    uint256 private constant PRICE_SAFETY_BPS = 11_000; // +10% headroom on price
 
     // Safety margins
     /// @dev Safety multiplier on total per-op envelope, expressed in BPS (e.g., 12000 = +20%).
-    uint256 private constant SAFETY_BPS = 12000; // +20% on gas envelope
+    uint256 private constant SAFETY_BPS = 12_000; // +20% on gas envelope
     /// @dev Default penalty in BPS applied to (CGL + PO) when over threshold (v0.8 semantics).
     uint16 private constant DEFAULT_PENALTY_BPS = 1000; // 10% v0.8 penalty on (CGL+PO) if >= threshold
     /// @dev Gas threshold after which penalty applies.
@@ -80,10 +80,9 @@ contract GasPolicy is IUserOpPolicy {
         uint256 _defaultPMV,
         uint256 _defaultPO
     ) {
-        if (
-            _defaultPVG == 0 || _defaultVGL == 0 || _defaultCGL == 0 || _defaultPMV == 0
-                || _defaultPO == 0
-        ) revert GasPolicy__InitializationIncorrect();
+        if (_defaultPVG == 0 || _defaultVGL == 0 || _defaultCGL == 0 || _defaultPMV == 0 || _defaultPO == 0) {
+            revert GasPolicy__InitializationIncorrect();
+        }
         DEFAULT_PVG = _defaultPVG;
         DEFAULT_VGL = _defaultVGL;
         DEFAULT_CGL = _defaultCGL;
@@ -105,10 +104,7 @@ contract GasPolicy is IUserOpPolicy {
      * - Paymaster note: Only considered when `paymasterAndData.length >= PAYMASTER_DATA_OFFSET`.
      *   If `0 < length < OFFSET`, it is effectively ignored in this implementation.
      */
-    function checkUserOpPolicy(bytes32 id, PackedUserOperation calldata userOp)
-        external
-        returns (uint256)
-    {
+    function checkUserOpPolicy(bytes32 id, PackedUserOperation calldata userOp) external returns (uint256) {
         /// @dev Only the account itself may mutate its budgets
         if (msg.sender != userOp.sender) return VALIDATION_FAILED;
         GasLimitConfig storage cfg = gasLimitConfigs[id][userOp.sender];
@@ -136,9 +132,8 @@ contract GasPolicy is IUserOpPolicy {
         uint32 threshold = cfg.penaltyThreshold == 0 ? DEFAULT_PENALTY_THR : cfg.penaltyThreshold;
 
         uint256 penaltyBasisGas = cgl + postOp;
-        uint256 penaltyGas = penaltyBasisGas >= threshold
-            ? (penaltyBasisGas * penaltyBps + BPS_CEIL_ROUNDING) / BPS_DENOMINATOR
-            : 0;
+        uint256 penaltyGas =
+            penaltyBasisGas >= threshold ? (penaltyBasisGas * penaltyBps + BPS_CEIL_ROUNDING) / BPS_DENOMINATOR : 0;
 
         uint256 worstCaseWei = 0;
         if (price != 0) {
@@ -186,9 +181,7 @@ contract GasPolicy is IUserOpPolicy {
      * @param initData ABI-encoded `InitData` struct with exact budget values and settings.
      * @dev Reverts if already initialized, or if `gasLimit`/`costLimit` are zero.
      */
-    function initializeGasPolicy(address account, bytes32 configId, bytes calldata initData)
-        external
-    {
+    function initializeGasPolicy(address account, bytes32 configId, bytes calldata initData) external {
         require(account == msg.sender, GasPolicy__AccountMustBeSender());
         GasLimitConfig storage cfg = gasLimitConfigs[configId][account];
         if (cfg.initialized) revert GasPolicy__IdExistAlready();
@@ -220,14 +213,12 @@ contract GasPolicy is IUserOpPolicy {
 
         /// @dev Envelope units per op with safety (includes PM legs so it also covers sponsored ops)
         uint256 rawEnvelope = DEFAULT_PVG + DEFAULT_VGL + DEFAULT_CGL + DEFAULT_PMV + DEFAULT_PO;
-        uint256 perOpEnvelopeUnits =
-            (rawEnvelope * SAFETY_BPS + BPS_CEIL_ROUNDING) / BPS_DENOMINATOR;
+        uint256 perOpEnvelopeUnits = (rawEnvelope * SAFETY_BPS + BPS_CEIL_ROUNDING) / BPS_DENOMINATOR;
 
         /// @dev Conservative penalty basis: assume most of the envelope is execution/postOp
         ///      Use 70% of the envelope OR the DEFAULT_CGL+DEFAULT_PO, whichever is larger.
         uint256 seventyPct = (perOpEnvelopeUnits * PERCENT_70) / PERCENT_DENOMINATOR;
-        uint256 execSideAssumed =
-            seventyPct > (DEFAULT_CGL + DEFAULT_PO) ? seventyPct : (DEFAULT_CGL + DEFAULT_PO);
+        uint256 execSideAssumed = seventyPct > (DEFAULT_CGL + DEFAULT_PO) ? seventyPct : (DEFAULT_CGL + DEFAULT_PO);
 
         uint256 perOpPenaltyGas = execSideAssumed >= DEFAULT_PENALTY_THR
             ? (execSideAssumed * DEFAULT_PENALTY_BPS + BPS_CEIL_ROUNDING) / BPS_DENOMINATOR
@@ -255,11 +246,7 @@ contract GasPolicy is IUserOpPolicy {
             require(costLimit256 <= type(uint128).max, GasPolicy_CostLimitHigh());
 
             _applyAutoConfig(
-                cfg,
-                uint128(gasLimit256),
-                uint128(costLimit256),
-                uint128(perOpMaxCostWei256),
-                uint32(limit)
+                cfg, uint128(gasLimit256), uint128(costLimit256), uint128(perOpMaxCostWei256), uint32(limit)
             );
         }
     }
@@ -299,7 +286,9 @@ contract GasPolicy is IUserOpPolicy {
         uint128 costLimit,
         uint128 perOpMaxCostWei,
         uint32 txLimit
-    ) private {
+    )
+        private
+    {
         cfg.gasLimit = gasLimit;
         cfg.costLimit = costLimit;
         cfg.perOpMaxCostWei = perOpMaxCostWei;
@@ -333,7 +322,10 @@ contract GasPolicy is IUserOpPolicy {
      * @return costLimit Cumulative wei allowed.
      * @return costUsed  Wei consumed so far.
      */
-    function getGasConfig(bytes32 configId, address userOpSender)
+    function getGasConfig(
+        bytes32 configId,
+        address userOpSender
+    )
         external
         view
         returns (uint128 gasLimit, uint128 gasUsed, uint128 costLimit, uint128 costUsed)
@@ -348,11 +340,7 @@ contract GasPolicy is IUserOpPolicy {
      * @param userOpSender The account address whose config is queried.
      * @return The full GasLimitConfig stored at (configId, userOpSender).
      */
-    function getGasConfigEx(bytes32 configId, address userOpSender)
-        external
-        view
-        returns (GasLimitConfig memory)
-    {
+    function getGasConfigEx(bytes32 configId, address userOpSender) external view returns (GasLimitConfig memory) {
         return gasLimitConfigs[configId][userOpSender];
     }
 

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.4;
 
-import {Base64} from "src/libs/Base64.sol";
-import {P256} from "src/libs/P256.sol";
+import { Base64 } from "src/libs/Base64.sol";
+import { P256 } from "src/libs/P256.sol";
 
 /// @notice WebAuthn helper.
 /// @author Solady (https://github.com/vectorized/solady/blob/main/src/utils/WebAuthn.sol)
@@ -89,7 +89,11 @@ library WebAuthn {
         WebAuthnAuth memory auth,
         bytes32 x,
         bytes32 y
-    ) internal view returns (bool result) {
+    )
+        internal
+        view
+        returns (bool result)
+    {
         bytes32 messageHash;
         string memory encoded = Base64.encode(challenge, true, true);
         /// @solidity memory-safe-assembly
@@ -155,7 +159,11 @@ library WebAuthn {
         bytes32 s,
         bytes32 x,
         bytes32 y
-    ) internal view returns (bool) {
+    )
+        internal
+        view
+        returns (bool)
+    {
         return verify(
             challenge,
             requireUserVerification,
@@ -177,14 +185,10 @@ library WebAuthn {
     /// @dev Performs a best-effort attempt to `abi.decode(auth)`. Won't revert.
     /// If any fields cannot be successfully extracted, `decoded` will not be populated,
     /// which will cause `verify` to return false (as `clientDataJSON` is empty).
-    function tryDecodeAuth(bytes memory encodedAuth)
-        internal
-        pure
-        returns (WebAuthnAuth memory decoded)
-    {
+    function tryDecodeAuth(bytes memory encodedAuth) internal pure returns (WebAuthnAuth memory decoded) {
         /// @solidity memory-safe-assembly
         assembly {
-            for { let n := mload(encodedAuth) } iszero(lt(n, 0xc0)) {} {
+            for { let n := mload(encodedAuth) } iszero(lt(n, 0xc0)) { } {
                 let o := add(encodedAuth, 0x20) // Start of `encodedAuth`'s bytes.
                 let e := add(o, n) // End of `encodedAuth` in memory.
                 let p := add(mload(o), o) // Start of `encodedAuth`.
@@ -223,18 +227,14 @@ library WebAuthn {
     ///     )
     /// ```
     /// Returns the empty string if any length or index exceeds 16 bits.
-    function tryEncodeAuthCompact(WebAuthnAuth memory auth)
-        internal
-        pure
-        returns (bytes memory result)
-    {
+    function tryEncodeAuthCompact(WebAuthnAuth memory auth) internal pure returns (bytes memory result) {
         /// @solidity memory-safe-assembly
         assembly {
             function copyBytes(o_, s_, c_) -> _e {
                 mstore(o_, shl(240, mload(s_)))
                 o_ := add(o_, c_)
                 _e := add(o_, mload(s_)) // The end of the bytes.
-                for { let d_ := sub(add(0x20, s_), o_) } 1 {} {
+                for { let d_ := sub(add(0x20, s_), o_) } 1 { } {
                     mstore(o_, mload(add(d_, o_)))
                     o_ := add(o_, 0x20)
                     if iszero(lt(o_, _e)) { break }
@@ -261,17 +261,13 @@ library WebAuthn {
     /// @dev Approximately the same gas as `tryDecodeAuth`, but helps save on calldata.
     /// If any fields cannot be successfully extracted, `decoded` will not be populated,
     /// which will cause `verify` to return false (as `clientDataJSON` is empty).
-    function tryDecodeAuthCompact(bytes memory encodedAuth)
-        internal
-        pure
-        returns (WebAuthnAuth memory decoded)
-    {
+    function tryDecodeAuthCompact(bytes memory encodedAuth) internal pure returns (WebAuthnAuth memory decoded) {
         /// @solidity memory-safe-assembly
         assembly {
             function extractBytes(o_, l_) -> _m {
                 _m := mload(0x40) // Grab the free memory pointer.
                 let s_ := add(_m, 0x20)
-                for { let i_ := 0 } 1 {} {
+                for { let i_ := 0 } 1 { } {
                     mstore(add(s_, i_), mload(add(o_, i_)))
                     i_ := add(i_, 0x20)
                     if iszero(lt(i_, l_)) { break }

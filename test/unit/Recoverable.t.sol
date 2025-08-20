@@ -2,28 +2,26 @@
 
 pragma solidity ^0.8.29;
 
-import {Base} from "test/Base.sol";
-import {GasPolicy} from "src/utils/GasPolicy.sol";
-import {Test, console2 as console} from "lib/forge-std/src/Test.sol";
-import {EfficientHashLib} from "lib/solady/src/utils/EfficientHashLib.sol";
-import {Math} from "lib/openzeppelin-contracts/contracts/utils/math/Math.sol";
-import {EntryPoint} from "lib/account-abstraction/contracts/core/EntryPoint.sol";
-import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
-import {SafeCast} from "lib/openzeppelin-contracts/contracts/utils/math/SafeCast.sol";
-import {ECDSA} from "lib/openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
-import {IEntryPoint} from "lib/account-abstraction/contracts/interfaces/IEntryPoint.sol";
+import { Base } from "test/Base.sol";
+import { GasPolicy } from "src/utils/GasPolicy.sol";
+import { Test, console2 as console } from "lib/forge-std/src/Test.sol";
+import { EfficientHashLib } from "lib/solady/src/utils/EfficientHashLib.sol";
+import { Math } from "lib/openzeppelin-contracts/contracts/utils/math/Math.sol";
+import { EntryPoint } from "lib/account-abstraction/contracts/core/EntryPoint.sol";
+import { IERC20 } from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
+import { SafeCast } from "lib/openzeppelin-contracts/contracts/utils/math/SafeCast.sol";
+import { ECDSA } from "lib/openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
+import { IEntryPoint } from "lib/account-abstraction/contracts/interfaces/IEntryPoint.sol";
 
-import {OPFMain as OPF7702} from "src/core/OPFMain.sol";
-import {KeyHashLib} from "src/libs/KeyHashLib.sol";
-import {MockERC20} from "src/mocks/MockERC20.sol";
-import {KeysManager} from "src/core/KeysManager.sol";
-import {ISpendLimit} from "src/interfaces/ISpendLimit.sol";
-import {IKey} from "src/interfaces/IKey.sol";
-import {WebAuthnVerifier} from "src/utils/WebAuthnVerifier.sol";
-import {PackedUserOperation} from
-    "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
-import {MessageHashUtils} from
-    "lib/openzeppelin-contracts/contracts/utils/cryptography/MessageHashUtils.sol";
+import { OPFMain as OPF7702 } from "src/core/OPFMain.sol";
+import { KeyHashLib } from "src/libs/KeyHashLib.sol";
+import { MockERC20 } from "src/mocks/MockERC20.sol";
+import { KeysManager } from "src/core/KeysManager.sol";
+import { ISpendLimit } from "src/interfaces/ISpendLimit.sol";
+import { IKey } from "src/interfaces/IKey.sol";
+import { WebAuthnVerifier } from "src/utils/WebAuthnVerifier.sol";
+import { PackedUserOperation } from "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
+import { MessageHashUtils } from "lib/openzeppelin-contracts/contracts/utils/cryptography/MessageHashUtils.sol";
 
 contract Recoverable is Base {
     using KeyHashLib for address;
@@ -91,7 +89,7 @@ contract Recoverable is Base {
         _deal();
 
         vm.prank(sender);
-        entryPoint.depositTo{value: 0.09e18}(owner);
+        entryPoint.depositTo{ value: 0.09e18 }(owner);
     }
 
     /* ─────────────────────────────────────────────────────────────── tests ──── */
@@ -413,8 +411,7 @@ contract Recoverable is Base {
         vm.prank(address(entryPoint));
         account.cancelRecovery();
 
-        (Key memory k_After, uint64 executeAfter_After, uint32 guardiansRequired_After) =
-            account.recoveryData();
+        (Key memory k_After, uint64 executeAfter_After, uint32 guardiansRequired_After) = account.recoveryData();
         console.log("r_After.key.eoaAddress", k_After.eoaAddress);
         console.log("executeAfter_After", executeAfter_After);
         console.log("guardiansRequired_After", guardiansRequired_After);
@@ -471,8 +468,8 @@ contract Recoverable is Base {
         vm.prank(address(entryPoint));
         account.completeRecovery(sigs);
 
-        (bool isActive_After, uint48 validUntil_After, uint48 validAfter_After, uint48 limit_After)
-        = account.getKeyData(keccak256(abi.encodePacked(old_k.pubKey.x, old_k.pubKey.y)));
+        (bool isActive_After, uint48 validUntil_After, uint48 validAfter_After, uint48 limit_After) =
+            account.getKeyData(keccak256(abi.encodePacked(old_k.pubKey.x, old_k.pubKey.y)));
         assertFalse(isActive_After);
         assertEq(validUntil_After, 0);
         assertEq(validAfter_After, 0);
@@ -500,9 +497,7 @@ contract Recoverable is Base {
     }
 
     function test_CompleteRecoveryToWebAuthn() external {
-        console.log(
-            "/* --------------------------------- test_CompleteRecoveryToWebAuthn -------- */"
-        );
+        console.log("/* --------------------------------- test_CompleteRecoveryToWebAuthn -------- */");
 
         _confirmGuardian();
         _startRecoveryToWebAuthn();
@@ -551,8 +546,8 @@ contract Recoverable is Base {
         vm.prank(address(entryPoint));
         account.completeRecovery(sigs);
 
-        (bool isActive_After, uint48 validUntil_After, uint48 validAfter_After, uint48 limit_After)
-        = account.getKeyData(keccak256(abi.encodePacked(old_k.pubKey.x, old_k.pubKey.y)));
+        (bool isActive_After, uint48 validUntil_After, uint48 validAfter_After, uint48 limit_After) =
+            account.getKeyData(keccak256(abi.encodePacked(old_k.pubKey.x, old_k.pubKey.y)));
         assertFalse(isActive_After);
         assertEq(validUntil_After, 0);
         assertEq(validAfter_After, 0);
@@ -577,9 +572,7 @@ contract Recoverable is Base {
 
         console.log("isActive_New", isActive_New);
         console.log("validUntil_New", validUntil_New);
-        console.log(
-            "/* --------------------------------- test_CompleteRecoveryToWebAuthn -------- */"
-        );
+        console.log("/* --------------------------------- test_CompleteRecoveryToWebAuthn -------- */");
     }
 
     function _poroposeGuardian() internal {
@@ -694,8 +687,7 @@ contract Recoverable is Base {
             x: 0x0000000000000000000000000000000000000000000000000000000000000000,
             y: 0x0000000000000000000000000000000000000000000000000000000000000000
         });
-        recovery_keyEOA =
-            Key({pubKey: recovery_pubKeyEOA, eoaAddress: sender, keyType: KeyType.EOA});
+        recovery_keyEOA = Key({ pubKey: recovery_pubKeyEOA, eoaAddress: sender, keyType: KeyType.EOA });
 
         bytes memory code = abi.encodePacked(
             bytes3(0xef0100),
@@ -709,12 +701,9 @@ contract Recoverable is Base {
     }
 
     function _startRecoveryToWebAuthn() internal {
-        recovery_pubKeyWebAuthn = PubKey({x: BATCH_VALID_PUBLIC_KEY_X, y: BATCH_VALID_PUBLIC_KEY_Y});
-        recovery_keyWebAuthn = Key({
-            pubKey: recovery_pubKeyWebAuthn,
-            eoaAddress: address(0),
-            keyType: KeyType.WEBAUTHN
-        });
+        recovery_pubKeyWebAuthn = PubKey({ x: BATCH_VALID_PUBLIC_KEY_X, y: BATCH_VALID_PUBLIC_KEY_Y });
+        recovery_keyWebAuthn =
+            Key({ pubKey: recovery_pubKeyWebAuthn, eoaAddress: address(0), keyType: KeyType.WEBAUTHN });
 
         bytes memory code = abi.encodePacked(
             bytes3(0xef0100),
@@ -742,10 +731,9 @@ contract Recoverable is Base {
             string memory iString = vm.toString(i);
             address sessionKeyAddr = makeAddr(iString);
 
-            keySK = Key({pubKey: pubKeySK, eoaAddress: sessionKeyAddr, keyType: KeyType.EOA});
+            keySK = Key({ pubKey: pubKeySK, eoaAddress: sessionKeyAddr, keyType: KeyType.EOA });
 
-            ISpendLimit.SpendTokenInfo memory spendInfo =
-                ISpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000e18});
+            ISpendLimit.SpendTokenInfo memory spendInfo = ISpendLimit.SpendTokenInfo({ token: TOKEN, limit: 1000e18 });
 
             keyData = KeyReg({
                 validUntil: validUntil,
@@ -776,17 +764,14 @@ contract Recoverable is Base {
             uint48 validUntil = uint48(block.timestamp + 1 days);
             uint48 limit = uint48(3);
 
-            bytes32 RANDOM_P256_PUBLIC_KEY_X =
-                keccak256(abi.encodePacked("X_KEY", i, block.timestamp));
-            bytes32 RANDOM_P256_PUBLIC_KEY_Y =
-                keccak256(abi.encodePacked("Y_KEY", i, block.timestamp, msg.sender));
+            bytes32 RANDOM_P256_PUBLIC_KEY_X = keccak256(abi.encodePacked("X_KEY", i, block.timestamp));
+            bytes32 RANDOM_P256_PUBLIC_KEY_Y = keccak256(abi.encodePacked("Y_KEY", i, block.timestamp, msg.sender));
 
-            pubKeySK = PubKey({x: RANDOM_P256_PUBLIC_KEY_X, y: RANDOM_P256_PUBLIC_KEY_Y});
+            pubKeySK = PubKey({ x: RANDOM_P256_PUBLIC_KEY_X, y: RANDOM_P256_PUBLIC_KEY_Y });
 
-            keySK = Key({pubKey: pubKeySK, eoaAddress: address(0), keyType: KeyType.P256});
+            keySK = Key({ pubKey: pubKeySK, eoaAddress: address(0), keyType: KeyType.P256 });
 
-            ISpendLimit.SpendTokenInfo memory spendInfo =
-                ISpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000e18});
+            ISpendLimit.SpendTokenInfo memory spendInfo = ISpendLimit.SpendTokenInfo({ token: TOKEN, limit: 1000e18 });
 
             keyData = KeyReg({
                 validUntil: validUntil,
@@ -817,17 +802,15 @@ contract Recoverable is Base {
             uint48 validUntil = uint48(block.timestamp + 1 days);
             uint48 limit = uint48(3);
 
-            bytes32 RANDOM_P256_PUBLIC_KEY_X =
-                keccak256(abi.encodePacked("X_KEY", i, block.timestamp + 1000));
+            bytes32 RANDOM_P256_PUBLIC_KEY_X = keccak256(abi.encodePacked("X_KEY", i, block.timestamp + 1000));
             bytes32 RANDOM_P256_PUBLIC_KEY_Y =
                 keccak256(abi.encodePacked("Y_KEY", i, block.timestamp + 1000, msg.sender));
 
-            pubKeySK = PubKey({x: RANDOM_P256_PUBLIC_KEY_X, y: RANDOM_P256_PUBLIC_KEY_Y});
+            pubKeySK = PubKey({ x: RANDOM_P256_PUBLIC_KEY_X, y: RANDOM_P256_PUBLIC_KEY_Y });
 
-            keySK = Key({pubKey: pubKeySK, eoaAddress: address(0), keyType: KeyType.P256NONKEY});
+            keySK = Key({ pubKey: pubKeySK, eoaAddress: address(0), keyType: KeyType.P256NONKEY });
 
-            ISpendLimit.SpendTokenInfo memory spendInfo =
-                ISpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000e18});
+            ISpendLimit.SpendTokenInfo memory spendInfo = ISpendLimit.SpendTokenInfo({ token: TOKEN, limit: 1000e18 });
 
             keyData = KeyReg({
                 validUntil: validUntil,
@@ -854,12 +837,11 @@ contract Recoverable is Base {
     /* ─────────────────────────────────────────────────────────── helpers ──── */
     function _initializeAccount() internal {
         /* sample WebAuthn public key – replace with a real one if needed */
-        pubKeyMK = PubKey({x: VALID_PUBLIC_KEY_X, y: VALID_PUBLIC_KEY_Y});
+        pubKeyMK = PubKey({ x: VALID_PUBLIC_KEY_X, y: VALID_PUBLIC_KEY_Y });
 
-        keyMK = Key({pubKey: pubKeyMK, eoaAddress: address(0), keyType: KeyType.WEBAUTHN});
+        keyMK = Key({ pubKey: pubKeyMK, eoaAddress: address(0), keyType: KeyType.WEBAUTHN });
 
-        ISpendLimit.SpendTokenInfo memory spendInfo =
-            ISpendLimit.SpendTokenInfo({token: TOKEN, limit: 0});
+        ISpendLimit.SpendTokenInfo memory spendInfo = ISpendLimit.SpendTokenInfo({ token: TOKEN, limit: 0 });
 
         keyData = KeyReg({
             validUntil: type(uint48).max,
@@ -872,12 +854,11 @@ contract Recoverable is Base {
             ethLimit: 0
         });
 
-        pubKeyMK = PubKey({x: bytes32(0), y: bytes32(0)});
-        keySK = Key({pubKey: pubKeyMK, eoaAddress: address(0), keyType: KeyType.WEBAUTHN});
+        pubKeyMK = PubKey({ x: bytes32(0), y: bytes32(0) });
+        keySK = Key({ pubKey: pubKeyMK, eoaAddress: address(0), keyType: KeyType.WEBAUTHN });
 
         /* sign arbitrary message so initialise() passes sig check */
-        bytes memory keyEnc =
-            abi.encode(keyMK.pubKey.x, keyMK.pubKey.y, keyMK.eoaAddress, keyMK.keyType);
+        bytes memory keyEnc = abi.encode(keyMK.pubKey.x, keyMK.pubKey.y, keyMK.eoaAddress, keyMK.keyType);
 
         bytes memory keyDataEnc = abi.encode(
             keyData.validUntil,
@@ -891,8 +872,7 @@ contract Recoverable is Base {
             keyData.ethLimit
         );
 
-        bytes memory skEnc =
-            abi.encode(keySK.pubKey.x, keySK.pubKey.y, keySK.eoaAddress, keySK.keyType);
+        bytes memory skEnc = abi.encode(keySK.pubKey.x, keySK.pubKey.y, keySK.eoaAddress, keySK.keyType);
 
         bytes memory skDataEnc = abi.encode(
             keyData.validUntil,
@@ -905,18 +885,13 @@ contract Recoverable is Base {
             keyData.allowedSelectors
         );
 
-        bytes32 structHash = keccak256(
-            abi.encode(INIT_TYPEHASH, keyEnc, keyDataEnc, skEnc, skDataEnc, initialGuardian)
-        );
+        bytes32 structHash = keccak256(abi.encode(INIT_TYPEHASH, keyEnc, keyDataEnc, skEnc, skDataEnc, initialGuardian));
 
         string memory name = "OPF7702Recoverable";
         string memory version = "1";
 
-        bytes32 domainSeparator = keccak256(
-            abi.encode(
-                TYPE_HASH, keccak256(bytes(name)), keccak256(bytes(version)), block.chainid, owner
-            )
-        );
+        bytes32 domainSeparator =
+            keccak256(abi.encode(TYPE_HASH, keccak256(bytes(name)), keccak256(bytes(version)), block.chainid, owner));
         bytes32 digest = MessageHashUtils.toTypedDataHash(domainSeparator, structHash);
 
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPk, digest);
