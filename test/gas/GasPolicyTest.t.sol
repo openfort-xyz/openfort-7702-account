@@ -25,12 +25,12 @@ contract GasPolicyTest is Test {
         assertEq(balance, 10e18);
     }
 
-    function test_InitializeWithMultiplexer() public {
+    function test_initializeGasPolicy() public {
         bytes32 configId = keccak256(abi.encodePacked(bytes32(0), bytes32(0)));
         _initGas(configId);
 
         (uint128 gasLimit, uint128 gasUsed, uint128 costLimit, uint128 costUsed) =
-            gP.getGasConfig(configId, account, account);
+        gP.getGasConfig(configId, account);
         console.log(gasLimit);
         console.log(gasUsed);
         console.log(costLimit);
@@ -65,7 +65,7 @@ contract GasPolicyTest is Test {
 
     function _initGas(bytes32 configId) internal {
         vm.prank(account);
-        gP.initializeWithMultiplexer(account, configId, 3);
+        gP.initializeGasPolicy(account, configId, 3);
     }
 
     function _packAccountGasLimits(uint256 callGasLimit, uint256 verificationGasLimit)

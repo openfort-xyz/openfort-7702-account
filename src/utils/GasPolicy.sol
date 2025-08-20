@@ -36,8 +36,7 @@ contract GasPolicy is IUserOpPolicy {
     uint32 private constant DEFAULT_PENALTY_THR = 40_000; // penalty threshold (v0.8)
     uint256 private constant DEFAULT_PRIORITY_FEE_WEI = 1 gwei; // assumed tip for pricing worst-case
 
-    mapping(bytes32 id => mapping(address mux => mapping(address account => GasLimitConfig)))
-        internal gasLimitConfigs;
+    mapping(bytes32 id => mapping(address account => GasLimitConfig)) gasLimitConfigs;
 
     constructor(
         uint256 _defaultPVG,
@@ -62,11 +61,13 @@ contract GasPolicy is IUserOpPolicy {
         external
         returns (uint256)
     {
-        GasLimitConfig storage cfg = gasLimitConfigs[id][msg.sender][userOp.sender];
+        /// @dev Only the account itself may mutate its budgets
+        if (msg.sender != userOp.sender) return VALIDATION_FAILED;
+        GasLimitConfig storage cfg = gasLimitConfigs[id][userOp.sender];
         if (!cfg.initialized) return VALIDATION_FAILED;
 
-        // 1) Unpack gas envelope
-        uint256 envelopeUnits;
+        /// @dev Unpack gas envelope
+        uint256 envelopeUnits = 0;
 
         envelopeUnits += userOp.preVerificationGas;
         envelopeUnits += UserOperationLib.unpackVerificationGasLimit(userOp);
@@ -80,7 +81,7 @@ contract GasPolicy is IUserOpPolicy {
 
         envelopeUnits += cgl + postOp;
 
-        // 2) Worst-case WEI (v0.8 semantics)
+        /// @dev Worst-case WEI (v0.8 semantics)
         uint256 price = userOp.gasPrice(); // min(maxFeePerGas, basefee + maxPriority)
 
         uint16 penaltyBps = cfg.penaltyBps == 0 ? DEFAULT_PENALTY_BPS : cfg.penaltyBps;
@@ -91,14 +92,16 @@ contract GasPolicy is IUserOpPolicy {
             ? (penaltyBasisGas * penaltyBps + BPS_CEIL_ROUNDING) / BPS_DENOMINATOR
             : 0;
 
+        /// @dev envelopeUnits * price
         if (price != 0 && envelopeUnits > type(uint256).max / price) return VALIDATION_FAILED;
         uint256 worstCaseWei = envelopeUnits * price;
+        /// @dev penaltyGas * price
         if (penaltyGas != 0) {
             if (penaltyGas > type(uint256).max / price) return VALIDATION_FAILED;
             worstCaseWei += penaltyGas * price;
         }
 
-        // 3) Guards
+        /// @dev Guards
         if (cfg.gasLimit > 0 && cfg.gasUsed + envelopeUnits > cfg.gasLimit) {
             return VALIDATION_FAILED;
         }
@@ -112,7 +115,7 @@ contract GasPolicy is IUserOpPolicy {
             return VALIDATION_FAILED;
         }
 
-        // 4) Account usage (optimistic)
+        /// @dev Account usage (optimistic)
         unchecked {
             cfg.gasUsed += uint128(envelopeUnits);
             cfg.costUsed += uint128(worstCaseWei);
@@ -129,11 +132,11 @@ contract GasPolicy is IUserOpPolicy {
      * @param configId  Session key id (e.g., keccak256(abi.encode(pubKey.x, pubKey.y))).
      * @param initData  Calldata
      */
-    function initializeWithMultiplexer(address account, bytes32 configId, bytes calldata initData)
+    function initializeGasPolicy(address account, bytes32 configId, bytes calldata initData)
         external
     {
         require(account == msg.sender, GasPolicy__AccountMustBeSender());
-        GasLimitConfig storage cfg = gasLimitConfigs[configId][msg.sender][account];
+        GasLimitConfig storage cfg = gasLimitConfigs[configId][account];
         if (cfg.initialized) revert GasPolicy__IdExistAlready();
 
         InitData memory d = abi.decode(initData, (InitData));
@@ -156,9 +159,9 @@ contract GasPolicy is IUserOpPolicy {
      *  - gasLimit           = perOpEnvelopeUnits * limit
      *  - costLimit          = perOpMaxCostWei * limit
      */
-    function initializeWithMultiplexer(address account, bytes32 configId, uint256 limit) external {
+    function initializeGasPolicy(address account, bytes32 configId, uint256 limit) external {
         require(account == msg.sender, GasPolicy__AccountMustBeSender());
-        GasLimitConfig storage cfg = gasLimitConfigs[configId][msg.sender][account];
+        GasLimitConfig storage cfg = gasLimitConfigs[configId][account];
         if (cfg.initialized) revert GasPolicy__IdExistAlready();
         require(limit > 0 && limit <= type(uint32).max, GasPolicy__BadLimit());
 
@@ -249,21 +252,21 @@ contract GasPolicy is IUserOpPolicy {
     }
 
     // ---------------------- VIEWS ----------------------
-    function getGasConfig(bytes32 configId, address multiplexer, address userOpSender)
+    function getGasConfig(bytes32 configId, address userOpSender)
         external
         view
         returns (uint128 gasLimit, uint128 gasUsed, uint128 costLimit, uint128 costUsed)
     {
-        GasLimitConfig storage c = gasLimitConfigs[configId][multiplexer][userOpSender];
+        GasLimitConfig storage c = gasLimitConfigs[configId][userOpSender];
         return (c.gasLimit, c.gasUsed, c.costLimit, c.costUsed);
     }
 
-    function getGasConfigEx(bytes32 configId, address multiplexer, address userOpSender)
+    function getGasConfigEx(bytes32 configId, address userOpSender)
         external
         view
         returns (GasLimitConfig memory)
     {
-        return gasLimitConfigs[configId][multiplexer][userOpSender];
+        return gasLimitConfigs[configId][userOpSender];
     }
 
     // ---------------------- InitData for manual path ----------------------

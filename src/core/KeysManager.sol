@@ -168,7 +168,7 @@ abstract contract KeysManager is BaseOPF7702, IKey, ISpendLimit {
 
         // Only enforce limits if _limit > 0
         if (_keyData.limit > 0) {
-            IUserOpPolicy(GAS_POLICY).initializeWithMultiplexer(
+            IUserOpPolicy(GAS_POLICY).initializeGasPolicy(
                 address(this), _key.computeKeyId(), uint256(_keyData.limit)
             );
             sKey.whitelisting = true;

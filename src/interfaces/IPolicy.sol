@@ -45,17 +45,17 @@ interface IUserOpPolicy is IPolicy {
         external
         returns (uint256);
 
-    function initializeWithMultiplexer(address account, bytes32 configId, uint256 limit) external;
+    function initializeGasPolicy(address account, bytes32 configId, uint256 limit) external;
 
-    function initializeWithMultiplexer(address account, bytes32 configId, bytes calldata initData)
+    function initializeGasPolicy(address account, bytes32 configId, bytes calldata initData)
         external;
 
-    function getGasConfig(bytes32 configId, address multiplexer, address userOpSender)
+    function getGasConfig(bytes32 configId, address userOpSender)
         external
         view
         returns (uint128 gasLimit, uint128 gasUsed, uint128 costLimit, uint128 costUsed);
 
-    function getGasConfigEx(bytes32 configId, address multiplexer, address userOpSender)
+    function getGasConfigEx(bytes32 configId, address userOpSender)
         external
         view
         returns (GasLimitConfig memory);
