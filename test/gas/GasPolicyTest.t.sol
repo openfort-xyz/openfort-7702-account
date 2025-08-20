@@ -30,7 +30,7 @@ contract GasPolicyTest is Test {
         _initGas(configId);
 
         (uint128 gasLimit, uint128 gasUsed, uint128 costLimit, uint128 costUsed) =
-        gP.getGasConfig(configId, account);
+            gP.getGasConfig(configId, account);
         console.log(gasLimit);
         console.log(gasUsed);
         console.log(costLimit);
