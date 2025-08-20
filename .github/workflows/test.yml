@@ -14,6 +14,8 @@ env:
   PRIVATE_KEY_SENDER: ${{ secrets.PRIVATE_KEY_SENDER }}
   PRIVATE_KEY_SESSIONKEY: ${{ secrets.PRIVATE_KEY_SESSIONKEY }}
   GUARDIAN_EOA_PRIVATE_KEY: ${{ secrets.GUARDIAN_EOA_PRIVATE_KEY }}
+  # Use the 'ci' profile from foundry.toml
+  FOUNDRY_PROFILE: ci
 
 on:
   push:
@@ -36,8 +38,7 @@ jobs:
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
-          # Use the same version you have locally, e.g. nightly-2025-07-10
-          version: nightly
+          version: nightly  # or pin to your exact local version
 
       - name: Show Forge version
         run: forge --version
@@ -48,8 +49,8 @@ jobs:
 
       - name: Run Forge build
         id: build
-        run: forge build --sizes --profile ci
+        run: forge build --sizes
 
       - name: Run Forge tests
         id: test
-        run: forge test -vvv --profile ci --rpc-url "$SEPOLIA_RPC_URL"
+        run: forge test -vvv --rpc-url "$SEPOLIA_RPC_URL"
