@@ -1,6 +1,5 @@
 name: CI
 
-# Global environment variables
 env:
   ETHERSCAN_KEY: ${{ secrets.ETHERSCAN_KEY }}
   SEPOLIA_RPC_URL: ${{ secrets.SEPOLIA_RPC_URL }}
@@ -29,31 +28,28 @@ jobs:
       fail-fast: true
 
     steps:
-      # 1) checkout with all submodules
       - name: Checkout repository with submodules
         uses: actions/checkout@v4
         with:
           submodules: recursive
 
-      # 2) INSTALL FOUNDRY FIRST (this was missing!)
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
+        with:
+          # You can pin to your local exact version instead (e.g. nightly-2025-07-10)
+          version: nightly
 
       - name: Show Forge version
-        run: |
-          forge --version
+        run: forge --version
 
       - name: Run Forge fmt
-        run: |
-          forge fmt --check
         id: fmt
+        run: forge fmt --check
 
       - name: Run Forge build
-        run: |
-          forge build --sizes
         id: build
+        run: forge build --sizes --profile ci
 
       - name: Run Forge tests
-        run: |
-          forge test -vvv --rpc-url "$SEPOLIA_RPC_URL"
         id: test
+        run: forge test -vvv --profile ci --rpc-url "$SEPOLIA_RPC_URL"
