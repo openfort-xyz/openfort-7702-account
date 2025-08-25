@@ -10,6 +10,7 @@
 > Contracts are **unaudited**, and the codebase may have **breaking changes** without notice.
 
 **All-in-one EIP-7702 powered smart accounts with session key support**
+<br></br>
 
 <p align="center">
   <a href="https://github.com/openfort/openfort-7702-account/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="License MIT"></a>
@@ -25,6 +26,7 @@
   <a href="#standards--compatibility">Standards</a> •
   <a href="#security--audits">Security</a>
 </p>
+
 ---
 
 ## Overview
