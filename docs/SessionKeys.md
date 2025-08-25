@@ -118,7 +118,7 @@ flowchart TD
     ContractWhitelist --> FunctionFilter
     FunctionFilter --> TransactionLimits
     TransactionLimits --> WhitelistingMode
-    ```
+```
 
 ## Permission Control Framework
 Session keys operate within a comprehensive permission framework that enforces multiple layers of access control:
