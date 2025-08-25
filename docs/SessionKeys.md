@@ -266,3 +266,36 @@ flowchart TD
     SelectorCheck --> SpendingCheck
     SpendingCheck --> ExecutionGrant
 ```
+
+## Validation and Enforcement
+The permission system implements multiple validation layers to ensure secure execution:
+
+### Spending Limit Enforcement
+Token spending validation follows strict ERC-20 patterns with specific security constraints:
+
+```mermaid
+flowchart TD
+    subgraph "Token Spend Validation"
+        TokenCall["ERC-20 Function Call<br/>• transfer(address,uint256)<br/>• transferFrom(address,address,uint256)<br/>• approve(address,uint256)"]
+        DataExtraction["_validateTokenSpend()<br/>• Extract value from calldata<br/>• Last 32 bytes = amount<br/>• Validate against limit"]
+        LimitCheck["Spending Limit Check<br/>• Current spend + amount <= limit<br/>• Update spend tracking<br/>• Prevent overspend"]
+    end
+    
+    subgraph "ETH Spend Validation"
+        ETHTransfer["ETH Transfer<br/>• msg.value > 0<br/>• Native ETH spending<br/>• Direct transfers"]
+        ETHValidation["_validateEthSpend()<br/>• Check ethLimit<br/>• Update ETH spending<br/>• Track cumulative usage"]
+    end
+    
+    subgraph "Spending Constraints"
+        SingleToken["Single Token Policy<br/>• One token per session key<br/>• Registered in SpendTokenInfo<br/>• No multi-token support"]
+        ERC20Only["ERC-20 Only Support<br/>• Standard transfer functions<br/>• No ERC-777, ERC-1363<br/>• No vault tokens (ERC-4626)"]
+    end
+
+    %% Flow connections
+    TokenCall --> DataExtraction
+    DataExtraction --> LimitCheck
+    ETHTransfer --> ETHValidation
+    LimitCheck --> SingleToken
+    ETHValidation --> SingleToken
+    SingleToken --> ERC20Only
+```
