@@ -337,3 +337,92 @@ flowchart TD
     IdKeysSlot --> P256Type
     IdKeysSlot --> P256NonKeyType
 ```
+
+## Key Features
+
+### Session Key System
+Session keys provide temporary, restricted access to smart accounts with customizable permissions. The system supports multiple key types and enforcement mechanisms:
+
+* Key IDs (`KeyHashLib`):
+
+    - EOA: `keccak256(abi.encodePacked(eoa))`.
+
+    - WebAuthn/P‑256: `keccak256(abi.encodePacked(pubKey.x, pubKey.y))`.
+
+    - Challenge replay protection: `usedChallenges[userOpHash]` is set on successful verification for WebAuthn/P‑256 userOps (and 1271), preventing replay.
+
+```mermaid
+flowchart LR
+    subgraph "Session Key Registration"
+        RegisterKey["registerSessionKey()<br/>KeysManager.sol"]
+        ValidateParams["Parameter Validation<br/>Time limits, spending caps"]
+        StoreKey["Store in mapping<br/>sessionKeys[keyHash]"]
+    end
+    
+    subgraph "Session Key Structure"
+        SessionKeyStruct["SessionKey struct<br/>- pubKey: PubKey<br/>- isActive: bool<br/>- validUntil: uint48<br/>- validAfter: uint48<br/>- limit: uint48<br/>- ethLimit: uint256<br/>- whitelisting: bool<br/>- allowedSelectors: bytes4[]"]
+    end
+    
+    subgraph "Permission Enforcement"
+        ValidateKey["isValidKey()<br/>Check expiration, limits"]
+        CheckSpending["validateSpendingLimits()<br/>ETH and token limits"]
+        CheckWhitelist["validateWhitelist()<br/>Contract and function filters"]
+    end
+
+    %% Flow connections
+    RegisterKey --> ValidateParams
+    ValidateParams --> StoreKey
+    StoreKey --> SessionKeyStruct
+    SessionKeyStruct --> ValidateKey
+    ValidateKey --> CheckSpending
+    CheckSpending --> CheckWhitelist
+``` 
+
+## GasPolicy (per‑session budgets)
+
+
+* Keyed by (`configId=keyId, account`). Only the account itself may mutate usage (`msg.sender == userOp.sender`).
+
+* Budgets: `gasLimit`, `costLimit` (wei), `perOpMaxCostWei`, `txLimit`, with optional penalty shaping (BPS) across `callGas` + `postOp`.
+
+* Validation path: `checkUserOpPolicy(id, userOp)`:
+
+    - Decodes envelope (`preVerificationGas`, `verificationGasLimit`, `callGasLimit`, optional paymaster legs), computes worst‑case wei via `userOp.gasPrice()`.
+
+    - Ensures usage ≤ budgets; then atomically accounts (`gasUsed`, `costUsed`, `txUsed`).
+
+* Initialization:
+
+    - Auto: `KeysManager._addKey` calls `initializeGasPolicy(account=this, configId=keyId, limit)` for session keys (limit>0).
+
+    - Manual: `initializeGasPolicy(account, configId, initData)` to set exact budgets.
+
+## Call‑data expectations & examples
+
+4337 `userOp.signature` envelope
+
+* Always ABI‑encoded as `(KeyType, bytes payload)`.
+
+    - EOA: `payload = ecdsaSig` (64/65 bytes).
+
+    - WebAuthn: `payload = abi.encode(uv, authenticatorData, clientDataJSON, challengeIdx, typeIdx, r, s, PubKey)`.
+
+    - P256 / P256NONKEY: `payload = abi.encode(r, s, PubKey)` (NONKEY path pre‑SHA‑256s the digest before verify).
+
+* ERC‑7821 execute(mode, executionData)
+```ts
+// Single batch (mode 1)
+bytes memory executionData = abi.encode(
+  Call[]({
+    Call({ target: to1, value: v1, data: d1 }),
+    Call({ target: to2, value: v2, data: d2 })
+  })
+);
+account.execute(MODE_1, executionData);
+
+// Single batch + opData (mode 2)
+bytes memory executionData = abi.encode(calls, opData);
+account.execute(MODE_2, executionData);
+
+// Batch of batches
+```
