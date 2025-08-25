@@ -86,3 +86,82 @@ flowchart TD
     P256Key --> P256Validation
     P256NonKey --> P256Validation
 ```
+
+## Permission Control Framework
+Session keys operate within a comprehensive permission framework that enforces multiple layers of access control:
+
+```mermaid
+flowchart TD
+    subgraph "Time Controls"
+        TimeValidation["Time-based Permissions<br/>• validAfter timestamp<br/>• validUntil expiration<br/>• Automatic cleanup"]
+    end
+    
+    subgraph "Spending Controls"
+        EthLimits["ETH Spending Limits<br/>• ethLimit field<br/>• Per-key tracking<br/>• Cumulative enforcement"]
+        TokenLimits["Token Spending Limits<br/>• SpendTokenInfo struct<br/>• ERC-20 only support<br/>• Single token per key"]
+    end
+    
+    subgraph "Access Controls"
+        ContractWhitelist["Contract Whitelisting<br/>• whitelist mapping<br/>• Address-based filtering<br/>• Boolean permissions"]
+        FunctionFilter["Function Selector Filtering<br/>• allowedSelectors array<br/>• bytes4 selector matching<br/>• Granular function control"]
+    end
+    
+    subgraph "Usage Controls"
+        TransactionLimits["Transaction Count Limits<br/>• limit field<br/>• Per-operation decrement<br/>• Usage exhaustion"]
+        WhitelistingMode["Whitelisting Mode<br/>• whitelisting boolean<br/>• Enforce restrictions<br/>• Default allow/deny"]
+    end
+
+    %% Flow connections
+    TimeValidation --> EthLimits
+    EthLimits --> TokenLimits
+    TokenLimits --> ContractWhitelist
+    ContractWhitelist --> FunctionFilter
+    FunctionFilter --> TransactionLimits
+    TransactionLimits --> WhitelistingMode
+    ```
+
+## Permission Control Framework
+Session keys operate within a comprehensive permission framework that enforces multiple layers of access control:
+
+```mermaid
+flowchart TD
+    subgraph "Time Controls"
+        TimeValidation["Time-based Permissions<br/>• validAfter timestamp<br/>• validUntil expiration<br/>• Automatic cleanup"]
+    end
+
+    subgraph "Gas Policy"
+        GasPolicy["Gas Permissions<br/>• limits counter<br/>• manual/auto config<br/>• include penalty gas"]
+    end
+
+    subgraph "Spending Controls"
+        EthLimits["ETH Spending Limits<br/>• ethLimit field<br/>• Per-key tracking<br/>• Cumulative enforcement"]
+        TokenLimits["Token Spending Limits<br/>• SpendTokenInfo struct<br/>• ERC-20 only support<br/>• Single token per key"]
+    end
+    
+    subgraph "Access Controls"
+        ContractWhitelist["Contract Whitelisting<br/>• whitelist mapping<br/>• Address-based filtering<br/>• Boolean permissions"]
+        FunctionFilter["Function Selector Filtering<br/>• allowedSelectors array<br/>• bytes4 selector matching<br/>• Granular function control"]
+    end
+    
+    subgraph "Usage Controls"
+        TransactionLimits["Transaction Count Limits<br/>• limit field<br/>• Per-operation decrement<br/>• Usage exhaustion"]
+        WhitelistingMode["Whitelisting Mode<br/>• whitelisting boolean<br/>• Enforce restrictions<br/>• Default allow/deny"]
+    end
+
+    %% Flow connections
+    TimeValidation --> GasPolicy
+    GasPolicy --> EthLimits
+    EthLimits --> TokenLimits
+    TokenLimits --> ContractWhitelist
+    ContractWhitelist --> FunctionFilter
+    FunctionFilter --> TransactionLimits
+    TransactionLimits --> WhitelistingMode
+```
+
+
+
+
+
+
+
+
