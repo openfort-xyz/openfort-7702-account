@@ -4,6 +4,19 @@ This document covers the session key management and permission enforcement syste
 
 For information about the core account abstraction implementation, see Account Abstraction Implementation. For details about authentication mechanisms and WebAuthn integration, see WebAuthn Integration.
 
+## Table of Contents
+
+- [System Architecture](#system-architecture)
+- [Key Types and Capabilities](#key-types-and-capabilities)
+- [Permission Control Framework](#permission-control-framework)
+- [Permission Control Framework](#permission-control-framework-1)
+- [Session Key Data Structure](#session-key-data-structure)
+- [Key Management Lifecycle](#key-management-lifecycle)
+- [Permission Validation Flow](#permission-validation-flow)
+- [Validation and Enforcement](#validation-and-enforcement)
+  - [Spending Limit Enforcement](#spending-limit-enforcement)
+- [Security Model](#security-model)
+
 ## System Architecture
 The session key system is built around three primary components that work together to provide secure, temporary access delegation:
 ```mermaid
@@ -302,6 +315,7 @@ flowchart TD
 
 
 ## Security Model
+
 The session key security model implements defense-in-depth through multiple validation layers:
 | Security Layer | Purpose | Implementation |
 |----------------|---------|----------------|
