@@ -48,9 +48,12 @@ This documentation covers the implementation of EIP-7702 compatible smart contra
 
 ## Docs & Deep Dives
 
+## Docs & Deep Dives
+
 - **Architecture** — high-level design, modules, call flow, and data shapes: [docs/Architecture.md](Architecture.md)
 - **Session Keys** — registration, permissions, signature envelopes, and policy limits: [docs/SessionKeys.md](SessionKeys.md)
 - **Recovery** — guardians, timelines, EIP-712 digests, and invariants: [docs/Recovery.md](Recovery.md)
+- **Gas Policy** — per-session gas/cost/tx budgets, validation flow, defaults, and examples: [docs/GasPolicy.md](GasPolicy.md)
 - **AA Primer** — how this integrates with ERC-4337 and EIP-7702: [docs/AA.md](AA.md)
 
 ---
