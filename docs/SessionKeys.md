@@ -230,3 +230,39 @@ sequenceDiagram
     Note over KeysManager, GasPolicy: Session keys: whitelisting=true, bounded permissions
     Note over GasPolicy: Gas Policy: Per limits
 ```
+
+## Permission Validation Flow
+
+```mermaid
+flowchart TD
+    subgraph "Transaction Initiation"
+        UserOp["User Operation<br/>• Transaction data<br/>• Signature<br/>• Session key ID"]
+    end
+    
+    subgraph "Signature Validation"
+        SignatureCheck["_validateSignature()<br/>• Key type resolution<br/>• Cryptographic verification<br/>• Key existence check"]
+        KeyTypeSwitch["Key Type Validation<br/>• EOA: ECDSA recovery<br/>• WebAuthn: assertion verification<br/>• P-256: curve validation"]
+    end
+    
+    subgraph "Permission Enforcement"
+        TimeCheck["Time Validation<br/>• validAfter <= now<br/>• now <= validUntil<br/>• Active status check"]
+        GasPolicyCheck["Gas Policy Validation<br/>• checkUserOpPolicy()<br/>• Gas envelope calculation<br/>• Budget limit enforcement<br/>• Usage counter updates"]
+        WhitelistCheck["Contract Whitelist<br/>• Target address validation<br/>• Whitelisting mode check<br/>• Address permissions"]
+        SelectorCheck["Function Selector<br/>• Extract function selector<br/>• Check allowed selectors<br/>• Granular permissions"]
+        SpendingCheck["Spending Validation<br/>• ETH limit check<br/>• Token limit validation<br/>• Usage count decrement"]
+    end
+    
+    subgraph "Execution Authorization"
+        ExecutionGrant["Permission Granted<br/>• All checks passed<br/>• Transaction authorized<br/>• State updated"]
+    end
+
+    %% Flow connections
+    UserOp --> SignatureCheck
+    SignatureCheck --> KeyTypeSwitch
+    KeyTypeSwitch --> TimeCheck
+    TimeCheck --> GasPolicyCheck
+    GasPolicyCheck --> WhitelistCheck
+    WhitelistCheck --> SelectorCheck
+    SelectorCheck --> SpendingCheck
+    SpendingCheck --> ExecutionGrant
+```
