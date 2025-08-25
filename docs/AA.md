@@ -2,6 +2,16 @@
 
 This page explains how the Openfort EIP-7702 Smart Accounts system implements both EIP-7702 (Account Implementation Contract Standard) and ERC-4337 (Account Abstraction via Entry Point) to provide comprehensive account abstraction functionality. For details about session key permissions and access controls, see Session Keys & Permission System. For social recovery mechanisms, see Social Recovery System.
 
+## Table of Contents
+
+- [EIP-7702 Delegation Architecture](#eip-7702-delegation-architecture)
+- [ERC-4337 Integration](#erc-4337-integration)
+  - [IAccount Interface Implementation](#iaccount-interface-implementation)
+- [Signature Validation Architecture](#signature-validation-architecture)
+- [EIP-7702 and ERC-4337 Interoperability](#eip-7702-and-erc-4337-interoperability)
+  - [Integration Points](#integration-points)
+  - [Execution Contexts](#execution-contexts)
+  
 ## EIP-7702 Delegation Architecture
 
 EIP-7702 enables any Externally Owned Account (EOA) to delegate its code execution to a smart contract implementation without requiring a deployment transaction. The system uses a deterministic storage layout to maintain state consistency across different account addresses.
