@@ -299,3 +299,17 @@ flowchart TD
     ETHValidation --> SingleToken
     SingleToken --> ERC20Only
 ```
+
+
+## Security Model
+The session key security model implements defense-in-depth through multiple validation layers:
+| Security Layer | Purpose | Implementation |
+|----------------|---------|----------------|
+| Signature Validation | Cryptographic authenticity | Key type-specific signature verification |
+| Time Bounds | Temporal access control | validAfter and validUntil timestamp checks |
+| Usage Limits | Transaction count control | limit field with per-operation decrement |
+| Spending Caps | Financial risk mitigation | ETH and token spending limits |
+| Contract Whitelisting | Target restriction | Address-based access control |
+| Function Filtering | Operation-level control | Function selector validation |
+| Gas Policy | Resource usage control | Gas envelope calculation, budget enforcement, penalty handling |
+| Gas Griefing Protection | DoS prevention | Signature length validation |
