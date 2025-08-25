@@ -200,6 +200,33 @@ erDiagram
 ```
 
 
+## Key Management Lifecycle
+Session keys follow a structured lifecycle from registration through usage to expiration:
+
+Registration Process
 
 
+```mermaid
+sequenceDiagram
+    participant Owner as Account Owner
+    participant Account as OPF7702 Account
+    participant KeysManager
+    participant Storage as Session Key Storage
+    participant GasPolicy as Gas Policy
 
+    Owner->>Account: registerSessionKey(key, permissions)
+    Account->>Account: _requireFromEntryPointOrOwner()
+    Account->>KeysManager: _addKey(keyReg)
+    KeysManager->>KeysManager: _masterKeyValidation(keyReg)
+    KeysManager->>KeysManager: _validateKeyPermissions(keyReg)
+    KeysManager->>Storage: Store session key data
+    KeysManager->>GasPolicy: initializeGasPolicy(account, configId, limit)
+    GasPolicy->>GasPolicy: Calculate gas budgets and limits
+    GasPolicy-->>KeysManager: Gas policy configured
+    KeysManager->>Account: SessionKeyRegistered event
+    Account-->>Owner: Registration complete
+
+    Note over KeysManager, GasPolicy: Master keys: validUntil=max, validAfter=0, limit=0, whitelisting=false
+    Note over KeysManager, GasPolicy: Session keys: whitelisting=true, bounded permissions
+    Note over GasPolicy: Gas Policy: Per limits
+```
