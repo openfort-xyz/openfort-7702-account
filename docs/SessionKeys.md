@@ -40,8 +40,8 @@ flowchart TD
     SessionKeyData --> PermissionChecks
     
     PermissionChecks --> WebAuthnVerifier
+    PermissionChecks --> GasPolicy
     PermissionChecks --> ExecutionEngine
     
-    ExecutionEngine --> GasPolicy
     ExecutionEngine --> MainAccount
 ```
