@@ -58,6 +58,7 @@ The Openfort EIP-7702 Smart Accounts system addresses key limitations in traditi
 The system is built on a modular architecture that separates concerns across multiple smart contracts, enabling flexible deployment and upgrade patterns.
 
 ### System Component Overview
+```mermaid
 flowchart TD
     subgraph "Authentication Layer"
         EOAKeys["EOA Keys<br/>(secp256k1)"]
@@ -99,6 +100,7 @@ flowchart TD
     OPF7702 --> EntryPoint
     EntryPoint --> Bundlers
     Bundlers --> Paymasters
+```
 
 ### Smart Contract Components
 The system consists of several interconnected smart contracts, each handling specific responsibilities:
@@ -283,6 +285,7 @@ function upgradeProxyDelegation(address newImplementation) external {
 Note: If the authority is delegated directly (not via an EIP‑7702 proxy), upgrades won’t take effect until the authority is redelegated to a compliant proxy.
 
 ## EIP-7702 Storage Architecture
+```mermaid
 flowchart TD
     subgraph "Storage Layout"
         BaseSlot["Base Storage Slot<br/>keccak256('openfort.baseAccount.7702.v1')<br/>0x801ae8ef...7f368"]
@@ -313,3 +316,4 @@ flowchart TD
     SessionKeysSlot --> WebAuthnType
     SessionKeysSlot --> P256Type
     SessionKeysSlot --> P256NonKeyType
+```
