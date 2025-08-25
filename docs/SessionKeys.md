@@ -158,8 +158,46 @@ flowchart TD
     TransactionLimits --> WhitelistingMode
 ```
 
+## Session Key Data Structure
+The core session key storage structure contains all permission and metadata fields:
+```mermaid
+erDiagram
+    SessionKey {
+        PubKey pubKey "Public key data"
+        bool isActive "Activation status"
+        uint48 validUntil "Expiration timestamp"
+        uint48 validAfter "Start timestamp"
+        uint48 limit "Transaction count limit"
+        bool masterSessionKey "Master key flag"
+        bool whitelisting "Enable restrictions"
+        uint256 ethLimit "ETH spending limit"
+        SpendTokenInfo spendTokenInfo "Token spend data"
+    }
+    
+    PubKey {
+        uint256 x "X coordinate"
+        uint256 y "Y coordinate"
+    }
+    
+    SpendTokenInfo {
+        address token "ERC-20 token address"
+        uint256 limit "Token spending limit"
+    }
+    
+    allowedSelectors {
+        bytes4 selector "Function selectors"
+    }
+    
+    whitelist {
+        address target "Contract address"
+        bool allowed "Permission flag"
+    }
 
-
+    SessionKey ||--|| PubKey : contains
+    SessionKey ||--|| SpendTokenInfo : contains
+    SessionKey ||--o{ allowedSelectors : has
+    SessionKey ||--o{ whitelist : maintains
+```
 
 
 
