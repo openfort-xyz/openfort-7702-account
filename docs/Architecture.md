@@ -7,6 +7,27 @@
 
 This document provides a comprehensive overview of the Openfort EIP-7702 Smart Accounts system—a production-ready implementation that combines EIP-7702 and ERC-4337 standards to deliver zero-deployment-cost accounts with multi-scheme key support (EOA, WebAuthn, P-256), policy-gated session management, ERC-7821 batch execution, guardian-based recovery, and WebAuthn authentication integration.
 
+## Table of Contents
+
+- [Repository layout (high-level)](#repository-layout)
+- [System Purpose](#system-purpose)
+- [Core Architecture](#core-architecture)
+  - [System Component Overview](#system-component-overview)
+  - [Smart Contract Components](#smart-contract-components)
+- [Core contracts & responsibilities](#core-contracts--responsibilities)
+  - [BaseOPF7702](#baseopf7702)
+  - [KeysManager](#keysmanager)
+  - [Execution (ERC-7821-style)](#execution)
+  - [OPF7702 (4337 + 1271 + call-gating)](#opf7702)
+  - [OPF7702Recoverable (guardians + EIP-712)](#opf7702recoverable)
+  - [OPFMain (concrete wallet)](#opfmain-concrete-wallet)
+- [EIP-7702 Storage Architecture](#eip-7702-storage-architecture)
+- [Key Features](#key-features)
+  - [Session Key System](#session-key-system)
+- [GasPolicy (per-session budgets)](#gaspolicy)
+- [Call-data expectations & examples](#callData-expectations-and-examples)
+
+
 TL;DR
 
 * OPFMain is the concrete account. It stacks:
@@ -29,7 +50,7 @@ TL;DR
 
 * `EIP‑7702`: upgradeProxyDelegation() to rotate logic behind an EIP‑7702 authority (via Solady LibEIP7702).
 
-## Repository layout (high‑level)
+## Repository layout
 ```ts
 src/
   core/
@@ -172,7 +193,8 @@ Stateful registry around keys and permissions.
 
     - `encodeEOASignature(sig)` → `abi.encode(KeyType.EOA, sig)`
 
-### Execution [(ERC‑7821‑style)](https://eips.ethereum.org/EIPS/eip-7821`)
+### Execution 
+[(ERC‑7821‑style)](https://eips.ethereum.org/EIPS/eip-7821`)
 
 Inherits: `KeysManager`, `ReentrancyGuard`.
 
@@ -196,7 +218,8 @@ Inherits: `KeysManager`, `ReentrancyGuard`.
 
 * Guards: **`MAX_TX = 9`** calls (across recursion), structural length checks, reentrancy guard, low‑level bubble‑up of revert data.
 
-### OPF7702 (4337 + 1271 + call‑gating)
+### OPF7702 
+(4337 + 1271 + call‑gating)
 
 Inherits: `Execution`, `Initializable`.
 
@@ -234,7 +257,8 @@ Inherits: `Execution`, `Initializable`.
 
     - Otherwise → WebAuthn payload path (same verifier / challenge rules) → returns `0x1626ba7e` on success.
 
-### OPF7702Recoverable (guardians + EIP‑712)
+### OPF7702Recoverable 
+(guardians + EIP‑712)
 
 Inherits: `OPF7702`, `EIP712`, `ERC7201`.
 
@@ -378,7 +402,8 @@ flowchart LR
     CheckSpending --> CheckWhitelist
 ``` 
 
-## GasPolicy (per‑session budgets)
+## GasPolicy 
+(per‑session budgets)
 
 
 * Keyed by (`configId=keyId, account`). Only the account itself may mutate usage (`msg.sender == userOp.sender`).
@@ -397,7 +422,7 @@ flowchart LR
 
     - Manual: `initializeGasPolicy(account, configId, initData)` to set exact budgets.
 
-## Call‑data expectations & examples
+## CallData expectations and examples
 
 4337 `userOp.signature` envelope
 
