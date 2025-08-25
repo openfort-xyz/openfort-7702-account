@@ -63,7 +63,7 @@ flowchart TD
         KeyType["KeyType enum<br/>EOA | WEBAUTHN | P256 | P256NONKEY"]
         
         EOAKey["EOA Keys<br/>• Traditional ECDSA<br/>• Private key based<br/>• Standard EOA support"]
-        WebAuthnKey["WebAuthn Keys<br/>• Hardware security keys<br• FaceId authentication<br/>• Biometric authentication<br/>• Platform authenticators"]
+        WebAuthnKey["WebAuthn Keys<br/>• Hardware security keys<br/>• FaceId authentication<br/>• Biometric authentication<br/>• Platform authenticators"]
         P256Key["P-256 Keys<br/>• Extractable P-256<br/>• Standard ECDSA flow<br/>• Cross-platform support"]
         P256NonKey["P-256 NonExtractable<br/>• Seamless signing keys<br/>• Prehashed digest flow<br/>• Maximum security"]
     end
