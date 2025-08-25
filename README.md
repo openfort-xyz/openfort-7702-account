@@ -11,6 +11,20 @@
 
 **All-in-one EIP-7702 powered smart accounts with session key support**
 
+<p align="center">
+  <a href="https://github.com/openfort/openfort-7702-account/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="License MIT"></a>
+  <img src="https://img.shields.io/badge/solidity-0.8.29-blue" alt="Solidity 0.8.29">
+  <img src="https://img.shields.io/badge/status-unaudited-orange" alt="Unaudited">
+</p>
+
+<p align="center">
+  <a href="#overview">Overview</a> •
+  <a href="#features">Features</a> •
+  <a href="#docs--deep-dives">Docs</a> •
+  <a href="#getting-started">Quickstart</a> •
+  <a href="#standards--compatibility">Standards</a> •
+  <a href="#security--audits">Security</a>
+</p>
 ---
 
 ## Overview
@@ -21,7 +35,7 @@ We believe smart accounts should provide an excellent experience throughout a us
 
 - **Effortless Onboarding**: Use WebAuthn and Passkeys with no deployment transaction required  
 - **Flexible Authentication**: Multiple authentication methods including EOA and WebAuthn/Passkeys  
-- **Fine-grained Access Control**: Session keys with customizable permissions and spending limits  
+- **Fine-grained Access Control**: Keys with customizable permissions and spending limits  
 - **Secure Transactions**: Built-in security features including whitelisting, function filtering, and time-based controls  
 - **Seamless Experience**: Full compatibility with ERC-4337 account abstraction standard  
 - **Gas Sponsorship**: Allow applications to pay for user transactions through session keys  
@@ -46,6 +60,7 @@ We believe smart accounts should provide an excellent experience throughout a us
 - [x] **Gas Sponsorship**: Dapps or relayers can pay for user ops  
 - [x] **Enhanced Recovery Options**: Social recovery relies on guardians (EOA/WebAuthn)
 - [x] **ERC-7821: Minimal Batch Executor Interface**: A minimal batch executor interface for delegations
+- [x] **Gas Policy** — per-session gas/cost/tx budgets
 - [ ] **Multi-chain Support**: Coming soon  
 
 ---
@@ -76,6 +91,30 @@ Extension of the main smart account that adds advanced social recovery capabilit
 - **`IValidation.sol`** – Shared structs and validation types
 ---
 
+## Supported Key Types
+
+| Type | Typical Source | Notes |
+|------|----------------|-------|
+| `EOA` | Wallets (secp256k1) | 64/65-byte ECDSA |
+| `WEBAUTHN` | Passkeys/YubiKey (P-256) | WebAuthn assertion payload |
+| `P256` | P-256 extractable | Standard ECDSA over P-256 |
+| `P256NONKEY` | Non-extractable WebCrypto | Pre-SHA-256 digest path |
+
+---
+
+## Standards & Compatibility
+
+| Standard | What we implement | Where |
+|---------|--------------------|-------|
+| **EIP-7702** | Delegation / authority & upgrade hooks | `OPFMain`, `BaseOPF7702` |
+| **ERC-4337** | `IAccount` validate flow | `BaseOPF7702`, `OPF7702` |
+| **EIP-712** | Typed data for init/recovery | `OPF7702Recoverable` |
+| **ERC-1271** | On-chain signature validation | `OPF7702` |
+| **ERC-7821** | Minimal batch executor modes | `Execution` |
+| **ERC-7201** | Namespaced storage layout | `ERC7201` util |
+
+---
+
 ## Getting Started
 
 ### Installation
@@ -99,16 +138,15 @@ forge test
 // Create a new account with an owner
 function initialize(
     Key calldata _key,
-    SpendTokenInfo calldata _spendTokenInfo,
-    bytes4[] calldata _allowedSelectors,
-    bytes32 _hash,
+    KeyReg calldata _keyData,
+    Key calldata _sessionKey,
+    KeyReg calldata _sessionKeyData,
     bytes memory _signature,
-    uint256 _validUntil,
-    uint256 _nonce
+    bytes32 _initialGuardian
 );
 ```
 
-#### Register a Session Key
+#### Register a Key
 
 ```solidity
 // Create a WebAuthn key structure
@@ -117,34 +155,36 @@ PubKey memory pubKey = PubKey({
     y: 0x...  // Y coordinate from credential
 });
 
-Key memory key = Key({
+Key memory _key = Key({
     pubKey: pubKey,
     eoaAddress: address(0),
     keyType: KeyType.WEBAUTHN
 });
 
+ISpendLimit.SpendTokenInfo memory spendInfo =
+    ISpendLimit.SpendTokenInfo({token: TOKEN, limit: 0});
+
+KeyReg memory keyData = KeyReg({
+        validUntil: validUntil,
+        validAfter: 0,
+        limit: limit,
+        whitelisting: true,
+        contractAddress: ETH_RECIVE,
+        spendTokenInfo: spendInfo,
+        allowedSelectors: _allowedSelectors(),
+        ethLimit: ETH_LIMIT
+    });
+
 // Register the session key
-account.registerKey(
-    key,
-    uint48(block.timestamp + 1 days),  // Valid until tomorrow
-    uint48(block.timestamp),           // Valid from now
-    10,                                // Allow 10 transactions
-    true,                              // Enable whitelisting
-    address(0x5678...),                // Allow this contract
-    tokenInfo,                         // Token spending limits
-    selectors,                         // Allowed functions
-    1 ether                            // ETH spending limit
-);
+account.registerKey(Key calldata _key, KeyReg calldata _keyData);
 ```
 
 #### Execute Transactions
 
 ```solidity
 // Single transaction
-account.execute(targetAddress, value, calldata);
-
 // Batch transactions
-account.execute(transactions);
+account.execute(mode, executionData);
 ```
 
 ## Technical Details
@@ -154,14 +194,14 @@ account.execute(transactions);
 The contracts use a fixed storage layout starting at a specific slot:
 
 ```solidity
-keccak256("openfort.baseAccount.7702.v1") = 0x801ae8efc2175d3d963e799b27e0e948b9a3fa84e2ce105a370245c8c127f368 == 57943590311362240630886240343495690972153947532773266946162183175043753177960
+keccak256(abi.encode(uint256(keccak256("openfort.baseAccount.7702.v1")) - 1)) & ~bytes32(uint256(0xff)) == 0xeddd36aac8c71936fe1d5edb073ff947aa7c1b6174e87c15677c96ab9ad95400 == 107588995614188179791452663824698570634674667931787294340862201729294267929600
 ```
 
 This enables deterministic storage access across different addresses, essential for EIP-7702.
 
-### Session Key Implementation
+### Key Implementation
 
-A *session key* is a short-lived externally-owned account or WebAuthn credential authorized to execute a restricted subset of calls without holding any ETH. Session keys enable powerful use cases like:
+A *key* is a short-lived externally-owned account or WebAuthn credential authorized to execute a restricted subset of calls without holding any ETH. Keys enable powerful use cases like:
 
 - Game developers sponsoring player transactions
 - Temporary account access for services
