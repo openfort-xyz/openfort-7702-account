@@ -45,3 +45,44 @@ flowchart TD
     
     ExecutionEngine --> MainAccount
 ```
+
+## Key Types and Capabilities
+The system supports four distinct key types, each with different cryptographic properties and security characteristics:
+
+
+| Key Type | Description | Use Cases | Validation Method |
+|----------|-------------|-----------|-------------------|
+| EOA | Traditional ECDSA keys | Standard wallets, development | ECDSA signature verification |
+| WEBAUTHN | WebAuthn credentials | Biometrics, hardware keys | WebAuthn assertion validation |
+| P256 | Standard P-256 keys | Extractable P-256 signatures | P-256 ECDSA verification |
+| P256NONKEY | Hardware-bound P-256 | Non-extractable hardware keys | SHA-256 digest validation |
+
+```mermaid
+flowchart TD
+    subgraph "Key Type Hierarchy"
+        KeyType["KeyType enum<br/>EOA | WEBAUTHN | P256 | P256NONKEY"]
+        
+        EOAKey["EOA Keys<br/>• Traditional ECDSA<br/>• Private key based<br/>• Standard EOA support"]
+        WebAuthnKey["WebAuthn Keys<br/>• Hardware security keys<br• FaceId authentication<br/>• Biometric authentication<br/>• Platform authenticators"]
+        P256Key["P-256 Keys<br/>• Extractable P-256<br/>• Standard ECDSA flow<br/>• Cross-platform support"]
+        P256NonKey["P-256 NonExtractable<br/>• Seamless signing keys<br/>• Prehashed digest flow<br/>• Maximum security"]
+    end
+    
+    subgraph "Validation Paths"
+        EOAValidation["_validateEOASignature()<br/>• ECDSA recovery<br/>• Address comparison"]
+        WebAuthnValidation["_validateWebAuthnSignature()<br/>• Challenge verification<br/>• Client data validation<br/>• Authenticator data parsing"]
+        P256Validation["P-256 Signature Verification<br/>• Point validation<br/>• Curve operations<br/>• Digest verification"]
+    end
+
+    %% Key type connections
+    KeyType --> EOAKey
+    KeyType --> WebAuthnKey
+    KeyType --> P256Key
+    KeyType --> P256NonKey
+    
+    %% Validation connections
+    EOAKey --> EOAValidation
+    WebAuthnKey --> WebAuthnValidation
+    P256Key --> P256Validation
+    P256NonKey --> P256Validation
+```
