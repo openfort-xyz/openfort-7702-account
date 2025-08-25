@@ -1,13 +1,46 @@
 # Recovery Module
 The OPF7702Recoverable contract implements a guardian-based social recovery system for EIP-7702 + ERC-4337 smart contract wallets. This enables users to recover their accounts if they lose access to their master key, using a network of trusted guardians.
 
+## Table of Contents
+
+- [Definitions](#definitions)
+- [Invariants (checked in constructor)](#invariants)
+- [How they’re used](#how-theyre-used)
+  - [Guardian changes](#guardian-changes)
+  - [Recovery flow](#recovery-flow)
+- [Key Features](#key-features)
+- [Guardian Management System](#guardian-management-system)
+  - [Guardian Lifecycle](#guardian-lifecycle)
+  - [Guardian Data Structure](#guardian-data-structure)
+  - [Guardian Operations](#guardian-operations)
+    - [Adding a Guardian](#adding-a-guardian)
+    - [Removing a Guardian](#removing-a-guardian)
+  - [Recovery Process](#recovery-process)
+    - [Recovery Data Structure](#recovery-data-structure)
+    - [Recovery Flow](#recovery-flow-1)
+    - [Recovery Timeline](#recovery-timeline)
+- [Security Features](#security-features)
+  - [Time-based Security Parameters](#time-based-security-parameters)
+  - [Security Validations](#security-validations)
+- [Function Reference](#function-reference)
+  - [Initialization](#initialization)
+  - [Guardian Management Functions](#guardian-management-functions)
+  - [Recovery Functions](#recovery-functions)
+  - [EIP-712 Signature Schemas](#eip-712-signature-schemas)
+    - [Recovery Signature](#recovery-signature)
+    - [Initialization Signature](#initialization-signature)
+  - [Recommended ranges (non-binding)](#recommended-ranges-non-binding)
+  - [Edge cases & guarantees](#edge-cases--guarantees)
+  - [Testing checklist](#testing-checklist)
+
 ### Definitions
 - `recoveryPeriod` — **Seconds to wait** after `startRecovery` before `completeRecovery` is allowed.
 - `lockPeriod` — **Seconds the wallet stays “locked”** after `startRecovery`. The lock is cleared early on `completeRecovery()` or `cancelRecovery()`.
 - `securityPeriod` — **Timelock** (seconds) before a guardian add/remove can be confirmed.
 - `securityWindow` — **Confirmation window** (seconds) after `securityPeriod` during which a pending add/remove **must** be confirmed, or it expires.
 
-### Invariants (checked in constructor)
+### Invariants 
+(checked in constructor)
 - `lockPeriod ≥ recoveryPeriod`  
 - `recoveryPeriod ≥ securityPeriod + securityWindow`  
 If either fails, the deploy reverts with `OPF7702Recoverable_InsecurePeriod()`.
