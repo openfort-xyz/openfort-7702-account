@@ -1,6 +1,38 @@
 # Recovery Module
 The OPF7702Recoverable contract implements a guardian-based social recovery system for EIP-7702 + ERC-4337 smart contract wallets. This enables users to recover their accounts if they lose access to their master key, using a network of trusted guardians.
 
+### Definitions
+- `recoveryPeriod` — **Seconds to wait** after `startRecovery` before `completeRecovery` is allowed.
+- `lockPeriod` — **Seconds the wallet stays “locked”** after `startRecovery`. The lock is cleared early on `completeRecovery()` or `cancelRecovery()`.
+- `securityPeriod` — **Timelock** (seconds) before a guardian add/remove can be confirmed.
+- `securityWindow` — **Confirmation window** (seconds) after `securityPeriod` during which a pending add/remove **must** be confirmed, or it expires.
+
+### Invariants (checked in constructor)
+- `lockPeriod ≥ recoveryPeriod`  
+- `recoveryPeriod ≥ securityPeriod + securityWindow`  
+If either fails, the deploy reverts with `OPF7702Recoverable_InsecurePeriod()`.
+
+### How they’re used
+
+#### Guardian changes
+- **Propose add**: `proposeGuardian(g)` sets `pending = now + securityPeriod`.
+- **Confirm add**: `confirmGuardianProposal(g)` allowed only in  
+  `now ∈ [pending, pending + securityWindow]`.  
+  Before `pending` → `PendingProposalNotOver`. After the window → `PendingProposalExpired` (re-propose).
+- **Cancel add**: `cancelGuardianProposal(g)` before confirmation.
+- **Revoke**: symmetric to add (`revokeGuardian` → `confirmGuardianRevocation` / `cancelGuardianRevocation`).
+- **During lock**: guardian mutations are blocked (`AccountLocked`).
+
+#### Recovery flow
+- **Start**: `startRecovery(newKey)` (guardian-only) sets:
+  - `executeAfter = now + recoveryPeriod`
+  - `lock = now + lockPeriod`
+  - `guardiansRequired = ceil(guardianCount / 2)`
+- **Complete**: `completeRecovery(signatures)` allowed when `now ≥ executeAfter` and signature count/ordering check passes. On success:
+  - old master key is deleted; `newKey` becomes **master**
+  - lock is **cleared** (`lock = 0`) even if `lockPeriod` hasn’t elapsed
+- **Cancel**: `cancelRecovery()` (Owner/EntryPoint) clears recovery and lock.
+
 ## Key Features
 * Guardian-based recovery with multi-signature thresholds
 * Time-locked operations for security
@@ -240,3 +272,25 @@ bytes32 constant INIT_TYPEHASH = keccak256(
     "Initialize(bytes key,bytes keyData,bytes sessionKey,bytes sessionKeyData,bytes32 guardian)"
 );
 ```
+
+### Recommended ranges (non-binding)
+| Parameter         | Typical Value | Rationale |
+|-------------------|---------------|-----------|
+| `recoveryPeriod`  | 2–7 days      | Gives time to react to compromise before takeover. Must cover `securityPeriod + securityWindow`. |
+| `lockPeriod`      | 7–14 days     | Longer than `recoveryPeriod` to dampen churn; clears early on successful completion. |
+| `securityPeriod`  | 1–3 days      | Baseline delay to deter rushed guardian churn. |
+| `securityWindow`  | 1–2 days      | Reasonable window to execute after timelock. |
+
+### Edge cases & guarantees
+- Proposals are **unique** per guardian; re-proposing within the live window reverts (`DuplicatedProposal` / `DuplicatedRevoke`).
+- Confirmations require the proposal to be **known** and within the allowed window.
+- Recovery cannot start if:
+  - Wallet is already locked (`AccountLocked`), or
+  - A recovery is ongoing (`_requireRecovery(false)`).
+- Completion requires **sorted, unique** guardian signatures over the EIP-712 digest (`getDigestToSign()`), exactly `guardiansRequired` entries.
+
+### Testing checklist
+- Enforce constructor invariants with boundary values (equalities allowed).
+- Guardian add/remove: confirm exactly at window edges; reject just outside.
+- Recovery: reject completion at `executeAfter - 1`, accept at `executeAfter`.
+- Lock behavior: locked right after `startRecovery`; auto-unlocks after `lockPeriod` if not completed; clears on success/cancel.
