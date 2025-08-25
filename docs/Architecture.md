@@ -285,16 +285,27 @@ function upgradeProxyDelegation(address newImplementation) external {
 Note: If the authority is delegated directly (not via an EIP‑7702 proxy), upgrades won’t take effect until the authority is redelegated to a compliant proxy.
 
 ## EIP-7702 Storage Architecture
+
+* Namespace: `"openfort.baseAccount.7702.v1"`.
+
+* Root slot (CUSTOM_STORAGE_ROOT): `0xeddd…95400` (see `ERC7201.sol`).
+
+* `BaseOPF7702._clearStorage()` zeroes known sub‑ranges (incl. guardian/recovery structs) to enable safe re‑initialization in advanced deployments.
+
 ```mermaid
 flowchart TD
     subgraph "Storage Layout"
-        BaseSlot["Base Storage Slot<br/>keccak256('openfort.baseAccount.7702.v1')<br/>0x801ae8ef...7f368"]
+        BaseSlot["Base Storage Slot<br/>keccak256('openfort.baseAccount.7702.v1')<br/>0xeddd...95400"]
         
-        OwnerSlot["Owner Key Slot<br/>BaseSlot + 0"]
-        NonceSlot["Nonce Slot<br/>BaseSlot + 1"]
-        SessionKeysSlot["Session Keys Mapping<br/>BaseSlot + 2"]
-        GuardianSlot["Guardian Storage<br/>BaseSlot + 3"]
-        RecoverySlot["Recovery State<br/>BaseSlot + 4"]
+        IdSlot["ID Slot<br/>BaseSlot + 0<br/>uint256 id"]
+        IdKeysSlot["ID Keys Mapping<br/>BaseSlot + 1<br/>mapping(uint256 => Key)"]
+        KeysSlot["Keys Mapping<br/>BaseSlot + 2<br/>mapping(bytes32 => KeyData)"]
+        ChallengesSlot["Used Challenges<br/>BaseSlot + 3<br/>mapping(bytes32 => bool)"]
+        StatusSlot["Status Slot<br/>BaseSlot + 4<br/>uint256 _status"]
+        NameSlot["Name Fallback<br/>BaseSlot + 5<br/>string _nameFallback"]
+        VersionSlot["Version Fallback<br/>BaseSlot + 6<br/>string _versionFallback"]
+        RecoverySlot["Recovery Data<br/>BaseSlot + 7<br/>RecoveryData (128 bytes)"]
+        GuardianSlot["Guardian Data<br/>BaseSlot + 11<br/>GuardiansData (96 bytes)"]
     end
     
     subgraph "Key Types Enum"
@@ -305,15 +316,24 @@ flowchart TD
     end
 
     %% Storage slot connections
-    BaseSlot --> OwnerSlot
-    BaseSlot --> NonceSlot
-    BaseSlot --> SessionKeysSlot
-    BaseSlot --> GuardianSlot
+    BaseSlot --> IdSlot
+    BaseSlot --> IdKeysSlot
+    BaseSlot --> KeysSlot
+    BaseSlot --> ChallengesSlot
+    BaseSlot --> StatusSlot
+    BaseSlot --> NameSlot
+    BaseSlot --> VersionSlot
     BaseSlot --> RecoverySlot
+    BaseSlot --> GuardianSlot
     
-    %% Session keys to key types
-    SessionKeysSlot --> EOAType
-    SessionKeysSlot --> WebAuthnType
-    SessionKeysSlot --> P256Type
-    SessionKeysSlot --> P256NonKeyType
+    %% Key mappings to key types
+    KeysSlot --> EOAType
+    KeysSlot --> WebAuthnType
+    KeysSlot --> P256Type
+    KeysSlot --> P256NonKeyType
+    
+    IdKeysSlot --> EOAType
+    IdKeysSlot --> WebAuthnType
+    IdKeysSlot --> P256Type
+    IdKeysSlot --> P256NonKeyType
 ```
