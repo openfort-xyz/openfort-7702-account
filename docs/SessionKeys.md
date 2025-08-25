@@ -16,7 +16,6 @@ flowchart TD
     subgraph "Permission Validation"
         ValidationCore["IValidation.sol<br/>• Validation interfaces<br/>• Permission structures"]
         PermissionChecks["BaseOPF7702.sol<br/>• _checkSessionKeyPermissions()<br/>• _validateTokenSpend()<br/>• _validateEthSpend()"]
-        WebAuthnVerifier["WebAuthnVerifierV2.sol<br/>• verifySignature()<br/>• verifyP256Signature()"]
     end
     
     subgraph "Storage Management"
@@ -25,9 +24,12 @@ flowchart TD
     
     subgraph "Execution Layer"
         ExecutionEngine["Execution.sol<br/>• execute()<br/>• executeBatch()<br/>• _executeCall()"]
-        GasPolicy["GasPolicy.sol<br/>• checkUserOpPolicy()"]
         MainAccount["OPF7702.sol<br/>• Session key integration<br/>• Permission enforcement<br/>• Transaction routing"]
     end
+
+    %% Separate components
+    WebAuthnVerifier["WebAuthnVerifierV2.sol<br/>• verifySignature()<br/>• verifyP256Signature()"]
+    GasPolicy["GasPolicy.sol<br/>• checkUserOpPolicy()"]
 
     %% Flow connections
     KeyStructures --> KeysManager
