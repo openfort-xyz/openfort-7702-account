@@ -130,6 +130,117 @@ Stateful registry around keys and permissions.
 
     - `encodeEOASignature(sig)` → `abi.encode(KeyType.EOA, sig)`
 
+### Execution [(ERC‑7821‑style)](https://eips.ethereum.org/EIPS/eip-7821`)
+
+Inherits: `KeysManager`, `ReentrancyGuard`.
+
+* Modes (top 10‑byte word):
+
+    - 1: `0x01000000000000000000…` → single flat `Call[]` batch.
+
+    - 2: `0x01000000000078210001…` → flat `Call[]` plus opaque opData.
+
+    - 3: `0x01000000000078210002…` → batch of batches (`bytes[]`), internally re‑runs as Mode‑2 per sub‑batch.
+
+* Shape:
+
+    - `Call` = `{ address target; uint256 value; bytes data; }`
+
+    - Mode‑1: `executionData = abi.encode(Call[])`
+
+    - Mode‑2: executionData = `abi.encode(Call[], bytes opData)` (opaque to executor; used by validators/policies)
+
+    - Mode‑3: executionData = `abi.encode(bytes[] batches)`
+
+* Guards: **`MAX_TX = 9`** calls (across recursion), structural length checks, reentrancy guard, low‑level bubble‑up of revert data.
+
+### OPF7702 (4337 + 1271 + call‑gating)
+
+Inherits: `Execution`, `Initializable`.
+
+* 4337 hook: overrides `_validateSignature(userOp, userOpHash)` → dispatch by `KeyType`:
+
+    - EOA → `ECDSA.recover(userOpHash, sig)`; if signer is this account or master key → accept.
+
+    - WEBAUTHN → decode full payload, reject reused `userOpHash` in `usedChallenges`, `IWebAuthnVerifier.verifySignature(...)`, then permission checks.
+
+    - P256 / P256NONKEY → for NONKEY pre‑hash `userOpHash` with SHA‑256, then `P256.verifySignature` → permission checks.
+
+    - On success → return `_packValidationData(false, validUntil, validAfter);` else `SIG_VALIDATION_FAILED`.
+
+* Permission check: `isValidKey(callData, sKey)` only authorizes the account’s own `execute(bytes32,bytes)` selector, and delegates to `_validateExecuteCall`:
+
+    - Reject self‑calls (`call.target == address(this)`).
+
+    - If master key → allow.
+
+    - Else enforce for every `Call`:
+
+        - `limit > 0` and decrement (`consumeQuota()`);
+
+        - `ethLimit ≥` value and decrement;
+
+        - `bytes4(innerData)` ∈ `allowedSelectors` (≤10 allowed);
+
+        - If `spendTokenInfo.token == target` → `_validateTokenSpend` checks last‑arg amount;
+
+        - `whitelisting` and `whitelist[target] == true`.
+
+* ERC‑1271: `isValidSignature(hash, signature)`
+
+    - 64/65‑byte → EOA path.
+
+    - Otherwise → WebAuthn payload path (same verifier / challenge rules) → returns `0x1626ba7e` on success.
+
+### OPF7702Recoverable (guardians + EIP‑712)
+
+Inherits: `OPF7702`, `EIP712`, `ERC7201`.
+
+* State:
+
+    - `guardiansData`: `{ bytes32[] guardians; mapping(bytes32 => {isActive, index, pending}); lockUntil }`.
+
+    - `recoveryData`: `{ Key key; uint64 executeAfter; uint32 guardiansRequired; }`.
+
+* Parameters (immutable at deploy):
+
+    - `recoveryPeriod` (cool‑down before execute), `lockPeriod` (wallet lock duration after recovery start), `securityPeriod` (add/remove delay), securityWindow (execution window).
+
+* Flows:
+
+    - Guardian add/remove
+
+        - `proposeGuardian(guardianId)` / `proposeGuardianRemoval(guardianId)` → set `pending = now + securityPeriod`.
+
+        - After `securityPeriod` and within `securityWindow` → `acceptGuardian()` / `acceptGuardianRemoval()` to finalize.
+
+    - Start recovery (guardian‑only):
+
+        - `startRecovery(Key recoveryKey)` → lock wallet, set `executeAfter = now + recoveryPeriod`, snapshot `guardiansRequired`, store target `recoveryKey` (EOA/WebAuthn allowed; P‑256 keys are rejected for recovery ownership).
+
+    - Complete recovery:
+
+        - After `executeAfter` → `completeRecovery(bytes[] signatures)`.
+
+        - Verifies sorted unique guardian signatures over `getDigestToSign()` (EIP‑712), checks quorum, then:
+
+            1. Delete old master key (`idKeys[0]` & `keys[mkId]`).
+
+            2. Install `recoveryKey` as new master (sets `validUntil=max`, `validAfter=0`, `limit=0`, `whitelisting=false`).
+
+            3. Clear lock.
+
+* Cancel/lock control: `cancelRecovery()` (self/admin), `lock()/unlock()` time locks.
+
+### OPFMain (concrete wallet)
+Binds the stack and exposes EIP‑7702 authority upgrade:
+```ts
+function upgradeProxyDelegation(address newImplementation) external {
+  _requireForExecute();
+  LibEIP7702.upgradeProxyDelegation(newImplementation);
+}
+```
+Note: If the authority is delegated directly (not via an EIP‑7702 proxy), upgrades won’t take effect until the authority is redelegated to a compliant proxy.
 
 ## EIP-7702 Storage Architecture
 The system uses a deterministic storage layout based on EIP-7702 requirements, enabling consistent state access across different addresses without deployment transactions.
