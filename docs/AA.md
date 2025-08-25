@@ -87,7 +87,7 @@ flowchart TD
         subgraph "Validation Handlers"
             EOAPath["_validateEOASignature()<br/>• ECDSA recover<br/>• Compare with owner"]
             WebAuthnPath["_validateWebAuthnSignature()<br/>• WebAuthnVerifier call<br/>• P-256 validation"]
-            SessionPath["Session Key Validation<br/>• Permission checks<br/>• Signature verification"]
+            SessionPath["Session Key Validation<br/>• Permission checks<br/>• Signature verification<br/>• Gas Policy"]
         end
         
         Result["ValidationResult<br/>• SIG_VALIDATION_SUCCEEDED<br/>• SIG_VALIDATION_FAILED"]
