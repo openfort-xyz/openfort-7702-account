@@ -15,6 +15,7 @@
 <p align="center">
   <a href="https://github.com/openfort/openfort-7702-account/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="License MIT"></a>
   <img src="https://img.shields.io/badge/solidity-0.8.29-blue" alt="Solidity 0.8.29">
+  <a href="https://eips.ethereum.org/EIPS/eip-7702"><img src="https://img.shields.io/badge/tech-EIP7702-red" alt="EIP 7702">
   <img src="https://img.shields.io/badge/status-unaudited-orange" alt="Unaudited">
 </p>
 
@@ -86,11 +87,6 @@ We believe smart accounts should provide an excellent experience throughout a us
 - **`OPF7702Recoverable.sol`**
 Extension of the main smart account that adds advanced social recovery capabilities. Enables guardian-based recovery flows, lock/unlock mechanisms and guardian proposal/revocation lifecycle management with full event traceability.
 
-### Supporting Interfaces
-
-- **`Key.sol`** – Key storage/logic interface  
-- **`IWebAuthnVerifier.sol`** – Interface for WebAuthn verification  
-- **`IValidation.sol`** – Shared structs and validation types
 ---
 
 ## Supported Key Types
@@ -136,7 +132,7 @@ forge test
 
 #### Initialize an Account
 
-```solidity
+
 // Create a new account with an owner
 function initialize(
     Key calldata _key,
