@@ -326,8 +326,7 @@ abstract contract KeysManager is BaseOPF7702, IKey, ISpendLimit {
         bytes32 s,
         PubKey memory pubKey
     ) external pure returns (bytes memory) {
-        return abi.encode(
-            KeyType.WEBAUTHN,
+        bytes memory inner = abi.encode(
             requireUserVerification,
             authenticatorData,
             clientDataJSON,
@@ -336,6 +335,11 @@ abstract contract KeysManager is BaseOPF7702, IKey, ISpendLimit {
             r,
             s,
             pubKey
+        );
+
+        return abi.encode(
+            KeyType.WEBAUTHN,
+            inner
         );
     }
 

@@ -2,25 +2,231 @@
 
 pragma solidity ^0.8.29;
 
-import {Test, console2 as console} from "lib/forge-std/src/Test.sol";
+import {Base} from "test/Base.sol";
+import {console2 as console} from "lib/forge-std/src/Test.sol";
+import {PackedUserOperation} from "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
+import {IKeysManager} from "src/interfaces/IKeysManager.sol";
+import {SigLengthLib} from "src/libs/SigLengthLib.sol";
 
-contract DataLength is Test {
-    function setUp() public {}
 
-    function test_Length() public pure {
-        bytes memory webAuthnStubSignature =
-            hex"00000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000014000000000000000000000000000000000000000000000000000000000000001a0000000000000000000000000000000000000000000000000000000000000001700000000000000000000000000000000000000000000000000000000000000010aec5a92cc94bb28f9205591bedcb17286839a14973f1c29a6cd2b1c77b21f4d248f0770faff81e778a8e96b352d7e4fd4d7196ba054a19e33adea15289f2ce9f286c668221cad349bd17a11d9edab7286203fd1c11ca8ed6170eaea395ffb096c311e526c8b85436e9386655fb75ba8028823297db69be18c08b19cde06e151000000000000000000000000000000000000000000000000000000000000002549960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d97631d0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000867b2274797065223a22776562617574686e2e676574222c226368616c6c656e6765223a22414337464a654371356b6377652d6c7562646f792d66426f6b72653552785743613545546b33425f415838222c226f726967696e223a22687474703a2f2f6c6f63616c686f73743a35313733222c2263726f73734f726967696e223a66616c73657d0000000000000000000000000000000000000000000000000000";
-        bytes memory P256StubSignature =
-            hex"000000000000000000000000000000000000000000000000000000000000000300000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000080254e599e798b1099fdc2a49d281e4fa39b1d7efda4353a764a6e384cfbafb8b929a15e062cc38ef564cb703d27623ee36fd4fbd1e2eccfc9602fd38da6060a587b6bf87b5801c3faeefb8a680dbf56ed9ecb5ab4f5dc1d1c8721cb5c08020106570767289dfdb128b10b944ba73de7011b939903b9d72e1e4f6a0e2c86b86ea3";
-        console.log("webAuthnStubSignature", webAuthnStubSignature.length);
-        console.log("P256StubSignature", P256StubSignature.length);
+contract DataLength is Base {
+    Key internal keyMK;
+    PubKey internal pubKeyMK;
+    string EOA = "EOA";
+    string WEBAUTHN = "WEBAUTHN";
+    string P256 = "EOA";
+
+    function setUp() public {
+        (owner, ownerPk) = makeAddrAndKey("owner");
     }
 
-    function test_GetInitHash() public pure {
-        bytes32 hash = keccak256(
-            "InitializionData(uint256 x,uint256 y,address eoaAddress,KeyType keyType,address _initialGuardian)"
+    function test_EOALength() public view {
+        bytes32 hash = keccak256("Hash");
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPk, hash);
+        bytes memory signature = abi.encodePacked(r, s, v);
+
+        bytes memory _signature = encodeEOASignature(signature);
+
+        PackedUserOperation memory userOp = _getUserOp();
+        userOp.signature = _signature;
+        _printLength(EOA, userOp);
+    }
+
+    function test_WebAuthnLength() public view {
+        PubKey memory pubKeyExecuteBatch =
+            PubKey({x: BATCH_VALID_PUBLIC_KEY_X, y: BATCH_VALID_PUBLIC_KEY_Y});
+        
+        bytes memory signature = encodeWebAuthnSignature(
+            true,
+            BATCH_AUTHENTICATOR_DATA,
+            BATCH_CLIENT_DATA_JSON,
+            BATCH_CHALLENGE_INDEX,
+            BATCH_TYPE_INDEX,
+            BATCH_VALID_SIGNATURE_R,
+            BATCH_VALID_SIGNATURE_S,
+            pubKeyExecuteBatch
         );
 
-        console.logBytes32(hash);
+        PackedUserOperation memory userOp = _getUserOp();
+        userOp.signature = signature;
+        _printLength(WEBAUTHN, userOp);
+    }
+
+    function test_P256Length() public view {
+        PubKey memory pubKeyExecuteBatch =
+            PubKey({x: MINT_P256_PUBLIC_KEY_X, y: MINT_P256_PUBLIC_KEY_Y});
+        
+        bytes memory signature = encodeP256Signature(
+            MINT_P256_SIGNATURE_R, MINT_P256_SIGNATURE_S, pubKeyExecuteBatch, KeyType.P256
+        );
+
+        PackedUserOperation memory userOp = _getUserOp();
+        userOp.signature = signature;
+        _printLength(P256, userOp);
+    }
+
+    function _printLength(string storage _type, PackedUserOperation memory userOp) internal pure {
+        console.log("%s : %d", _type, userOp.signature.length);
+    }
+
+    function test_WebAuthnLib_Canonical_Pass() public view {
+        PubKey memory pk = PubKey({x: BATCH_VALID_PUBLIC_KEY_X, y: BATCH_VALID_PUBLIC_KEY_Y});
+
+        bytes memory inner = abi.encode(
+            true,
+            BATCH_AUTHENTICATOR_DATA,
+            BATCH_CLIENT_DATA_JSON,
+            BATCH_CHALLENGE_INDEX,
+            BATCH_TYPE_INDEX,
+            BATCH_VALID_SIGNATURE_R,
+            BATCH_VALID_SIGNATURE_S,
+            pk
+        );
+        bytes memory outer = abi.encode(KeyType.WEBAUTHN, inner);
+
+        (KeyType t, bytes memory sigData) = abi.decode(outer, (KeyType, bytes));
+        assertEq(uint8(t), uint8(KeyType.WEBAUTHN), "keyType mismatch");
+
+        SigLengthLib.assertOuterMatchesDecoded(outer.length, sigData);
+    }
+
+    function test_WebAuthnLib_TrailingByteOnOuter_Revert() public {
+        PubKey memory pk = PubKey({x: BATCH_VALID_PUBLIC_KEY_X, y: BATCH_VALID_PUBLIC_KEY_Y});
+
+        bytes memory inner = abi.encode(
+            true,
+            BATCH_AUTHENTICATOR_DATA,
+            BATCH_CLIENT_DATA_JSON,
+            BATCH_CHALLENGE_INDEX,
+            BATCH_TYPE_INDEX,
+            BATCH_VALID_SIGNATURE_R,
+            BATCH_VALID_SIGNATURE_S,
+            pk
+        );
+        bytes memory outer = abi.encode(KeyType.WEBAUTHN, inner);
+        bytes memory badOuter = abi.encodePacked(outer, outer); // extra junk
+
+        (, bytes memory sigData) = abi.decode(badOuter, (KeyType, bytes));
+
+        vm.expectRevert(IKeysManager.KeyManager__InvalidSignatureLength.selector);
+        this._assertOuterMatchesDecoded(badOuter.length, sigData);
+    }
+
+    function test_WebAuthnLib_TrailingByteInsideInner_Revert() public {
+        PubKey memory pk = PubKey({x: BATCH_VALID_PUBLIC_KEY_X, y: BATCH_VALID_PUBLIC_KEY_Y});
+
+        bytes memory inner = abi.encode(
+            true,
+            BATCH_AUTHENTICATOR_DATA,
+            BATCH_CLIENT_DATA_JSON,
+            BATCH_CHALLENGE_INDEX,
+            BATCH_TYPE_INDEX,
+            BATCH_VALID_SIGNATURE_R,
+            BATCH_VALID_SIGNATURE_S,
+            pk
+        );
+
+        bytes memory badInner = abi.encodePacked(inner, inner);
+        bytes memory outer = abi.encode(KeyType.WEBAUTHN, badInner);
+
+        (, bytes memory sigData) = abi.decode(outer, (KeyType, bytes));
+
+        vm.expectRevert(IKeysManager.KeyManager__InvalidSignatureLength.selector);
+        this._assertOuterMatchesDecoded(outer.length, sigData);
+    }
+
+
+    function test_WebAuthnLib_VariableClientDataJSON_Pass() public view {
+        PubKey memory pk = PubKey({x: BATCH_VALID_PUBLIC_KEY_X, y: BATCH_VALID_PUBLIC_KEY_Y});
+
+        string memory longerJSON = string(abi.encodePacked(BATCH_CLIENT_DATA_JSON, "/v2"));
+
+        bytes memory inner = abi.encode(
+            true,
+            BATCH_AUTHENTICATOR_DATA,
+            longerJSON,
+            BATCH_CHALLENGE_INDEX,
+            BATCH_TYPE_INDEX,
+            BATCH_VALID_SIGNATURE_R,
+            BATCH_VALID_SIGNATURE_S,
+            pk
+        );
+        bytes memory outer = abi.encode(KeyType.WEBAUTHN, inner);
+
+        (, bytes memory sigData) = abi.decode(outer, (KeyType, bytes));
+        SigLengthLib.assertOuterMatchesDecoded(outer.length, sigData);
+    }
+
+    function test_WebAuthnLib_VariableAuthenticatorData_Pass() public view {
+        PubKey memory pk = PubKey({x: BATCH_VALID_PUBLIC_KEY_X, y: BATCH_VALID_PUBLIC_KEY_Y});
+
+        bytes memory longerAD = bytes.concat(BATCH_AUTHENTICATOR_DATA, hex"00");
+
+        bytes memory inner = abi.encode(
+            true,
+            longerAD,
+            BATCH_CLIENT_DATA_JSON,
+            BATCH_CHALLENGE_INDEX,
+            BATCH_TYPE_INDEX,
+            BATCH_VALID_SIGNATURE_R,
+            BATCH_VALID_SIGNATURE_S,
+            pk
+        );
+        bytes memory outer = abi.encode(KeyType.WEBAUTHN, inner);
+
+        (, bytes memory sigData) = abi.decode(outer, (KeyType, bytes));
+        SigLengthLib.assertOuterMatchesDecoded(outer.length, sigData);
+    }
+
+    function _assertOuterMatchesDecoded(uint256 outerLen, bytes memory sigData) external pure {
+        SigLengthLib.assertOuterMatchesDecoded(outerLen, sigData);
+    }
+
+    function _getUserOp() internal pure returns (PackedUserOperation memory userOp) {
+        userOp.sender = address(0);
+        userOp.nonce = 1;
+        userOp.initCode = hex"";
+        userOp.callData = hex"";
+        userOp.accountGasLimits = hex"";
+        userOp.preVerificationGas = 1;
+        userOp.gasFees = hex"";
+        userOp.paymasterAndData = hex"";
+        userOp.signature = hex"";
+    }
+
+    function encodeWebAuthnSignature(
+        bool requireUserVerification,
+        bytes memory authenticatorData,
+        string memory clientDataJSON,
+        uint256 challengeIndex,
+        uint256 typeIndex,
+        bytes32 r,
+        bytes32 s,
+        PubKey memory pubKey
+    ) internal pure returns (bytes memory) {
+        return abi.encode(
+            KeyType.WEBAUTHN,
+            requireUserVerification,
+            authenticatorData,
+            clientDataJSON,
+            challengeIndex,
+            typeIndex,
+            r,
+            s,
+            pubKey
+        );
+    }
+
+    function encodeP256Signature(bytes32 r, bytes32 s, PubKey memory pubKey, KeyType _keyType)
+        internal
+        pure
+        returns (bytes memory)
+    {
+        bytes memory inner = abi.encode(r, s, pubKey);
+        return abi.encode(_keyType, inner);
+    }
+
+    function encodeEOASignature(bytes memory _signature) internal pure returns (bytes memory) {
+        return abi.encode(KeyType.EOA, _signature);
     }
 }

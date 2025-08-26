@@ -162,7 +162,9 @@ contract RegistartionTest is Base {
             pubKeyExecuteBatch
         );
 
-        bytes4 magicValue = account.isValidSignature(userOpHash, _signature);
+        (, bytes memory sigData) = abi.decode(_signature, (KeyType, bytes));
+
+        bytes4 magicValue = account.isValidSignature(userOpHash, sigData);
         bool usedChallenge = account.usedChallenges(userOpHash);
         console.log("usedChallenge", usedChallenge);
         console.logBytes4(magicValue);
@@ -254,7 +256,9 @@ contract RegistartionTest is Base {
             pubKeyExecuteBatch
         );
 
-        bytes4 magicValue = account.isValidSignature(userOpHash, _signature);
+        (, bytes memory sigData) = abi.decode(_signature, (KeyType, bytes));
+
+        bytes4 magicValue = account.isValidSignature(userOpHash, sigData);
         bool usedChallenge = account.usedChallenges(userOpHash);
         console.log("usedChallenge", usedChallenge);
         console.logBytes4(magicValue);
@@ -347,7 +351,9 @@ contract RegistartionTest is Base {
             pubKeyExecuteBatch
         );
 
-        bytes4 magicValue = account.isValidSignature(userOpHash, _signature);
+        (, bytes memory sigData) = abi.decode(_signature, (KeyType, bytes));
+
+        bytes4 magicValue = account.isValidSignature(userOpHash, sigData);
         bool usedChallenge = account.usedChallenges(userOpHash);
         console.log("usedChallenge", usedChallenge);
         console.logBytes4(magicValue);

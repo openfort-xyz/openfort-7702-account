@@ -29,7 +29,7 @@ interface IUserOpPolicy is IPolicy {
         uint256 txLimit,
         uint256 penaltyBps,
         uint256 penaltyThreshold,
-        bool    autoInit
+        bool autoInit
     );
 
     event GasPolicyAccounted(
@@ -43,7 +43,7 @@ interface IUserOpPolicy is IPolicy {
         uint256 costUsedTotal,
         uint256 txUsedTotal
     );
-    
+
     struct InitData {
         uint128 gasLimit;
         uint128 costLimit;

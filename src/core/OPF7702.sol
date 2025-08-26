@@ -15,6 +15,7 @@ pragma solidity ^0.8.29;
 
 import {Execution} from "src/core/Execution.sol";
 import {KeyHashLib} from "src/libs/KeyHashLib.sol";
+import {SigLengthLib} from "src/libs/SigLengthLib.sol";
 import {IUserOpPolicy} from "src/interfaces/IPolicy.sol";
 import {IKeysManager} from "src/interfaces/IKeysManager.sol";
 import {IWebAuthnVerifier} from "src/interfaces/IWebAuthnVerifier.sol";
@@ -47,6 +48,7 @@ contract OPF7702 is Execution, Initializable {
     using ECDSA for bytes32;
     using KeyHashLib for Key;
     using KeyHashLib for PubKey;
+    using SigLengthLib for bytes;
     using KeyHashLib for address;
     using KeyValidation for KeyData;
 
@@ -82,14 +84,14 @@ contract OPF7702 is Execution, Initializable {
     {
         // decode signature envelope: first word is KeyType, second is the raw payload
         (KeyType sigType, bytes memory sigData) = abi.decode(userOp.signature, (KeyType, bytes));
-
-        _checkValidSignatureLength(sigType, userOp.signature.length);
-
+        
+        _checkValidSignatureLength(sigType, userOp.signature.length, sigData);
+        
         if (sigType == KeyType.EOA) {
             return _validateKeyTypeEOA(sigData, userOpHash, userOp);
         }
         if (sigType == KeyType.WEBAUTHN) {
-            return _validateKeyTypeWEBAUTHN(userOpHash, userOp.signature, userOp);
+            return _validateKeyTypeWEBAUTHN(sigData, userOpHash, userOp);
         }
         if (sigType == KeyType.P256 || sigType == KeyType.P256NONKEY) {
             return _validateKeyTypeP256(sigData, userOpHash, userOp, sigType);
@@ -99,15 +101,13 @@ contract OPF7702 is Execution, Initializable {
 
     /// @dev validate and enforces per-key-type length bounds, uses to avoid
     ///      copying attacker-supplied padding before the check.
-    function _checkValidSignatureLength(KeyType sigType, uint256 sigLength) private pure {
+    function _checkValidSignatureLength(KeyType sigType, uint256 sigLength, bytes memory sigData) private pure {
         if (sigType == KeyType.EOA) {
             if (sigLength > 192) {
                 revert IKeysManager.KeyManager__InvalidSignatureLength();
             }
         } else if (sigType == KeyType.WEBAUTHN) {
-            if (sigLength > 704) {
-                revert IKeysManager.KeyManager__InvalidSignatureLength();
-            }
+            SigLengthLib.assertOuterMatchesDecoded(sigLength, sigData);
         } else if (sigType == KeyType.P256 || sigType == KeyType.P256NONKEY) {
             if (sigLength > 224) {
                 revert IKeysManager.KeyManager__InvalidSignatureLength();
@@ -117,17 +117,17 @@ contract OPF7702 is Execution, Initializable {
 
     /**
      * @notice Validates an EOA (ECDSA) key signature.
-     * @param sigData     Raw signature bytes (64 or 65 bytes).
+     * @param signature     Raw signature bytes (64 or 65 bytes).
      * @param userOpHash  The user operation hash.
      * @param userOp      The packed user operation coming from EntryPoint.
      * @return Packed validation output, or SIG_VALIDATION_FAILED.
      */
     function _validateKeyTypeEOA(
-        bytes memory sigData,
+        bytes memory signature,
         bytes32 userOpHash,
         PackedUserOperation calldata userOp
     ) private returns (uint256) {
-        address signer = ECDSA.recover(userOpHash, sigData);
+        address signer = ECDSA.recover(userOpHash, signature);
 
         // if masterKey (this contract) signed it, immediate success
         if (signer == address(this)) {
@@ -172,13 +172,12 @@ contract OPF7702 is Execution, Initializable {
      * @return Packed validation output, or SIG_VALIDATION_FAILED.
      */
     function _validateKeyTypeWEBAUTHN(
+        bytes memory signature,
         bytes32 userOpHash,
-        bytes calldata signature,
         PackedUserOperation calldata userOp
     ) private returns (uint256) {
         // decode everything in one shot
-        (
-            ,
+        ( 
             bool requireUV,
             bytes memory authenticatorData,
             string memory clientDataJSON,
@@ -188,7 +187,7 @@ contract OPF7702 is Execution, Initializable {
             bytes32 s,
             PubKey memory pubKey
         ) = abi.decode(
-            signature, (KeyType, bool, bytes, string, uint256, uint256, bytes32, bytes32, PubKey)
+            signature, (bool, bytes, string, uint256, uint256, bytes32, bytes32, PubKey)
         );
 
         if (usedChallenges[userOpHash]) {
@@ -242,20 +241,20 @@ contract OPF7702 is Execution, Initializable {
      *  • If master Key, immediate success.
      *  • Otherwise, call `isValidKey(...)`.
      *
-     * @param sigData     Encoded bytes: (r, s, PubKey).
+     * @param signature     Encoded bytes: (r, s, PubKey).
      * @param userOpHash  The original userOp hash.
      * @param userOp      The packed user operation coming from EntryPoint.
      * @param sigType     KeyType.P256 or KeyType.P256NONKEY.
      * @return Packed validation output, or SIG_VALIDATION_FAILED.
      */
     function _validateKeyTypeP256(
-        bytes memory sigData,
+        bytes memory signature,
         bytes32 userOpHash,
         PackedUserOperation calldata userOp,
         KeyType sigType
     ) private returns (uint256) {
         (bytes32 r, bytes32 sSig, PubKey memory pubKey) =
-            abi.decode(sigData, (bytes32, bytes32, PubKey));
+            abi.decode(signature, (bytes32, bytes32, PubKey));
 
         if (usedChallenges[userOpHash]) {
             revert IKeysManager.KeyManager__UsedChallenge();
