@@ -84,9 +84,9 @@ contract OPF7702 is Execution, Initializable {
     {
         // decode signature envelope: first word is KeyType, second is the raw payload
         (KeyType sigType, bytes memory sigData) = abi.decode(userOp.signature, (KeyType, bytes));
-        
-        _checkValidSignatureLength(sigType, userOp.signature.length, sigData);
-        
+
+        _checkValidSignatureLength(sigType, userOp.signature.length);
+
         if (sigType == KeyType.EOA) {
             return _validateKeyTypeEOA(sigData, userOpHash, userOp);
         }
@@ -101,13 +101,11 @@ contract OPF7702 is Execution, Initializable {
 
     /// @dev validate and enforces per-key-type length bounds, uses to avoid
     ///      copying attacker-supplied padding before the check.
-    function _checkValidSignatureLength(KeyType sigType, uint256 sigLength, bytes memory sigData) private pure {
+    function _checkValidSignatureLength(KeyType sigType, uint256 sigLength) private pure {
         if (sigType == KeyType.EOA) {
             if (sigLength > 192) {
                 revert IKeysManager.KeyManager__InvalidSignatureLength();
             }
-        } else if (sigType == KeyType.WEBAUTHN) {
-            SigLengthLib.assertOuterMatchesDecoded(sigLength, sigData);
         } else if (sigType == KeyType.P256 || sigType == KeyType.P256NONKEY) {
             if (sigLength > 224) {
                 revert IKeysManager.KeyManager__InvalidSignatureLength();
@@ -177,7 +175,7 @@ contract OPF7702 is Execution, Initializable {
         PackedUserOperation calldata userOp
     ) private returns (uint256) {
         // decode everything in one shot
-        ( 
+        (
             bool requireUV,
             bytes memory authenticatorData,
             string memory clientDataJSON,
@@ -186,8 +184,10 @@ contract OPF7702 is Execution, Initializable {
             bytes32 r,
             bytes32 s,
             PubKey memory pubKey
-        ) = abi.decode(
-            signature, (bool, bytes, string, uint256, uint256, bytes32, bytes32, PubKey)
+        ) = abi.decode(signature, (bool, bytes, string, uint256, uint256, bytes32, bytes32, PubKey));
+
+        SigLengthLib.assertWebAuthnOuterLen(
+            userOp.signature.length, authenticatorData.length, bytes(clientDataJSON).length
         );
 
         if (usedChallenges[userOpHash]) {

@@ -337,10 +337,7 @@ abstract contract KeysManager is BaseOPF7702, IKey, ISpendLimit {
             pubKey
         );
 
-        return abi.encode(
-            KeyType.WEBAUTHN,
-            inner
-        );
+        return abi.encode(KeyType.WEBAUTHN, inner);
     }
 
     /**

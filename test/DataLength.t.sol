@@ -4,10 +4,10 @@ pragma solidity ^0.8.29;
 
 import {Base} from "test/Base.sol";
 import {console2 as console} from "lib/forge-std/src/Test.sol";
-import {PackedUserOperation} from "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
+import {PackedUserOperation} from
+    "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
 import {IKeysManager} from "src/interfaces/IKeysManager.sol";
 import {SigLengthLib} from "src/libs/SigLengthLib.sol";
-
 
 contract DataLength is Base {
     Key internal keyMK;
@@ -16,8 +16,11 @@ contract DataLength is Base {
     string WEBAUTHN = "WEBAUTHN";
     string P256 = "EOA";
 
+    TestLargeSignature tsl;
+
     function setUp() public {
         (owner, ownerPk) = makeAddrAndKey("owner");
+        tsl = new TestLargeSignature();
     }
 
     function test_EOALength() public view {
@@ -35,7 +38,7 @@ contract DataLength is Base {
     function test_WebAuthnLength() public view {
         PubKey memory pubKeyExecuteBatch =
             PubKey({x: BATCH_VALID_PUBLIC_KEY_X, y: BATCH_VALID_PUBLIC_KEY_Y});
-        
+
         bytes memory signature = encodeWebAuthnSignature(
             true,
             BATCH_AUTHENTICATOR_DATA,
@@ -55,7 +58,7 @@ contract DataLength is Base {
     function test_P256Length() public view {
         PubKey memory pubKeyExecuteBatch =
             PubKey({x: MINT_P256_PUBLIC_KEY_X, y: MINT_P256_PUBLIC_KEY_Y});
-        
+
         bytes memory signature = encodeP256Signature(
             MINT_P256_SIGNATURE_R, MINT_P256_SIGNATURE_S, pubKeyExecuteBatch, KeyType.P256
         );
@@ -87,7 +90,35 @@ contract DataLength is Base {
         (KeyType t, bytes memory sigData) = abi.decode(outer, (KeyType, bytes));
         assertEq(uint8(t), uint8(KeyType.WEBAUTHN), "keyType mismatch");
 
-        SigLengthLib.assertOuterMatchesDecoded(outer.length, sigData);
+        (, bytes memory authenticatorData, string memory clientDataJSON,,,,,) =
+            abi.decode(sigData, (bool, bytes, string, uint256, uint256, bytes32, bytes32, PubKey));
+
+        SigLengthLib.assertWebAuthnOuterLen(
+            outer.length, authenticatorData.length, bytes(clientDataJSON).length
+        );
+    }
+
+    function test_Revert() public view {
+        PackedUserOperation memory op = _getUserOp();
+
+        PubKey memory pk = PubKey({x: BATCH_VALID_PUBLIC_KEY_X, y: BATCH_VALID_PUBLIC_KEY_Y});
+
+        bytes memory inner = abi.encode(
+            true,
+            BATCH_AUTHENTICATOR_DATA,
+            BATCH_CLIENT_DATA_JSON,
+            BATCH_CHALLENGE_INDEX,
+            BATCH_TYPE_INDEX,
+            BATCH_VALID_SIGNATURE_R,
+            BATCH_VALID_SIGNATURE_S,
+            pk
+        );
+        bytes memory outer = abi.encode(KeyType.WEBAUTHN, inner);
+        // bytes memory outerBigSize = abi.encodePacked(outer, hex"00");
+        op.signature = outer;
+
+        bytes32 userOpHash = keccak256("HASH");
+        tsl.validateSignature(op, userOpHash);
     }
 
     function test_WebAuthnLib_TrailingByteOnOuter_Revert() public {
@@ -108,8 +139,13 @@ contract DataLength is Base {
 
         (, bytes memory sigData) = abi.decode(badOuter, (KeyType, bytes));
 
+        (, bytes memory authenticatorData, string memory clientDataJSON,,,,,) =
+            abi.decode(sigData, (bool, bytes, string, uint256, uint256, bytes32, bytes32, PubKey));
+
         vm.expectRevert(IKeysManager.KeyManager__InvalidSignatureLength.selector);
-        this._assertOuterMatchesDecoded(badOuter.length, sigData);
+        this._assertOuterMatchesDecoded(
+            badOuter.length, authenticatorData.length, bytes(clientDataJSON).length
+        );
     }
 
     function test_WebAuthnLib_TrailingByteInsideInner_Revert() public {
@@ -131,10 +167,14 @@ contract DataLength is Base {
 
         (, bytes memory sigData) = abi.decode(outer, (KeyType, bytes));
 
-        vm.expectRevert(IKeysManager.KeyManager__InvalidSignatureLength.selector);
-        this._assertOuterMatchesDecoded(outer.length, sigData);
-    }
+        (, bytes memory authenticatorData, string memory clientDataJSON,,,,,) =
+            abi.decode(sigData, (bool, bytes, string, uint256, uint256, bytes32, bytes32, PubKey));
 
+        vm.expectRevert(IKeysManager.KeyManager__InvalidSignatureLength.selector);
+        this._assertOuterMatchesDecoded(
+            outer.length, authenticatorData.length, bytes(clientDataJSON).length
+        );
+    }
 
     function test_WebAuthnLib_VariableClientDataJSON_Pass() public view {
         PubKey memory pk = PubKey({x: BATCH_VALID_PUBLIC_KEY_X, y: BATCH_VALID_PUBLIC_KEY_Y});
@@ -154,7 +194,13 @@ contract DataLength is Base {
         bytes memory outer = abi.encode(KeyType.WEBAUTHN, inner);
 
         (, bytes memory sigData) = abi.decode(outer, (KeyType, bytes));
-        SigLengthLib.assertOuterMatchesDecoded(outer.length, sigData);
+
+        (, bytes memory authenticatorData, string memory clientDataJSON,,,,,) =
+            abi.decode(sigData, (bool, bytes, string, uint256, uint256, bytes32, bytes32, PubKey));
+
+        SigLengthLib.assertWebAuthnOuterLen(
+            outer.length, authenticatorData.length, bytes(clientDataJSON).length
+        );
     }
 
     function test_WebAuthnLib_VariableAuthenticatorData_Pass() public view {
@@ -175,11 +221,20 @@ contract DataLength is Base {
         bytes memory outer = abi.encode(KeyType.WEBAUTHN, inner);
 
         (, bytes memory sigData) = abi.decode(outer, (KeyType, bytes));
-        SigLengthLib.assertOuterMatchesDecoded(outer.length, sigData);
+        (, bytes memory authenticatorData, string memory clientDataJSON,,,,,) =
+            abi.decode(sigData, (bool, bytes, string, uint256, uint256, bytes32, bytes32, PubKey));
+
+        SigLengthLib.assertWebAuthnOuterLen(
+            outer.length, authenticatorData.length, bytes(clientDataJSON).length
+        );
     }
 
-    function _assertOuterMatchesDecoded(uint256 outerLen, bytes memory sigData) external pure {
-        SigLengthLib.assertOuterMatchesDecoded(outerLen, sigData);
+    function _assertOuterMatchesDecoded(
+        uint256 outerLen,
+        uint256 authenticatorDataLen,
+        uint256 clientDataJSONLen
+    ) external pure {
+        SigLengthLib.assertWebAuthnOuterLen(outerLen, authenticatorDataLen, clientDataJSONLen);
     }
 
     function _getUserOp() internal pure returns (PackedUserOperation memory userOp) {
@@ -228,5 +283,43 @@ contract DataLength is Base {
 
     function encodeEOASignature(bytes memory _signature) internal pure returns (bytes memory) {
         return abi.encode(KeyType.EOA, _signature);
+    }
+}
+
+contract TestLargeSignature {
+    using SigLengthLib for bytes;
+
+    enum KeyType {
+        EOA,
+        WEBAUTHN,
+        P256,
+        P256NONKEY
+    }
+
+    struct PubKey {
+        bytes32 x;
+        bytes32 y;
+    }
+
+    function validateSignature(PackedUserOperation calldata userOp, bytes32 userOpHash)
+        public
+        pure
+    {
+        (, bytes memory sigData) = abi.decode(userOp.signature, (KeyType, bytes));
+        _validateKeyTypeWEBAUTHN(sigData, userOpHash, userOp);
+    }
+
+    function _validateKeyTypeWEBAUTHN(
+        bytes memory signature,
+        bytes32, /*userOpHash*/
+        PackedUserOperation calldata userOp
+    ) private pure {
+        // decode everything in one shot
+        (, bytes memory authenticatorData, string memory clientDataJSON,,,,,) =
+            abi.decode(signature, (bool, bytes, string, uint256, uint256, bytes32, bytes32, PubKey));
+
+        SigLengthLib.assertWebAuthnOuterLen(
+            userOp.signature.length, authenticatorData.length, bytes(clientDataJSON).length
+        );
     }
 }
