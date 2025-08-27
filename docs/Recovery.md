@@ -266,28 +266,22 @@ sequenceDiagram
 ```mermaid
 gantt
     title Recovery Process Timeline
-    dateFormat X
-    axisFormat %d
+    dateFormat YYYY-MM-DD
+    axisFormat %m-%d
 
-    section Security Setup
-    Security Period (Guardian Changes) :milestone, m1, 0, 1d
-    Security Window (Confirm Changes)  :milestone, m2, 1d, 2d
+    section Guardian Management
+    Security Period         :security_period, 2024-01-01, 2024-01-02
+    Security Window         :security_window, 2024-01-02, 2024-01-03
     
-    section Recovery Process
-    Recovery Started                   :milestone, recovery_start, 0, 0
-    Recovery Period (Wait)            :active, recovery_wait, 0, 5d
-    Recovery Executable               :milestone, recovery_exec, 5d, 5d
+    section Recovery Process  
+    Recovery Started        :milestone, recovery_start, 2024-01-01, 0d
+    Recovery Period (Wait)  :active, recovery_wait, 2024-01-01, 2024-01-06
+    Recovery Executable     :milestone, recovery_exec, 2024-01-06, 0d
     
-    section Lock Period
-    Account Locked                    :crit, lock_period, 0, 10d
-    Lock Cleared on Success          :milestone, lock_clear, 5d, 5d
-    Lock Auto-Expires               :milestone, lock_auto, 10d, 10d
-    
-    section Timeline Examples
-    Example: recoveryPeriod = 5 days  :done, ex1, 0, 5d
-    Example: lockPeriod = 10 days     :done, ex2, 0, 10d
-    Example: securityPeriod = 1 day   :done, ex3, 0, 1d
-    Example: securityWindow = 1 day   :done, ex4, 1d, 2d
+    section Account Lock
+    Account Locked          :crit, lock_period, 2024-01-01, 2024-01-11
+    Lock Cleared (Success)  :milestone, lock_clear_success, 2024-01-06, 0d
+    Lock Auto-Expires       :milestone, lock_auto_expire, 2024-01-11, 0d
 ```
 
 ### Security Features
