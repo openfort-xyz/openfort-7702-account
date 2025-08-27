@@ -379,7 +379,7 @@ flowchart LR
     subgraph "Session Key Registration"
         RegisterKey["registerSessionKey()<br/>KeysManager.sol"]
         ValidateParams["Parameter Validation<br/>Time limits, spending caps"]
-        GasPolicy["Set gas config"]
+        GasPolicy["Gas Policy<br/>Set gas config"]
         StoreKey["Store in mapping<br/>sessionKeys[keyHash]"]
     end
     
