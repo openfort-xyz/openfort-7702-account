@@ -1,5 +1,5 @@
 # Recovery Module
-The OPF7702Recoverable contract implements a guardian-based social recovery system for EIP-7702 + ERC-4337 smart contract wallets. This enables users to recover their accounts if they lose access to their master key, using a network of trusted guardians.
+The OPF7702Recoverable module implements a guardian-based social recovery system for EIP-7702 + ERC-4337 smart contract wallets. This enables users to recover their accounts if they lose access to their master key, using a network of trusted guardians.
 
 ## Table of Contents
 
@@ -224,12 +224,69 @@ struct RecoveryData {
 
 #### Recovery Flow
 ```mermaid
+sequenceDiagram
+    participant Guardian
+    participant Contract
+    participant Owner
+    participant Time
 
+    Note over Guardian,Time: Recovery Initiation Phase
+    Guardian->>Contract: startRecovery(newKey)
+    Contract->>Contract: Validate guardian status
+    Contract->>Contract: Check wallet not locked
+    Contract->>Contract: Check no ongoing recovery
+    Contract->>Contract: Validate recovery key
+    Contract->>Contract: Calculate executeAfter = now + recoveryPeriod
+    Contract->>Contract: Calculate guardiansRequired = ceil(guardianCount / 2)
+    Contract->>Contract: Set lock = now + lockPeriod
+    Contract-->>Guardian: RecoveryStarted event
+    
+    Note over Guardian,Time: Recovery Execution Phase
+    Time->>Time: Recovery period passes
+    
+    Guardian->>Contract: completeRecovery(signatures[])
+    Contract->>Contract: Check now >= executeAfter
+    Contract->>Contract: Validate signature count
+    Contract->>Contract: Verify guardian signatures
+    Contract->>Contract: Check signatures are sorted/unique
+    Contract->>Contract: Delete old master key
+    Contract->>Contract: Set new master key
+    Contract->>Contract: Clear lock (set to 0)
+    Contract-->>Owner: RecoveryCompleted event
+    
+    Note over Owner,Contract: Alternative: Cancellation
+    Owner->>Contract: cancelRecovery()
+    Contract->>Contract: Clear recovery data
+    Contract->>Contract: Clear lock
+    Contract-->>Owner: RecoveryCancelled event
 ```
 
 #### Recovery Timeline
 ```mermaid
+gantt
+    title Recovery Process Timeline
+    dateFormat X
+    axisFormat %d
 
+    section Security Setup
+    Security Period (Guardian Changes) :milestone, m1, 0, 1d
+    Security Window (Confirm Changes)  :milestone, m2, 1d, 2d
+    
+    section Recovery Process
+    Recovery Started                   :milestone, recovery_start, 0, 0
+    Recovery Period (Wait)            :active, recovery_wait, 0, 5d
+    Recovery Executable               :milestone, recovery_exec, 5d, 5d
+    
+    section Lock Period
+    Account Locked                    :crit, lock_period, 0, 10d
+    Lock Cleared on Success          :milestone, lock_clear, 5d, 5d
+    Lock Auto-Expires               :milestone, lock_auto, 10d, 10d
+    
+    section Timeline Examples
+    Example: recoveryPeriod = 5 days  :done, ex1, 0, 5d
+    Example: lockPeriod = 10 days     :done, ex2, 0, 10d
+    Example: securityPeriod = 1 day   :done, ex3, 0, 1d
+    Example: securityWindow = 1 day   :done, ex4, 1d, 2d
 ```
 
 ### Security Features
@@ -243,7 +300,79 @@ struct RecoveryData {
 
 #### Security Validations
 ```mermaid
+flowchart TD
+    Start([Function Called]) --> CheckLock{Is Wallet Locked?}
+    
+    CheckLock -->|Yes| LockError[❌ AccountLocked Error]
+    CheckLock -->|No| CheckRecovery{Recovery State Check}
+    
+    CheckRecovery -->|Ongoing & Not Expected| RecoveryError[❌ OngoingRecovery Error]
+    CheckRecovery -->|None & Expected| NoRecoveryError[❌ NoOngoingRecovery Error]
+    CheckRecovery -->|Valid State| TimeCheck{Time Validation}
+    
+    TimeCheck --> SecurityPeriodCheck{Security Period<br/>Validation}
+    SecurityPeriodCheck -->|Before Period| EarlyError[❌ PendingProposalNotOver Error]
+    SecurityPeriodCheck -->|After Window| ExpiredError[❌ PendingProposalExpired Error]
+    SecurityPeriodCheck -->|Within Window| ExecutionCheck{Execution Time<br/>Validation}
+    
+    ExecutionCheck -->|Too Early| ExecutionEarlyError[❌ OngoingRecovery Error]
+    ExecutionCheck -->|Valid Time| SignatureCheck{Signature Validation}
+    
+    SignatureCheck --> CountCheck{Signature Count<br/>Matches Required?}
+    CountCheck -->|No| CountError[❌ InvalidSignatureAmount Error]
+    CountCheck -->|Yes| ValidGuardianCheck{All Signers<br/>Active Guardians?}
+    
+    ValidGuardianCheck -->|No| GuardianError[❌ InvalidRecoverySignatures Error]
+    ValidGuardianCheck -->|Yes| SortedCheck{Signatures<br/>Sorted & Unique?}
+    
+    SortedCheck -->|No| SortError[❌ InvalidRecoverySignatures Error]
+    SortedCheck -->|Yes| KeyValidation{Recovery Key<br/>Validation}
+    
+    KeyValidation --> KeyTypeCheck{Supported Key Type?}
+    KeyTypeCheck -->|P256/P256NONKEY| UnsupportedError[❌ UnsupportedKeyType Error]
+    KeyTypeCheck -->|EOA/WebAuthn| KeyActiveCheck{Key Already Active?}
+    
+    KeyActiveCheck -->|Yes| ActiveKeyError[❌ RecoverCannotBeActiveKey Error]
+    KeyActiveCheck -->|No| GuardianKeyCheck{Key is Guardian?}
+    
+    GuardianKeyCheck -->|Yes| GuardianOwnerError[❌ GuardianCannotBeOwner Error]
+    GuardianKeyCheck -->|No| ZeroCheck{Key is Zero Address?}
+    
+    ZeroCheck -->|Yes| ZeroError[❌ AddressCantBeZero Error]
+    ZeroCheck -->|No| Success[✅ Validation Passed]
 
+    subgraph "Invariant Checks (Constructor)"
+        InvariantStart([Constructor]) --> InvariantCheck1{lockPeriod >=<br/>recoveryPeriod?}
+        InvariantCheck1 -->|No| InvariantError1[❌ InsecurePeriod Error]
+        InvariantCheck1 -->|Yes| InvariantCheck2{recoveryPeriod >=<br/>securityPeriod +<br/>securityWindow?}
+        InvariantCheck2 -->|No| InvariantError2[❌ InsecurePeriod Error]
+        InvariantCheck2 -->|Yes| InvariantSuccess[✅ Invariants Valid]
+    end
+
+    subgraph "Guardian-Specific Validations"
+        GuardianStart([Guardian Operation]) --> DuplicateCheck{Guardian Already<br/>Active/Proposed?}
+        DuplicateCheck -->|Yes| DuplicateError[❌ DuplicatedGuardian/<br/>DuplicatedProposal Error]
+        DuplicateCheck -->|No| SelfCheck{Guardian is<br/>Contract Address?}
+        SelfCheck -->|Yes| SelfError[❌ GuardianCannotBeAddressThis Error]
+        SelfCheck -->|No| MasterKeyCheck{Guardian is<br/>Master Key?}
+        MasterKeyCheck -->|Yes| MasterError[❌ GuardianCannotBeCurrentMasterKey Error]
+        MasterKeyCheck -->|No| GuardianSuccess[✅ Guardian Valid]
+    end
+
+    style LockError fill:#ffcccc
+    style RecoveryError fill:#ffcccc
+    style NoRecoveryError fill:#ffcccc
+    style EarlyError fill:#ffcccc
+    style ExpiredError fill:#ffcccc
+    style ExecutionEarlyError fill:#ffcccc
+    style CountError fill:#ffcccc
+    style GuardianError fill:#ffcccc
+    style SortError fill:#ffcccc
+    style UnsupportedError fill:#ffcccc
+    style ActiveKeyError fill:#ffcccc
+    style GuardianOwnerError fill:#ffcccc
+    style ZeroError fill:#ffcccc
+    style Success fill:#ccffcc
 ```
 
 ### Function Reference
