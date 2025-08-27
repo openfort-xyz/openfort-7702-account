@@ -262,6 +262,7 @@ sequenceDiagram
 ```
 
 #### Recovery Timeline
+
 ```mermaid
 gantt
     title Recovery Process Timeline
