@@ -41,7 +41,10 @@ test-execution:
 
 test-recovery:
 	forge test --mp test/unit/Recoverable.t.sol --rpc-url $(SEPOLIA_RPC_URL) -vv 
-	
+
+test-gas:
+	forge test --mp test/gas/GasFuzzing.t.sol --rpc-url $(SEPOLIA_RPC_URL) -vv  && forge test --mp test/gas/GasPolicyTest.t.sol --rpc-url $(SEPOLIA_RPC_URL) -vv 
+
 test-all:
 	npx tsx --experimental-global-webcrypto  script/P256_Single_Mint.ts && npx tsx --experimental-global-webcrypto  script/P256_ETH.ts && npx tsx --experimental-global-webcrypto  script/P256.ts && forge test -vv --rpc-url $(SEPOLIA_RPC_URL)
 

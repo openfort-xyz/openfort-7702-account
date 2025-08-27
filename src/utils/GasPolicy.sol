@@ -54,10 +54,6 @@ contract GasPolicy is IUserOpPolicy {
     // Safety margins
     /// @dev Safety multiplier on total per-op envelope, expressed in BPS (e.g., 12000 = +20%).
     uint256 private constant SAFETY_BPS = 12_000; // +20% on gas envelope
-    /// @dev Default penalty in BPS applied to (CGL + PO) when over threshold (v0.8 semantics).
-    uint16 private constant DEFAULT_PENALTY_BPS = 1000; // 10% v0.8 penalty on (CGL+PO) if >= threshold
-    /// @dev Gas threshold after which penalty applies.
-    uint32 private constant DEFAULT_PENALTY_THR = 40_000; // penalty threshold (v0.8)
     /// @dev Default priority fee to assume for worst-case pricing during auto-init.
     uint256 private constant DEFAULT_PRIORITY_FEE_WEI = 1 gwei; // assumed tip for pricing worst-case
 
@@ -102,7 +98,7 @@ contract GasPolicy is IUserOpPolicy {
      * @dev
      * - Access: Only the account (`userOp.sender`) may call; prevents 3rd-party budget griefing.
      * - Behavior: Computes the gas envelope and worst-case wei cost using `userOp.gasPrice()`,
-     *   applies penalty if above threshold, checks per-op and cumulative limits, and increments
+     *   checks per-op and cumulative limits, and increments
      *   usage counters optimistically.
      * - Paymaster note: Only considered when `paymasterAndData.length >= PAYMASTER_DATA_OFFSET`.
      *   If `0 < length < OFFSET`, it is effectively ignored in this implementation.
@@ -134,26 +130,11 @@ contract GasPolicy is IUserOpPolicy {
         /// @dev Worst-case WEI (v0.8 semantics)
         uint256 price = userOp.gasPrice(); // min(maxFeePerGas, basefee + maxPriority)
 
-        uint16 penaltyBps = cfg.penaltyBps == 0 ? DEFAULT_PENALTY_BPS : cfg.penaltyBps;
-        uint32 threshold = cfg.penaltyThreshold == 0 ? DEFAULT_PENALTY_THR : cfg.penaltyThreshold;
-
-        uint256 penaltyBasisGas = cgl + postOp;
-        uint256 penaltyGas = penaltyBasisGas >= threshold
-            ? (penaltyBasisGas * penaltyBps + BPS_CEIL_ROUNDING) / BPS_DENOMINATOR
-            : 0;
-
         uint256 worstCaseWei = 0;
         if (price != 0) {
             /// @dev envelopeUnits * price
             if (envelopeUnits > type(uint256).max / price) return VALIDATION_FAILED;
             worstCaseWei = envelopeUnits * price;
-            /// @dev penaltyGas * price + safe addition
-            if (penaltyGas != 0) {
-                if (penaltyGas > type(uint256).max / price) return VALIDATION_FAILED;
-                uint256 penaltyWei = penaltyGas * price;
-                if (worstCaseWei > type(uint256).max - penaltyWei) return VALIDATION_FAILED;
-                worstCaseWei += penaltyWei;
-            }
         }
 
         /// @dev Guards
@@ -182,7 +163,6 @@ contract GasPolicy is IUserOpPolicy {
             userOp.sender,
             envelopeUnits,
             price,
-            penaltyGas,
             worstCaseWei,
             cfg.gasUsed,
             cfg.costUsed,
@@ -219,8 +199,6 @@ contract GasPolicy is IUserOpPolicy {
             cfg.costLimit,
             cfg.perOpMaxCostWei,
             cfg.txLimit,
-            cfg.penaltyBps,
-            cfg.penaltyThreshold,
             false
         );
     }
@@ -233,7 +211,6 @@ contract GasPolicy is IUserOpPolicy {
      * @param limit    Number of UserOperations allowed in this session (0 < limit ≤ 2^32-1).
      * @dev
      * - Derives per-op envelope by summing DEFAULT_* legs and applying `SAFETY_BPS`.
-     * - Approximates penalty gas from max(70% of envelope, CGL+PO) if ≥ `DEFAULT_PENALTY_THR`.
      * - Prices at `max(block.basefee + DEFAULT_PRIORITY_FEE_WEI, DEFAULT_PRICE_FLOOR_WEI)` and
      *   adds `PRICE_SAFETY_BPS` headroom.
      * - Keeps an `unchecked` block by design; multiplications are guarded by subsequent checks.
@@ -249,16 +226,6 @@ contract GasPolicy is IUserOpPolicy {
         uint256 perOpEnvelopeUnits =
             (rawEnvelope * SAFETY_BPS + BPS_CEIL_ROUNDING) / BPS_DENOMINATOR;
 
-        /// @dev Conservative penalty basis: assume most of the envelope is execution/postOp
-        ///      Use 70% of the envelope OR the DEFAULT_CGL+DEFAULT_PO, whichever is larger.
-        uint256 seventyPct = (perOpEnvelopeUnits * PERCENT_70) / PERCENT_DENOMINATOR;
-        uint256 execSideAssumed =
-            seventyPct > (DEFAULT_CGL + DEFAULT_PO) ? seventyPct : (DEFAULT_CGL + DEFAULT_PO);
-
-        uint256 perOpPenaltyGas = execSideAssumed >= DEFAULT_PENALTY_THR
-            ? (execSideAssumed * DEFAULT_PENALTY_BPS + BPS_CEIL_ROUNDING) / BPS_DENOMINATOR
-            : 0;
-
         /// @dev Price assumption: basefee + 1 gwei, but at least 2 gwei, then +10% safety
         uint256 priceAssumption = block.basefee + DEFAULT_PRIORITY_FEE_WEI;
         if (priceAssumption < DEFAULT_PRICE_FLOOR_WEI) priceAssumption = DEFAULT_PRICE_FLOOR_WEI;
@@ -266,11 +233,10 @@ contract GasPolicy is IUserOpPolicy {
 
         /// @dev Per-op max wei (overflow-checked)
         unchecked {
-            uint256 unitsPlusPenalty = perOpEnvelopeUnits + perOpPenaltyGas;
-            if (priceAssumption != 0 && unitsPlusPenalty > type(uint256).max / priceAssumption) {
+            if (priceAssumption != 0 && perOpEnvelopeUnits > type(uint256).max / priceAssumption) {
                 revert GasPolicy_PerOpCostOverflow();
             }
-            uint256 perOpMaxCostWei256 = unitsPlusPenalty * priceAssumption;
+            uint256 perOpMaxCostWei256 = perOpEnvelopeUnits * priceAssumption;
             require(perOpMaxCostWei256 <= type(uint128).max, GasPolicy_PerOpCostHigh());
 
             // 5) Cumulative budgets
@@ -295,8 +261,6 @@ contract GasPolicy is IUserOpPolicy {
                 cfg.costLimit,
                 cfg.perOpMaxCostWei,
                 cfg.txLimit,
-                cfg.penaltyBps,
-                cfg.penaltyThreshold,
                 true
             );
         }
@@ -305,8 +269,7 @@ contract GasPolicy is IUserOpPolicy {
     /**
      * @notice Apply manual configuration to a `GasLimitConfig` and mark initialized.
      * @param cfg Storage pointer to the target config.
-     * @param d   Decoded InitData with explicit budgets and penalty settings.
-     * @dev Sets defaults for penalty fields when zero; resets counters to zero.
+     * @param d   Decoded InitData with explicit budgetssettings.
      */
     function _applyManualConfig(GasLimitConfig storage cfg, InitData memory d) private {
         // Required budgets already checked by caller
@@ -314,10 +277,6 @@ contract GasPolicy is IUserOpPolicy {
         cfg.costLimit = d.costLimit;
         cfg.perOpMaxCostWei = d.perOpMaxCostWei; // 0 allowed (disables per-op cap)
         cfg.txLimit = d.txLimit; // 0 allowed (unlimited)
-
-        // Penalty config with sane defaults
-        cfg.penaltyBps = d.penaltyBps == 0 ? DEFAULT_PENALTY_BPS : d.penaltyBps;
-        cfg.penaltyThreshold = d.penaltyThreshold == 0 ? DEFAULT_PENALTY_THR : d.penaltyThreshold;
 
         _resetCountersAndMarkInitialized(cfg);
     }
@@ -329,7 +288,6 @@ contract GasPolicy is IUserOpPolicy {
      * @param costLimit        Total cumulative wei allowed for the session.
      * @param perOpMaxCostWei  Max wei per single operation (0 disables the cap).
      * @param txLimit          Max number of operations (0 means unlimited).
-     * @dev Resets counters to zero and applies default penalty settings.
      */
     function _applyAutoConfig(
         GasLimitConfig storage cfg,
@@ -342,10 +300,6 @@ contract GasPolicy is IUserOpPolicy {
         cfg.costLimit = costLimit;
         cfg.perOpMaxCostWei = perOpMaxCostWei;
         cfg.txLimit = txLimit;
-
-        // Defaults for v0.8
-        cfg.penaltyBps = DEFAULT_PENALTY_BPS;
-        cfg.penaltyThreshold = DEFAULT_PENALTY_THR;
 
         _resetCountersAndMarkInitialized(cfg);
     }
@@ -410,7 +364,7 @@ contract GasPolicy is IUserOpPolicy {
  *   + PO  (postOpGasLimit, if present)
  *
  * - Pricing: computes worst-case wei using `userOp.gasPrice()` (min(maxFeePerGas,
- *   basefee + maxPriorityFee)), plus an optional v0.8 penalty on (CGL + PO) if above
+ *   basefee + maxPriorityFee))
  *   a threshold. Ceil division is used for BPS math.
  *
  * - Limits:
@@ -421,7 +375,7 @@ contract GasPolicy is IUserOpPolicy {
  * - Initialization:
  *   * Manual: supply exact budgets via `InitData`.
  *   * Auto: derives conservative defaults from provided DEFAULT_* legs, a safety BPS,
- *     penalty assumptions, and `block.basefee` (+priority fee with floor), then scales
+ *     and `block.basefee` (+priority fee with floor), then scales
  *     cumulatives by `limit`.
  *
  * - Arithmetic safety:

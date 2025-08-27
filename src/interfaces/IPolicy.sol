@@ -27,8 +27,6 @@ interface IUserOpPolicy is IPolicy {
         uint256 costLimit,
         uint256 perOpMaxCostWei,
         uint256 txLimit,
-        uint256 penaltyBps,
-        uint256 penaltyThreshold,
         bool autoInit
     );
 
@@ -37,7 +35,6 @@ interface IUserOpPolicy is IPolicy {
         address indexed account,
         uint256 envelopeUnits,
         uint256 priceWei,
-        uint256 penaltyGas,
         uint256 worstCaseWei,
         uint256 gasUsedTotal,
         uint256 costUsedTotal,
@@ -49,8 +46,6 @@ interface IUserOpPolicy is IPolicy {
         uint128 costLimit;
         uint128 perOpMaxCostWei; // 0 = disabled
         uint32 txLimit; // 0 = disabled
-        uint16 penaltyBps; // 0 -> default 10%
-        uint32 penaltyThreshold; // 0 -> default 40_000
     }
 
     struct GasLimitConfig {
@@ -61,8 +56,6 @@ interface IUserOpPolicy is IPolicy {
         uint128 perOpMaxCostWei; // optional per-op cap (0 = disabled)
         uint32 txLimit; // optional tx count cap (0 = disabled)
         uint32 txUsed;
-        uint16 penaltyBps; // default 1000 (10%)
-        uint32 penaltyThreshold; // default 40,000 (EP v0.8)
         bool initialized;
     }
 

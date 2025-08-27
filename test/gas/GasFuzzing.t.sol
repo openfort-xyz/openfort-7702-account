@@ -225,10 +225,8 @@ contract GasFuzzing is Test {
             uint256 envelope = uint256(pvg) + uint256(vgl) + uint256(cgl);
             uint256 price = _calcPrice(maxFee, tip);
 
-            uint256 penaltyGas = cgl >= 40_000 ? (uint256(cgl) * 1000 + 9999) / 10_000 : 0;
-
             accGas += envelope;
-            accWei += price * (envelope + penaltyGas);
+            accWei += price * envelope;
         }
 
         (uint128 gasLimit, uint128 gasUsed, uint128 costLimit, uint128 costUsed) =
@@ -264,9 +262,9 @@ contract GasFuzzing is Test {
 
     function test_auto_init_reverts_when_basefee_extreme() public {
         bytes32 configId = keccak256(abi.encodePacked(uint256(14)));
-        vm.fee(3e32); // ≥ ~2.9e32 is needed to overflow the uint128 per-op cap
+        vm.fee(4e32); // safely above the ~3.106e32 threshold
         vm.prank(account);
-        vm.expectRevert(); // GasPolicy_PerOpCostHigh
+        vm.expectRevert();
         gP.initializeGasPolicy(account, configId, 1);
         vm.fee(0);
     }
