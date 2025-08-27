@@ -29,7 +29,7 @@ flowchart LR
         end
         
         subgraph "Storage Layout"
-            BaseSlot["Base Storage Slot<br/>keccak256('openfort.baseAccount.7702.v1')"]
+            BaseSlot["Base Storage Slot<br/>keccak256(abi.encode(uint256(keccak256("openfort.baseAccount.7702.v1")) - 1)) & ~bytes32(uint256(0xff))"]
             AccountData["AccountData7702<br/>• owner: Key<br/>• nonce: uint256"]
             SessionKeys["Session Keys Mapping<br/>keyHash => KeyData"]
         end
