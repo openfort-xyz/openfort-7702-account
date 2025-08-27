@@ -19,7 +19,7 @@ EIP-7702 enables any Externally Owned Account (EOA) to delegate its code executi
 Delegation Flow
 ```mermaid
 flowchart LR
-    subgraph "EIP-7702 Delegation Process</br>"
+    subgraph "EIP-7702 Delegation Process"
         EOA["EOA Address"]
         
         subgraph "Implementation Contract"

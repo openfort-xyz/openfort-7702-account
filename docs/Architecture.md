@@ -89,7 +89,7 @@ flowchart TD
     
     subgraph "Core Smart Contracts"
         BaseOPF7702["BaseOPF7702.sol<br/>Abstract base account"]
-        KeysManager["KeysManager.sol<br/>Session key management"]
+        KeysManager["KeysManager.sol<br/>Key management"]
         Execution["Execution.sol<br/>Transaction execution"]
         OPF7702["OPF7702.sol<br/>Main account implementation"]
         OPFRecoverable["OPF7702Recoverable.sol<br/>Social recovery extension"]
@@ -97,7 +97,6 @@ flowchart TD
     
     subgraph "Verification System"
         WebAuthnVerifier["WebAuthnVerifier.sol<br/>P-256 signature validation"]
-        WebAuthnVerifierV2["WebAuthnVerifierV2.sol<br/>Enhanced verification"]
     end
     
     subgraph "ERC-4337 Infrastructure"
@@ -109,13 +108,12 @@ flowchart TD
     %% Connections
     EOAKeys --> BaseOPF7702
     WebAuthnKeys --> WebAuthnVerifier
-    P256Keys --> WebAuthnVerifierV2
+    P256Keys --> WebAuthnVerifier
     
     BaseOPF7702 --> OPF7702
     KeysManager --> OPF7702
     Execution --> OPF7702
     WebAuthnVerifier --> OPF7702
-    WebAuthnVerifierV2 --> OPF7702
     
     OPF7702 --> OPFRecoverable
     OPF7702 --> EntryPoint
@@ -130,7 +128,7 @@ The system consists of several interconnected smart contracts, each handling spe
 | **Contract** | **Purpose** | **Key Functions** |
 |--------------|-------------|-------------------|
 | `BaseOPF7702` | Abstract base providing ERC-4337 IAccount interface and signature validation | `validateUserOp()`, `_validateSignature()` |
-| `KeysManager` | Session key registration, validation, and permission enforcement | `registerSessionKey()`, `isValidKey()`, `revokeKey()` |
+| `KeysManager` | Key registration, validation, and permission enforcement | `registerSessionKey()`, `isValidKey()`, `revokeKey()` |
 | `Execution` | Stateless transaction execution with batch support | `execute()`, `executeBatch()` |
 | `OPF7702` | Main account implementation combining execution and key management | `initialize()`, `registerKey()` |
 | `OPF7702Recoverable` | Social recovery extension with guardian management | `proposeGuardian()`, `executeRecovery()` |
@@ -326,10 +324,11 @@ flowchart TD
         KeysSlot["Keys Mapping<br/>BaseSlot + 2<br/>mapping(bytes32 => KeyData)"]
         ChallengesSlot["Used Challenges<br/>BaseSlot + 3<br/>mapping(bytes32 => bool)"]
         StatusSlot["Status Slot<br/>BaseSlot + 4<br/>uint256 _status"]
-        NameSlot["Name Fallback<br/>BaseSlot + 5<br/>string _nameFallback"]
-        VersionSlot["Version Fallback<br/>BaseSlot + 6<br/>string _versionFallback"]
-        RecoverySlot["Recovery Data<br/>BaseSlot + 7<br/>RecoveryData (128 bytes)"]
-        GuardianSlot["Guardian Data<br/>BaseSlot + 11<br/>GuardiansData (96 bytes)"]
+        InitializedSlot["Initialized Fields<br/>BaseSlot + 5<br/>uint64 _initialized + bool _initializing"]
+        NameSlot["Name Fallback<br/>BaseSlot + 6<br/>string _nameFallback"]
+        VersionSlot["Version Fallback<br/>BaseSlot + 7<br/>string _versionFallback"]
+        RecoverySlot["Recovery Data<br/>BaseSlot + 8<br/>RecoveryData (128 bytes)"]
+        GuardianSlot["Guardian Data<br/>BaseSlot + 12<br/>GuardiansData (96 bytes)"]
     end
     
     subgraph "Key Types Enum"
@@ -380,6 +379,7 @@ flowchart LR
     subgraph "Session Key Registration"
         RegisterKey["registerSessionKey()<br/>KeysManager.sol"]
         ValidateParams["Parameter Validation<br/>Time limits, spending caps"]
+        GasPolicy["Set gas config"]
         StoreKey["Store in mapping<br/>sessionKeys[keyHash]"]
     end
     
@@ -395,7 +395,8 @@ flowchart LR
 
     %% Flow connections
     RegisterKey --> ValidateParams
-    ValidateParams --> StoreKey
+    ValidateParams --> GasPolicy
+    GasPolicy --> StoreKey
     StoreKey --> SessionKeyStruct
     SessionKeyStruct --> ValidateKey
     ValidateKey --> CheckSpending
