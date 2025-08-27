@@ -31,7 +31,7 @@ flowchart LR
         subgraph "Storage Layout"
             BaseSlot["Base Storage Slot<br/>keccak256(abi.encode(uint256(keccak256('openfort.baseAccount.7702.v1')) - 1)) & ~bytes32(uint256(0xff))"]
             AccountData["AccountData7702<br/>• owner: Key<br/>• nonce: uint256"]
-            SessionKeys["Session Keys Mapping<br/>keyHash => KeyData"]
+            SessionKeys["Keys Mapping<br/>keyHash => KeyData"]
         end
     end
 
@@ -51,7 +51,7 @@ The system implements the IAccount interface from ERC-4337 to enable UserOperati
 flowchart LR
     subgraph "ERC-4337 Flow"
         Bundler["Bundler/Relayer"]
-        EntryPoint["EntryPoint Contract<br/>0x0000000071727De22E5E9d8BAf0edAc6f37da032"]
+        EntryPoint["EntryPoint Contract<br/>0x4337084D9E255Ff0702461CF8895CE9E3b5Ff108"]
         
         subgraph "BaseOPF7702 Validation"
             ValidateUserOp["validateUserOp()<br/>IAccount interface"]
@@ -61,7 +61,7 @@ flowchart LR
         
         subgraph "Signature Handlers"
             EOAValidator["_validateEOASignature()<br/>ECDSA recovery"]
-            WebAuthnValidator["_validateWebAuthnSignature()<br/>P-256 verification"]
+            WebAuthnValidator["_validateWebAuthnSignature()<br/>_validateKeyTypeP256()<br/>WebAuthn/P-256 verification"]
             SessionKeyValidator["Session Key Validation<br/>Permissions + signature"]
         end
     end
@@ -81,7 +81,6 @@ The BaseOPF7702 contract implements the required ERC-4337 interface methods:
 | Method | Implementation Location | Purpose |
 |--------|-------------------------|---------|
 | validateUserOp() | BaseOPF7702 | Validates UserOperation signatures and permissions |
-| getNonce() | BaseOPF7702 | Returns current nonce for replay protection |
 | Signature validation | BaseOPF7702._validateSignature() | Routes to appropriate signature handler |
 
 ## Signature Validation Architecture
@@ -96,7 +95,7 @@ flowchart TD
         
         subgraph "Validation Handlers"
             EOAPath["_validateEOASignature()<br/>• ECDSA recover<br/>• Compare with owner"]
-            WebAuthnPath["_validateWebAuthnSignature()<br/>• WebAuthnVerifier call<br/>• P-256 validation"]
+            WebAuthnPath["_validateWebAuthnSignature()<br/>_validateKeyTypeP256()<br/>• WebAuthnVerifier call<br/>• P-256 validation"]
             SessionPath["Session Key Validation<br/>• Permission checks<br/>• Signature verification<br/>• Gas Policy"]
         end
         
@@ -123,7 +122,6 @@ The system seamlessly integrates both standards to provide zero-deployment accou
 | Storage | Deterministic slots across addresses | State persistence for UserOps | Fixed slot calculation |
 | Validation | Code delegation verification | UserOperation signature validation | Unified signature routing |
 | Execution | Direct EOA transactions | Bundled UserOperations | Same execution engine |
-| Nonce Management | Replay protection | UserOp ordering | Shared nonce counter |
 
 ### Execution Contexts
 The implementation handles both direct EOA calls (via EIP-7702 delegation) and bundled UserOperations (via ERC-4337 flow) through the same execution engine.
