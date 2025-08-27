@@ -20,7 +20,7 @@ Delegation Flow
 ```mermaid
 flowchart LR
     subgraph "EIP-7702 Delegation Process"
-        EOA["EOAAddress"]
+        EOA["EOA Address"]
         
         subgraph "Implementation Contract"
             SetCode["SET_CODE_TX<br/>delegates to OPF7702"]
