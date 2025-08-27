@@ -41,7 +41,7 @@ flowchart TD
     end
 
     %% Separate components
-    WebAuthnVerifier["WebAuthnVerifierV2.sol<br/>• verifySignature()<br/>• verifyP256Signature()"]
+    WebAuthnVerifier["WebAuthnVerifier.sol<br/>• verifySignature()<br/>• verifyP256Signature()"]
     GasPolicy["GasPolicy.sol<br/>• checkUserOpPolicy()"]
 
     %% Flow connections
