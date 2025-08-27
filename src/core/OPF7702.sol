@@ -29,7 +29,7 @@ import {
     SIG_VALIDATION_SUCCESS,
     _packValidationData
 } from "lib/account-abstraction/contracts/core/Helpers.sol";
-import {Initializable} from "lib/openzeppelin-contracts/contracts/proxy/utils/Initializable.sol";
+import {Initializable} from "src/libs/Initializable.sol";
 
 /**
  * @title   Openfort Base Account 7702 with ERC-4337 Support
