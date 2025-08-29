@@ -68,7 +68,7 @@ contract OPF7702RecoverableTest is BaseContract {
     function test_confirmGuardianPendingProposalNotOver() public {
         _proposeGuardian(sender);
         proposalTimestamp = block.timestamp;
-        _wrap(proposalTimestamp+ 1);
+        _wrap(proposalTimestamp + 1);
 
         _etch();
 
@@ -103,6 +103,24 @@ contract OPF7702RecoverableTest is BaseContract {
         account.confirmGuardianProposal(keccak256(abi.encodePacked(sender)));
     }
 
+    function test_confirmGuardianProposal_reverts_DuplicatedGuardian_when_revoke_pending() public {
+        _proposeGuardian(sender);
+        proposalTimestamp = block.timestamp;
+        _wrap(proposalTimestamp + SECURITY_PERIOD + 1);
+        _confirmGuardianProposal(sender);
+
+        proposalTimestamp = block.timestamp;
+        _etch();
+        _revoke(sender);
+
+        _wrap(proposalTimestamp + SECURITY_PERIOD);
+
+        _etch();
+        vm.expectRevert(OPF7702Recoverable__DuplicatedGuardian.selector);
+        vm.prank(owner);
+        account.confirmGuardianProposal(keccak256(abi.encodePacked(sender)));
+    }
+
     function test_cancelGuardianProposalDuplicatedGuardian() public {
         _proposeGuardian(sender);
         proposalTimestamp = block.timestamp;
@@ -112,6 +130,21 @@ contract OPF7702RecoverableTest is BaseContract {
         _etch();
 
         vm.expectRevert(OPF7702Recoverable__UnknownProposal.selector);
+        vm.prank(owner);
+        account.cancelGuardianProposal(keccak256(abi.encodePacked(sender)));
+    }
+
+    function test_cancelGuardianProposal_reverts_DuplicatedGuardian_when_revoke_pending() public {
+        _proposeGuardian(sender);
+        proposalTimestamp = block.timestamp;
+        _wrap(proposalTimestamp + SECURITY_PERIOD + 1);
+        _confirmGuardianProposal(sender);
+
+        _etch();
+        _revoke(sender);
+
+        _etch();
+        vm.expectRevert(OPF7702Recoverable__DuplicatedGuardian.selector);
         vm.prank(owner);
         account.cancelGuardianProposal(keccak256(abi.encodePacked(sender)));
     }
@@ -162,7 +195,7 @@ contract OPF7702RecoverableTest is BaseContract {
 
         proposalTimestamp = block.timestamp;
         _wrap(proposalTimestamp + 30 days);
-        
+
         _etch();
         vm.expectRevert(OPF7702Recoverable__PendingRevokeExpired.selector);
         vm.prank(owner);
@@ -268,7 +301,7 @@ contract OPF7702RecoverableTest is BaseContract {
         _startRecovery();
 
         _etch();
-        
+
         proposalTimestamp = block.timestamp;
         _wrap(proposalTimestamp + RECOVERY_PERIOD + 1);
 
@@ -290,7 +323,7 @@ contract OPF7702RecoverableTest is BaseContract {
 
         _signatures.push(abi.encodePacked(r, s, v));
         _etch();
-        
+
         proposalTimestamp = block.timestamp;
         _wrap(proposalTimestamp + RECOVERY_PERIOD + 1);
 
@@ -332,13 +365,35 @@ contract OPF7702RecoverableTest is BaseContract {
         _signatures.push(abi.encodePacked(r, s, v));
 
         _etch();
-        
+
         proposalTimestamp = block.timestamp;
         _wrap(proposalTimestamp + RECOVERY_PERIOD + 1);
 
         vm.expectRevert(KeyManager__KeyRegistered.selector);
         vm.prank(sender);
         account.completeRecovery(_signatures);
+    }
+
+    function test_requireRecoveryRevertsNoOngoingRecovery() public {
+        _etch();
+
+        vm.expectRevert(OPF7702Recoverable__NoOngoingRecovery.selector);
+        vm.prank(owner);
+        account.cancelRecovery();
+    }
+
+    function test_requireRecoveryOngoingRecoveryConfirmGuardianProposal() public {
+        _proposeGuardian(sender);
+        proposalTimestamp = block.timestamp;
+        _wrap(proposalTimestamp + SECURITY_PERIOD + 1);
+        _confirmGuardianProposal(sender);
+
+        _startRecovery();
+
+        _etch();
+        vm.expectRevert(OPF7702Recoverable__OngoingRecovery.selector);
+        vm.prank(owner);
+        account.confirmGuardianProposal(keccak256(abi.encodePacked(sender)));
     }
 
     function test_getGuardians() public view {
@@ -383,12 +438,11 @@ contract OPF7702RecoverableTest is BaseContract {
         vm.warp(_time);
     }
 
-    function _getKey(bytes32 _x, bytes32 _y, address  _eoa, KeyType keyType) internal pure returns (Key memory recoveryKey) {
-        recoveryKey = Key({
-            pubKey: PubKey({x: _x, y: _y}),
-            eoaAddress:_eoa ,
-            keyType: keyType
-        });
+    function _getKey(bytes32 _x, bytes32 _y, address _eoa, KeyType keyType)
+        internal
+        pure
+        returns (Key memory recoveryKey)
+    {
+        recoveryKey = Key({pubKey: PubKey({x: _x, y: _y}), eoaAddress: _eoa, keyType: keyType});
     }
 }
-

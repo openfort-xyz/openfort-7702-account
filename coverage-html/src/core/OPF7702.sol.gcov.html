@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2025-08-29 18:09:04</td>
+            <td class="headerValue">2025-08-29 18:57:14</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -117,11 +117,11 @@
 <span id="L55"><span class="lineNum">      55</span>              :     /// @notice Address of this implementation contract</span>
 <span id="L56"><span class="lineNum">      56</span>              :     address public immutable _OPENFORT_CONTRACT_ADDRESS;</span>
 <span id="L57"><span class="lineNum">      57</span>              : </span>
-<span id="L58"><span class="lineNum">      58</span> <span class="tlaGNC">         151 :     constructor(address _entryPoint, address _webAuthnVerifier, address _gasPolicy) {</span></span>
-<span id="L59"><span class="lineNum">      59</span> <span class="tlaGNC">         151 :         ENTRY_POINT = _entryPoint;</span></span>
-<span id="L60"><span class="lineNum">      60</span> <span class="tlaGNC">         151 :         WEBAUTHN_VERIFIER = _webAuthnVerifier;</span></span>
-<span id="L61"><span class="lineNum">      61</span> <span class="tlaGNC">         151 :         GAS_POLICY = _gasPolicy;</span></span>
-<span id="L62"><span class="lineNum">      62</span> <span class="tlaGNC">         151 :         _OPENFORT_CONTRACT_ADDRESS = address(this);</span></span>
+<span id="L58"><span class="lineNum">      58</span> <span class="tlaGNC">         155 :     constructor(address _entryPoint, address _webAuthnVerifier, address _gasPolicy) {</span></span>
+<span id="L59"><span class="lineNum">      59</span> <span class="tlaGNC">         155 :         ENTRY_POINT = _entryPoint;</span></span>
+<span id="L60"><span class="lineNum">      60</span> <span class="tlaGNC">         155 :         WEBAUTHN_VERIFIER = _webAuthnVerifier;</span></span>
+<span id="L61"><span class="lineNum">      61</span> <span class="tlaGNC">         155 :         GAS_POLICY = _gasPolicy;</span></span>
+<span id="L62"><span class="lineNum">      62</span> <span class="tlaGNC">         155 :         _OPENFORT_CONTRACT_ADDRESS = address(this);</span></span>
 <span id="L63"><span class="lineNum">      63</span> <span class="tlaUNC">           0 :         _disableInitializers();</span></span>
 <span id="L64"><span class="lineNum">      64</span>              :     }</span>
 <span id="L65"><span class="lineNum">      65</span>              : </span>
@@ -640,8 +640,8 @@
 <span id="L578"><span class="lineNum">     578</span>              :      * @param signature  The signature bytes (v,r,s) or 64-byte compact.</span>
 <span id="L579"><span class="lineNum">     579</span>              :      * @return True if recovered == this contract, false otherwise.</span>
 <span id="L580"><span class="lineNum">     580</span>              :      */</span>
-<span id="L581"><span class="lineNum">     581</span> <span class="tlaGNC">         148 :     function _checkSignature(bytes32 hash, bytes memory signature) internal view returns (bool) {</span></span>
-<span id="L582"><span class="lineNum">     582</span> <span class="tlaGNC">         148 :         return ECDSA.recover(hash, signature) == address(this);</span></span>
+<span id="L581"><span class="lineNum">     581</span> <span class="tlaGNC">         152 :     function _checkSignature(bytes32 hash, bytes memory signature) internal view returns (bool) {</span></span>
+<span id="L582"><span class="lineNum">     582</span> <span class="tlaGNC">         152 :         return ECDSA.recover(hash, signature) == address(this);</span></span>
 <span id="L583"><span class="lineNum">     583</span>              :     }</span>
 <span id="L584"><span class="lineNum">     584</span>              : }</span>
         </pre>

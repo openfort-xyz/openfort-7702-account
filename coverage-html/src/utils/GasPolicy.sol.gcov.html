@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2025-08-29 18:09:04</td>
+            <td class="headerValue">2025-08-29 18:57:14</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryLo">66.7&nbsp;%</td>
@@ -131,7 +131,7 @@
 <span id="L69"><span class="lineNum">      69</span>              :      * @param _defaultPO  Default postOp gas leg.</span>
 <span id="L70"><span class="lineNum">      70</span>              :      * @dev Reverts if any default leg is zero to avoid nonsensical auto-init computations.</span>
 <span id="L71"><span class="lineNum">      71</span>              :      */</span>
-<span id="L72"><span class="lineNum">      72</span> <span class="tlaGNC">         169 :     constructor(</span></span>
+<span id="L72"><span class="lineNum">      72</span> <span class="tlaGNC">         173 :     constructor(</span></span>
 <span id="L73"><span class="lineNum">      73</span>              :         uint256 _defaultPVG,</span>
 <span id="L74"><span class="lineNum">      74</span>              :         uint256 _defaultVGL,</span>
 <span id="L75"><span class="lineNum">      75</span>              :         uint256 _defaultCGL,</span>
@@ -139,16 +139,16 @@
 <span id="L77"><span class="lineNum">      77</span>              :         uint256 _defaultPO</span>
 <span id="L78"><span class="lineNum">      78</span>              :     ) {</span>
 <span id="L79"><span class="lineNum">      79</span>              :         if (</span>
-<span id="L80"><span class="lineNum">      80</span> <span class="tlaGNC">         169 :             _defaultPVG == 0 || _defaultVGL == 0 || _defaultCGL == 0 || _defaultPMV == 0</span></span>
-<span id="L81"><span class="lineNum">      81</span> <span class="tlaGNC">         169 :                 || _defaultPO == 0</span></span>
+<span id="L80"><span class="lineNum">      80</span> <span class="tlaGNC">         173 :             _defaultPVG == 0 || _defaultVGL == 0 || _defaultCGL == 0 || _defaultPMV == 0</span></span>
+<span id="L81"><span class="lineNum">      81</span> <span class="tlaGNC">         173 :                 || _defaultPO == 0</span></span>
 <span id="L82"><span class="lineNum">      82</span> <span class="tlaUNC">           0 :         ) {</span></span>
 <span id="L83"><span class="lineNum">      83</span> <span class="tlaUNC">           0 :             revert GasPolicy__InitializationIncorrect();</span></span>
 <span id="L84"><span class="lineNum">      84</span>              :         }</span>
-<span id="L85"><span class="lineNum">      85</span> <span class="tlaGNC">         169 :         DEFAULT_PVG = _defaultPVG;</span></span>
-<span id="L86"><span class="lineNum">      86</span> <span class="tlaGNC">         169 :         DEFAULT_VGL = _defaultVGL;</span></span>
-<span id="L87"><span class="lineNum">      87</span> <span class="tlaGNC">         169 :         DEFAULT_CGL = _defaultCGL;</span></span>
-<span id="L88"><span class="lineNum">      88</span> <span class="tlaGNC">         169 :         DEFAULT_PMV = _defaultPMV;</span></span>
-<span id="L89"><span class="lineNum">      89</span> <span class="tlaGNC">         169 :         DEFAULT_PO = _defaultPO;</span></span>
+<span id="L85"><span class="lineNum">      85</span> <span class="tlaGNC">         173 :         DEFAULT_PVG = _defaultPVG;</span></span>
+<span id="L86"><span class="lineNum">      86</span> <span class="tlaGNC">         173 :         DEFAULT_VGL = _defaultVGL;</span></span>
+<span id="L87"><span class="lineNum">      87</span> <span class="tlaGNC">         173 :         DEFAULT_CGL = _defaultCGL;</span></span>
+<span id="L88"><span class="lineNum">      88</span> <span class="tlaGNC">         173 :         DEFAULT_PMV = _defaultPMV;</span></span>
+<span id="L89"><span class="lineNum">      89</span> <span class="tlaGNC">         173 :         DEFAULT_PO = _defaultPO;</span></span>
 <span id="L90"><span class="lineNum">      90</span>              :     }</span>
 <span id="L91"><span class="lineNum">      91</span>              : </span>
 <span id="L92"><span class="lineNum">      92</span>              :     // ---------------------- POLICY CHECK ----------------------</span>
@@ -165,62 +165,62 @@
 <span id="L103"><span class="lineNum">     103</span>              :      * - Paymaster note: Only considered when `paymasterAndData.length &gt;= PAYMASTER_DATA_OFFSET`.</span>
 <span id="L104"><span class="lineNum">     104</span>              :      *   If `0 &lt; length &lt; OFFSET`, it is effectively ignored in this implementation.</span>
 <span id="L105"><span class="lineNum">     105</span>              :      */</span>
-<span id="L106"><span class="lineNum">     106</span> <span class="tlaGNC">         921 :     function checkUserOpPolicy(bytes32 id, PackedUserOperation calldata userOp)</span></span>
+<span id="L106"><span class="lineNum">     106</span> <span class="tlaGNC">         936 :     function checkUserOpPolicy(bytes32 id, PackedUserOperation calldata userOp)</span></span>
 <span id="L107"><span class="lineNum">     107</span>              :         external</span>
 <span id="L108"><span class="lineNum">     108</span>              :         returns (uint256)</span>
 <span id="L109"><span class="lineNum">     109</span>              :     {</span>
 <span id="L110"><span class="lineNum">     110</span>              :         /// @dev Only the account itself may mutate its budgets</span>
-<span id="L111"><span class="lineNum">     111</span> <span class="tlaGNC">         921 :         if (msg.sender != userOp.sender) return VALIDATION_FAILED;</span></span>
-<span id="L112"><span class="lineNum">     112</span> <span class="tlaGNC">         920 :         GasLimitConfig storage cfg = gasLimitConfigs[id][userOp.sender];</span></span>
-<span id="L113"><span class="lineNum">     113</span> <span class="tlaGNC">         920 :         if (!cfg.initialized) return VALIDATION_FAILED;</span></span>
+<span id="L111"><span class="lineNum">     111</span> <span class="tlaGNC">         936 :         if (msg.sender != userOp.sender) return VALIDATION_FAILED;</span></span>
+<span id="L112"><span class="lineNum">     112</span> <span class="tlaGNC">         935 :         GasLimitConfig storage cfg = gasLimitConfigs[id][userOp.sender];</span></span>
+<span id="L113"><span class="lineNum">     113</span> <span class="tlaGNC">         935 :         if (!cfg.initialized) return VALIDATION_FAILED;</span></span>
 <span id="L114"><span class="lineNum">     114</span>              : </span>
 <span id="L115"><span class="lineNum">     115</span>              :         /// @dev Unpack gas envelope</span>
-<span id="L116"><span class="lineNum">     116</span> <span class="tlaGNC">         919 :         uint256 envelopeUnits = 0;</span></span>
+<span id="L116"><span class="lineNum">     116</span> <span class="tlaGNC">         934 :         uint256 envelopeUnits = 0;</span></span>
 <span id="L117"><span class="lineNum">     117</span>              : </span>
-<span id="L118"><span class="lineNum">     118</span> <span class="tlaGNC">         919 :         envelopeUnits += userOp.preVerificationGas;</span></span>
-<span id="L119"><span class="lineNum">     119</span> <span class="tlaGNC">         919 :         envelopeUnits += UserOperationLib.unpackVerificationGasLimit(userOp);</span></span>
-<span id="L120"><span class="lineNum">     120</span> <span class="tlaGNC">         919 :         uint256 cgl = UserOperationLib.unpackCallGasLimit(userOp);</span></span>
+<span id="L118"><span class="lineNum">     118</span> <span class="tlaGNC">         934 :         envelopeUnits += userOp.preVerificationGas;</span></span>
+<span id="L119"><span class="lineNum">     119</span> <span class="tlaGNC">         934 :         envelopeUnits += UserOperationLib.unpackVerificationGasLimit(userOp);</span></span>
+<span id="L120"><span class="lineNum">     120</span> <span class="tlaGNC">         934 :         uint256 cgl = UserOperationLib.unpackCallGasLimit(userOp);</span></span>
 <span id="L121"><span class="lineNum">     121</span>              : </span>
-<span id="L122"><span class="lineNum">     122</span> <span class="tlaGNC">         919 :         uint256 postOp = 0;</span></span>
-<span id="L123"><span class="lineNum">     123</span> <span class="tlaGNC">         919 :         if (userOp.paymasterAndData.length &gt;= UserOperationLib.PAYMASTER_DATA_OFFSET) {</span></span>
+<span id="L122"><span class="lineNum">     122</span> <span class="tlaGNC">         934 :         uint256 postOp = 0;</span></span>
+<span id="L123"><span class="lineNum">     123</span> <span class="tlaGNC">         934 :         if (userOp.paymasterAndData.length &gt;= UserOperationLib.PAYMASTER_DATA_OFFSET) {</span></span>
 <span id="L124"><span class="lineNum">     124</span> <span class="tlaGNC">           4 :             envelopeUnits += UserOperationLib.unpackPaymasterVerificationGasLimit(userOp);</span></span>
 <span id="L125"><span class="lineNum">     125</span> <span class="tlaGNC">           4 :             postOp = UserOperationLib.unpackPostOpGasLimit(userOp);</span></span>
 <span id="L126"><span class="lineNum">     126</span>              :         }</span>
 <span id="L127"><span class="lineNum">     127</span>              : </span>
-<span id="L128"><span class="lineNum">     128</span> <span class="tlaGNC">         919 :         envelopeUnits += cgl + postOp;</span></span>
+<span id="L128"><span class="lineNum">     128</span> <span class="tlaGNC">         934 :         envelopeUnits += cgl + postOp;</span></span>
 <span id="L129"><span class="lineNum">     129</span>              : </span>
 <span id="L130"><span class="lineNum">     130</span>              :         /// @dev Worst-case WEI (v0.8 semantics)</span>
-<span id="L131"><span class="lineNum">     131</span> <span class="tlaGNC">         919 :         uint256 price = userOp.gasPrice(); // min(maxFeePerGas, basefee + maxPriority)</span></span>
+<span id="L131"><span class="lineNum">     131</span> <span class="tlaGNC">         934 :         uint256 price = userOp.gasPrice(); // min(maxFeePerGas, basefee + maxPriority)</span></span>
 <span id="L132"><span class="lineNum">     132</span>              : </span>
-<span id="L133"><span class="lineNum">     133</span> <span class="tlaGNC">         919 :         uint256 worstCaseWei = 0;</span></span>
-<span id="L134"><span class="lineNum">     134</span> <span class="tlaGNC">         919 :         if (price != 0) {</span></span>
+<span id="L133"><span class="lineNum">     133</span> <span class="tlaGNC">         934 :         uint256 worstCaseWei = 0;</span></span>
+<span id="L134"><span class="lineNum">     134</span> <span class="tlaGNC">         934 :         if (price != 0) {</span></span>
 <span id="L135"><span class="lineNum">     135</span>              :             /// @dev envelopeUnits * price</span>
-<span id="L136"><span class="lineNum">     136</span> <span class="tlaGNC">         913 :             if (envelopeUnits &gt; type(uint256).max / price) return VALIDATION_FAILED;</span></span>
-<span id="L137"><span class="lineNum">     137</span> <span class="tlaGNC">         913 :             worstCaseWei = envelopeUnits * price;</span></span>
+<span id="L136"><span class="lineNum">     136</span> <span class="tlaGNC">         928 :             if (envelopeUnits &gt; type(uint256).max / price) return VALIDATION_FAILED;</span></span>
+<span id="L137"><span class="lineNum">     137</span> <span class="tlaGNC">         928 :             worstCaseWei = envelopeUnits * price;</span></span>
 <span id="L138"><span class="lineNum">     138</span>              :         }</span>
 <span id="L139"><span class="lineNum">     139</span>              : </span>
 <span id="L140"><span class="lineNum">     140</span>              :         /// @dev Guards</span>
-<span id="L141"><span class="lineNum">     141</span> <span class="tlaGNC">         919 :         if (cfg.gasLimit &gt; 0 &amp;&amp; cfg.gasUsed + envelopeUnits &gt; cfg.gasLimit) {</span></span>
-<span id="L142"><span class="lineNum">     142</span> <span class="tlaGNC">         159 :             return VALIDATION_FAILED;</span></span>
+<span id="L141"><span class="lineNum">     141</span> <span class="tlaGNC">         934 :         if (cfg.gasLimit &gt; 0 &amp;&amp; cfg.gasUsed + envelopeUnits &gt; cfg.gasLimit) {</span></span>
+<span id="L142"><span class="lineNum">     142</span> <span class="tlaGNC">         161 :             return VALIDATION_FAILED;</span></span>
 <span id="L143"><span class="lineNum">     143</span>              :         }</span>
-<span id="L144"><span class="lineNum">     144</span> <span class="tlaGNC">         760 :         if (cfg.costLimit &gt; 0 &amp;&amp; cfg.costUsed + worstCaseWei &gt; cfg.costLimit) {</span></span>
+<span id="L144"><span class="lineNum">     144</span> <span class="tlaGNC">         773 :         if (cfg.costLimit &gt; 0 &amp;&amp; cfg.costUsed + worstCaseWei &gt; cfg.costLimit) {</span></span>
 <span id="L145"><span class="lineNum">     145</span> <span class="tlaGNC">           6 :             return VALIDATION_FAILED;</span></span>
 <span id="L146"><span class="lineNum">     146</span>              :         }</span>
-<span id="L147"><span class="lineNum">     147</span> <span class="tlaGNC">         754 :         if (cfg.perOpMaxCostWei &gt; 0 &amp;&amp; worstCaseWei &gt; cfg.perOpMaxCostWei) return VALIDATION_FAILED;</span></span>
-<span id="L148"><span class="lineNum">     148</span> <span class="tlaGNC">         753 :         if (cfg.txLimit &gt; 0 &amp;&amp; cfg.txUsed + 1 &gt; cfg.txLimit) return VALIDATION_FAILED;</span></span>
+<span id="L147"><span class="lineNum">     147</span> <span class="tlaGNC">         767 :         if (cfg.perOpMaxCostWei &gt; 0 &amp;&amp; worstCaseWei &gt; cfg.perOpMaxCostWei) return VALIDATION_FAILED;</span></span>
+<span id="L148"><span class="lineNum">     148</span> <span class="tlaGNC">         766 :         if (cfg.txLimit &gt; 0 &amp;&amp; cfg.txUsed + 1 &gt; cfg.txLimit) return VALIDATION_FAILED;</span></span>
 <span id="L149"><span class="lineNum">     149</span>              : </span>
-<span id="L150"><span class="lineNum">     150</span> <span class="tlaGNC">         751 :         if (envelopeUnits &gt; type(uint128).max || worstCaseWei &gt; type(uint128).max) {</span></span>
+<span id="L150"><span class="lineNum">     150</span> <span class="tlaGNC">         764 :         if (envelopeUnits &gt; type(uint128).max || worstCaseWei &gt; type(uint128).max) {</span></span>
 <span id="L151"><span class="lineNum">     151</span> <span class="tlaUNC">           0 :             return VALIDATION_FAILED;</span></span>
 <span id="L152"><span class="lineNum">     152</span>              :         }</span>
 <span id="L153"><span class="lineNum">     153</span>              : </span>
 <span id="L154"><span class="lineNum">     154</span>              :         /// @dev Account usage (optimistic)</span>
 <span id="L155"><span class="lineNum">     155</span>              :         unchecked {</span>
-<span id="L156"><span class="lineNum">     156</span> <span class="tlaGNC">         751 :             cfg.gasUsed += uint128(envelopeUnits);</span></span>
-<span id="L157"><span class="lineNum">     157</span> <span class="tlaGNC">         751 :             cfg.costUsed += uint128(worstCaseWei);</span></span>
-<span id="L158"><span class="lineNum">     158</span> <span class="tlaGNC">         751 :             cfg.txUsed += 1;</span></span>
+<span id="L156"><span class="lineNum">     156</span> <span class="tlaGNC">         764 :             cfg.gasUsed += uint128(envelopeUnits);</span></span>
+<span id="L157"><span class="lineNum">     157</span> <span class="tlaGNC">         764 :             cfg.costUsed += uint128(worstCaseWei);</span></span>
+<span id="L158"><span class="lineNum">     158</span> <span class="tlaGNC">         764 :             cfg.txUsed += 1;</span></span>
 <span id="L159"><span class="lineNum">     159</span>              :         }</span>
 <span id="L160"><span class="lineNum">     160</span>              : </span>
-<span id="L161"><span class="lineNum">     161</span> <span class="tlaGNC">         751 :         emit GasPolicyAccounted(</span></span>
+<span id="L161"><span class="lineNum">     161</span> <span class="tlaGNC">         764 :         emit GasPolicyAccounted(</span></span>
 <span id="L162"><span class="lineNum">     162</span>              :             id,</span>
 <span id="L163"><span class="lineNum">     163</span>              :             userOp.sender,</span>
 <span id="L164"><span class="lineNum">     164</span>              :             envelopeUnits,</span>
@@ -231,7 +231,7 @@
 <span id="L169"><span class="lineNum">     169</span>              :             cfg.txUsed</span>
 <span id="L170"><span class="lineNum">     170</span>              :         );</span>
 <span id="L171"><span class="lineNum">     171</span>              : </span>
-<span id="L172"><span class="lineNum">     172</span> <span class="tlaGNC">         751 :         return VALIDATION_SUCCESS;</span></span>
+<span id="L172"><span class="lineNum">     172</span> <span class="tlaGNC">         764 :         return VALIDATION_SUCCESS;</span></span>
 <span id="L173"><span class="lineNum">     173</span>              :     }</span>
 <span id="L174"><span class="lineNum">     174</span>              : </span>
 <span id="L175"><span class="lineNum">     175</span>              :     // ---------------------- INITIALIZATION (MANUAL) ----------------------</span>
@@ -271,38 +271,38 @@
 <span id="L209"><span class="lineNum">     209</span>              :      *   adds `PRICE_SAFETY_BPS` headroom.</span>
 <span id="L210"><span class="lineNum">     210</span>              :      * - Keeps an `unchecked` block by design; multiplications are guarded by subsequent checks.</span>
 <span id="L211"><span class="lineNum">     211</span>              :      */</span>
-<span id="L212"><span class="lineNum">     212</span> <span class="tlaGNC">        1311 :     function initializeGasPolicy(address account, bytes32 configId, uint256 limit) external {</span></span>
-<span id="L213"><span class="lineNum">     213</span> <span class="tlaGNC">        1311 :         require(account == msg.sender, GasPolicy__AccountMustBeSender());</span></span>
-<span id="L214"><span class="lineNum">     214</span> <span class="tlaGNC">        1311 :         GasLimitConfig storage cfg = gasLimitConfigs[configId][account];</span></span>
+<span id="L212"><span class="lineNum">     212</span> <span class="tlaGNC">        1315 :     function initializeGasPolicy(address account, bytes32 configId, uint256 limit) external {</span></span>
+<span id="L213"><span class="lineNum">     213</span> <span class="tlaGNC">        1315 :         require(account == msg.sender, GasPolicy__AccountMustBeSender());</span></span>
+<span id="L214"><span class="lineNum">     214</span> <span class="tlaGNC">        1315 :         GasLimitConfig storage cfg = gasLimitConfigs[configId][account];</span></span>
 <span id="L215"><span class="lineNum">     215</span> <span class="tlaUNC">           0 :         if (cfg.initialized) revert GasPolicy__IdExistAlready();</span></span>
-<span id="L216"><span class="lineNum">     216</span> <span class="tlaGNC">        1311 :         require(limit &gt; 0 &amp;&amp; limit &lt;= type(uint32).max, GasPolicy__BadLimit());</span></span>
+<span id="L216"><span class="lineNum">     216</span> <span class="tlaGNC">        1315 :         require(limit &gt; 0 &amp;&amp; limit &lt;= type(uint32).max, GasPolicy__BadLimit());</span></span>
 <span id="L217"><span class="lineNum">     217</span>              : </span>
 <span id="L218"><span class="lineNum">     218</span>              :         /// @dev Envelope units per op with safety (includes PM legs so it also covers sponsored ops)</span>
-<span id="L219"><span class="lineNum">     219</span> <span class="tlaGNC">        1311 :         uint256 rawEnvelope = DEFAULT_PVG + DEFAULT_VGL + DEFAULT_CGL + DEFAULT_PMV + DEFAULT_PO;</span></span>
-<span id="L220"><span class="lineNum">     220</span> <span class="tlaGNC">        1311 :         uint256 perOpEnvelopeUnits =</span></span>
-<span id="L221"><span class="lineNum">     221</span> <span class="tlaGNC">        1311 :             (rawEnvelope * SAFETY_BPS + BPS_CEIL_ROUNDING) / BPS_DENOMINATOR;</span></span>
+<span id="L219"><span class="lineNum">     219</span> <span class="tlaGNC">        1315 :         uint256 rawEnvelope = DEFAULT_PVG + DEFAULT_VGL + DEFAULT_CGL + DEFAULT_PMV + DEFAULT_PO;</span></span>
+<span id="L220"><span class="lineNum">     220</span> <span class="tlaGNC">        1315 :         uint256 perOpEnvelopeUnits =</span></span>
+<span id="L221"><span class="lineNum">     221</span> <span class="tlaGNC">        1315 :             (rawEnvelope * SAFETY_BPS + BPS_CEIL_ROUNDING) / BPS_DENOMINATOR;</span></span>
 <span id="L222"><span class="lineNum">     222</span>              : </span>
 <span id="L223"><span class="lineNum">     223</span>              :         /// @dev Price assumption: basefee + 1 gwei, but at least 2 gwei, then +10% safety</span>
-<span id="L224"><span class="lineNum">     224</span> <span class="tlaGNC">        1311 :         uint256 priceAssumption = block.basefee + DEFAULT_PRIORITY_FEE_WEI;</span></span>
-<span id="L225"><span class="lineNum">     225</span> <span class="tlaGNC">        1311 :         if (priceAssumption &lt; DEFAULT_PRICE_FLOOR_WEI) priceAssumption = DEFAULT_PRICE_FLOOR_WEI;</span></span>
-<span id="L226"><span class="lineNum">     226</span> <span class="tlaGNC">        1311 :         priceAssumption = (priceAssumption * PRICE_SAFETY_BPS + BPS_CEIL_ROUNDING) / BPS_DENOMINATOR;</span></span>
+<span id="L224"><span class="lineNum">     224</span> <span class="tlaGNC">        1315 :         uint256 priceAssumption = block.basefee + DEFAULT_PRIORITY_FEE_WEI;</span></span>
+<span id="L225"><span class="lineNum">     225</span> <span class="tlaGNC">        1315 :         if (priceAssumption &lt; DEFAULT_PRICE_FLOOR_WEI) priceAssumption = DEFAULT_PRICE_FLOOR_WEI;</span></span>
+<span id="L226"><span class="lineNum">     226</span> <span class="tlaGNC">        1315 :         priceAssumption = (priceAssumption * PRICE_SAFETY_BPS + BPS_CEIL_ROUNDING) / BPS_DENOMINATOR;</span></span>
 <span id="L227"><span class="lineNum">     227</span>              : </span>
 <span id="L228"><span class="lineNum">     228</span>              :         /// @dev Per-op max wei (overflow-checked)</span>
 <span id="L229"><span class="lineNum">     229</span>              :         unchecked {</span>
-<span id="L230"><span class="lineNum">     230</span> <span class="tlaGNC">        1311 :             if (priceAssumption != 0 &amp;&amp; perOpEnvelopeUnits &gt; type(uint256).max / priceAssumption) {</span></span>
+<span id="L230"><span class="lineNum">     230</span> <span class="tlaGNC">        1315 :             if (priceAssumption != 0 &amp;&amp; perOpEnvelopeUnits &gt; type(uint256).max / priceAssumption) {</span></span>
 <span id="L231"><span class="lineNum">     231</span> <span class="tlaUNC">           0 :                 revert GasPolicy_PerOpCostOverflow();</span></span>
 <span id="L232"><span class="lineNum">     232</span>              :             }</span>
-<span id="L233"><span class="lineNum">     233</span> <span class="tlaGNC">        1311 :             uint256 perOpMaxCostWei256 = perOpEnvelopeUnits * priceAssumption;</span></span>
-<span id="L234"><span class="lineNum">     234</span> <span class="tlaGNC">        1311 :             require(perOpMaxCostWei256 &lt;= type(uint128).max, GasPolicy_PerOpCostHigh());</span></span>
+<span id="L233"><span class="lineNum">     233</span> <span class="tlaGNC">        1315 :             uint256 perOpMaxCostWei256 = perOpEnvelopeUnits * priceAssumption;</span></span>
+<span id="L234"><span class="lineNum">     234</span> <span class="tlaGNC">        1315 :             require(perOpMaxCostWei256 &lt;= type(uint128).max, GasPolicy_PerOpCostHigh());</span></span>
 <span id="L235"><span class="lineNum">     235</span>              : </span>
 <span id="L236"><span class="lineNum">     236</span>              :             // 5) Cumulative budgets</span>
-<span id="L237"><span class="lineNum">     237</span> <span class="tlaGNC">        1311 :             uint256 gasLimit256 = perOpEnvelopeUnits * limit;</span></span>
-<span id="L238"><span class="lineNum">     238</span> <span class="tlaGNC">        1310 :             uint256 costLimit256 = perOpMaxCostWei256 * limit;</span></span>
+<span id="L237"><span class="lineNum">     237</span> <span class="tlaGNC">        1315 :             uint256 gasLimit256 = perOpEnvelopeUnits * limit;</span></span>
+<span id="L238"><span class="lineNum">     238</span> <span class="tlaGNC">        1314 :             uint256 costLimit256 = perOpMaxCostWei256 * limit;</span></span>
 <span id="L239"><span class="lineNum">     239</span>              : </span>
-<span id="L240"><span class="lineNum">     240</span> <span class="tlaGNC">        1310 :             require(gasLimit256 &lt;= type(uint128).max, GasPolicy_GasLimitHigh());</span></span>
-<span id="L241"><span class="lineNum">     241</span> <span class="tlaGNC">        1310 :             require(costLimit256 &lt;= type(uint128).max, GasPolicy_CostLimitHigh());</span></span>
+<span id="L240"><span class="lineNum">     240</span> <span class="tlaGNC">        1314 :             require(gasLimit256 &lt;= type(uint128).max, GasPolicy_GasLimitHigh());</span></span>
+<span id="L241"><span class="lineNum">     241</span> <span class="tlaGNC">        1314 :             require(costLimit256 &lt;= type(uint128).max, GasPolicy_CostLimitHigh());</span></span>
 <span id="L242"><span class="lineNum">     242</span>              : </span>
-<span id="L243"><span class="lineNum">     243</span> <span class="tlaGNC">        1311 :             _applyAutoConfig(</span></span>
+<span id="L243"><span class="lineNum">     243</span> <span class="tlaGNC">        1315 :             _applyAutoConfig(</span></span>
 <span id="L244"><span class="lineNum">     244</span>              :                 cfg,</span>
 <span id="L245"><span class="lineNum">     245</span>              :                 uint128(gasLimit256),</span>
 <span id="L246"><span class="lineNum">     246</span>              :                 uint128(costLimit256),</span>
@@ -310,7 +310,7 @@
 <span id="L248"><span class="lineNum">     248</span>              :                 uint32(limit)</span>
 <span id="L249"><span class="lineNum">     249</span>              :             );</span>
 <span id="L250"><span class="lineNum">     250</span>              : </span>
-<span id="L251"><span class="lineNum">     251</span> <span class="tlaGNC">        1311 :             emit GasPolicyInitialized(</span></span>
+<span id="L251"><span class="lineNum">     251</span> <span class="tlaGNC">        1315 :             emit GasPolicyInitialized(</span></span>
 <span id="L252"><span class="lineNum">     252</span>              :                 configId,</span>
 <span id="L253"><span class="lineNum">     253</span>              :                 account,</span>
 <span id="L254"><span class="lineNum">     254</span>              :                 cfg.gasLimit,</span>
@@ -345,30 +345,30 @@
 <span id="L283"><span class="lineNum">     283</span>              :      * @param perOpMaxCostWei  Max wei per single operation (0 disables the cap).</span>
 <span id="L284"><span class="lineNum">     284</span>              :      * @param txLimit          Max number of operations (0 means unlimited).</span>
 <span id="L285"><span class="lineNum">     285</span>              :      */</span>
-<span id="L286"><span class="lineNum">     286</span> <span class="tlaGNC">        1310 :     function _applyAutoConfig(</span></span>
+<span id="L286"><span class="lineNum">     286</span> <span class="tlaGNC">        1314 :     function _applyAutoConfig(</span></span>
 <span id="L287"><span class="lineNum">     287</span>              :         GasLimitConfig storage cfg,</span>
 <span id="L288"><span class="lineNum">     288</span>              :         uint128 gasLimit,</span>
 <span id="L289"><span class="lineNum">     289</span>              :         uint128 costLimit,</span>
 <span id="L290"><span class="lineNum">     290</span>              :         uint128 perOpMaxCostWei,</span>
 <span id="L291"><span class="lineNum">     291</span>              :         uint32 txLimit</span>
 <span id="L292"><span class="lineNum">     292</span>              :     ) private {</span>
-<span id="L293"><span class="lineNum">     293</span> <span class="tlaGNC">        1310 :         cfg.gasLimit = gasLimit;</span></span>
-<span id="L294"><span class="lineNum">     294</span> <span class="tlaGNC">        1310 :         cfg.costLimit = costLimit;</span></span>
-<span id="L295"><span class="lineNum">     295</span> <span class="tlaGNC">        1310 :         cfg.perOpMaxCostWei = perOpMaxCostWei;</span></span>
-<span id="L296"><span class="lineNum">     296</span> <span class="tlaGNC">        1310 :         cfg.txLimit = txLimit;</span></span>
+<span id="L293"><span class="lineNum">     293</span> <span class="tlaGNC">        1314 :         cfg.gasLimit = gasLimit;</span></span>
+<span id="L294"><span class="lineNum">     294</span> <span class="tlaGNC">        1314 :         cfg.costLimit = costLimit;</span></span>
+<span id="L295"><span class="lineNum">     295</span> <span class="tlaGNC">        1314 :         cfg.perOpMaxCostWei = perOpMaxCostWei;</span></span>
+<span id="L296"><span class="lineNum">     296</span> <span class="tlaGNC">        1314 :         cfg.txLimit = txLimit;</span></span>
 <span id="L297"><span class="lineNum">     297</span>              : </span>
-<span id="L298"><span class="lineNum">     298</span> <span class="tlaGNC">        1310 :         _resetCountersAndMarkInitialized(cfg);</span></span>
+<span id="L298"><span class="lineNum">     298</span> <span class="tlaGNC">        1314 :         _resetCountersAndMarkInitialized(cfg);</span></span>
 <span id="L299"><span class="lineNum">     299</span>              :     }</span>
 <span id="L300"><span class="lineNum">     300</span>              : </span>
 <span id="L301"><span class="lineNum">     301</span>              :     /**</span>
 <span id="L302"><span class="lineNum">     302</span>              :      * @notice Zero out usage counters and set `initialized = true`.</span>
 <span id="L303"><span class="lineNum">     303</span>              :      * @param cfg Storage pointer to the target config.</span>
 <span id="L304"><span class="lineNum">     304</span>              :      */</span>
-<span id="L305"><span class="lineNum">     305</span> <span class="tlaGNC">        1310 :     function _resetCountersAndMarkInitialized(GasLimitConfig storage cfg) private {</span></span>
-<span id="L306"><span class="lineNum">     306</span> <span class="tlaGNC">        1310 :         cfg.gasUsed = 0;</span></span>
-<span id="L307"><span class="lineNum">     307</span> <span class="tlaGNC">        1310 :         cfg.costUsed = 0;</span></span>
-<span id="L308"><span class="lineNum">     308</span> <span class="tlaGNC">        1310 :         cfg.txUsed = 0;</span></span>
-<span id="L309"><span class="lineNum">     309</span> <span class="tlaGNC">        1310 :         cfg.initialized = true;</span></span>
+<span id="L305"><span class="lineNum">     305</span> <span class="tlaGNC">        1314 :     function _resetCountersAndMarkInitialized(GasLimitConfig storage cfg) private {</span></span>
+<span id="L306"><span class="lineNum">     306</span> <span class="tlaGNC">        1314 :         cfg.gasUsed = 0;</span></span>
+<span id="L307"><span class="lineNum">     307</span> <span class="tlaGNC">        1314 :         cfg.costUsed = 0;</span></span>
+<span id="L308"><span class="lineNum">     308</span> <span class="tlaGNC">        1314 :         cfg.txUsed = 0;</span></span>
+<span id="L309"><span class="lineNum">     309</span> <span class="tlaGNC">        1314 :         cfg.initialized = true;</span></span>
 <span id="L310"><span class="lineNum">     310</span>              :     }</span>
 <span id="L311"><span class="lineNum">     311</span>              : </span>
 <span id="L312"><span class="lineNum">     312</span>              :     // ---------------------- VIEWS ----------------------</span>

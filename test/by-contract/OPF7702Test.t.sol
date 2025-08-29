@@ -10,9 +10,7 @@ import {EfficientHashLib} from "lib/solady/src/utils/EfficientHashLib.sol";
 import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 
 import {console2 as console} from "lib/forge-std/src/Test.sol";
-import {
-    _packValidationData
-} from "lib/account-abstraction/contracts/core/Helpers.sol";
+import {_packValidationData} from "lib/account-abstraction/contracts/core/Helpers.sol";
 
 contract OPF7702Test is BaseContract {
     bytes32 mode_1 = bytes32(uint256(0x01000000000000000000) << (22 * 8));
@@ -449,7 +447,9 @@ contract OPF7702Test is BaseContract {
         vm.prank(ENTRYPOINT_V8);
         uint256 res = account.validateUserOp(userOp, userOpHash, 0);
 
-        uint256 pack = _packValidationData(false, keyDataSKP256NonKey.validUntil, keyDataSKP256NonKey.validAfter);
+        uint256 pack = _packValidationData(
+            false, keyDataSKP256NonKey.validUntil, keyDataSKP256NonKey.validAfter
+        );
         assertEq(res, pack);
     }
 

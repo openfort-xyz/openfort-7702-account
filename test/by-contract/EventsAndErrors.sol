@@ -19,6 +19,7 @@ abstract contract EventsAndErrors {
     error OPF7702Recoverable__OngoingRecovery();
     error OPF7702Recoverable__UnknownProposal();
     error OPF7702Recoverable__DuplicatedRevoke();
+    error OPF7702Recoverable__NoOngoingRecovery();
     error OPF7702Recoverable__AddressCantBeZero();
     error OPF7702Recoverable__DuplicatedProposal();
     error OPF7702Recoverable__UnsupportedKeyType();

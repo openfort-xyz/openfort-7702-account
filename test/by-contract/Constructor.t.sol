@@ -98,7 +98,6 @@ contract Constructor is Test, IKey {
         stdJson.readBytes32(json_path_p256, ".result2.P256NONKEY_sHex");
 
     function setUp() public virtual {
-
         (owner, ownerPK) = makeAddrAndKey("owner");
         (sender, senderPK) = makeAddrAndKey("sender");
         (sessionKey, sessionKeyPK) = makeAddrAndKey("sessionKey");
@@ -143,8 +142,8 @@ contract Constructor is Test, IKey {
         vm.stopPrank();
 
         _deal();
-    
-            _createMKData();
+
+        _createMKData();
         address initialAddr = makeAddr("initialGuardian");
         initialGuardian = keccak256(abi.encodePacked(initialAddr));
 
@@ -223,7 +222,7 @@ contract Constructor is Test, IKey {
         vm.stopPrank();
 
         _deal();
-    
+
         _createMKData();
 
         initialGuardian = bytes32(0);

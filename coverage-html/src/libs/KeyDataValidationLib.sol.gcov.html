@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2025-08-29 18:09:04</td>
+            <td class="headerValue">2025-08-29 18:57:14</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryMed">75.0&nbsp;%</td>
@@ -134,13 +134,13 @@
 <span id="L72"><span class="lineNum">      72</span>              :     }</span>
 <span id="L73"><span class="lineNum">      73</span>              : </span>
 <span id="L74"><span class="lineNum">      74</span>              :     /// @return ok True if neither an EOA address nor a public key is set.</span>
-<span id="L75"><span class="lineNum">      75</span> <span class="tlaGNC">         158 :     function checkKey(IKey.Key memory sKey) internal pure returns (bool ok) {</span></span>
+<span id="L75"><span class="lineNum">      75</span> <span class="tlaGNC">         163 :     function checkKey(IKey.Key memory sKey) internal pure returns (bool ok) {</span></span>
 <span id="L76"><span class="lineNum">      76</span>              :         // Key is non-empty if it has an EOA address...</span>
-<span id="L77"><span class="lineNum">      77</span> <span class="tlaGNC">         158 :         bool hasAddress = sKey.eoaAddress != address(0);</span></span>
+<span id="L77"><span class="lineNum">      77</span> <span class="tlaGNC">         163 :         bool hasAddress = sKey.eoaAddress != address(0);</span></span>
 <span id="L78"><span class="lineNum">      78</span>              :         // ...or any non-zero pubkey coordinate.</span>
-<span id="L79"><span class="lineNum">      79</span> <span class="tlaGNC">         158 :         bool hasPubKey = sKey.pubKey.x != bytes32(0) || sKey.pubKey.y != bytes32(0);</span></span>
+<span id="L79"><span class="lineNum">      79</span> <span class="tlaGNC">         163 :         bool hasPubKey = sKey.pubKey.x != bytes32(0) || sKey.pubKey.y != bytes32(0);</span></span>
 <span id="L80"><span class="lineNum">      80</span>              : </span>
-<span id="L81"><span class="lineNum">      81</span> <span class="tlaGNC">         158 :         ok = !hasAddress &amp;&amp; !hasPubKey; // Returns only when both representations are absent.</span></span>
+<span id="L81"><span class="lineNum">      81</span> <span class="tlaGNC">         163 :         ok = !hasAddress &amp;&amp; !hasPubKey; // Returns only when both representations are absent.</span></span>
 <span id="L82"><span class="lineNum">      82</span>              :     }</span>
 <span id="L83"><span class="lineNum">      83</span>              : }</span>
         </pre>

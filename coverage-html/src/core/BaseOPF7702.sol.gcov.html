@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2025-08-29 18:09:04</td>
+            <td class="headerValue">2025-08-29 18:57:14</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">90.0&nbsp;%</td>
@@ -185,15 +185,15 @@
 <span id="L123"><span class="lineNum">     123</span>              :      * zero.</span>
 <span id="L124"><span class="lineNum">     124</span>              :      *      Useful when proxy patterns or re-deployment require resetting specific storage.</span>
 <span id="L125"><span class="lineNum">     125</span>              :      */</span>
-<span id="L126"><span class="lineNum">     126</span> <span class="tlaGNC">         149 :     function _clearStorage() internal {</span></span>
-<span id="L127"><span class="lineNum">     127</span> <span class="tlaGNC">         149 :         bytes32 baseSlot = keccak256(</span></span>
+<span id="L126"><span class="lineNum">     126</span> <span class="tlaGNC">         153 :     function _clearStorage() internal {</span></span>
+<span id="L127"><span class="lineNum">     127</span> <span class="tlaGNC">         153 :         bytes32 baseSlot = keccak256(</span></span>
 <span id="L128"><span class="lineNum">     128</span>              :             abi.encode(uint256(keccak256(&quot;openfort.baseAccount.7702.v1&quot;)) - 1)</span>
-<span id="L129"><span class="lineNum">     129</span> <span class="tlaGNC">         149 :         ) &amp; ~bytes32(uint256(0xff));</span></span>
+<span id="L129"><span class="lineNum">     129</span> <span class="tlaGNC">         153 :         ) &amp; ~bytes32(uint256(0xff));</span></span>
 <span id="L130"><span class="lineNum">     130</span>              : </span>
 <span id="L131"><span class="lineNum">     131</span>              :         // Todo: Clear _GAS_SLOT</span>
 <span id="L132"><span class="lineNum">     132</span>              :         // clear slot 0, _EP_SLOT &amp; _VERIFIER_SLOT</span>
-<span id="L133"><span class="lineNum">     133</span> <span class="tlaGNC">         149 :         bytes32 epSlot = UpgradeAddress._EP_SLOT;</span></span>
-<span id="L134"><span class="lineNum">     134</span> <span class="tlaGNC">         149 :         bytes32 verifierSlot = UpgradeAddress._VERIFIER_SLOT;</span></span>
+<span id="L133"><span class="lineNum">     133</span> <span class="tlaGNC">         153 :         bytes32 epSlot = UpgradeAddress._EP_SLOT;</span></span>
+<span id="L134"><span class="lineNum">     134</span> <span class="tlaGNC">         153 :         bytes32 verifierSlot = UpgradeAddress._VERIFIER_SLOT;</span></span>
 <span id="L135"><span class="lineNum">     135</span>              :         assembly {</span>
 <span id="L136"><span class="lineNum">     136</span> <span class="tlaUNC">           0 :             sstore(baseSlot, 0)</span></span>
 <span id="L137"><span class="lineNum">     137</span> <span class="tlaUNC">           0 :             sstore(epSlot, 0)</span></span>
@@ -209,8 +209,8 @@
 <span id="L147"><span class="lineNum">     147</span>              :         // recoveryData: starts at base+8, size 4 slots  -&gt; [8,9,10,11]</span>
 <span id="L148"><span class="lineNum">     148</span>              :         // guardiansData: starts at base+12, size 3 slots -&gt; [12,13,14]</span>
 <span id="L149"><span class="lineNum">     149</span>              :         unchecked {</span>
-<span id="L150"><span class="lineNum">     150</span> <span class="tlaGNC">         149 :             for (uint256 i = 6; i &lt;= 14; ++i) {</span></span>
-<span id="L151"><span class="lineNum">     151</span> <span class="tlaGNC">        1341 :                 bytes32 slot = bytes32(uint256(baseSlot) + i);</span></span>
+<span id="L150"><span class="lineNum">     150</span> <span class="tlaGNC">         153 :             for (uint256 i = 6; i &lt;= 14; ++i) {</span></span>
+<span id="L151"><span class="lineNum">     151</span> <span class="tlaGNC">        1377 :                 bytes32 slot = bytes32(uint256(baseSlot) + i);</span></span>
 <span id="L152"><span class="lineNum">     152</span>              :                 assembly {</span>
 <span id="L153"><span class="lineNum">     153</span> <span class="tlaUNC">           0 :                     sstore(slot, 0)</span></span>
 <span id="L154"><span class="lineNum">     154</span>              :                 }</span>
@@ -251,8 +251,8 @@
 <span id="L189"><span class="lineNum">     189</span>              :      * `entryPoint()` can execute.</span>
 <span id="L190"><span class="lineNum">     190</span>              :      *      Reverts with a generic require message if the caller is unauthorized.</span>
 <span id="L191"><span class="lineNum">     191</span>              :      */</span>
-<span id="L192"><span class="lineNum">     192</span> <span class="tlaGNC">        1085 :     function _requireForExecute() internal view virtual override {</span></span>
-<span id="L193"><span class="lineNum">     193</span> <span class="tlaGNC">        1085 :         require(</span></span>
+<span id="L192"><span class="lineNum">     192</span> <span class="tlaGNC">        1105 :     function _requireForExecute() internal view virtual override {</span></span>
+<span id="L193"><span class="lineNum">     193</span> <span class="tlaGNC">        1105 :         require(</span></span>
 <span id="L194"><span class="lineNum">     194</span>              :             msg.sender == address(this) || msg.sender == address(entryPoint()),</span>
 <span id="L195"><span class="lineNum">     195</span>              :             IBaseOPF7702.OpenfortBaseAccount7702V1_UnauthorizedCaller()</span>
 <span id="L196"><span class="lineNum">     196</span>              :         );</span>
@@ -270,8 +270,8 @@
 <span id="L208"><span class="lineNum">     208</span>              :      * @return The `IEntryPoint` implementation address.</span>
 <span id="L209"><span class="lineNum">     209</span>              :      * @dev Required by `IAccount` interface to route UserOperations.</span>
 <span id="L210"><span class="lineNum">     210</span>              :      */</span>
-<span id="L211"><span class="lineNum">     211</span> <span class="tlaGNC">        1076 :     function entryPoint() public view override returns (IEntryPoint) {</span></span>
-<span id="L212"><span class="lineNum">     212</span> <span class="tlaGNC">        1076 :         return IEntryPoint(UpgradeAddress.entryPoint(ENTRY_POINT));</span></span>
+<span id="L211"><span class="lineNum">     211</span> <span class="tlaGNC">        1084 :     function entryPoint() public view override returns (IEntryPoint) {</span></span>
+<span id="L212"><span class="lineNum">     212</span> <span class="tlaGNC">        1084 :         return IEntryPoint(UpgradeAddress.entryPoint(ENTRY_POINT));</span></span>
 <span id="L213"><span class="lineNum">     213</span>              :     }</span>
 <span id="L214"><span class="lineNum">     214</span>              : </span>
 <span id="L215"><span class="lineNum">     215</span>              :     /**</span>

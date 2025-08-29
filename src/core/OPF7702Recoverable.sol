@@ -249,7 +249,6 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
             revert IOPF7702Recoverable.OPF7702Recoverable__PendingProposalExpired();
         }
 
-        // Todo: Never Will reach this revert gi.pending = 0; will revert before on if (gi.pending == 0) revert IOPF7702Recoverable.OPF7702Recoverable__UnknownProposal();
         if (gi.isActive) revert IOPF7702Recoverable.OPF7702Recoverable__DuplicatedGuardian();
 
         emit IOPF7702Recoverable.GuardianAdded(_guardian);
@@ -272,7 +271,7 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
         IOPF7702Recoverable.GuardianIdentity storage gi = guardiansData.data[_guardian];
 
         if (gi.pending == 0) revert IOPF7702Recoverable.OPF7702Recoverable__UnknownProposal();
-        // Todo: Never Will reach this revert gi.pending = 0; will revert before on if (gi.pending == 0) revert IOPF7702Recoverable.OPF7702Recoverable__UnknownProposal();
+
         if (gi.isActive) revert IOPF7702Recoverable.OPF7702Recoverable__DuplicatedGuardian();
 
         emit IOPF7702Recoverable.GuardianProposalCancelled(_guardian);
