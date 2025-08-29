@@ -16,19 +16,10 @@ import {IKey} from "src/interfaces/IKey.sol";
 import "test/by-contract/EventsAndErrors.sol";
 import {ISpendLimit} from "src/interfaces/ISpendLimit.sol";
 
-import {PackedUserOperation} from
-    "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
-
-contract EOAMasterKey is Test, IKey {
-    struct Call {
-        address target;
-        uint256 value;
-        bytes data;
-    }
-
-    error KeyManager__InvalidMasterKeyReg(KeyReg _keyData);
-
-    bytes32 internal constant mode_1 = bytes32(uint256(0x01000000000000000000) << (22 * 8));
+contract Constructor is Test, IKey {
+    error OPF7702Recoverable_InsecurePeriod();
+    error OPF7702Recoverable__AddressCantBeZero();
+    error OpenfortBaseAccount7702V1__InvalidSignature();
 
     /* ─────────────────────────────────────────────────────────────              ── */
     address constant TOKEN = 0x9C0b94fb071Ed4066d7C18F4b68968e311A66209;
@@ -47,7 +38,7 @@ contract EOAMasterKey is Test, IKey {
 
     /* ─────────────────────────────────────────────────────────────              ── */
     uint256 constant RECOVERY_PERIOD = 2 days;
-    uint256 constant LOCK_PERIOD = 5 days;
+    uint256 constant LOCK_PERIOD = 1 days;
     uint256 constant SECURITY_PERIOD = 1.5 days;
     uint256 constant SECURITY_WINDOW = 0.5 days;
 
@@ -107,7 +98,6 @@ contract EOAMasterKey is Test, IKey {
         stdJson.readBytes32(json_path_p256, ".result2.P256NONKEY_sHex");
 
     function setUp() public virtual {
-        vm.startPrank(sender);
 
         (owner, ownerPK) = makeAddrAndKey("owner");
         (sender, senderPK) = makeAddrAndKey("sender");
@@ -117,12 +107,30 @@ contract EOAMasterKey is Test, IKey {
         entryPoint = IEntryPoint(payable(ENTRYPOINT_V8));
         webAuthn = WebAuthnVerifier(payable(SEPOLIA_WEBAUTHN));
         gasPolicy = new GasPolicy(DEFAULT_PVG, DEFAULT_VGL, DEFAULT_CGL, DEFAULT_PMV, DEFAULT_PO);
+    }
 
+    function test_ConstructorRevert() public {
+        vm.expectRevert(OPF7702Recoverable_InsecurePeriod.selector);
+        vm.prank(sender);
         opf = new OPF(
             address(entryPoint),
             SEPOLIA_WEBAUTHN,
             RECOVERY_PERIOD,
             LOCK_PERIOD,
+            SECURITY_PERIOD,
+            SECURITY_WINDOW,
+            address(gasPolicy)
+        );
+    }
+
+    function test_RevertInitialization() public {
+        vm.startPrank(sender);
+
+        opf = new OPF(
+            address(entryPoint),
+            SEPOLIA_WEBAUTHN,
+            RECOVERY_PERIOD,
+            5 days,
             SECURITY_PERIOD,
             SECURITY_WINDOW,
             address(gasPolicy)
@@ -135,12 +143,90 @@ contract EOAMasterKey is Test, IKey {
         vm.stopPrank();
 
         _deal();
-    }
-
-    function test_InitializationEOAMK() public {
-        _createMKData();
+    
+            _createMKData();
         address initialAddr = makeAddr("initialGuardian");
         initialGuardian = keccak256(abi.encodePacked(initialAddr));
+
+        bytes memory keyEnc =
+            abi.encode(keyMK.pubKey.x, keyMK.pubKey.y, keyMK.eoaAddress, keyMK.keyType);
+
+        bytes memory keyDataEnc = abi.encode(
+            keyDataMK.validUntil,
+            keyDataMK.validAfter,
+            keyDataMK.limit,
+            keyDataMK.whitelisting,
+            keyDataMK.contractAddress,
+            keyDataMK.spendTokenInfo.token,
+            keyDataMK.spendTokenInfo.limit,
+            keyDataMK.allowedSelectors,
+            keyDataMK.ethLimit
+        );
+
+        _createSKP256NonKeyData();
+
+        bytes memory skEnc =
+            abi.encode(keySK.pubKey.x, keySK.pubKey.y, keySK.eoaAddress, keySK.keyType);
+
+        bytes memory skDataEnc = abi.encode(
+            keyDataSKP256NonKey.validUntil,
+            keyDataSKP256NonKey.validAfter,
+            keyDataSKP256NonKey.limit,
+            keyDataSKP256NonKey.whitelisting,
+            keyDataSKP256NonKey.contractAddress,
+            keyDataSKP256NonKey.spendTokenInfo.token,
+            keyDataSKP256NonKey.spendTokenInfo.limit,
+            keyDataSKP256NonKey.allowedSelectors
+        );
+
+        bytes32 structHash = keccak256(
+            abi.encode(INIT_TYPEHASH, keyEnc, keyDataEnc, skEnc, skDataEnc, initialGuardian)
+        );
+
+        string memory name = "OPF7702Recoverable";
+        string memory version = "2";
+
+        bytes32 domainSeparator = keccak256(
+            abi.encode(
+                TYPE_HASH, keccak256(bytes(name)), keccak256(bytes(version)), block.chainid, owner
+            )
+        );
+        bytes32 digest = MessageHashUtils.toTypedDataHash(domainSeparator, structHash);
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPK, digest);
+        bytes memory sig = abi.encodePacked(r, s, v);
+
+        _etch();
+
+        vm.expectRevert(OpenfortBaseAccount7702V1__InvalidSignature.selector);
+        vm.prank(address(entryPoint));
+        account.initialize(keyMK, keyDataMK, keySK, keyDataSKP256NonKey, sig, initialGuardian);
+    }
+
+    function test_RevertInvalidGuardian() public {
+        vm.startPrank(sender);
+
+        opf = new OPF(
+            address(entryPoint),
+            SEPOLIA_WEBAUTHN,
+            RECOVERY_PERIOD,
+            5 days,
+            SECURITY_PERIOD,
+            SECURITY_WINDOW,
+            address(gasPolicy)
+        );
+
+        implementation = opf;
+
+        _etch();
+
+        vm.stopPrank();
+
+        _deal();
+    
+        _createMKData();
+
+        initialGuardian = bytes32(0);
 
         bytes memory keyEnc =
             abi.encode(keyMK.pubKey.x, keyMK.pubKey.y, keyMK.eoaAddress, keyMK.keyType);
@@ -192,49 +278,14 @@ contract EOAMasterKey is Test, IKey {
 
         _etch();
 
+        vm.expectRevert(OPF7702Recoverable__AddressCantBeZero.selector);
         vm.prank(address(entryPoint));
         account.initialize(keyMK, keyDataMK, keySK, keyDataSKP256NonKey, sig, initialGuardian);
-
-        Call[] memory calls = new Call[](1);
-        calls[0] = Call({target: ETH_RECIVE, value: 0.001e18, data: hex""});
-        bytes memory executionData = abi.encode(calls);
-
-        bytes memory callData = abi.encodeWithSelector(
-            bytes4(keccak256("execute(bytes32,bytes)")), mode_1, executionData
-        );
-
-        uint256 nonce = entryPoint.getNonce(owner, 1);
-
-        PackedUserOperation memory userOp = PackedUserOperation({
-            sender: owner,
-            nonce: nonce,
-            initCode: hex"7702",
-            callData: callData,
-            accountGasLimits: _packAccountGasLimits(600_000, 400_000),
-            preVerificationGas: 800_000,
-            gasFees: _packGasFees(80 gwei, 15 gwei),
-            paymasterAndData: hex"",
-            signature: hex""
-        });
-
-        bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
-
-        (uint8 v2, bytes32 r2, bytes32 s2) = vm.sign(senderPK, userOpHash);
-        bytes memory signature = abi.encodePacked(r2, s2, v2);
-
-        bytes memory _signature = account.encodeEOASignature(signature);
-        userOp.signature = _signature;
-
-        _etch();
-
-        vm.prank(ENTRYPOINT_V8);
-        uint256 res = account.validateUserOp(userOp, userOpHash, 0);
-        assertEq(res, 0);
     }
 
     function _createMKData() internal {
-        pubKeyMK = PubKey({x: bytes32(0), y: bytes32(0)});
-        keyMK = Key({pubKey: pubKeyMK, eoaAddress: sender, keyType: KeyType.EOA});
+        pubKeyMK = PubKey({x: PUBLIC_KEY_X, y: PUBLIC_KEY_Y});
+        keyMK = Key({pubKey: pubKeyMK, eoaAddress: address(0), keyType: KeyType.WEBAUTHN});
         ISpendLimit.SpendTokenInfo memory spendInfo = _getSpendTokenInfo(address(0), 0);
 
         keyDataMK = KeyReg({
@@ -291,21 +342,5 @@ contract EOAMasterKey is Test, IKey {
     function _etch() internal {
         vm.etch(owner, abi.encodePacked(bytes3(0xef0100), address(implementation)));
         account = OPF(payable(owner));
-    }
-
-    function _packAccountGasLimits(uint256 callGasLimit, uint256 verificationGasLimit)
-        internal
-        pure
-        returns (bytes32)
-    {
-        return bytes32((callGasLimit << 128) | verificationGasLimit);
-    }
-
-    function _packGasFees(uint256 maxFeePerGas, uint256 maxPriorityFeePerGas)
-        internal
-        pure
-        returns (bytes32)
-    {
-        return bytes32((maxFeePerGas << 128) | maxPriorityFeePerGas);
     }
 }

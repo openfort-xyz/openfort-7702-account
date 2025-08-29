@@ -73,6 +73,9 @@ contract Data is Test, IKey, EventsAndErrors {
 
     bytes32 public CHALLENGE = stdJson.readBytes32(json_path, ".global.challenge");
 
+    uint256 public CHALLENGE_INDEX = stdJson.readUint(json_path, ".global.metadata.challengeIndex");
+    uint256 public TYPE_INDEX = stdJson.readUint(json_path, ".global.metadata.typeIndex");
+
     bytes32 public SIGNATURE_R = stdJson.readBytes32(json_path, ".global.signature.r");
     bytes32 public SIGNATURE_S = stdJson.readBytes32(json_path, ".global.signature.s");
 
@@ -83,7 +86,28 @@ contract Data is Test, IKey, EventsAndErrors {
         stdJson.readString(json_path, ".global.metadata.clientDataJSON");
 
     /* ─────────────────────────────────────────────────────────────              ── */
+    bytes32 public SK_CHALLENGE = stdJson.readBytes32(json_path, ".globalSK.challenge");
+
+    bytes32 public SK_PUBLIC_KEY_X = stdJson.readBytes32(json_path, ".globalSK.x");
+    bytes32 public SK_PUBLIC_KEY_Y = stdJson.readBytes32(json_path, ".globalSK.y");
+
+    uint256 public SK_CHALLENGE_INDEX =
+        stdJson.readUint(json_path, ".globalSK.metadata.challengeIndex");
+    uint256 public SK_TYPE_INDEX = stdJson.readUint(json_path, ".globalSK.metadata.typeIndex");
+
+    bytes32 public SK_SIGNATURE_R = stdJson.readBytes32(json_path, ".globalSK.signature.r");
+    bytes32 public SK_SIGNATURE_S = stdJson.readBytes32(json_path, ".globalSK.signature.s");
+
+    bytes public SK_AUTHENTICATOR_DATA =
+        stdJson.readBytes(json_path, ".globalSK.metadata.authenticatorData");
+
+    string public SK_CLIENT_DATA_JSON =
+        stdJson.readString(json_path, ".globalSK.metadata.clientDataJSON");
+
+    /* ─────────────────────────────────────────────────────────────              ── */
     string public json_path_p256 = vm.readFile("test/data/p256_global.json");
+
+    bytes32 P256NOKEY_CHALLENGE = stdJson.readBytes32(json_path_p256, ".result2.challenge");
 
     bytes32 P256NOKEY_PUBLIC_KEY_X = stdJson.readBytes32(json_path_p256, ".result2.P256NONKEY_xHex");
     bytes32 P256NOKEY_PUBLIC_KEY_Y = stdJson.readBytes32(json_path_p256, ".result2.P256NONKEY_yHex");
@@ -123,6 +147,25 @@ contract Data is Test, IKey, EventsAndErrors {
             spendTokenInfo: spendInfo,
             allowedSelectors: _allowedSelectors(),
             ethLimit: 0
+        });
+    }
+
+    function _createSKWebAuthnData() internal {
+        pubKeySK = PubKey({x: SK_PUBLIC_KEY_X, y: SK_PUBLIC_KEY_Y});
+        keySK = Key({pubKey: pubKeySK, eoaAddress: address(0), keyType: KeyType.WEBAUTHN});
+        ISpendLimit.SpendTokenInfo memory spendInfo = _getSpendTokenInfo(TOKEN, 100e18);
+
+        uint48 validUntil = uint48(block.timestamp + 1 days);
+
+        keyDataSKP256NonKey = KeyReg({
+            validUntil: validUntil,
+            validAfter: 0,
+            limit: 10,
+            whitelisting: true,
+            contractAddress: ETH_RECIVE,
+            spendTokenInfo: spendInfo,
+            allowedSelectors: _allowedSelectors(),
+            ethLimit: 1e18
         });
     }
 
@@ -196,5 +239,21 @@ contract Data is Test, IKey, EventsAndErrors {
         userOp.gasFees = hex"";
         userOp.paymasterAndData = hex"";
         userOp.signature = hex"";
+    }
+
+    function _packAccountGasLimits(uint256 callGasLimit, uint256 verificationGasLimit)
+        internal
+        pure
+        returns (bytes32)
+    {
+        return bytes32((callGasLimit << 128) | verificationGasLimit);
+    }
+
+    function _packGasFees(uint256 maxFeePerGas, uint256 maxPriorityFeePerGas)
+        internal
+        pure
+        returns (bytes32)
+    {
+        return bytes32((maxFeePerGas << 128) | maxPriorityFeePerGas);
     }
 }

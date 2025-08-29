@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2025-08-28 20:09:10</td>
+            <td class="headerValue">2025-08-29 18:09:04</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -77,27 +77,27 @@
 <span id="L15"><span class="lineNum">      15</span>              :     ///         Head size for inner = 9 * 32 bytes (incl. PubKey.x,y).</span>
 <span id="L16"><span class="lineNum">      16</span>              :     ///         Dynamic tails: bytes + string -&gt; each 32 (len) + padded payload.</span>
 <span id="L17"><span class="lineNum">      17</span>              : </span>
-<span id="L18"><span class="lineNum">      18</span> <span class="tlaGNC">          14 :     function assertWebAuthnOuterLen(</span></span>
+<span id="L18"><span class="lineNum">      18</span> <span class="tlaGNC">          24 :     function assertWebAuthnOuterLen(</span></span>
 <span id="L19"><span class="lineNum">      19</span>              :         uint256 signatureLen,</span>
 <span id="L20"><span class="lineNum">      20</span>              :         uint256 authenticatorDataLen,</span>
 <span id="L21"><span class="lineNum">      21</span>              :         uint256 clientDataJSONLen</span>
 <span id="L22"><span class="lineNum">      22</span>              :     ) internal pure {</span>
 <span id="L23"><span class="lineNum">      23</span>              :         // pad to 32 (readable form)</span>
-<span id="L24"><span class="lineNum">      24</span> <span class="tlaGNC">          14 :         uint256 adRem = authenticatorDataLen % _WORD;</span></span>
-<span id="L25"><span class="lineNum">      25</span> <span class="tlaGNC">          14 :         uint256 adPad = adRem == 0 ? authenticatorDataLen : authenticatorDataLen + (_WORD - adRem);</span></span>
+<span id="L24"><span class="lineNum">      24</span> <span class="tlaGNC">          24 :         uint256 adRem = authenticatorDataLen % _WORD;</span></span>
+<span id="L25"><span class="lineNum">      25</span> <span class="tlaGNC">          24 :         uint256 adPad = adRem == 0 ? authenticatorDataLen : authenticatorDataLen + (_WORD - adRem);</span></span>
 <span id="L26"><span class="lineNum">      26</span>              : </span>
-<span id="L27"><span class="lineNum">      27</span> <span class="tlaGNC">          14 :         uint256 cjRem = clientDataJSONLen % _WORD;</span></span>
-<span id="L28"><span class="lineNum">      28</span> <span class="tlaGNC">          14 :         uint256 cjPad = cjRem == 0 ? clientDataJSONLen : clientDataJSONLen + (_WORD - cjRem);</span></span>
+<span id="L27"><span class="lineNum">      27</span> <span class="tlaGNC">          24 :         uint256 cjRem = clientDataJSONLen % _WORD;</span></span>
+<span id="L28"><span class="lineNum">      28</span> <span class="tlaGNC">          24 :         uint256 cjPad = cjRem == 0 ? clientDataJSONLen : clientDataJSONLen + (_WORD - cjRem);</span></span>
 <span id="L29"><span class="lineNum">      29</span>              : </span>
 <span id="L30"><span class="lineNum">      30</span>              :         // inner head = 9 words (bool + bytes off + string off + 2 uints + 2 bytes32 + PubKey(2 words))</span>
-<span id="L31"><span class="lineNum">      31</span> <span class="tlaGNC">          14 :         uint256 innerExpected = (9 * _WORD) + _WORD + adPad // bytes authenticatorData</span></span>
+<span id="L31"><span class="lineNum">      31</span> <span class="tlaGNC">          24 :         uint256 innerExpected = (9 * _WORD) + _WORD + adPad // bytes authenticatorData</span></span>
 <span id="L32"><span class="lineNum">      32</span>              :             + _WORD + cjPad; // string clientDataJSON</span>
 <span id="L33"><span class="lineNum">      33</span>              : </span>
 <span id="L34"><span class="lineNum">      34</span>              :         // signature `(KeyType, bytes)` = 64 (head) + 32 (bytes length) + padded inner</span>
 <span id="L35"><span class="lineNum">      35</span>              :         // _WORD * 3 == 32 * 3 = 96</span>
-<span id="L36"><span class="lineNum">      36</span> <span class="tlaGNC">          14 :         uint256 expectedOuter = (_WORD * 3) + innerExpected;</span></span>
+<span id="L36"><span class="lineNum">      36</span> <span class="tlaGNC">          24 :         uint256 expectedOuter = (_WORD * 3) + innerExpected;</span></span>
 <span id="L37"><span class="lineNum">      37</span>              : </span>
-<span id="L38"><span class="lineNum">      38</span> <span class="tlaGNC">          14 :         if (signatureLen != expectedOuter) {</span></span>
+<span id="L38"><span class="lineNum">      38</span> <span class="tlaGNC">          24 :         if (signatureLen != expectedOuter) {</span></span>
 <span id="L39"><span class="lineNum">      39</span> <span class="tlaGNC">           2 :             revert IKeysManager.KeyManager__InvalidSignatureLength();</span></span>
 <span id="L40"><span class="lineNum">      40</span>              :         }</span>
 <span id="L41"><span class="lineNum">      41</span>              :     }</span>

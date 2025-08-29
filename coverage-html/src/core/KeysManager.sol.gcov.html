@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2025-08-28 20:09:10</td>
+            <td class="headerValue">2025-08-29 18:09:04</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -131,31 +131,31 @@
 <span id="L69"><span class="lineNum">      69</span>              :      * @param _key             Struct containing key information (PubKey or EOA).</span>
 <span id="L70"><span class="lineNum">      70</span>              :      * @param _keyData KeyReg data structure containing permissions and limits</span>
 <span id="L71"><span class="lineNum">      71</span>              :      */</span>
-<span id="L72"><span class="lineNum">      72</span> <span class="tlaGNC">         728 :     function registerKey(Key calldata _key, KeyReg calldata _keyData) public {</span></span>
+<span id="L72"><span class="lineNum">      72</span> <span class="tlaGNC">         786 :     function registerKey(Key calldata _key, KeyReg calldata _keyData) public {</span></span>
 <span id="L73"><span class="lineNum">      73</span> <span class="tlaUNC">           0 :         _requireForExecute();</span></span>
 <span id="L74"><span class="lineNum">      74</span>              :         // Must have limit checks to prevent register masterKey</span>
-<span id="L75"><span class="lineNum">      75</span> <span class="tlaGNC">         727 :         _keyData.limit.ensureLimit();</span></span>
+<span id="L75"><span class="lineNum">      75</span> <span class="tlaGNC">         785 :         _keyData.limit.ensureLimit();</span></span>
 <span id="L76"><span class="lineNum">      76</span>              : </span>
 <span id="L77"><span class="lineNum">      77</span>              :         // Validate timestamps</span>
-<span id="L78"><span class="lineNum">      78</span> <span class="tlaGNC">         726 :         ValidationLib.ensureValidTimestamps(_keyData.validAfter, _keyData.validUntil);</span></span>
+<span id="L78"><span class="lineNum">      78</span> <span class="tlaGNC">         784 :         ValidationLib.ensureValidTimestamps(_keyData.validAfter, _keyData.validUntil);</span></span>
 <span id="L79"><span class="lineNum">      79</span>              : </span>
-<span id="L80"><span class="lineNum">      80</span> <span class="tlaGNC">         725 :         bytes32 keyId = _key.computeKeyId();</span></span>
+<span id="L80"><span class="lineNum">      80</span> <span class="tlaGNC">         783 :         bytes32 keyId = _key.computeKeyId();</span></span>
 <span id="L81"><span class="lineNum">      81</span>              : </span>
-<span id="L82"><span class="lineNum">      82</span> <span class="tlaGNC">         725 :         KeyData storage sKey = keys[keyId];</span></span>
+<span id="L82"><span class="lineNum">      82</span> <span class="tlaGNC">         783 :         KeyData storage sKey = keys[keyId];</span></span>
 <span id="L83"><span class="lineNum">      83</span>              : </span>
 <span id="L84"><span class="lineNum">      84</span> <span class="tlaGNC">           1 :         if (sKey.isActive) {</span></span>
 <span id="L85"><span class="lineNum">      85</span> <span class="tlaGNC">           1 :             revert IKeysManager.KeyManager__KeyRegistered();</span></span>
 <span id="L86"><span class="lineNum">      86</span>              :         }</span>
 <span id="L87"><span class="lineNum">      87</span>              : </span>
-<span id="L88"><span class="lineNum">      88</span> <span class="tlaGNC">         724 :         _addKey(sKey, _key, _keyData);</span></span>
+<span id="L88"><span class="lineNum">      88</span> <span class="tlaGNC">         782 :         _addKey(sKey, _key, _keyData);</span></span>
 <span id="L89"><span class="lineNum">      89</span>              : </span>
 <span id="L90"><span class="lineNum">      90</span>              :         // Store Key struct by ID and increment</span>
-<span id="L91"><span class="lineNum">      91</span> <span class="tlaGNC">         724 :         idKeys[id] = _key;</span></span>
+<span id="L91"><span class="lineNum">      91</span> <span class="tlaGNC">         782 :         idKeys[id] = _key;</span></span>
 <span id="L92"><span class="lineNum">      92</span>              :         unchecked {</span>
-<span id="L93"><span class="lineNum">      93</span> <span class="tlaGNC">         721 :             id++;</span></span>
+<span id="L93"><span class="lineNum">      93</span> <span class="tlaGNC">         779 :             id++;</span></span>
 <span id="L94"><span class="lineNum">      94</span>              :         }</span>
 <span id="L95"><span class="lineNum">      95</span>              : </span>
-<span id="L96"><span class="lineNum">      96</span> <span class="tlaGNC">         724 :         emit IKeysManager.KeyRegistrated(keyId);</span></span>
+<span id="L96"><span class="lineNum">      96</span> <span class="tlaGNC">         782 :         emit IKeysManager.KeyRegistrated(keyId);</span></span>
 <span id="L97"><span class="lineNum">      97</span>              :     }</span>
 <span id="L98"><span class="lineNum">      98</span>              : </span>
 <span id="L99"><span class="lineNum">      99</span>              :     /**</span>
@@ -168,14 +168,14 @@
 <span id="L106"><span class="lineNum">     106</span>              :      *             • For WebAuthn/P256/P256NONKEY: uses `pubKey` to compute `keyId`.</span>
 <span id="L107"><span class="lineNum">     107</span>              :      *             • For EOA: uses `eoaAddress` (must be non‐zero).</span>
 <span id="L108"><span class="lineNum">     108</span>              :      */</span>
-<span id="L109"><span class="lineNum">     109</span> <span class="tlaGNC">           6 :     function revokeKey(Key calldata _key) external {</span></span>
+<span id="L109"><span class="lineNum">     109</span> <span class="tlaGNC">           7 :     function revokeKey(Key calldata _key) external {</span></span>
 <span id="L110"><span class="lineNum">     110</span> <span class="tlaUNC">           0 :         _requireForExecute();</span></span>
 <span id="L111"><span class="lineNum">     111</span>              : </span>
-<span id="L112"><span class="lineNum">     112</span> <span class="tlaGNC">           6 :         bytes32 keyId = _key.computeKeyId();</span></span>
+<span id="L112"><span class="lineNum">     112</span> <span class="tlaGNC">           7 :         bytes32 keyId = _key.computeKeyId();</span></span>
 <span id="L113"><span class="lineNum">     113</span>              : </span>
-<span id="L114"><span class="lineNum">     114</span> <span class="tlaGNC">           6 :         KeyData storage sKey = keys[keyId];</span></span>
-<span id="L115"><span class="lineNum">     115</span> <span class="tlaGNC">           6 :         _revokeKey(sKey);</span></span>
-<span id="L116"><span class="lineNum">     116</span> <span class="tlaGNC">           6 :         emit IKeysManager.KeyRevoked(keyId);</span></span>
+<span id="L114"><span class="lineNum">     114</span> <span class="tlaGNC">           7 :         KeyData storage sKey = keys[keyId];</span></span>
+<span id="L115"><span class="lineNum">     115</span> <span class="tlaGNC">           7 :         _revokeKey(sKey);</span></span>
+<span id="L116"><span class="lineNum">     116</span> <span class="tlaGNC">           7 :         emit IKeysManager.KeyRevoked(keyId);</span></span>
 <span id="L117"><span class="lineNum">     117</span>              :     }</span>
 <span id="L118"><span class="lineNum">     118</span>              : </span>
 <span id="L119"><span class="lineNum">     119</span>              :     /**</span>
@@ -223,49 +223,49 @@
 <span id="L161"><span class="lineNum">     161</span>              :      * @param _keyData KeyReg data structure containing permissions and limits</span>
 <span id="L162"><span class="lineNum">     162</span>              :      */</span>
 <span id="L163"><span class="lineNum">     163</span>              :     /// Todo: enfore to check the if _keyData.whitelisting = true</span>
-<span id="L164"><span class="lineNum">     164</span> <span class="tlaGNC">         823 :     function _addKey(KeyData storage sKey, Key memory _key, KeyReg memory _keyData) internal {</span></span>
-<span id="L165"><span class="lineNum">     165</span> <span class="tlaGNC">         823 :         sKey.pubKey = _key.pubKey;</span></span>
-<span id="L166"><span class="lineNum">     166</span> <span class="tlaGNC">         823 :         sKey.isActive = true;</span></span>
-<span id="L167"><span class="lineNum">     167</span> <span class="tlaGNC">         823 :         sKey.validUntil = _keyData.validUntil;</span></span>
-<span id="L168"><span class="lineNum">     168</span> <span class="tlaGNC">         823 :         sKey.validAfter = _keyData.validAfter;</span></span>
-<span id="L169"><span class="lineNum">     169</span> <span class="tlaGNC">         823 :         sKey.limit = _keyData.limit;</span></span>
-<span id="L170"><span class="lineNum">     170</span> <span class="tlaGNC">         823 :         sKey.masterKey = (_keyData.limit == 0);</span></span>
+<span id="L164"><span class="lineNum">     164</span> <span class="tlaGNC">         931 :     function _addKey(KeyData storage sKey, Key memory _key, KeyReg memory _keyData) internal {</span></span>
+<span id="L165"><span class="lineNum">     165</span> <span class="tlaGNC">         931 :         sKey.pubKey = _key.pubKey;</span></span>
+<span id="L166"><span class="lineNum">     166</span> <span class="tlaGNC">         931 :         sKey.isActive = true;</span></span>
+<span id="L167"><span class="lineNum">     167</span> <span class="tlaGNC">         931 :         sKey.validUntil = _keyData.validUntil;</span></span>
+<span id="L168"><span class="lineNum">     168</span> <span class="tlaGNC">         931 :         sKey.validAfter = _keyData.validAfter;</span></span>
+<span id="L169"><span class="lineNum">     169</span> <span class="tlaGNC">         931 :         sKey.limit = _keyData.limit;</span></span>
+<span id="L170"><span class="lineNum">     170</span> <span class="tlaGNC">         931 :         sKey.masterKey = (_keyData.limit == 0);</span></span>
 <span id="L171"><span class="lineNum">     171</span>              : </span>
 <span id="L172"><span class="lineNum">     172</span>              :         // Only enforce limits if _limit &gt; 0</span>
-<span id="L173"><span class="lineNum">     173</span> <span class="tlaGNC">         823 :         if (_keyData.limit &gt; 0) {</span></span>
-<span id="L174"><span class="lineNum">     174</span> <span class="tlaGNC">         724 :             IUserOpPolicy(GAS_POLICY).initializeGasPolicy(</span></span>
+<span id="L173"><span class="lineNum">     173</span> <span class="tlaGNC">         931 :         if (_keyData.limit &gt; 0) {</span></span>
+<span id="L174"><span class="lineNum">     174</span> <span class="tlaGNC">         782 :             IUserOpPolicy(GAS_POLICY).initializeGasPolicy(</span></span>
 <span id="L175"><span class="lineNum">     175</span>              :                 address(this), _key.computeKeyId(), uint256(_keyData.limit)</span>
 <span id="L176"><span class="lineNum">     176</span>              :             );</span>
-<span id="L177"><span class="lineNum">     177</span> <span class="tlaGNC">         724 :             sKey.whitelisting = true;</span></span>
+<span id="L177"><span class="lineNum">     177</span> <span class="tlaGNC">         782 :             sKey.whitelisting = true;</span></span>
 <span id="L178"><span class="lineNum">     178</span>              :             /// Session Key enforced to be whitelisting</span>
-<span id="L179"><span class="lineNum">     179</span> <span class="tlaGNC">         724 :             sKey.ethLimit = _keyData.ethLimit;</span></span>
+<span id="L179"><span class="lineNum">     179</span> <span class="tlaGNC">         782 :             sKey.ethLimit = _keyData.ethLimit;</span></span>
 <span id="L180"><span class="lineNum">     180</span>              : </span>
 <span id="L181"><span class="lineNum">     181</span>              :             // Whitelist contract and token if requested</span>
-<span id="L182"><span class="lineNum">     182</span> <span class="tlaGNC">         724 :             if (_keyData.whitelisting) {</span></span>
-<span id="L183"><span class="lineNum">     183</span> <span class="tlaGNC">         724 :                 _keyData.contractAddress.ensureNotZero();</span></span>
+<span id="L182"><span class="lineNum">     182</span> <span class="tlaGNC">         782 :             if (_keyData.whitelisting) {</span></span>
+<span id="L183"><span class="lineNum">     183</span> <span class="tlaGNC">         782 :                 _keyData.contractAddress.ensureNotZero();</span></span>
 <span id="L184"><span class="lineNum">     184</span>              :                 // Add the contract itself</span>
-<span id="L185"><span class="lineNum">     185</span> <span class="tlaGNC">         723 :                 sKey.whitelist[_keyData.contractAddress] = true;</span></span>
+<span id="L185"><span class="lineNum">     185</span> <span class="tlaGNC">         781 :                 sKey.whitelist[_keyData.contractAddress] = true;</span></span>
 <span id="L186"><span class="lineNum">     186</span>              : </span>
 <span id="L187"><span class="lineNum">     187</span>              :                 // Validate token address</span>
-<span id="L188"><span class="lineNum">     188</span> <span class="tlaGNC">         723 :                 address tokenAddr = _keyData.spendTokenInfo.token;</span></span>
-<span id="L189"><span class="lineNum">     189</span> <span class="tlaGNC">         723 :                 tokenAddr.ensureNotZero();</span></span>
-<span id="L190"><span class="lineNum">     190</span> <span class="tlaGNC">         724 :                 sKey.whitelist[tokenAddr] = true;</span></span>
+<span id="L188"><span class="lineNum">     188</span> <span class="tlaGNC">         781 :                 address tokenAddr = _keyData.spendTokenInfo.token;</span></span>
+<span id="L189"><span class="lineNum">     189</span> <span class="tlaGNC">         781 :                 tokenAddr.ensureNotZero();</span></span>
+<span id="L190"><span class="lineNum">     190</span> <span class="tlaGNC">         782 :                 sKey.whitelist[tokenAddr] = true;</span></span>
 <span id="L191"><span class="lineNum">     191</span>              : </span>
-<span id="L192"><span class="lineNum">     192</span> <span class="tlaGNC">         722 :                 uint256 selCount = _keyData.allowedSelectors.length;</span></span>
-<span id="L193"><span class="lineNum">     193</span> <span class="tlaGNC">         722 :                 selCount.ensureSelectorsLen();</span></span>
-<span id="L194"><span class="lineNum">     194</span> <span class="tlaGNC">         721 :                 for (uint256 i = 0; i &lt; selCount;) {</span></span>
-<span id="L195"><span class="lineNum">     195</span> <span class="tlaGNC">        2163 :                     sKey.allowedSelectors.push(_keyData.allowedSelectors[i]);</span></span>
+<span id="L192"><span class="lineNum">     192</span> <span class="tlaGNC">         780 :                 uint256 selCount = _keyData.allowedSelectors.length;</span></span>
+<span id="L193"><span class="lineNum">     193</span> <span class="tlaGNC">         780 :                 selCount.ensureSelectorsLen();</span></span>
+<span id="L194"><span class="lineNum">     194</span> <span class="tlaGNC">         779 :                 for (uint256 i = 0; i &lt; selCount;) {</span></span>
+<span id="L195"><span class="lineNum">     195</span> <span class="tlaGNC">        2337 :                     sKey.allowedSelectors.push(_keyData.allowedSelectors[i]);</span></span>
 <span id="L196"><span class="lineNum">     196</span>              :                     unchecked {</span>
-<span id="L197"><span class="lineNum">     197</span> <span class="tlaGNC">        2163 :                         ++i;</span></span>
+<span id="L197"><span class="lineNum">     197</span> <span class="tlaGNC">        2337 :                         ++i;</span></span>
 <span id="L198"><span class="lineNum">     198</span>              :                     }</span>
 <span id="L199"><span class="lineNum">     199</span>              :                 }</span>
 <span id="L200"><span class="lineNum">     200</span>              :             }</span>
 <span id="L201"><span class="lineNum">     201</span>              : </span>
-<span id="L202"><span class="lineNum">     202</span> <span class="tlaGNC">         721 :             _keyData.spendTokenInfo.token.ensureNotZero();</span></span>
+<span id="L202"><span class="lineNum">     202</span> <span class="tlaGNC">         779 :             _keyData.spendTokenInfo.token.ensureNotZero();</span></span>
 <span id="L203"><span class="lineNum">     203</span>              : </span>
 <span id="L204"><span class="lineNum">     204</span>              :             // Configure spendTokenInfo regardless of whitelisting</span>
-<span id="L205"><span class="lineNum">     205</span> <span class="tlaGNC">         721 :             sKey.spendTokenInfo.token = _keyData.spendTokenInfo.token;</span></span>
-<span id="L206"><span class="lineNum">     206</span> <span class="tlaGNC">         721 :             sKey.spendTokenInfo.limit = _keyData.spendTokenInfo.limit;</span></span>
+<span id="L205"><span class="lineNum">     205</span> <span class="tlaGNC">         779 :             sKey.spendTokenInfo.token = _keyData.spendTokenInfo.token;</span></span>
+<span id="L206"><span class="lineNum">     206</span> <span class="tlaGNC">         779 :             sKey.spendTokenInfo.limit = _keyData.spendTokenInfo.limit;</span></span>
 <span id="L207"><span class="lineNum">     207</span>              :         }</span>
 <span id="L208"><span class="lineNum">     208</span>              :     }</span>
 <span id="L209"><span class="lineNum">     209</span>              : </span>
@@ -281,28 +281,28 @@
 <span id="L219"><span class="lineNum">     219</span>              :      *      any residual entries from being reactivated.</span>
 <span id="L220"><span class="lineNum">     220</span>              :      * @param sKey Storage reference to the `KeyData` being revoked.</span>
 <span id="L221"><span class="lineNum">     221</span>              :      */</span>
-<span id="L222"><span class="lineNum">     222</span> <span class="tlaGNC">          46 :     function _revokeKey(KeyData storage sKey) internal {</span></span>
-<span id="L223"><span class="lineNum">     223</span> <span class="tlaGNC">          46 :         if (!sKey.isActive) {</span></span>
+<span id="L222"><span class="lineNum">     222</span> <span class="tlaGNC">          47 :     function _revokeKey(KeyData storage sKey) internal {</span></span>
+<span id="L223"><span class="lineNum">     223</span> <span class="tlaGNC">          47 :         if (!sKey.isActive) {</span></span>
 <span id="L224"><span class="lineNum">     224</span> <span class="tlaGNC">           1 :             revert IKeysManager.KeyManager__KeyInactive();</span></span>
 <span id="L225"><span class="lineNum">     225</span>              :         }</span>
-<span id="L226"><span class="lineNum">     226</span> <span class="tlaGNC">          45 :         sKey.isActive = false;</span></span>
-<span id="L227"><span class="lineNum">     227</span> <span class="tlaGNC">          45 :         sKey.validUntil = 0;</span></span>
-<span id="L228"><span class="lineNum">     228</span> <span class="tlaGNC">          45 :         sKey.validAfter = 0;</span></span>
-<span id="L229"><span class="lineNum">     229</span> <span class="tlaGNC">          45 :         sKey.limit = 0;</span></span>
-<span id="L230"><span class="lineNum">     230</span> <span class="tlaGNC">          45 :         sKey.masterKey = false;</span></span>
-<span id="L231"><span class="lineNum">     231</span> <span class="tlaGNC">          45 :         sKey.ethLimit = 0;</span></span>
+<span id="L226"><span class="lineNum">     226</span> <span class="tlaGNC">          46 :         sKey.isActive = false;</span></span>
+<span id="L227"><span class="lineNum">     227</span> <span class="tlaGNC">          46 :         sKey.validUntil = 0;</span></span>
+<span id="L228"><span class="lineNum">     228</span> <span class="tlaGNC">          46 :         sKey.validAfter = 0;</span></span>
+<span id="L229"><span class="lineNum">     229</span> <span class="tlaGNC">          46 :         sKey.limit = 0;</span></span>
+<span id="L230"><span class="lineNum">     230</span> <span class="tlaGNC">          46 :         sKey.masterKey = false;</span></span>
+<span id="L231"><span class="lineNum">     231</span> <span class="tlaGNC">          46 :         sKey.ethLimit = 0;</span></span>
 <span id="L232"><span class="lineNum">     232</span>              : </span>
-<span id="L233"><span class="lineNum">     233</span> <span class="tlaGNC">          45 :         delete sKey.allowedSelectors;</span></span>
-<span id="L234"><span class="lineNum">     234</span> <span class="tlaGNC">          45 :         delete sKey.spendTokenInfo;</span></span>
+<span id="L233"><span class="lineNum">     233</span> <span class="tlaGNC">          46 :         delete sKey.allowedSelectors;</span></span>
+<span id="L234"><span class="lineNum">     234</span> <span class="tlaGNC">          46 :         delete sKey.spendTokenInfo;</span></span>
 <span id="L235"><span class="lineNum">     235</span>              : </span>
-<span id="L236"><span class="lineNum">     236</span> <span class="tlaGNC">          45 :         delete sKey.pubKey;</span></span>
+<span id="L236"><span class="lineNum">     236</span> <span class="tlaGNC">          46 :         delete sKey.pubKey;</span></span>
 <span id="L237"><span class="lineNum">     237</span>              :     }</span>
 <span id="L238"><span class="lineNum">     238</span>              : </span>
 <span id="L239"><span class="lineNum">     239</span>              :     /// @dev Master key must have: validUntil = max(uint48), validAfter = 0, limit = 0, whitelisting = false.</span>
-<span id="L240"><span class="lineNum">     240</span> <span class="tlaGNC">          98 :     function _masterKeyValidation(KeyReg calldata _kReg) internal pure {</span></span>
+<span id="L240"><span class="lineNum">     240</span> <span class="tlaGNC">         149 :     function _masterKeyValidation(KeyReg calldata _kReg) internal pure {</span></span>
 <span id="L241"><span class="lineNum">     241</span>              :         if (</span>
-<span id="L242"><span class="lineNum">     242</span> <span class="tlaGNC">          98 :             _kReg.limit != 0 || _kReg.whitelisting // must be false</span></span>
-<span id="L243"><span class="lineNum">     243</span> <span class="tlaGNC">          97 :                 || _kReg.validAfter != 0 || _kReg.validUntil != type(uint48).max</span></span>
+<span id="L242"><span class="lineNum">     242</span> <span class="tlaGNC">         149 :             _kReg.limit != 0 || _kReg.whitelisting // must be false</span></span>
+<span id="L243"><span class="lineNum">     243</span> <span class="tlaGNC">         148 :                 || _kReg.validAfter != 0 || _kReg.validUntil != type(uint48).max</span></span>
 <span id="L244"><span class="lineNum">     244</span> <span class="tlaGNC">           1 :         ) revert IKeysManager.KeyManager__InvalidMasterKeyReg(_kReg);</span></span>
 <span id="L245"><span class="lineNum">     245</span>              :     }</span>
 <span id="L246"><span class="lineNum">     246</span>              : </span>
@@ -334,8 +334,8 @@
 <span id="L272"><span class="lineNum">     272</span>              :      * @param _id       Identifier index for the key to retrieve.</span>
 <span id="L273"><span class="lineNum">     273</span>              :      * @return A `KeyData` struct containing key type and relevant public key or EOA address.</span>
 <span id="L274"><span class="lineNum">     274</span>              :      */</span>
-<span id="L275"><span class="lineNum">     275</span> <span class="tlaGNC">          90 :     function getKeyById(uint256 _id) public view returns (Key memory) {</span></span>
-<span id="L276"><span class="lineNum">     276</span> <span class="tlaGNC">          90 :         return idKeys[_id];</span></span>
+<span id="L275"><span class="lineNum">     275</span> <span class="tlaGNC">         117 :     function getKeyById(uint256 _id) public view returns (Key memory) {</span></span>
+<span id="L276"><span class="lineNum">     276</span> <span class="tlaGNC">         117 :         return idKeys[_id];</span></span>
 <span id="L277"><span class="lineNum">     277</span>              :     }</span>
 <span id="L278"><span class="lineNum">     278</span>              : </span>
 <span id="L279"><span class="lineNum">     279</span>              :     /**</span>
@@ -346,13 +346,13 @@
 <span id="L284"><span class="lineNum">     284</span>              :      * @return validAfter UNIX timestamp after which the key is valid.</span>
 <span id="L285"><span class="lineNum">     285</span>              :      * @return limit      Remaining number of transactions allowed.</span>
 <span id="L286"><span class="lineNum">     286</span>              :      */</span>
-<span id="L287"><span class="lineNum">     287</span> <span class="tlaGNC">          57 :     function getKeyData(bytes32 _keyHash)</span></span>
+<span id="L287"><span class="lineNum">     287</span> <span class="tlaGNC">          59 :     function getKeyData(bytes32 _keyHash)</span></span>
 <span id="L288"><span class="lineNum">     288</span>              :         external</span>
 <span id="L289"><span class="lineNum">     289</span>              :         view</span>
 <span id="L290"><span class="lineNum">     290</span>              :         returns (bool isActive, uint48 validUntil, uint48 validAfter, uint48 limit)</span>
 <span id="L291"><span class="lineNum">     291</span>              :     {</span>
-<span id="L292"><span class="lineNum">     292</span> <span class="tlaGNC">          57 :         KeyData storage sKey = keys[_keyHash];</span></span>
-<span id="L293"><span class="lineNum">     293</span> <span class="tlaGNC">          57 :         return (sKey.isActive, sKey.validUntil, sKey.validAfter, sKey.limit);</span></span>
+<span id="L292"><span class="lineNum">     292</span> <span class="tlaGNC">          59 :         KeyData storage sKey = keys[_keyHash];</span></span>
+<span id="L293"><span class="lineNum">     293</span> <span class="tlaGNC">          59 :         return (sKey.isActive, sKey.validUntil, sKey.validAfter, sKey.limit);</span></span>
 <span id="L294"><span class="lineNum">     294</span>              :     }</span>
 <span id="L295"><span class="lineNum">     295</span>              : </span>
 <span id="L296"><span class="lineNum">     296</span>              :     /**</span>
@@ -378,7 +378,7 @@
 <span id="L316"><span class="lineNum">     316</span>              :      *         KeyType.WEBAUTHN, requireUserVerification, authenticatorData, clientDataJSON,</span>
 <span id="L317"><span class="lineNum">     317</span>              :      *         challengeIndex, typeIndex, r, s, pubKey.</span>
 <span id="L318"><span class="lineNum">     318</span>              :      */</span>
-<span id="L319"><span class="lineNum">     319</span> <span class="tlaGNC">           9 :     function encodeWebAuthnSignature(</span></span>
+<span id="L319"><span class="lineNum">     319</span> <span class="tlaGNC">          18 :     function encodeWebAuthnSignature(</span></span>
 <span id="L320"><span class="lineNum">     320</span>              :         bool requireUserVerification,</span>
 <span id="L321"><span class="lineNum">     321</span>              :         bytes memory authenticatorData,</span>
 <span id="L322"><span class="lineNum">     322</span>              :         string memory clientDataJSON,</span>
@@ -388,7 +388,7 @@
 <span id="L326"><span class="lineNum">     326</span>              :         bytes32 s,</span>
 <span id="L327"><span class="lineNum">     327</span>              :         PubKey memory pubKey</span>
 <span id="L328"><span class="lineNum">     328</span>              :     ) external pure returns (bytes memory) {</span>
-<span id="L329"><span class="lineNum">     329</span> <span class="tlaGNC">           9 :         bytes memory inner = abi.encode(</span></span>
+<span id="L329"><span class="lineNum">     329</span> <span class="tlaGNC">          18 :         bytes memory inner = abi.encode(</span></span>
 <span id="L330"><span class="lineNum">     330</span>              :             requireUserVerification,</span>
 <span id="L331"><span class="lineNum">     331</span>              :             authenticatorData,</span>
 <span id="L332"><span class="lineNum">     332</span>              :             clientDataJSON,</span>
@@ -399,7 +399,7 @@
 <span id="L337"><span class="lineNum">     337</span>              :             pubKey</span>
 <span id="L338"><span class="lineNum">     338</span>              :         );</span>
 <span id="L339"><span class="lineNum">     339</span>              : </span>
-<span id="L340"><span class="lineNum">     340</span> <span class="tlaGNC">           9 :         return abi.encode(KeyType.WEBAUTHN, inner);</span></span>
+<span id="L340"><span class="lineNum">     340</span> <span class="tlaGNC">          18 :         return abi.encode(KeyType.WEBAUTHN, inner);</span></span>
 <span id="L341"><span class="lineNum">     341</span>              :     }</span>
 <span id="L342"><span class="lineNum">     342</span>              : </span>
 <span id="L343"><span class="lineNum">     343</span>              :     /**</span>
@@ -410,13 +410,13 @@
 <span id="L348"><span class="lineNum">     348</span>              :      * @param _keyType  KeyType of key.</span>
 <span id="L349"><span class="lineNum">     349</span>              :      * @return ABI‐encoded payload as: KeyType.P256, abi.encode(r, s, pubKey).</span>
 <span id="L350"><span class="lineNum">     350</span>              :      */</span>
-<span id="L351"><span class="lineNum">     351</span> <span class="tlaGNC">           7 :     function encodeP256Signature(bytes32 r, bytes32 s, PubKey memory pubKey, KeyType _keyType)</span></span>
+<span id="L351"><span class="lineNum">     351</span> <span class="tlaGNC">          16 :     function encodeP256Signature(bytes32 r, bytes32 s, PubKey memory pubKey, KeyType _keyType)</span></span>
 <span id="L352"><span class="lineNum">     352</span>              :         external</span>
 <span id="L353"><span class="lineNum">     353</span>              :         pure</span>
 <span id="L354"><span class="lineNum">     354</span>              :         returns (bytes memory)</span>
 <span id="L355"><span class="lineNum">     355</span>              :     {</span>
-<span id="L356"><span class="lineNum">     356</span> <span class="tlaGNC">           7 :         bytes memory inner = abi.encode(r, s, pubKey);</span></span>
-<span id="L357"><span class="lineNum">     357</span> <span class="tlaGNC">           7 :         return abi.encode(_keyType, inner);</span></span>
+<span id="L356"><span class="lineNum">     356</span> <span class="tlaGNC">          16 :         bytes memory inner = abi.encode(r, s, pubKey);</span></span>
+<span id="L357"><span class="lineNum">     357</span> <span class="tlaGNC">          16 :         return abi.encode(_keyType, inner);</span></span>
 <span id="L358"><span class="lineNum">     358</span>              :     }</span>
 <span id="L359"><span class="lineNum">     359</span>              : </span>
 <span id="L360"><span class="lineNum">     360</span>              :     /**</span>
@@ -424,8 +424,8 @@
 <span id="L362"><span class="lineNum">     362</span>              :      * @param _signature Raw ECDSA signature bytes over the UserOperation digest.</span>
 <span id="L363"><span class="lineNum">     363</span>              :      * @return ABI‐encoded payload as: KeyType.EOA, _signature.</span>
 <span id="L364"><span class="lineNum">     364</span>              :      */</span>
-<span id="L365"><span class="lineNum">     365</span> <span class="tlaGNC">          13 :     function encodeEOASignature(bytes calldata _signature) external pure returns (bytes memory) {</span></span>
-<span id="L366"><span class="lineNum">     366</span> <span class="tlaGNC">          13 :         return abi.encode(KeyType.EOA, _signature);</span></span>
+<span id="L365"><span class="lineNum">     365</span> <span class="tlaGNC">          15 :     function encodeEOASignature(bytes calldata _signature) external pure returns (bytes memory) {</span></span>
+<span id="L366"><span class="lineNum">     366</span> <span class="tlaGNC">          15 :         return abi.encode(KeyType.EOA, _signature);</span></span>
 <span id="L367"><span class="lineNum">     367</span>              :     }</span>
 <span id="L368"><span class="lineNum">     368</span>              : }</span>
         </pre>

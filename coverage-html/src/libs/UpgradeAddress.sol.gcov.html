@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2025-08-28 20:09:10</td>
+            <td class="headerValue">2025-08-29 18:09:04</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -121,21 +121,21 @@
 <span id="L59"><span class="lineNum">      59</span>              :     /* --------------------------------------------------------------------- */</span>
 <span id="L60"><span class="lineNum">      60</span>              : </span>
 <span id="L61"><span class="lineNum">      61</span>              :     /// @notice Returns the active EntryPoint address, defaulting to `_fallback`.</span>
-<span id="L62"><span class="lineNum">      62</span> <span class="tlaGNC">         951 :     function entryPoint(address _fallback) internal view returns (address ep) {</span></span>
-<span id="L63"><span class="lineNum">      63</span> <span class="tlaGNC">         951 :         uint256 packed;</span></span>
+<span id="L62"><span class="lineNum">      62</span> <span class="tlaGNC">        1076 :     function entryPoint(address _fallback) internal view returns (address ep) {</span></span>
+<span id="L63"><span class="lineNum">      63</span> <span class="tlaGNC">        1076 :         uint256 packed;</span></span>
 <span id="L64"><span class="lineNum">      64</span>              :         assembly {</span>
 <span id="L65"><span class="lineNum">      65</span> <span class="tlaUNC">           0 :             packed := sload(_EP_SLOT)</span></span>
 <span id="L66"><span class="lineNum">      66</span>              :         }</span>
-<span id="L67"><span class="lineNum">      67</span> <span class="tlaGNC">         951 :         ep = _isOverridden(packed) ? _unpack(packed) : _fallback;</span></span>
+<span id="L67"><span class="lineNum">      67</span> <span class="tlaGNC">        1076 :         ep = _isOverridden(packed) ? _unpack(packed) : _fallback;</span></span>
 <span id="L68"><span class="lineNum">      68</span>              :     }</span>
 <span id="L69"><span class="lineNum">      69</span>              : </span>
 <span id="L70"><span class="lineNum">      70</span>              :     /// @notice Returns the active WebAuthnVerifier address, defaulting to `_fallback`.</span>
-<span id="L71"><span class="lineNum">      71</span> <span class="tlaGNC">          40 :     function webAuthnVerifier(address _fallback) internal view returns (address v) {</span></span>
-<span id="L72"><span class="lineNum">      72</span> <span class="tlaGNC">          40 :         uint256 packed;</span></span>
+<span id="L71"><span class="lineNum">      71</span> <span class="tlaGNC">          58 :     function webAuthnVerifier(address _fallback) internal view returns (address v) {</span></span>
+<span id="L72"><span class="lineNum">      72</span> <span class="tlaGNC">          58 :         uint256 packed;</span></span>
 <span id="L73"><span class="lineNum">      73</span>              :         assembly {</span>
 <span id="L74"><span class="lineNum">      74</span> <span class="tlaUNC">           0 :             packed := sload(_VERIFIER_SLOT)</span></span>
 <span id="L75"><span class="lineNum">      75</span>              :         }</span>
-<span id="L76"><span class="lineNum">      76</span> <span class="tlaGNC">          40 :         v = _isOverridden(packed) ? _unpack(packed) : _fallback;</span></span>
+<span id="L76"><span class="lineNum">      76</span> <span class="tlaGNC">          58 :         v = _isOverridden(packed) ? _unpack(packed) : _fallback;</span></span>
 <span id="L77"><span class="lineNum">      77</span>              :     }</span>
 <span id="L78"><span class="lineNum">      78</span>              : </span>
 <span id="L79"><span class="lineNum">      79</span>              :     /// @notice Permanently overrides the EntryPoint address.</span>
@@ -195,8 +195,8 @@
 <span id="L133"><span class="lineNum">     133</span>              :     }</span>
 <span id="L134"><span class="lineNum">     134</span>              : </span>
 <span id="L135"><span class="lineNum">     135</span>              :     /// @dev True if the MSB flag is set.</span>
-<span id="L136"><span class="lineNum">     136</span> <span class="tlaGNC">         999 :     function _isOverridden(uint256 packed) private pure returns (bool) {</span></span>
-<span id="L137"><span class="lineNum">     137</span> <span class="tlaGNC">         999 :         return packed &amp; _OVERRIDDEN_FLAG != 0;</span></span>
+<span id="L136"><span class="lineNum">     136</span> <span class="tlaGNC">        1142 :     function _isOverridden(uint256 packed) private pure returns (bool) {</span></span>
+<span id="L137"><span class="lineNum">     137</span> <span class="tlaGNC">        1142 :         return packed &amp; _OVERRIDDEN_FLAG != 0;</span></span>
 <span id="L138"><span class="lineNum">     138</span>              :     }</span>
 <span id="L139"><span class="lineNum">     139</span>              : }</span>
         </pre>
