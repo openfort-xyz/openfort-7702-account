@@ -193,13 +193,7 @@ contract GasPolicy is IUserOpPolicy {
         _applyManualConfig(cfg, d);
 
         emit GasPolicyInitialized(
-            configId,
-            account,
-            cfg.gasLimit,
-            cfg.costLimit,
-            cfg.perOpMaxCostWei,
-            cfg.txLimit,
-            false
+            configId, account, cfg.gasLimit, cfg.costLimit, cfg.perOpMaxCostWei, cfg.txLimit, false
         );
     }
 

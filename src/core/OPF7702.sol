@@ -96,7 +96,9 @@ contract OPF7702 is Execution, Initializable {
         if (sigType == KeyType.P256 || sigType == KeyType.P256NONKEY) {
             return _validateKeyTypeP256(sigData, userOpHash, userOp, sigType);
         }
-        revert IKeysManager.KeyManager__InvalidKeyType(sigType);
+
+        // Todo; No need to Revret,  the decode will revert on incorrect type
+        revert IKeysManager.KeyManager__InvalidKeyType();
     }
 
     /// @dev validate and enforces per-key-type length bounds, uses to avoid

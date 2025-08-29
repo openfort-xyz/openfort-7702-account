@@ -101,6 +101,17 @@ abstract contract BaseOPF7702 is
         emit UpgradeAddress.WebAuthnVerifierUpdated(previous, webAuthnVerifier());
     }
 
+    // Todo
+
+    // function setGasPolicy(address _gasPolicy) external {
+    //     _requireForExecute();
+
+    //     address previous = address(gasPolicy());
+    //     _gasPolicy.setGasPolicy();
+
+    //     emit UpgradeAddress.GasPolicyUpdated(previous, gasPolicy());
+    // }
+
     // =============================================================
     //                        INTERNAL FUNCTIONS
     // =============================================================
@@ -117,6 +128,7 @@ abstract contract BaseOPF7702 is
             abi.encode(uint256(keccak256("openfort.baseAccount.7702.v1")) - 1)
         ) & ~bytes32(uint256(0xff));
 
+        // Todo: Clear _GAS_SLOT
         // clear slot 0, _EP_SLOT & _VERIFIER_SLOT
         bytes32 epSlot = UpgradeAddress._EP_SLOT;
         bytes32 verifierSlot = UpgradeAddress._VERIFIER_SLOT;
@@ -130,7 +142,6 @@ abstract contract BaseOPF7702 is
         assembly {
             sstore(add(baseSlot, 4), 0)
         }
-
 
         // ---- Clear composite structs:
         // recoveryData: starts at base+8, size 4 slots  -> [8,9,10,11]
@@ -209,6 +220,11 @@ abstract contract BaseOPF7702 is
         return UpgradeAddress.webAuthnVerifier(WEBAUTHN_VERIFIER);
     }
 
+    // Todo
+    // function gasPolicy() public view returns (address) {
+    //     return UpgradeAddress.gasPolicy(GAS_POLICY);
+    // }
+
     /// @notice Checks if the contract implements a given interface.
     /// @param _interfaceId The interface identifier, as specified in ERC-165.
     /// @return `true` if this contract supports `_interfaceId`, `false` otherwise.
@@ -229,9 +245,12 @@ abstract contract BaseOPF7702 is
     }
 
     /// @notice Called by an ERC777 token contract whenever tokens are being moved or created into this account
-    function tokensReceived(address, address, address, uint256, bytes calldata, bytes calldata)
-        external
-        pure
-        override
-    {}
+    function tokensReceived(
+        address operator,
+        address from,
+        address to,
+        uint256 amount,
+        bytes calldata userData,
+        bytes calldata operatorData
+    ) external pure override {}
 }

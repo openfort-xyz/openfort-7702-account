@@ -51,6 +51,15 @@ test-all:
 coverage:
 	forge coverage --ir-minimum --rpc-url $(SEPOLIA_RPC_URL) >> coverage.txt
 
+report-debug:
+	forge coverage --match-path "src/core/BaseOPF7702.sol" --ir-minimum --rpc-url $(SEPOLIA_RPC_URL) >> report_debug_BaseOPF7702.txt
+
+report-json:
+	forge coverage --report json --ir-minimum --rpc-url $(SEPOLIA_RPC_URL) >> coverage.json
+
+lcov:
+	forge coverage --report lcov --ir-minimum --rpc-url $(SEPOLIA_RPC_URL)  && genhtml lcov.info -o coverage-html/ --ignore-errors inconsistent,corrupt
+
 gas:
 	forge test --gas-report --rpc-url $(SEPOLIA_RPC_URL)
 	

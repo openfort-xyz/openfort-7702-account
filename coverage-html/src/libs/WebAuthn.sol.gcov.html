@@ -1,0 +1,412 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<html lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>LCOV - lcov.info - src/libs/WebAuthn.sol</title>
+  <link rel="stylesheet" type="text/css" href="../../gcov.css">
+</head>
+
+<body>
+
+          <table width="100%" border=0 cellspacing=0 cellpadding=0>
+            <tr><td class="title">LCOV - code coverage report</td></tr>
+            <tr><td class="ruler"><img src="../../glass.png" width=3 height=3 alt=""></td></tr>
+
+            <tr>
+              <td width="100%">
+                <table cellpadding=1 border=0 width="100%">
+          <tr>
+            <td width="10%" class="headerItem">Current view:</td>
+            <td width="10%" class="headerValue"><a href="../../index.html" title="Click to go to top-level">top level</a> - <a href="index.html" title="Click to go to directory src/libs">src/libs</a> - WebAuthn.sol<span style="font-size: 80%;"> (source / <a href="WebAuthn.sol.func-c.html" title="Click to go to function table">functions</a>)</span></td>
+            <td width="5%"></td>
+            <td width="5%"></td>
+            <td width="5%" class="headerCovTableHead">Coverage</td>
+            <td width="5%" class="headerCovTableHead" title="Covered + Uncovered code">Total</td>
+            <td width="5%" class="headerCovTableHead" title="Exercised code only">Hit</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Test:</td>
+            <td class="headerValue">lcov.info</td>
+            <td></td>
+            <td class="headerItem">Lines:</td>
+            <td class="headerCovTableEntryLo">0.0&nbsp;%</td>
+            <td class="headerCovTableEntry">115</td>
+            <td class="headerCovTableEntry">0</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Test Date:</td>
+            <td class="headerValue">2025-08-28 20:09:10</td>
+            <td></td>
+            <td class="headerItem">Functions:</td>
+            <td class="headerCovTableEntryLo">0.0&nbsp;%</td>
+            <td class="headerCovTableEntry">8</td>
+            <td class="headerCovTableEntry">0</td>
+          </tr>
+                  <tr><td><img src="../../glass.png" width=3 height=3 alt=""></td></tr>
+                </table>
+              </td>
+            </tr>
+
+            <tr><td class="ruler"><img src="../../glass.png" width=3 height=3 alt=""></td></tr>
+          </table>
+
+          <table cellpadding=0 cellspacing=0 border=0>
+            <tr>
+              <td><br></td>
+            </tr>
+            <tr>
+              <td>
+<pre class="sourceHeading">            Line data    Source code</pre>
+<pre class="source">
+<span id="L1"><span class="lineNum">       1</span>              : // SPDX-License-Identifier: MIT</span>
+<span id="L2"><span class="lineNum">       2</span>              : pragma solidity ^0.8.4;</span>
+<span id="L3"><span class="lineNum">       3</span>              : </span>
+<span id="L4"><span class="lineNum">       4</span>              : import {Base64} from &quot;src/libs/Base64.sol&quot;;</span>
+<span id="L5"><span class="lineNum">       5</span>              : import {P256} from &quot;src/libs/P256.sol&quot;;</span>
+<span id="L6"><span class="lineNum">       6</span>              : </span>
+<span id="L7"><span class="lineNum">       7</span>              : /// @notice WebAuthn helper.</span>
+<span id="L8"><span class="lineNum">       8</span>              : /// @author Solady (https://github.com/vectorized/solady/blob/main/src/utils/WebAuthn.sol)</span>
+<span id="L9"><span class="lineNum">       9</span>              : /// @author Modified from Daimo WebAuthn (https://github.com/daimo-eth/p256-verifier/blob/master/src/WebAuthn.sol)</span>
+<span id="L10"><span class="lineNum">      10</span>              : /// @author Modified from Coinbase WebAuthn (https://github.com/base-org/webauthn-sol/blob/main/src/WebAuthn.sol)</span>
+<span id="L11"><span class="lineNum">      11</span>              : library WebAuthn {</span>
+<span id="L12"><span class="lineNum">      12</span>              :     /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/</span>
+<span id="L13"><span class="lineNum">      13</span>              :     /*                          STRUCTS                           */</span>
+<span id="L14"><span class="lineNum">      14</span>              :     /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/</span>
+<span id="L15"><span class="lineNum">      15</span>              : </span>
+<span id="L16"><span class="lineNum">      16</span>              :     /// @dev Helps make encoding and decoding easier, alleviates stack-too-deep.</span>
+<span id="L17"><span class="lineNum">      17</span>              :     struct WebAuthnAuth {</span>
+<span id="L18"><span class="lineNum">      18</span>              :         // The WebAuthn authenticator data.</span>
+<span id="L19"><span class="lineNum">      19</span>              :         // See: https://www.w3.org/TR/webauthn-2/#dom-authenticatorassertionresponse-authenticatordata.</span>
+<span id="L20"><span class="lineNum">      20</span>              :         bytes authenticatorData;</span>
+<span id="L21"><span class="lineNum">      21</span>              :         // The WebAuthn client data JSON.</span>
+<span id="L22"><span class="lineNum">      22</span>              :         // See: https://www.w3.org/TR/webauthn-2/#dom-authenticatorresponse-clientdatajson.</span>
+<span id="L23"><span class="lineNum">      23</span>              :         string clientDataJSON;</span>
+<span id="L24"><span class="lineNum">      24</span>              :         // Start index of &quot;challenge&quot;:&quot;...&quot; in `clientDataJSON`.</span>
+<span id="L25"><span class="lineNum">      25</span>              :         uint256 challengeIndex;</span>
+<span id="L26"><span class="lineNum">      26</span>              :         // Start index of &quot;type&quot;:&quot;...&quot; in `clientDataJSON`.</span>
+<span id="L27"><span class="lineNum">      27</span>              :         uint256 typeIndex;</span>
+<span id="L28"><span class="lineNum">      28</span>              :         // The r value of secp256r1 signature.</span>
+<span id="L29"><span class="lineNum">      29</span>              :         bytes32 r;</span>
+<span id="L30"><span class="lineNum">      30</span>              :         // The s value of secp256r1 signature.</span>
+<span id="L31"><span class="lineNum">      31</span>              :         bytes32 s;</span>
+<span id="L32"><span class="lineNum">      32</span>              :     }</span>
+<span id="L33"><span class="lineNum">      33</span>              : </span>
+<span id="L34"><span class="lineNum">      34</span>              :     /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/</span>
+<span id="L35"><span class="lineNum">      35</span>              :     /*              WEBAUTHN VERIFICATION OPERATIONS              */</span>
+<span id="L36"><span class="lineNum">      36</span>              :     /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/</span>
+<span id="L37"><span class="lineNum">      37</span>              : </span>
+<span id="L38"><span class="lineNum">      38</span>              :     /// @dev Verifies a Webauthn Authentication Assertion.</span>
+<span id="L39"><span class="lineNum">      39</span>              :     /// See: https://www.w3.org/TR/webauthn-2/#sctn-verifying-assertion.</span>
+<span id="L40"><span class="lineNum">      40</span>              :     ///</span>
+<span id="L41"><span class="lineNum">      41</span>              :     /// We do not verify all the steps as described in the specification, only ones</span>
+<span id="L42"><span class="lineNum">      42</span>              :     /// relevant to our context. Please carefully read through this list before usage.</span>
+<span id="L43"><span class="lineNum">      43</span>              :     ///</span>
+<span id="L44"><span class="lineNum">      44</span>              :     /// Specifically, we do verify the following:</span>
+<span id="L45"><span class="lineNum">      45</span>              :     /// - Verify that `authenticatorData` (which comes from the authenticator,</span>
+<span id="L46"><span class="lineNum">      46</span>              :     ///   such as iCloud Keychain) indicates a well-formed assertion with the</span>
+<span id="L47"><span class="lineNum">      47</span>              :     ///   &quot;User Present&quot; bit set. If `requireUserVerification` is set, checks that the</span>
+<span id="L48"><span class="lineNum">      48</span>              :     ///   authenticator enforced user verification. User verification should be required</span>
+<span id="L49"><span class="lineNum">      49</span>              :     ///   if, and only if, `options.userVerification` is set to required in the request.</span>
+<span id="L50"><span class="lineNum">      50</span>              :     /// - Verifies that the client JSON is of type &quot;webauthn.get&quot;,</span>
+<span id="L51"><span class="lineNum">      51</span>              :     ///   i.e. the client was responding to a request to assert authentication.</span>
+<span id="L52"><span class="lineNum">      52</span>              :     /// - Verifies that the client JSON contains the requested challenge.</span>
+<span id="L53"><span class="lineNum">      53</span>              :     /// - Verifies that (r, s) constitute a valid signature over both the</span>
+<span id="L54"><span class="lineNum">      54</span>              :     ///   `authData` and client JSON, for public key (x, y).</span>
+<span id="L55"><span class="lineNum">      55</span>              :     ///</span>
+<span id="L56"><span class="lineNum">      56</span>              :     /// We make some assumptions about the particular use case of this verifier,</span>
+<span id="L57"><span class="lineNum">      57</span>              :     /// so we do NOT verify the following:</span>
+<span id="L58"><span class="lineNum">      58</span>              :     /// - Does NOT verify that the origin in the `clientDataJSON` matches the</span>
+<span id="L59"><span class="lineNum">      59</span>              :     ///   Relying Party's origin: it is considered the authenticator's responsibility to</span>
+<span id="L60"><span class="lineNum">      60</span>              :     ///   ensure that the user is interacting with the correct RP. This is enforced by</span>
+<span id="L61"><span class="lineNum">      61</span>              :     ///   most high quality authenticators properly, particularly the iCloud Keychain</span>
+<span id="L62"><span class="lineNum">      62</span>              :     ///   and Google Password Manager were tested.</span>
+<span id="L63"><span class="lineNum">      63</span>              :     /// - Does NOT verify That `topOrigin` in `clientDataJSON` is well-formed:</span>
+<span id="L64"><span class="lineNum">      64</span>              :     ///   We assume it would never be present, i.e. the credentials are never used in a</span>
+<span id="L65"><span class="lineNum">      65</span>              :     ///   cross-origin/iframe context. The website/app set up should disallow cross-origin</span>
+<span id="L66"><span class="lineNum">      66</span>              :     ///   usage of the credentials. This is the default behavior for created credentials</span>
+<span id="L67"><span class="lineNum">      67</span>              :     ///   in common settings.</span>
+<span id="L68"><span class="lineNum">      68</span>              :     /// - Does NOT verify that the `rpIdHash` in `authenticatorData` is the SHA-256 hash</span>
+<span id="L69"><span class="lineNum">      69</span>              :     ///   of the RP ID expected by the Relying Party:</span>
+<span id="L70"><span class="lineNum">      70</span>              :     ///   this means that we rely on the authenticator to properly enforce</span>
+<span id="L71"><span class="lineNum">      71</span>              :     ///   credentials to be used only by the correct RP.</span>
+<span id="L72"><span class="lineNum">      72</span>              :     ///   This is generally enforced with features like Apple App Site Association</span>
+<span id="L73"><span class="lineNum">      73</span>              :     ///   and Google Asset Links. To protect from edge cases in which a previously-linked</span>
+<span id="L74"><span class="lineNum">      74</span>              :     ///   RP ID is removed from the authorized RP IDs, we recommend that messages</span>
+<span id="L75"><span class="lineNum">      75</span>              :     ///   signed by the authenticator include some expiry mechanism.</span>
+<span id="L76"><span class="lineNum">      76</span>              :     /// - Does NOT verify the credential backup state: this assumes the credential backup</span>
+<span id="L77"><span class="lineNum">      77</span>              :     ///   state is NOT used as part of Relying Party business logic or policy.</span>
+<span id="L78"><span class="lineNum">      78</span>              :     /// - Does NOT verify the values of the client extension outputs:</span>
+<span id="L79"><span class="lineNum">      79</span>              :     ///   this assumes that the Relying Party does not use client extension outputs.</span>
+<span id="L80"><span class="lineNum">      80</span>              :     /// - Does NOT verify the signature counter: signature counters are intended to enable</span>
+<span id="L81"><span class="lineNum">      81</span>              :     ///   risk scoring for the Relying Party. This assumes risk scoring is not used as part</span>
+<span id="L82"><span class="lineNum">      82</span>              :     ///   of Relying Party business logic or policy.</span>
+<span id="L83"><span class="lineNum">      83</span>              :     /// - Does NOT verify the attestation object: this assumes that</span>
+<span id="L84"><span class="lineNum">      84</span>              :     ///   response.attestationObject is NOT present in the response,</span>
+<span id="L85"><span class="lineNum">      85</span>              :     ///   i.e. the RP does not intend to verify an attestation.</span>
+<span id="L86"><span class="lineNum">      86</span> <span class="tlaUNC">           0 :     function verify(</span></span>
+<span id="L87"><span class="lineNum">      87</span>              :         bytes memory challenge,</span>
+<span id="L88"><span class="lineNum">      88</span>              :         bool requireUserVerification,</span>
+<span id="L89"><span class="lineNum">      89</span>              :         WebAuthnAuth memory auth,</span>
+<span id="L90"><span class="lineNum">      90</span>              :         bytes32 x,</span>
+<span id="L91"><span class="lineNum">      91</span>              :         bytes32 y</span>
+<span id="L92"><span class="lineNum">      92</span>              :     ) internal view returns (bool result) {</span>
+<span id="L93"><span class="lineNum">      93</span> <span class="tlaUNC">           0 :         bytes32 messageHash;</span></span>
+<span id="L94"><span class="lineNum">      94</span> <span class="tlaUNC">           0 :         string memory encoded = Base64.encode(challenge, true, true);</span></span>
+<span id="L95"><span class="lineNum">      95</span>              :         /// @solidity memory-safe-assembly</span>
+<span id="L96"><span class="lineNum">      96</span>              :         assembly {</span>
+<span id="L97"><span class="lineNum">      97</span> <span class="tlaUNC">           0 :             let clientDataJSON := mload(add(auth, 0x20))</span></span>
+<span id="L98"><span class="lineNum">      98</span> <span class="tlaUNC">           0 :             let n := mload(clientDataJSON) // `clientDataJSON`'s length.</span></span>
+<span id="L99"><span class="lineNum">      99</span> <span class="tlaUNC">           0 :             let o := add(clientDataJSON, 0x20) // Start of `clientData`'s bytes.</span></span>
+<span id="L100"><span class="lineNum">     100</span>              :             {</span>
+<span id="L101"><span class="lineNum">     101</span> <span class="tlaUNC">           0 :                 let c := mload(add(auth, 0x40)) // Challenge index in `clientDataJSON`.</span></span>
+<span id="L102"><span class="lineNum">     102</span> <span class="tlaUNC">           0 :                 let t := mload(add(auth, 0x60)) // Type index in `clientDataJSON`.</span></span>
+<span id="L103"><span class="lineNum">     103</span> <span class="tlaUNC">           0 :                 let l := mload(encoded) // Cache `encoded`'s length.</span></span>
+<span id="L104"><span class="lineNum">     104</span> <span class="tlaUNC">           0 :                 let q := add(l, 0x0d) // Length of `encoded` prefixed with '&quot;challenge&quot;:&quot;'.</span></span>
+<span id="L105"><span class="lineNum">     105</span> <span class="tlaUNC">           0 :                 mstore(encoded, shr(152, '&quot;challenge&quot;:&quot;')) // Temp prefix with '&quot;challenge&quot;:&quot;'.</span></span>
+<span id="L106"><span class="lineNum">     106</span> <span class="tlaUNC">           0 :                 result :=</span></span>
+<span id="L107"><span class="lineNum">     107</span>              :                     and(</span>
+<span id="L108"><span class="lineNum">     108</span>              :                         // 11. Verify JSON's type. Also checks for possible addition overflows.</span>
+<span id="L109"><span class="lineNum">     109</span>              :                         and(</span>
+<span id="L110"><span class="lineNum">     110</span>              :                             eq(shr(88, mload(add(o, t))), shr(88, '&quot;type&quot;:&quot;webauthn.get&quot;')),</span>
+<span id="L111"><span class="lineNum">     111</span>              :                             lt(shr(128, or(t, c)), lt(add(0x14, t), n))</span>
+<span id="L112"><span class="lineNum">     112</span>              :                         ),</span>
+<span id="L113"><span class="lineNum">     113</span>              :                         // 12. Verify JSON's challenge. Includes a check for the closing '&quot;'.</span>
+<span id="L114"><span class="lineNum">     114</span>              :                         and(</span>
+<span id="L115"><span class="lineNum">     115</span>              :                             eq(keccak256(add(o, c), q), keccak256(add(encoded, 0x13), q)),</span>
+<span id="L116"><span class="lineNum">     116</span>              :                             and(eq(byte(0, mload(add(add(o, c), q))), 34), lt(add(q, c), n))</span>
+<span id="L117"><span class="lineNum">     117</span>              :                         )</span>
+<span id="L118"><span class="lineNum">     118</span>              :                     )</span>
+<span id="L119"><span class="lineNum">     119</span> <span class="tlaUNC">           0 :                 mstore(encoded, l) // Restore `encoded`'s length, in case of string interning.</span></span>
+<span id="L120"><span class="lineNum">     120</span>              :             }</span>
+<span id="L121"><span class="lineNum">     121</span>              :             // Skip 13., 14., 15.</span>
+<span id="L122"><span class="lineNum">     122</span> <span class="tlaUNC">           0 :             let l := mload(mload(auth)) // Length of `authenticatorData`.</span></span>
+<span id="L123"><span class="lineNum">     123</span>              :             // 16. Verify that the &quot;User Present&quot; flag is set (bit 0).</span>
+<span id="L124"><span class="lineNum">     124</span>              :             // 17. Verify that the &quot;User Verified&quot; flag is set (bit 2), if required.</span>
+<span id="L125"><span class="lineNum">     125</span>              :             // See: https://www.w3.org/TR/webauthn-2/#flags.</span>
+<span id="L126"><span class="lineNum">     126</span> <span class="tlaUNC">           0 :             let u := or(1, shl(2, iszero(iszero(requireUserVerification))))</span></span>
+<span id="L127"><span class="lineNum">     127</span> <span class="tlaUNC">           0 :             result := and(and(result, gt(l, 0x20)), eq(and(mload(add(mload(auth), 0x21)), u), u))</span></span>
+<span id="L128"><span class="lineNum">     128</span> <span class="tlaUNC">           0 :             if result {</span></span>
+<span id="L129"><span class="lineNum">     129</span> <span class="tlaUNC">           0 :                 let p := add(mload(auth), 0x20) // Start of `authenticatorData`'s bytes.</span></span>
+<span id="L130"><span class="lineNum">     130</span> <span class="tlaUNC">           0 :                 let e := add(p, l) // Location of the word after `authenticatorData`.</span></span>
+<span id="L131"><span class="lineNum">     131</span> <span class="tlaUNC">           0 :                 let w := mload(e) // Cache the word after `authenticatorData`.</span></span>
+<span id="L132"><span class="lineNum">     132</span>              :                 // 19. Compute `sha256(clientDataJSON)`.</span>
+<span id="L133"><span class="lineNum">     133</span>              :                 // 20. Compute `sha256(authenticatorData ‖ sha256(clientDataJSON))`.</span>
+<span id="L134"><span class="lineNum">     134</span>              :                 // forgefmt: disable-next-item</span>
+<span id="L135"><span class="lineNum">     135</span> <span class="tlaUNC">           0 :                 messageHash := mload(staticcall(gas(),</span></span>
+<span id="L136"><span class="lineNum">     136</span>              :                     shl(1, staticcall(gas(), 2, o, n, e, 0x20)), p, add(l, 0x20), 0x01, 0x20))</span>
+<span id="L137"><span class="lineNum">     137</span> <span class="tlaUNC">           0 :                 mstore(e, w) // Restore the word after `authenticatorData`, in case of reuse.</span></span>
+<span id="L138"><span class="lineNum">     138</span>              :                 // `returndatasize()` is `0x20` on `sha256` success, and `0x00` otherwise.</span>
+<span id="L139"><span class="lineNum">     139</span> <span class="tlaUNC">           0 :                 if iszero(returndatasize()) { invalid() }</span></span>
+<span id="L140"><span class="lineNum">     140</span>              :             }</span>
+<span id="L141"><span class="lineNum">     141</span>              :         }</span>
+<span id="L142"><span class="lineNum">     142</span>              :         // `P256.verifySignature` returns false if `s &gt; N/2` due to the malleability check.</span>
+<span id="L143"><span class="lineNum">     143</span> <span class="tlaUNC">           0 :         if (result) result = P256.verifySignature(messageHash, auth.r, auth.s, x, y);</span></span>
+<span id="L144"><span class="lineNum">     144</span>              :     }</span>
+<span id="L145"><span class="lineNum">     145</span>              : </span>
+<span id="L146"><span class="lineNum">     146</span>              :     /// @dev Plain variant of verify.</span>
+<span id="L147"><span class="lineNum">     147</span> <span class="tlaUNC">           0 :     function verify(</span></span>
+<span id="L148"><span class="lineNum">     148</span>              :         bytes memory challenge,</span>
+<span id="L149"><span class="lineNum">     149</span>              :         bool requireUserVerification,</span>
+<span id="L150"><span class="lineNum">     150</span>              :         bytes memory authenticatorData,</span>
+<span id="L151"><span class="lineNum">     151</span>              :         string memory clientDataJSON,</span>
+<span id="L152"><span class="lineNum">     152</span>              :         uint256 challengeIndex,</span>
+<span id="L153"><span class="lineNum">     153</span>              :         uint256 typeIndex,</span>
+<span id="L154"><span class="lineNum">     154</span>              :         bytes32 r,</span>
+<span id="L155"><span class="lineNum">     155</span>              :         bytes32 s,</span>
+<span id="L156"><span class="lineNum">     156</span>              :         bytes32 x,</span>
+<span id="L157"><span class="lineNum">     157</span>              :         bytes32 y</span>
+<span id="L158"><span class="lineNum">     158</span>              :     ) internal view returns (bool) {</span>
+<span id="L159"><span class="lineNum">     159</span> <span class="tlaUNC">           0 :         return verify(</span></span>
+<span id="L160"><span class="lineNum">     160</span>              :             challenge,</span>
+<span id="L161"><span class="lineNum">     161</span>              :             requireUserVerification,</span>
+<span id="L162"><span class="lineNum">     162</span>              :             WebAuthnAuth(authenticatorData, clientDataJSON, challengeIndex, typeIndex, r, s),</span>
+<span id="L163"><span class="lineNum">     163</span>              :             x,</span>
+<span id="L164"><span class="lineNum">     164</span>              :             y</span>
+<span id="L165"><span class="lineNum">     165</span>              :         );</span>
+<span id="L166"><span class="lineNum">     166</span>              :     }</span>
+<span id="L167"><span class="lineNum">     167</span>              : </span>
+<span id="L168"><span class="lineNum">     168</span>              :     /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/</span>
+<span id="L169"><span class="lineNum">     169</span>              :     /*                ENCODING / DECODING HELPERS                 */</span>
+<span id="L170"><span class="lineNum">     170</span>              :     /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/</span>
+<span id="L171"><span class="lineNum">     171</span>              : </span>
+<span id="L172"><span class="lineNum">     172</span>              :     /// @dev Returns `abi.encode(auth)`.</span>
+<span id="L173"><span class="lineNum">     173</span> <span class="tlaUNC">           0 :     function encodeAuth(WebAuthnAuth memory auth) internal pure returns (bytes memory) {</span></span>
+<span id="L174"><span class="lineNum">     174</span> <span class="tlaUNC">           0 :         return abi.encode(auth);</span></span>
+<span id="L175"><span class="lineNum">     175</span>              :     }</span>
+<span id="L176"><span class="lineNum">     176</span>              : </span>
+<span id="L177"><span class="lineNum">     177</span>              :     /// @dev Performs a best-effort attempt to `abi.decode(auth)`. Won't revert.</span>
+<span id="L178"><span class="lineNum">     178</span>              :     /// If any fields cannot be successfully extracted, `decoded` will not be populated,</span>
+<span id="L179"><span class="lineNum">     179</span>              :     /// which will cause `verify` to return false (as `clientDataJSON` is empty).</span>
+<span id="L180"><span class="lineNum">     180</span> <span class="tlaUNC">           0 :     function tryDecodeAuth(bytes memory encodedAuth)</span></span>
+<span id="L181"><span class="lineNum">     181</span>              :         internal</span>
+<span id="L182"><span class="lineNum">     182</span>              :         pure</span>
+<span id="L183"><span class="lineNum">     183</span>              :         returns (WebAuthnAuth memory decoded)</span>
+<span id="L184"><span class="lineNum">     184</span>              :     {</span>
+<span id="L185"><span class="lineNum">     185</span>              :         /// @solidity memory-safe-assembly</span>
+<span id="L186"><span class="lineNum">     186</span>              :         assembly {</span>
+<span id="L187"><span class="lineNum">     187</span> <span class="tlaUNC">           0 :             for { let n := mload(encodedAuth) } iszero(lt(n, 0xc0)) {} {</span></span>
+<span id="L188"><span class="lineNum">     188</span> <span class="tlaUNC">           0 :                 let o := add(encodedAuth, 0x20) // Start of `encodedAuth`'s bytes.</span></span>
+<span id="L189"><span class="lineNum">     189</span> <span class="tlaUNC">           0 :                 let e := add(o, n) // End of `encodedAuth` in memory.</span></span>
+<span id="L190"><span class="lineNum">     190</span> <span class="tlaUNC">           0 :                 let p := add(mload(o), o) // Start of `encodedAuth`.</span></span>
+<span id="L191"><span class="lineNum">     191</span> <span class="tlaUNC">           0 :                 if or(gt(add(p, 0xc0), e), lt(p, o)) { break }</span></span>
+<span id="L192"><span class="lineNum">     192</span> <span class="tlaUNC">           0 :                 let authenticatorData := add(mload(p), p)</span></span>
+<span id="L193"><span class="lineNum">     193</span> <span class="tlaUNC">           0 :                 let clientDataJSON := add(mload(add(p, 0x20)), p)</span></span>
+<span id="L194"><span class="lineNum">     194</span> <span class="tlaUNC">           0 :                 if or(</span></span>
+<span id="L195"><span class="lineNum">     195</span>              :                     or(gt(authenticatorData, e), lt(authenticatorData, p)),</span>
+<span id="L196"><span class="lineNum">     196</span>              :                     or(gt(clientDataJSON, e), lt(clientDataJSON, p))</span>
+<span id="L197"><span class="lineNum">     197</span> <span class="tlaUNC">           0 :                 ) { break }</span></span>
+<span id="L198"><span class="lineNum">     198</span> <span class="tlaUNC">           0 :                 if or(</span></span>
+<span id="L199"><span class="lineNum">     199</span>              :                     gt(add(add(authenticatorData, 0x20), mload(authenticatorData)), e),</span>
+<span id="L200"><span class="lineNum">     200</span>              :                     gt(add(add(clientDataJSON, 0x20), mload(clientDataJSON)), e)</span>
+<span id="L201"><span class="lineNum">     201</span> <span class="tlaUNC">           0 :                 ) { break }</span></span>
+<span id="L202"><span class="lineNum">     202</span> <span class="tlaUNC">           0 :                 mstore(decoded, authenticatorData) // `authenticatorData`.</span></span>
+<span id="L203"><span class="lineNum">     203</span> <span class="tlaUNC">           0 :                 mstore(add(decoded, 0x20), clientDataJSON) // `clientDataJSON`.</span></span>
+<span id="L204"><span class="lineNum">     204</span> <span class="tlaUNC">           0 :                 mstore(add(decoded, 0x40), mload(add(p, 0x40))) // `challengeIndex`.</span></span>
+<span id="L205"><span class="lineNum">     205</span> <span class="tlaUNC">           0 :                 mstore(add(decoded, 0x60), mload(add(p, 0x60))) // `typeIndex`.</span></span>
+<span id="L206"><span class="lineNum">     206</span> <span class="tlaUNC">           0 :                 mstore(add(decoded, 0x80), mload(add(p, 0x80))) // `r`.</span></span>
+<span id="L207"><span class="lineNum">     207</span> <span class="tlaUNC">           0 :                 mstore(add(decoded, 0xa0), mload(add(p, 0xa0))) // `s`.</span></span>
+<span id="L208"><span class="lineNum">     208</span> <span class="tlaUNC">           0 :                 break</span></span>
+<span id="L209"><span class="lineNum">     209</span>              :             }</span>
+<span id="L210"><span class="lineNum">     210</span>              :         }</span>
+<span id="L211"><span class="lineNum">     211</span>              :     }</span>
+<span id="L212"><span class="lineNum">     212</span>              : </span>
+<span id="L213"><span class="lineNum">     213</span>              :     /// @dev Returns the compact encoding of `auth`:</span>
+<span id="L214"><span class="lineNum">     214</span>              :     /// ```</span>
+<span id="L215"><span class="lineNum">     215</span>              :     ///     abi.encodePacked(</span>
+<span id="L216"><span class="lineNum">     216</span>              :     ///         uint16(auth.authenticatorData.length),</span>
+<span id="L217"><span class="lineNum">     217</span>              :     ///         bytes(auth.authenticatorData),</span>
+<span id="L218"><span class="lineNum">     218</span>              :     ///         bytes(auth.clientDataJSON),</span>
+<span id="L219"><span class="lineNum">     219</span>              :     ///         uint16(auth.challengeIndex),</span>
+<span id="L220"><span class="lineNum">     220</span>              :     ///         uint16(auth.typeIndex),</span>
+<span id="L221"><span class="lineNum">     221</span>              :     ///         bytes32(auth.r),</span>
+<span id="L222"><span class="lineNum">     222</span>              :     ///         bytes32(auth.s)</span>
+<span id="L223"><span class="lineNum">     223</span>              :     ///     )</span>
+<span id="L224"><span class="lineNum">     224</span>              :     /// ```</span>
+<span id="L225"><span class="lineNum">     225</span>              :     /// Returns the empty string if any length or index exceeds 16 bits.</span>
+<span id="L226"><span class="lineNum">     226</span> <span class="tlaUNC">           0 :     function tryEncodeAuthCompact(WebAuthnAuth memory auth)</span></span>
+<span id="L227"><span class="lineNum">     227</span>              :         internal</span>
+<span id="L228"><span class="lineNum">     228</span>              :         pure</span>
+<span id="L229"><span class="lineNum">     229</span>              :         returns (bytes memory result)</span>
+<span id="L230"><span class="lineNum">     230</span>              :     {</span>
+<span id="L231"><span class="lineNum">     231</span>              :         /// @solidity memory-safe-assembly</span>
+<span id="L232"><span class="lineNum">     232</span>              :         assembly {</span>
+<span id="L233"><span class="lineNum">     233</span> <span class="tlaUNC">           0 :             function copyBytes(o_, s_, c_) -&gt; _e {</span></span>
+<span id="L234"><span class="lineNum">     234</span> <span class="tlaUNC">           0 :                 mstore(o_, shl(240, mload(s_)))</span></span>
+<span id="L235"><span class="lineNum">     235</span> <span class="tlaUNC">           0 :                 o_ := add(o_, c_)</span></span>
+<span id="L236"><span class="lineNum">     236</span> <span class="tlaUNC">           0 :                 _e := add(o_, mload(s_)) // The end of the bytes.</span></span>
+<span id="L237"><span class="lineNum">     237</span> <span class="tlaUNC">           0 :                 for { let d_ := sub(add(0x20, s_), o_) } 1 {} {</span></span>
+<span id="L238"><span class="lineNum">     238</span> <span class="tlaUNC">           0 :                     mstore(o_, mload(add(d_, o_)))</span></span>
+<span id="L239"><span class="lineNum">     239</span> <span class="tlaUNC">           0 :                     o_ := add(o_, 0x20)</span></span>
+<span id="L240"><span class="lineNum">     240</span> <span class="tlaUNC">           0 :                     if iszero(lt(o_, _e)) { break }</span></span>
+<span id="L241"><span class="lineNum">     241</span>              :                 }</span>
+<span id="L242"><span class="lineNum">     242</span>              :             }</span>
+<span id="L243"><span class="lineNum">     243</span> <span class="tlaUNC">           0 :             let clientDataJSON := mload(add(0x20, auth))</span></span>
+<span id="L244"><span class="lineNum">     244</span> <span class="tlaUNC">           0 :             let c := mload(add(0x40, auth)) // `challengeIndex`.</span></span>
+<span id="L245"><span class="lineNum">     245</span> <span class="tlaUNC">           0 :             let t := mload(add(0x60, auth)) // `typeIndex`.</span></span>
+<span id="L246"><span class="lineNum">     246</span>              :             // If none of the lengths are more than `0xffff`.</span>
+<span id="L247"><span class="lineNum">     247</span> <span class="tlaUNC">           0 :             if iszero(shr(16, or(or(t, c), or(mload(mload(auth)), mload(clientDataJSON))))) {</span></span>
+<span id="L248"><span class="lineNum">     248</span> <span class="tlaUNC">           0 :                 result := mload(0x40)</span></span>
+<span id="L249"><span class="lineNum">     249</span>              :                 // `authenticatorData`, `clientDataJSON`.</span>
+<span id="L250"><span class="lineNum">     250</span> <span class="tlaUNC">           0 :                 let o := copyBytes(copyBytes(add(result, 0x20), mload(auth), 2), clientDataJSON, 0)</span></span>
+<span id="L251"><span class="lineNum">     251</span> <span class="tlaUNC">           0 :                 mstore(o, or(shl(240, c), shl(224, t))) // `challengeIndex`, `typeIndex`.</span></span>
+<span id="L252"><span class="lineNum">     252</span> <span class="tlaUNC">           0 :                 mstore(add(o, 0x04), mload(add(0x80, auth))) // `r`.</span></span>
+<span id="L253"><span class="lineNum">     253</span> <span class="tlaUNC">           0 :                 mstore(add(o, 0x24), mload(add(0xa0, auth))) // `s`.</span></span>
+<span id="L254"><span class="lineNum">     254</span> <span class="tlaUNC">           0 :                 mstore(result, sub(add(o, 0x24), result)) // Store the length.</span></span>
+<span id="L255"><span class="lineNum">     255</span> <span class="tlaUNC">           0 :                 mstore(add(o, 0x44), 0) // Zeroize the slot after the string.</span></span>
+<span id="L256"><span class="lineNum">     256</span> <span class="tlaUNC">           0 :                 mstore(0x40, add(o, 0x64)) // Allocate memory .</span></span>
+<span id="L257"><span class="lineNum">     257</span>              :             }</span>
+<span id="L258"><span class="lineNum">     258</span>              :         }</span>
+<span id="L259"><span class="lineNum">     259</span>              :     }</span>
+<span id="L260"><span class="lineNum">     260</span>              : </span>
+<span id="L261"><span class="lineNum">     261</span>              :     /// @dev Approximately the same gas as `tryDecodeAuth`, but helps save on calldata.</span>
+<span id="L262"><span class="lineNum">     262</span>              :     /// If any fields cannot be successfully extracted, `decoded` will not be populated,</span>
+<span id="L263"><span class="lineNum">     263</span>              :     /// which will cause `verify` to return false (as `clientDataJSON` is empty).</span>
+<span id="L264"><span class="lineNum">     264</span> <span class="tlaUNC">           0 :     function tryDecodeAuthCompact(bytes memory encodedAuth)</span></span>
+<span id="L265"><span class="lineNum">     265</span>              :         internal</span>
+<span id="L266"><span class="lineNum">     266</span>              :         pure</span>
+<span id="L267"><span class="lineNum">     267</span>              :         returns (WebAuthnAuth memory decoded)</span>
+<span id="L268"><span class="lineNum">     268</span>              :     {</span>
+<span id="L269"><span class="lineNum">     269</span>              :         /// @solidity memory-safe-assembly</span>
+<span id="L270"><span class="lineNum">     270</span>              :         assembly {</span>
+<span id="L271"><span class="lineNum">     271</span> <span class="tlaUNC">           0 :             function extractBytes(o_, l_) -&gt; _m {</span></span>
+<span id="L272"><span class="lineNum">     272</span> <span class="tlaUNC">           0 :                 _m := mload(0x40) // Grab the free memory pointer.</span></span>
+<span id="L273"><span class="lineNum">     273</span> <span class="tlaUNC">           0 :                 let s_ := add(_m, 0x20)</span></span>
+<span id="L274"><span class="lineNum">     274</span> <span class="tlaUNC">           0 :                 for { let i_ := 0 } 1 {} {</span></span>
+<span id="L275"><span class="lineNum">     275</span> <span class="tlaUNC">           0 :                     mstore(add(s_, i_), mload(add(o_, i_)))</span></span>
+<span id="L276"><span class="lineNum">     276</span> <span class="tlaUNC">           0 :                     i_ := add(i_, 0x20)</span></span>
+<span id="L277"><span class="lineNum">     277</span> <span class="tlaUNC">           0 :                     if iszero(lt(i_, l_)) { break }</span></span>
+<span id="L278"><span class="lineNum">     278</span>              :                 }</span>
+<span id="L279"><span class="lineNum">     279</span> <span class="tlaUNC">           0 :                 mstore(_m, l_) // Store the length.</span></span>
+<span id="L280"><span class="lineNum">     280</span> <span class="tlaUNC">           0 :                 mstore(add(l_, s_), 0) // Zeroize the slot after the string.</span></span>
+<span id="L281"><span class="lineNum">     281</span> <span class="tlaUNC">           0 :                 mstore(0x40, add(0x20, add(l_, s_))) // Allocate memory.</span></span>
+<span id="L282"><span class="lineNum">     282</span>              :             }</span>
+<span id="L283"><span class="lineNum">     283</span> <span class="tlaUNC">           0 :             let n := mload(encodedAuth)</span></span>
+<span id="L284"><span class="lineNum">     284</span> <span class="tlaUNC">           0 :             if iszero(lt(n, 0x46)) {</span></span>
+<span id="L285"><span class="lineNum">     285</span> <span class="tlaUNC">           0 :                 let o := add(encodedAuth, 0x20) // Start of `encodedAuth`'s bytes.</span></span>
+<span id="L286"><span class="lineNum">     286</span> <span class="tlaUNC">           0 :                 let e := add(o, n) // End of `encodedAuth` in memory.</span></span>
+<span id="L287"><span class="lineNum">     287</span> <span class="tlaUNC">           0 :                 n := shr(240, mload(o)) // Length of `authenticatorData`.</span></span>
+<span id="L288"><span class="lineNum">     288</span> <span class="tlaUNC">           0 :                 let a := add(o, 0x02) // Start of `authenticatorData`.</span></span>
+<span id="L289"><span class="lineNum">     289</span> <span class="tlaUNC">           0 :                 let c := add(a, n) // Start of `clientDataJSON`.</span></span>
+<span id="L290"><span class="lineNum">     290</span> <span class="tlaUNC">           0 :                 let j := sub(e, 0x44) // Start of `challengeIndex`.</span></span>
+<span id="L291"><span class="lineNum">     291</span> <span class="tlaUNC">           0 :                 if iszero(gt(c, j)) {</span></span>
+<span id="L292"><span class="lineNum">     292</span> <span class="tlaUNC">           0 :                     mstore(decoded, extractBytes(a, n)) // `authenticatorData`.</span></span>
+<span id="L293"><span class="lineNum">     293</span> <span class="tlaUNC">           0 :                     mstore(add(decoded, 0x20), extractBytes(c, sub(j, c))) // `clientDataJSON`.</span></span>
+<span id="L294"><span class="lineNum">     294</span> <span class="tlaUNC">           0 :                     mstore(add(decoded, 0x40), shr(240, mload(j))) // `challengeIndex`.</span></span>
+<span id="L295"><span class="lineNum">     295</span> <span class="tlaUNC">           0 :                     mstore(add(decoded, 0x60), shr(240, mload(add(j, 0x02)))) // `typeIndex`.</span></span>
+<span id="L296"><span class="lineNum">     296</span> <span class="tlaUNC">           0 :                     mstore(add(decoded, 0x80), mload(add(j, 0x04))) // `r`.</span></span>
+<span id="L297"><span class="lineNum">     297</span> <span class="tlaUNC">           0 :                     mstore(add(decoded, 0xa0), mload(add(j, 0x24))) // `s`.</span></span>
+<span id="L298"><span class="lineNum">     298</span>              :                 }</span>
+<span id="L299"><span class="lineNum">     299</span>              :             }</span>
+<span id="L300"><span class="lineNum">     300</span>              :         }</span>
+<span id="L301"><span class="lineNum">     301</span>              :     }</span>
+<span id="L302"><span class="lineNum">     302</span>              : </span>
+<span id="L303"><span class="lineNum">     303</span>              :     /// @dev Calldata variant of `tryDecodeAuthCompact`.</span>
+<span id="L304"><span class="lineNum">     304</span> <span class="tlaUNC">           0 :     function tryDecodeAuthCompactCalldata(bytes calldata encodedAuth)</span></span>
+<span id="L305"><span class="lineNum">     305</span>              :         internal</span>
+<span id="L306"><span class="lineNum">     306</span>              :         pure</span>
+<span id="L307"><span class="lineNum">     307</span>              :         returns (WebAuthnAuth memory decoded)</span>
+<span id="L308"><span class="lineNum">     308</span>              :     {</span>
+<span id="L309"><span class="lineNum">     309</span>              :         /// @solidity memory-safe-assembly</span>
+<span id="L310"><span class="lineNum">     310</span>              :         assembly {</span>
+<span id="L311"><span class="lineNum">     311</span> <span class="tlaUNC">           0 :             function extractBytes(o_, l_) -&gt; _m {</span></span>
+<span id="L312"><span class="lineNum">     312</span> <span class="tlaUNC">           0 :                 _m := mload(0x40) // Grab the free memory pointer.</span></span>
+<span id="L313"><span class="lineNum">     313</span> <span class="tlaUNC">           0 :                 let s_ := add(_m, 0x20)</span></span>
+<span id="L314"><span class="lineNum">     314</span> <span class="tlaUNC">           0 :                 calldatacopy(s_, o_, l_)</span></span>
+<span id="L315"><span class="lineNum">     315</span> <span class="tlaUNC">           0 :                 mstore(_m, l_) // Store the length.</span></span>
+<span id="L316"><span class="lineNum">     316</span> <span class="tlaUNC">           0 :                 mstore(add(l_, s_), 0) // Zeroize the slot after the string.</span></span>
+<span id="L317"><span class="lineNum">     317</span> <span class="tlaUNC">           0 :                 mstore(0x40, add(0x20, add(l_, s_))) // Allocate memory.</span></span>
+<span id="L318"><span class="lineNum">     318</span>              :             }</span>
+<span id="L319"><span class="lineNum">     319</span> <span class="tlaUNC">           0 :             if iszero(lt(encodedAuth.length, 0x46)) {</span></span>
+<span id="L320"><span class="lineNum">     320</span> <span class="tlaUNC">           0 :                 let e := add(encodedAuth.offset, encodedAuth.length) // End of `encodedAuth`.</span></span>
+<span id="L321"><span class="lineNum">     321</span> <span class="tlaUNC">           0 :                 let n := shr(240, calldataload(encodedAuth.offset)) // Length of `authenticatorData`.</span></span>
+<span id="L322"><span class="lineNum">     322</span> <span class="tlaUNC">           0 :                 let a := add(encodedAuth.offset, 0x02) // Start of `authenticatorData`.</span></span>
+<span id="L323"><span class="lineNum">     323</span> <span class="tlaUNC">           0 :                 let c := add(a, n) // Start of `clientDataJSON`.</span></span>
+<span id="L324"><span class="lineNum">     324</span> <span class="tlaUNC">           0 :                 let j := sub(e, 0x44) // Start of `challengeIndex`.</span></span>
+<span id="L325"><span class="lineNum">     325</span> <span class="tlaUNC">           0 :                 if iszero(gt(c, j)) {</span></span>
+<span id="L326"><span class="lineNum">     326</span> <span class="tlaUNC">           0 :                     mstore(decoded, extractBytes(a, n)) // `authenticatorData`.</span></span>
+<span id="L327"><span class="lineNum">     327</span> <span class="tlaUNC">           0 :                     mstore(add(decoded, 0x20), extractBytes(c, sub(j, c))) // `clientDataJSON`.</span></span>
+<span id="L328"><span class="lineNum">     328</span> <span class="tlaUNC">           0 :                     mstore(add(decoded, 0x40), shr(240, calldataload(j))) // `challengeIndex`.</span></span>
+<span id="L329"><span class="lineNum">     329</span> <span class="tlaUNC">           0 :                     mstore(add(decoded, 0x60), shr(240, calldataload(add(j, 0x02)))) // `typeIndex`.</span></span>
+<span id="L330"><span class="lineNum">     330</span> <span class="tlaUNC">           0 :                     mstore(add(decoded, 0x80), calldataload(add(j, 0x04))) // `r`.</span></span>
+<span id="L331"><span class="lineNum">     331</span> <span class="tlaUNC">           0 :                     mstore(add(decoded, 0xa0), calldataload(add(j, 0x24))) // `s`.</span></span>
+<span id="L332"><span class="lineNum">     332</span>              :                 }</span>
+<span id="L333"><span class="lineNum">     333</span>              :             }</span>
+<span id="L334"><span class="lineNum">     334</span>              :         }</span>
+<span id="L335"><span class="lineNum">     335</span>              :     }</span>
+<span id="L336"><span class="lineNum">     336</span>              : }</span>
+        </pre>
+              </td>
+            </tr>
+          </table>
+          <br>
+
+          <table width="100%" border=0 cellspacing=0 cellpadding=0>
+            <tr><td class="ruler"><img src="../../glass.png" width=3 height=3 alt=""></td></tr>
+            <tr><td class="versionInfo">Generated by: <a href="https://github.com//linux-test-project/lcov" target="_parent">LCOV version 2.3.2-1</a></td></tr>
+          </table>
+          <br>
+
+</body>
+</html>

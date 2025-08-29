@@ -31,7 +31,7 @@ interface IKeysManager is IKey {
     /// @notice Thrown when KeyReg of MasterKey incorrect
     error KeyManager__InvalidMasterKeyReg(KeyReg _keyData);
     /// @notice Thrown when KeyType incorrect
-    error KeyManager__InvalidKeyType(KeyType sigType);
+    error KeyManager__InvalidKeyType();
     /// @notice Thrown when challenge was already used
     error KeyManager__UsedChallenge();
 
