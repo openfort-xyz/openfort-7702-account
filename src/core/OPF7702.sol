@@ -196,7 +196,6 @@ contract OPF7702 is Execution, Initializable {
         if (usedChallenges[userOpHash]) {
             revert IKeysManager.KeyManager__UsedChallenge();
         }
-        usedChallenges[userOpHash] = true; // mark challenge as used
 
         bool sigOk = IWebAuthnVerifier(webAuthnVerifier()).verifySignature(
             userOpHash,
@@ -210,29 +209,30 @@ contract OPF7702 is Execution, Initializable {
             pubKey.x,
             pubKey.y
         );
-        if (!sigOk) {
-            return SIG_VALIDATION_FAILED;
+
+        if (sigOk) {
+            usedChallenges[userOpHash] = true; // mark challenge as used
+
+            KeyData storage sKey = keys[pubKey.computeKeyId()];
+            bool isValid = _keyValidation(sKey);
+
+            if (isValid) {
+                // master key → immediate success
+                if (sKey.masterKey) {
+                    return SIG_VALIDATION_SUCCESS;
+                }
+
+                uint256 isValidGas =
+                    IUserOpPolicy(GAS_POLICY).checkUserOpPolicy(pubKey.computeKeyId(), userOp);
+
+                if (isValidGas == 1) revert IKeysManager.KeyManager__RevertGasPolicy();
+
+                if (isValidKey(userOp.callData, sKey)) {
+                    return _packValidationData(false, sKey.validUntil, sKey.validAfter);
+                }
+            }
         }
-
-        KeyData storage sKey = keys[pubKey.computeKeyId()];
-
-        bool isValid = _keyValidation(sKey);
-
-        if (!isValid) return SIG_VALIDATION_FAILED;
-
-        // master key → immediate success
-        if (sKey.masterKey) {
-            return SIG_VALIDATION_SUCCESS;
-        }
-
-        uint256 isValidGas =
-            IUserOpPolicy(GAS_POLICY).checkUserOpPolicy(pubKey.computeKeyId(), userOp);
-
-        if (isValidGas == 1) revert IKeysManager.KeyManager__RevertGasPolicy();
-
-        if (isValidKey(userOp.callData, sKey)) {
-            return _packValidationData(false, sKey.validUntil, sKey.validAfter);
-        }
+        
         return SIG_VALIDATION_FAILED;
     }
 
