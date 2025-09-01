@@ -274,8 +274,8 @@ contract OPF7702Test is BaseContract {
             nonce: nonce,
             initCode: hex"7702",
             callData: callData,
-            accountGasLimits: _packAccountGasLimits(360_000, 240_000),
-            preVerificationGas: 110_000,
+            accountGasLimits: _packAccountGasLimits(360_000 * 15, 240_000 * 15),
+            preVerificationGas: 110_000 * 15,
             gasFees: _packGasFees(5 gwei, 80 gwei),
             paymasterAndData: hex"",
             signature: hex""

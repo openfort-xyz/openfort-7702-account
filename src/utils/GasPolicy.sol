@@ -27,12 +27,6 @@ contract GasPolicy is IUserOpPolicy {
     uint256 private constant VALIDATION_SUCCESS = 0;
 
     // ---------------------- % and BPS helpers ----------------------
-    // Percent arithmetic
-    /// @dev Denominator for percent arithmetic (x * pct / 100).
-    uint256 private constant PERCENT_DENOMINATOR = 100;
-    /// @dev Fixed 70% helper.
-    uint256 private constant PERCENT_70 = 70;
-
     // Basis-points arithmetic (x * bps / 10_000), often with ceil
     /// @dev Denominator for basis points arithmetic.
     uint256 private constant BPS_DENOMINATOR = 10_000;
@@ -46,16 +40,9 @@ contract GasPolicy is IUserOpPolicy {
     uint256 private immutable DEFAULT_PMV; // paymaster validate
     uint256 private immutable DEFAULT_PO; // postOp (token charge/refund)
 
-    /// @dev Minimum gas price assumption in wei for auto-init.
-    uint256 private constant DEFAULT_PRICE_FLOOR_WEI = 2 gwei; // at least 2 gwei assumed
-    /// @dev Extra headroom on price, expressed in BPS (e.g., 11000 = +10%).
-    uint256 private constant PRICE_SAFETY_BPS = 11_000; // +10% headroom on price
-
     // Safety margins
     /// @dev Safety multiplier on total per-op envelope, expressed in BPS (e.g., 12000 = +20%).
     uint256 private constant SAFETY_BPS = 12_000; // +20% on gas envelope
-    /// @dev Default priority fee to assume for worst-case pricing during auto-init.
-    uint256 private constant DEFAULT_PRIORITY_FEE_WEI = 1 gwei; // assumed tip for pricing worst-case
 
     /// @notice Per-(configId, account) gas/cost/tx budget configuration and live counters.
     mapping(bytes32 id => mapping(address account => GasLimitConfig)) gasLimitConfigs;
@@ -91,17 +78,15 @@ contract GasPolicy is IUserOpPolicy {
 
     // ---------------------- POLICY CHECK ----------------------
     /**
-     * @notice Validate a `PackedUserOperation` against configured budgets and account usage.
+     * @notice Validate a `PackedUserOperation` against configured gas budgets and account usage.
      * @param id     Session/policy identifier (e.g., keccak256 over session public key).
      * @param userOp The packed user operation being validated and accounted.
-     * @return validationCode `0` on success, `1` on failure (to match AA policy semantics).
+     * @return validationCode `0` on success, `1` on failure (ERC-4337 policy semantics).
      * @dev
      * - Access: Only the account (`userOp.sender`) may call; prevents 3rd-party budget griefing.
-     * - Behavior: Computes the gas envelope and worst-case wei cost using `userOp.gasPrice()`,
-     *   checks per-op and cumulative limits, and increments
-     *   usage counters optimistically.
+     * - Behavior: Computes the gas envelope (PVG+VGL+[PMV]+CGL+[PO]), checks cumulative gas and tx caps,
+     *   and increments usage counters optimistically.
      * - Paymaster note: Only considered when `paymasterAndData.length >= PAYMASTER_DATA_OFFSET`.
-     *   If `0 < length < OFFSET`, it is effectively ignored in this implementation.
      */
     function checkUserOpPolicy(bytes32 id, PackedUserOperation calldata userOp)
         external
@@ -127,47 +112,24 @@ contract GasPolicy is IUserOpPolicy {
 
         envelopeUnits += cgl + postOp;
 
-        /// @dev Worst-case WEI (v0.8 semantics)
-        uint256 price = userOp.gasPrice(); // min(maxFeePerGas, basefee + maxPriority)
-
-        uint256 worstCaseWei = 0;
-        if (price != 0) {
-            /// @dev envelopeUnits * price
-            if (envelopeUnits > type(uint256).max / price) return VALIDATION_FAILED;
-            worstCaseWei = envelopeUnits * price;
-        }
-
         /// @dev Guards
         if (cfg.gasLimit > 0 && cfg.gasUsed + envelopeUnits > cfg.gasLimit) {
             return VALIDATION_FAILED;
         }
-        if (cfg.costLimit > 0 && cfg.costUsed + worstCaseWei > cfg.costLimit) {
-            return VALIDATION_FAILED;
-        }
-        if (cfg.perOpMaxCostWei > 0 && worstCaseWei > cfg.perOpMaxCostWei) return VALIDATION_FAILED;
+
         if (cfg.txLimit > 0 && cfg.txUsed + 1 > cfg.txLimit) return VALIDATION_FAILED;
 
-        if (envelopeUnits > type(uint128).max || worstCaseWei > type(uint128).max) {
+        if (envelopeUnits > type(uint128).max) {
             return VALIDATION_FAILED;
         }
 
         /// @dev Account usage (optimistic)
         unchecked {
             cfg.gasUsed += uint128(envelopeUnits);
-            cfg.costUsed += uint128(worstCaseWei);
             cfg.txUsed += 1;
         }
 
-        emit GasPolicyAccounted(
-            id,
-            userOp.sender,
-            envelopeUnits,
-            price,
-            worstCaseWei,
-            cfg.gasUsed,
-            cfg.costUsed,
-            cfg.txUsed
-        );
+        emit GasPolicyAccounted(id, userOp.sender, envelopeUnits, cfg.gasUsed, cfg.txUsed);
 
         return VALIDATION_SUCCESS;
     }
@@ -188,26 +150,22 @@ contract GasPolicy is IUserOpPolicy {
         if (cfg.initialized) revert GasPolicy__IdExistAlready();
 
         InitData memory d = abi.decode(initData, (InitData));
-        require(d.gasLimit != 0 && d.costLimit != 0, GasPolicy__ZeroBudgets());
+        if (d.gasLimit == 0) revert GasPolicy__ZeroBudgets();
 
         _applyManualConfig(cfg, d);
 
-        emit GasPolicyInitialized(
-            configId, account, cfg.gasLimit, cfg.costLimit, cfg.perOpMaxCostWei, cfg.txLimit, false
-        );
+        emit GasPolicyInitialized(configId, account, cfg.gasLimit, cfg.txLimit, false);
     }
 
     // ---------------------- INITIALIZATION (AUTO / DEFAULTS) ----------------------
     /**
-     * @notice Initialize budgets using conservative defaults scaled by a tx `limit`.
+     * @notice Initialize budgets using conservative defaults scaled by a tx `limit` (gas-only).
      * @param account  The 7702 account or SCA whose budgets are being set. Must be the caller.
      * @param configId Session key / policy identifier.
      * @param limit    Number of UserOperations allowed in this session (0 < limit ≤ 2^32-1).
      * @dev
-     * - Derives per-op envelope by summing DEFAULT_* legs and applying `SAFETY_BPS`.
-     * - Prices at `max(block.basefee + DEFAULT_PRIORITY_FEE_WEI, DEFAULT_PRICE_FLOOR_WEI)` and
-     *   adds `PRICE_SAFETY_BPS` headroom.
-     * - Keeps an `unchecked` block by design; multiplications are guarded by subsequent checks.
+     *  - Derives per-op envelope by summing DEFAULT_* legs and applying `SAFETY_BPS`.
+     *  - No price/wei math; only gas-unit limits are configured.
      */
     function initializeGasPolicy(address account, bytes32 configId, uint256 limit) external {
         require(account == msg.sender, GasPolicy__AccountMustBeSender());
@@ -215,48 +173,22 @@ contract GasPolicy is IUserOpPolicy {
         if (cfg.initialized) revert GasPolicy__IdExistAlready();
         require(limit > 0 && limit <= type(uint32).max, GasPolicy__BadLimit());
 
-        /// @dev Envelope units per op with safety (includes PM legs so it also covers sponsored ops)
+        // Envelope units per op with safety (includes PM legs so it also covers sponsored ops)
         uint256 rawEnvelope = DEFAULT_PVG + DEFAULT_VGL + DEFAULT_CGL + DEFAULT_PMV + DEFAULT_PO;
         uint256 perOpEnvelopeUnits =
             (rawEnvelope * SAFETY_BPS + BPS_CEIL_ROUNDING) / BPS_DENOMINATOR;
 
-        /// @dev Price assumption: basefee + 1 gwei, but at least 2 gwei, then +10% safety
-        uint256 priceAssumption = block.basefee + DEFAULT_PRIORITY_FEE_WEI;
-        if (priceAssumption < DEFAULT_PRICE_FLOOR_WEI) priceAssumption = DEFAULT_PRICE_FLOOR_WEI;
-        priceAssumption = (priceAssumption * PRICE_SAFETY_BPS + BPS_CEIL_ROUNDING) / BPS_DENOMINATOR;
-
-        /// @dev Per-op max wei (overflow-checked)
         unchecked {
-            if (priceAssumption != 0 && perOpEnvelopeUnits > type(uint256).max / priceAssumption) {
-                revert GasPolicy_PerOpCostOverflow();
-            }
-            uint256 perOpMaxCostWei256 = perOpEnvelopeUnits * priceAssumption;
-            require(perOpMaxCostWei256 <= type(uint128).max, GasPolicy_PerOpCostHigh());
+            // Guard the multiplication before casting
+            if (perOpEnvelopeUnits > type(uint256).max / limit) revert GasPolicy_GasLimitHigh();
 
-            // 5) Cumulative budgets
             uint256 gasLimit256 = perOpEnvelopeUnits * limit;
-            uint256 costLimit256 = perOpMaxCostWei256 * limit;
 
-            require(gasLimit256 <= type(uint128).max, GasPolicy_GasLimitHigh());
-            require(costLimit256 <= type(uint128).max, GasPolicy_CostLimitHigh());
+            if (gasLimit256 > type(uint128).max) revert GasPolicy_GasLimitHigh();
 
-            _applyAutoConfig(
-                cfg,
-                uint128(gasLimit256),
-                uint128(costLimit256),
-                uint128(perOpMaxCostWei256),
-                uint32(limit)
-            );
+            _applyAutoConfig(cfg, uint128(gasLimit256), uint32(limit));
 
-            emit GasPolicyInitialized(
-                configId,
-                account,
-                cfg.gasLimit,
-                cfg.costLimit,
-                cfg.perOpMaxCostWei,
-                cfg.txLimit,
-                true
-            );
+            emit GasPolicyInitialized(configId, account, cfg.gasLimit, cfg.txLimit, false);
         }
     }
 
@@ -268,31 +200,21 @@ contract GasPolicy is IUserOpPolicy {
     function _applyManualConfig(GasLimitConfig storage cfg, InitData memory d) private {
         // Required budgets already checked by caller
         cfg.gasLimit = d.gasLimit;
-        cfg.costLimit = d.costLimit;
-        cfg.perOpMaxCostWei = d.perOpMaxCostWei; // 0 allowed (disables per-op cap)
         cfg.txLimit = d.txLimit; // 0 allowed (unlimited)
 
         _resetCountersAndMarkInitialized(cfg);
     }
 
     /**
-     * @notice Apply auto-derived configuration and mark initialized.
-     * @param cfg              Storage pointer to the target config.
-     * @param gasLimit         Total cumulative gas units allowed for the session.
-     * @param costLimit        Total cumulative wei allowed for the session.
-     * @param perOpMaxCostWei  Max wei per single operation (0 disables the cap).
-     * @param txLimit          Max number of operations (0 means unlimited).
+     * @notice Apply auto-derived configuration and mark initialized (gas-only).
+     * @param cfg       Storage pointer to the target config.
+     * @param gasLimit  Total cumulative gas units allowed for the session.
+     * @param txLimit   Max number of operations (0 means unlimited).
      */
-    function _applyAutoConfig(
-        GasLimitConfig storage cfg,
-        uint128 gasLimit,
-        uint128 costLimit,
-        uint128 perOpMaxCostWei,
-        uint32 txLimit
-    ) private {
+    function _applyAutoConfig(GasLimitConfig storage cfg, uint128 gasLimit, uint32 txLimit)
+        private
+    {
         cfg.gasLimit = gasLimit;
-        cfg.costLimit = costLimit;
-        cfg.perOpMaxCostWei = perOpMaxCostWei;
         cfg.txLimit = txLimit;
 
         _resetCountersAndMarkInitialized(cfg);
@@ -304,28 +226,26 @@ contract GasPolicy is IUserOpPolicy {
      */
     function _resetCountersAndMarkInitialized(GasLimitConfig storage cfg) private {
         cfg.gasUsed = 0;
-        cfg.costUsed = 0;
         cfg.txUsed = 0;
         cfg.initialized = true;
     }
 
     // ---------------------- VIEWS ----------------------
-    /**
-     * @notice Read a compact view of the gas/cost budgets and usage for (configId, account).
-     * @param configId  Session/policy identifier.
-     * @param userOpSender The account address whose config is queried.
-     * @return gasLimit  Cumulative gas units allowed.
-     * @return gasUsed   Gas units consumed so far.
-     * @return costLimit Cumulative wei allowed.
-     * @return costUsed  Wei consumed so far.
-     */
+    /// ---------------------- VIEWS ----------------------
+    /// @notice Read a compact view of gas budgets and usage for (configId, account).
+    /// @param configId      Session/policy identifier.
+    /// @param userOpSender  The account whose config is queried.
+    /// @return gasLimit  Cumulative gas units allowed.
+    /// @return gasUsed   Gas units consumed so far.
+    /// @return txLimit   Max number of ops (0 = unlimited).
+    /// @return txUsed    Ops consumed so far.
     function getGasConfig(bytes32 configId, address userOpSender)
         external
         view
-        returns (uint128 gasLimit, uint128 gasUsed, uint128 costLimit, uint128 costUsed)
+        returns (uint128 gasLimit, uint128 gasUsed, uint32 txLimit, uint32 txUsed)
     {
         GasLimitConfig storage c = gasLimitConfigs[configId][userOpSender];
-        return (c.gasLimit, c.gasUsed, c.costLimit, c.costUsed);
+        return (c.gasLimit, c.gasUsed, c.txLimit, c.txUsed);
     }
 
     /**

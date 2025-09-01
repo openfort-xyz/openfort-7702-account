@@ -63,11 +63,8 @@ contract GasFuzzing is Test {
         });
     }
 
-    function _calcPrice(uint256 maxFee, uint256 tip) internal view returns (uint256) {
-        uint256 a = maxFee;
-        uint256 b = tip + block.basefee;
-        return a < b ? a : b;
-    }
+    // REMOVED: price helper (no wei accounting anymore)
+    // function _calcPrice(...) internal view returns (uint256) { ... }
 
     function _initAuto(bytes32 configId, uint256 limit) internal {
         vm.prank(account);
@@ -81,13 +78,14 @@ contract GasFuzzing is Test {
     function test_initialize_and_getters() public {
         bytes32 configId = keccak256(abi.encodePacked(uint256(1)));
         _initAuto(configId, 3);
-        (uint128 gasLimit, uint128 gasUsed, uint128 costLimit, uint128 costUsed) =
+        // UPDATED tuple: (gasLimit, gasUsed, txLimit, txUsed)
+        (uint128 gasLimit, uint128 gasUsed, uint32 txLimit, uint32 txUsed) =
             gP.getGasConfig(configId, account);
-        console.log(gasLimit, gasUsed, costLimit, costUsed);
+        console.log(gasLimit, gasUsed, txLimit, txUsed);
         assertGt(gasLimit, 0);
         assertEq(gasUsed, 0);
-        assertGt(costLimit, 0);
-        assertEq(costUsed, 0);
+        assertGt(txLimit, 0);
+        assertEq(txUsed, 0);
     }
 
     function test_uninitialized_fails() public {
@@ -144,8 +142,10 @@ contract GasFuzzing is Test {
             uint256 res = gP.checkUserOpPolicy(configId, uo);
             assertEq(res, 0);
         }
-        (,,, uint128 costUsed) = gP.getGasConfig(configId, account);
-        assertEq(costUsed, 0);
+        // UPDATED: check gasUsed & txUsed only
+        (uint128 gasLimit, uint128 gasUsed,, uint32 txUsed) = gP.getGasConfig(configId, account);
+        assertEq(txUsed, 3);
+        assertLe(gasUsed, gasLimit);
     }
 
     function test_penalty_boundary() public {
@@ -164,9 +164,12 @@ contract GasFuzzing is Test {
         vm.prank(account);
         assertEq(gP.checkUserOpPolicy(configIdB, atThr), 0);
 
-        (,,, uint128 costBelow) = gP.getGasConfig(configIdA, account);
-        (,,, uint128 costAtThr) = gP.getGasConfig(configIdB, account);
-        assertLt(costBelow, costAtThr);
+        // UPDATED: compare gasUsed instead of cost deltas
+        (uint128 gasLimitA, uint128 gasUsedA,,) = gP.getGasConfig(configIdA, account);
+        (uint128 gasLimitB, uint128 gasUsedB,,) = gP.getGasConfig(configIdB, account);
+        assertLe(gasUsedA, gasLimitA);
+        assertLe(gasUsedB, gasLimitB);
+        assertLt(gasUsedA, gasUsedB); // 39,999 < 40,000 path uses less gas units
     }
 
     function test_perOpMaxCostWei_cap_triggers() public {
@@ -175,15 +178,16 @@ contract GasFuzzing is Test {
         PackedUserOperation memory uo =
             _mkUserOp(account, 110_000, 300_000, 300_000, 10 gwei, 10 gwei, hex"");
         vm.prank(account);
+        // UPDATED: per-op cost cap removed; should pass under gas-only policy
         uint256 res = gP.checkUserOpPolicy(configId, uo);
-        assertEq(res, 1);
+        assertEq(res, 0);
     }
 
     function test_cumulative_cost_limit_exceeded() public {
         bytes32 configId = keccak256(abi.encodePacked(uint256(10)));
         _initAuto(configId, 2);
 
-        vm.fee(1 gwei); // basefee
+        vm.fee(1 gwei); // basefee (no effect now, but harmless)
         PackedUserOperation memory uo =
             _mkUserOp(account, 90_000, 200_000, 200_000, 2 gwei, 1 gwei, hex"");
 
@@ -214,7 +218,6 @@ contract GasFuzzing is Test {
         _initAuto(configId, nOps + 1);
 
         uint256 accGas = 0;
-        uint256 accWei = 0;
 
         for (uint256 i = 0; i < nOps; i++) {
             PackedUserOperation memory uo = _mkUserOp(account, pvg, vgl, cgl, maxFee, tip, hex"");
@@ -223,18 +226,15 @@ contract GasFuzzing is Test {
             assertEq(res, 0);
 
             uint256 envelope = uint256(pvg) + uint256(vgl) + uint256(cgl);
-            uint256 price = _calcPrice(maxFee, tip);
-
             accGas += envelope;
-            accWei += price * envelope;
         }
 
-        (uint128 gasLimit, uint128 gasUsed, uint128 costLimit, uint128 costUsed) =
+        (uint128 gasLimit, uint128 gasUsed, uint32 txLimit, uint32 txUsed) =
             gP.getGasConfig(configId, account);
         assertLe(gasUsed, gasLimit);
-        assertLe(costUsed, costLimit);
         assertEq(gasUsed, uint128(accGas));
-        assertEq(costUsed, uint128(accWei));
+        assertEq(txUsed, nOps);
+        assertLe(txUsed, txLimit);
     }
 
     function test_malformed_paymaster_len_lt_offset_passes() public {
@@ -262,11 +262,17 @@ contract GasFuzzing is Test {
 
     function test_auto_init_reverts_when_basefee_extreme() public {
         bytes32 configId = keccak256(abi.encodePacked(uint256(14)));
-        vm.fee(4e32); // safely above the ~3.106e32 threshold
+        vm.fee(4e32); // previously caused revert; now should NOT affect init
         vm.prank(account);
-        vm.expectRevert();
         gP.initializeGasPolicy(account, configId, 1);
         vm.fee(0);
+
+        (uint128 gasLimit, uint128 gasUsed, uint32 txLimit, uint32 txUsed) =
+            gP.getGasConfig(configId, account);
+        assertGt(gasLimit, 0);
+        assertEq(gasUsed, 0);
+        assertGt(txLimit, 0);
+        assertEq(txUsed, 0);
     }
 
     function test_fuzz_overflow_guard_in_check(
@@ -298,12 +304,12 @@ contract GasFuzzing is Test {
         vm.prank(account);
         gP.initializeGasPolicy(account, configId, 1);
 
-        (uint128 gasLimit, uint128 gasUsed, uint128 costLimit, uint128 costUsed) =
+        (uint128 gasLimit, uint128 gasUsed, uint32 txLimit, uint32 txUsed) =
             gP.getGasConfig(configId, account);
 
         assertGt(gasLimit, 0);
         assertEq(gasUsed, 0);
-        assertGt(costLimit, 0);
-        assertEq(costUsed, 0);
+        assertGt(txLimit, 0);
+        assertEq(txUsed, 0);
     }
 }
