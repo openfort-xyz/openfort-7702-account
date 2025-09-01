@@ -354,7 +354,7 @@ contract OPF7702 is Execution, Initializable {
                     return false;
                 }
             }
-            
+
             sKey.consumeQuota();
             return true;
         }
