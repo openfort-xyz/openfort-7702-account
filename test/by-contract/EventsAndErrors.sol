@@ -4,6 +4,7 @@ pragma solidity ^0.8.29;
 
 abstract contract EventsAndErrors {
     error NotFromEntryPoint();
+    error KeyManager__KeyRevoked();
     error KeyManager__KeyInactive();
     error KeyManager__UsedChallenge();
     error KeyManager__KeyRegistered();

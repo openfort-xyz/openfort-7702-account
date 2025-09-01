@@ -325,4 +325,32 @@ contract KeysManagerTest is BaseContract {
 
         assertTrue(isActive);
     }
+
+    function test_registerKeyKeyManager__KeyRevoked() public {
+        Key memory k = account.getKeyById(1);
+
+        _etch();
+        vm.prank(owner);
+        account.revokeKey(k);
+
+        (,, KeyReg memory kReg) = _createAnyKey(
+            _x,
+            _y,
+            random,
+            KeyType.P256,
+            TOKEN,
+            100e18,
+            uint48(block.timestamp + 1 days),
+            0,
+            10,
+            ETH_RECIVE,
+            0.1e18,
+            selEmpt
+        );
+
+        _etch();
+        vm.expectRevert(KeyManager__KeyRevoked.selector);
+        vm.prank(owner);
+        account.registerKey(k, kReg);
+    }
 }
