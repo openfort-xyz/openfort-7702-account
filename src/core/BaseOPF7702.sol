@@ -57,6 +57,7 @@ abstract contract BaseOPF7702 is
     /// @notice The WebAuthn Verifier singleton contract used to verify WebAuthn and P256 signatures.
     address public immutable WEBAUTHN_VERIFIER;
 
+    /// @notice The Gas Policy Verifier singleton contract used to verify and set gas policy of session keys.
     address public immutable GAS_POLICY;
 
     // =============================================================
@@ -101,16 +102,18 @@ abstract contract BaseOPF7702 is
         emit UpgradeAddress.WebAuthnVerifierUpdated(previous, webAuthnVerifier());
     }
 
-    // Todo
+    /// @notice Updates the Gas Policy contract address used by this account
+    /// @param _gasPolicy The new WebAuthn Gas Policy contract address to set
+    /// @dev Only callable by authorized parties (self or current EntryPoint).
+    ///      Uses UpgradeAddress library to handle the update logic
+    function setGasPolicy(address _gasPolicy) external {
+        _requireForExecute();
 
-    // function setGasPolicy(address _gasPolicy) external {
-    //     _requireForExecute();
+        address previous = address(gasPolicy());
+        _gasPolicy.setGasPolicy();
 
-    //     address previous = address(gasPolicy());
-    //     _gasPolicy.setGasPolicy();
-
-    //     emit UpgradeAddress.GasPolicyUpdated(previous, gasPolicy());
-    // }
+        emit UpgradeAddress.GasPolicyUpdated(previous, gasPolicy());
+    }
 
     // =============================================================
     //                        INTERNAL FUNCTIONS
@@ -132,10 +135,12 @@ abstract contract BaseOPF7702 is
         // clear slot 0, _EP_SLOT & _VERIFIER_SLOT
         bytes32 epSlot = UpgradeAddress._EP_SLOT;
         bytes32 verifierSlot = UpgradeAddress._VERIFIER_SLOT;
+        bytes32 gasPolicySlot = UpgradeAddress._GAS_POLICY_SLOT;
         assembly {
             sstore(baseSlot, 0)
             sstore(epSlot, 0)
             sstore(verifierSlot, 0)
+            sstore(gasPolicySlot, 0)
         }
 
         // Clear ReentrancyGuard status (S+4) to a safe state (0 is fine; first guarded call will set + normalize to 1)
@@ -220,10 +225,13 @@ abstract contract BaseOPF7702 is
         return UpgradeAddress.webAuthnVerifier(WEBAUTHN_VERIFIER);
     }
 
-    // Todo
-    // function gasPolicy() public view returns (address) {
-    //     return UpgradeAddress.gasPolicy(GAS_POLICY);
-    // }
+    /**
+     * @notice Returns the Gas Policy contract used by this account.
+     * @return The `address` of implementation.
+     */
+    function gasPolicy() public view returns (address) {
+        return UpgradeAddress.gasPolicy(GAS_POLICY);
+    }
 
     /// @notice Checks if the contract implements a given interface.
     /// @param _interfaceId The interface identifier, as specified in ERC-165.

@@ -631,4 +631,17 @@ contract UpgradeAddresses is Base {
         vm.prank(address(entryPoint));
         account.initialize(keyMK, keyData, keySK, keyData, sig, initialGuardian);
     }
+
+    function test_UpdateGasPolicy() public {
+        address newAddr = address(111101);
+        address oldAddr = account.gasPolicy();
+        vm.etch(owner, abi.encodePacked(bytes3(0xef0100), address(implementation)));
+        account = OPF7702(payable(owner));
+
+        vm.prank(owner);
+        account.setGasPolicy(newAddr);
+
+        assertEq(newAddr, account.gasPolicy());
+        assertNotEq(oldAddr, account.gasPolicy());
+    }
 }
