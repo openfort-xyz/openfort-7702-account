@@ -139,21 +139,22 @@ contract OPF7702 is Execution, Initializable {
 
         bool isValid = _keyValidation(sKey);
 
-        if (!isValid) return SIG_VALIDATION_FAILED;
+        if (isValid) {
+            // master key → immediate success
+            if (sKey.masterKey) {
+                return SIG_VALIDATION_SUCCESS;
+            }
 
-        // master key → immediate success
-        if (sKey.masterKey) {
-            return SIG_VALIDATION_SUCCESS;
+            uint256 isValidGas =
+                IUserOpPolicy(GAS_POLICY).checkUserOpPolicy(signer.computeKeyId(), userOp);
+
+            if (isValidGas == 1) revert IKeysManager.KeyManager__RevertGasPolicy();
+
+            if (isValidKey(userOp.callData, sKey)) {
+                return _packValidationData(false, sKey.validUntil, sKey.validAfter);
+            }
         }
 
-        uint256 isValidGas =
-            IUserOpPolicy(GAS_POLICY).checkUserOpPolicy(signer.computeKeyId(), userOp);
-
-        if (isValidGas == 1) revert IKeysManager.KeyManager__RevertGasPolicy();
-
-        if (isValidKey(userOp.callData, sKey)) {
-            return _packValidationData(false, sKey.validUntil, sKey.validAfter);
-        }
         return SIG_VALIDATION_FAILED;
     }
 
