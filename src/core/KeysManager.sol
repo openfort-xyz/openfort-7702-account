@@ -21,6 +21,7 @@ import {IUserOpPolicy} from "src/interfaces/IPolicy.sol";
 import {ValidationLib} from "src/libs/ValidationLib.sol";
 import {ISpendLimit} from "src/interfaces/ISpendLimit.sol";
 import {IKeysManager} from "src/interfaces/IKeysManager.sol";
+import {KeyDataValidationLib} from "src/libs/KeyDataValidationLib.sol";
 
 /// @title KeysManager
 /// @author Openfort@0xkoiner
@@ -30,6 +31,7 @@ import {IKeysManager} from "src/interfaces/IKeysManager.sol";
 abstract contract KeysManager is BaseOPF7702, IKey, ISpendLimit {
     using KeyHashLib for Key;
     using ValidationLib for *;
+    using KeyDataValidationLib for Key;
 
     // =============================================================
     //                          CONSTANTS
@@ -83,10 +85,6 @@ abstract contract KeysManager is BaseOPF7702, IKey, ISpendLimit {
 
         if (sKey.isActive) {
             revert IKeysManager.KeyManager__KeyRegistered();
-        }
-
-        if (sKey.whitelisting) {
-            revert IKeysManager.KeyManager__KeyRevoked();
         }
 
         _addKey(sKey, _key, _keyData);
@@ -164,8 +162,10 @@ abstract contract KeysManager is BaseOPF7702, IKey, ISpendLimit {
      * @param _key             Struct containing key information (PubKey or EOA).
      * @param _keyData KeyReg data structure containing permissions and limits
      */
-    /// Todo: enfore to check the if _keyData.whitelisting = true
     function _addKey(KeyData storage sKey, Key memory _key, KeyReg memory _keyData) internal {
+        if (sKey.whitelisting) {
+            revert IKeysManager.KeyManager__KeyRevoked();
+        }
         sKey.pubKey = _key.pubKey;
         sKey.isActive = true;
         sKey.validUntil = _keyData.validUntil;
@@ -241,10 +241,10 @@ abstract contract KeysManager is BaseOPF7702, IKey, ISpendLimit {
     }
 
     /// @dev Master key must have: validUntil = max(uint48), validAfter = 0, limit = 0, whitelisting = false.
-    function _masterKeyValidation(KeyReg calldata _kReg) internal pure {
+    function _masterKeyValidation(Key calldata _k, KeyReg calldata _kReg) internal pure {
         if (
             _kReg.limit != 0 || _kReg.whitelisting // must be false
-                || _kReg.validAfter != 0 || _kReg.validUntil != type(uint48).max
+                || _kReg.validAfter != 0 || _kReg.validUntil != type(uint48).max || _k.checkKey()
         ) revert IKeysManager.KeyManager__InvalidMasterKeyReg(_kReg);
     }
 

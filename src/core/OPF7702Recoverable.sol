@@ -141,7 +141,7 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
         _requireForExecute();
         _clearStorage();
 
-        _masterKeyValidation(_keyData);
+        _masterKeyValidation(_key, _keyData);
 
         bytes32 digest =
             getDigestToInit(_key, _keyData, _sessionKey, _sessionKeyData, _initialGuardian);
