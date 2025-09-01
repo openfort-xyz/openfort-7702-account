@@ -46,6 +46,8 @@ abstract contract BaseOPF7702 is
 
     /// @notice Revert if msg.sender != entryPoint()
     error NotFromEntryPoint();
+    /// @notice Revert if _entryPoint/_webAuthnVerifier/_gasPolicy == previous
+    error BaseOPF7702__NoChangeUpdateContractAddress();
 
     // =============================================================
     //                          STATE VARIABLES
@@ -85,6 +87,8 @@ abstract contract BaseOPF7702 is
     function setEntryPoint(address _entryPoint) external {
         _requireForExecute();
         address previous = address(entryPoint());
+        if (_entryPoint == previous) revert BaseOPF7702__NoChangeUpdateContractAddress();
+
         _entryPoint.setEntryPoint();
 
         emit UpgradeAddress.EntryPointUpdated(previous, address(entryPoint()));
@@ -97,6 +101,8 @@ abstract contract BaseOPF7702 is
     function setWebAuthnVerifier(address _webAuthnVerifier) external {
         _requireForExecute();
         address previous = webAuthnVerifier();
+        if (_webAuthnVerifier == previous) revert BaseOPF7702__NoChangeUpdateContractAddress();
+
         _webAuthnVerifier.setWebAuthnVerifier();
 
         emit UpgradeAddress.WebAuthnVerifierUpdated(previous, webAuthnVerifier());
@@ -108,8 +114,9 @@ abstract contract BaseOPF7702 is
     ///      Uses UpgradeAddress library to handle the update logic
     function setGasPolicy(address _gasPolicy) external {
         _requireForExecute();
-
         address previous = address(gasPolicy());
+        if (_gasPolicy == previous) revert BaseOPF7702__NoChangeUpdateContractAddress();
+
         _gasPolicy.setGasPolicy();
 
         emit UpgradeAddress.GasPolicyUpdated(previous, gasPolicy());
