@@ -505,7 +505,10 @@ contract OPF7702 is Execution, Initializable {
         view
         returns (bytes4)
     {
-        address signer = ECDSA.recover(_hash, _signature);
+        (address signer, ECDSA.RecoverError err,) = ECDSA.tryRecover(_hash, _signature);
+        if (err != ECDSA.RecoverError.NoError) {
+            return bytes4(0xffffffff);
+        }
 
         if (signer == address(this)) {
             return this.isValidSignature.selector;
@@ -531,18 +534,36 @@ contract OPF7702 is Execution, Initializable {
         view
         returns (bytes4)
     {
-        (
-            bool requireUV,
-            bytes memory authenticatorData,
-            string memory clientDataJSON,
-            uint256 challengeIndex,
-            uint256 typeIndex,
-            bytes32 r,
-            bytes32 s,
-            PubKey memory pubKey
-        ) = abi.decode(
-            _signature, (bool, bytes, string, uint256, uint256, bytes32, bytes32, PubKey)
-        );
+        bool requireUV;
+        bytes memory authenticatorData;
+        string memory clientDataJSON;
+        uint256 challengeIndex;
+        uint256 typeIndex;
+        bytes32 r;
+        bytes32 s;
+        PubKey memory pubKey;
+
+        try this._decodeWebAuthn1271(_signature) returns (
+            bool _requireUV,
+            bytes memory _authData,
+            string memory _cData,
+            uint256 _cIdx,
+            uint256 _tIdx,
+            bytes32 _r,
+            bytes32 _s,
+            PubKey memory _pk
+        ) {
+            requireUV = _requireUV;
+            authenticatorData = _authData;
+            clientDataJSON = _cData;
+            challengeIndex = _cIdx;
+            typeIndex = _tIdx;
+            r = _r;
+            s = _s;
+            pubKey = _pk;
+        } catch {
+            return bytes4(0xffffffff);
+        }
 
         if (usedChallenges[_hash]) {
             return bytes4(0xffffffff);
@@ -569,6 +590,24 @@ contract OPF7702 is Execution, Initializable {
         if (sKey.masterKey) return this.isValidSignature.selector;
 
         return bytes4(0xffffffff);
+    }
+
+    /// @dev helper ONLY for 1271 decoding so we can try/catch
+    function _decodeWebAuthn1271(bytes memory sig)
+        external
+        pure
+        returns (
+            bool requireUV,
+            bytes memory authenticatorData,
+            string memory clientDataJSON,
+            uint256 challengeIndex,
+            uint256 typeIndex,
+            bytes32 r,
+            bytes32 s,
+            PubKey memory pubKey
+        )
+    {
+        return abi.decode(sig, (bool, bytes, string, uint256, uint256, bytes32, bytes32, PubKey));
     }
 
     /**
