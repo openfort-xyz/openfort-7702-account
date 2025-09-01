@@ -324,7 +324,9 @@ contract TestLargeSignature {
     }
 
     function test_GasPolicySlot() public {
-        bytes32 slot = keccak256(abi.encode(uint256(keccak256("openfort.webauthnverifier.storage")) - 1)) & ~bytes32(uint256(0xff));
+        bytes32 slot = keccak256(
+            abi.encode(uint256(keccak256("openfort.webauthnverifier.storage")) - 1)
+        ) & ~bytes32(uint256(0xff));
         console.logBytes32(slot);
     }
 }

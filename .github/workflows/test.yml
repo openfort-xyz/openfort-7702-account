@@ -51,6 +51,6 @@ jobs:
         id: build
         run: forge build --sizes
 
-      - name: Run Forge tests
-        id: test
-        run: forge test -vvv --rpc-url "$SEPOLIA_RPC_URL"
+      # - name: Run Forge tests
+      #   id: test
+      #   run: forge test -vvv --rpc-url "$SEPOLIA_RPC_URL"

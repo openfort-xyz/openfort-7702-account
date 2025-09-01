@@ -131,8 +131,7 @@ abstract contract BaseOPF7702 is
             abi.encode(uint256(keccak256("openfort.baseAccount.7702.v1")) - 1)
         ) & ~bytes32(uint256(0xff));
 
-        // Todo: Clear _GAS_SLOT
-        // clear slot 0, _EP_SLOT & _VERIFIER_SLOT
+        // clear slot 0, _EP_SLOT & _VERIFIER_SLOT & _GAS_SLOT
         bytes32 epSlot = UpgradeAddress._EP_SLOT;
         bytes32 verifierSlot = UpgradeAddress._VERIFIER_SLOT;
         bytes32 gasPolicySlot = UpgradeAddress._GAS_POLICY_SLOT;

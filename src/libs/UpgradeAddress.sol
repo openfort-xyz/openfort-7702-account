@@ -59,9 +59,8 @@ library UpgradeAddress {
     /// @param current The address of the new WebAuthn verifier contract that is now active
     event WebAuthnVerifierUpdated(address indexed previous, address indexed current);
 
-
     /// @notice Emitted when the Gas Policy contract address is updated
-    /// @dev This event is triggered when the account updates its Gas Policy contract, 
+    /// @dev This event is triggered when the account updates its Gas Policy contract,
     ///      affecting how Session Key are registered and validated.
     ///      Important for tracking gas usage and config.
     /// @param previous The address of the previous Gas Policy contract that was replaced
@@ -80,7 +79,6 @@ library UpgradeAddress {
         }
         ep = _isOverridden(packed) ? _unpack(packed) : _fallback;
     }
-
 
     /// @notice Returns the active Gas Policy address, defaulting to `_fallback`.
     function webAuthnVerifier(address _fallback) internal view returns (address v) {
