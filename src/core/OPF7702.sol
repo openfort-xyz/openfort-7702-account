@@ -232,7 +232,7 @@ contract OPF7702 is Execution, Initializable {
                 }
             }
         }
-        
+
         return SIG_VALIDATION_FAILED;
     }
 
