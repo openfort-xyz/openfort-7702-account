@@ -85,6 +85,10 @@ abstract contract KeysManager is BaseOPF7702, IKey, ISpendLimit {
             revert IKeysManager.KeyManager__KeyRegistered();
         }
 
+        if (sKey.whitelisting) {
+            revert IKeysManager.KeyManager__KeyRevoked();
+        }
+
         _addKey(sKey, _key, _keyData);
 
         // Store Key struct by ID and increment

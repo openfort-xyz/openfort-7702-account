@@ -26,6 +26,8 @@ interface IKeysManager is IKey {
     error KeyManager__SelectorsListTooBig();
     /// @notice Thrown when attempting to register a key that is already active
     error KeyManager__KeyRegistered();
+    /// @notice Thrown when attempting to register a key that is been revoked
+    error KeyManager__KeyRevoked();
     /// @notice Thrown when signature length incorrect
     error KeyManager__InvalidSignatureLength();
     /// @notice Thrown when KeyReg of MasterKey incorrect
