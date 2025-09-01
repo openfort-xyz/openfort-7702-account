@@ -259,36 +259,35 @@ contract OPF7702 is Execution, Initializable {
         (bytes32 r, bytes32 sSig, PubKey memory pubKey) =
             abi.decode(signature, (bytes32, bytes32, PubKey));
 
-        if (usedChallenges[userOpHash]) {
+        bytes32 challenge = (sigType == KeyType.P256NONKEY)
+            ? EfficientHashLib.sha2(userOpHash)
+            : userOpHash;
+
+        if (usedChallenges[challenge]) {
             revert IKeysManager.KeyManager__UsedChallenge();
         }
-        usedChallenges[userOpHash] = true;
-
-        if (sigType == KeyType.P256NONKEY) {
-            userOpHash = EfficientHashLib.sha2(userOpHash);
-        }
-
+        
         bool sigOk = IWebAuthnVerifier(webAuthnVerifier()).verifyP256Signature(
-            userOpHash, r, sSig, pubKey.x, pubKey.y
+            challenge, r, sSig, pubKey.x, pubKey.y
         );
-        if (!sigOk) {
-            return SIG_VALIDATION_FAILED;
+        if (sigOk) {
+            usedChallenges[challenge] = true;
+
+            KeyData storage sKey = keys[pubKey.computeKeyId()];
+            bool isValid = _keyValidation(sKey);
+
+            if (isValid) {
+                uint256 isValidGas =
+                    IUserOpPolicy(GAS_POLICY).checkUserOpPolicy(pubKey.computeKeyId(), userOp);
+
+                if (isValidGas == 1) revert IKeysManager.KeyManager__RevertGasPolicy();
+
+                if (isValidKey(userOp.callData, sKey)) {
+                    return _packValidationData(false, sKey.validUntil, sKey.validAfter);
+                }
+            }
         }
 
-        KeyData storage sKey = keys[pubKey.computeKeyId()];
-
-        bool isValid = _keyValidation(sKey);
-
-        if (!isValid) return SIG_VALIDATION_FAILED;
-
-        uint256 isValidGas =
-            IUserOpPolicy(GAS_POLICY).checkUserOpPolicy(pubKey.computeKeyId(), userOp);
-
-        if (isValidGas == 1) revert IKeysManager.KeyManager__RevertGasPolicy();
-
-        if (isValidKey(userOp.callData, sKey)) {
-            return _packValidationData(false, sKey.validUntil, sKey.validAfter);
-        }
         return SIG_VALIDATION_FAILED;
     }
 

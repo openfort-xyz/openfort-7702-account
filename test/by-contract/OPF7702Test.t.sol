@@ -666,7 +666,7 @@ contract OPF7702Test is BaseContract {
 
     function test_ValidateKeyTypeP256RevertUsedChallenge() public {
         Call[] memory calls = new Call[](1);
-        calls[0] = Call({target: ETH_RECIVE, value: 20e18, data: hex""});
+        calls[0] = Call({target: ETH_RECIVE, value: 0e18, data: hex""});
         bytes memory executionData = abi.encode(calls);
 
         bytes memory callData = abi.encodeWithSelector(
@@ -687,8 +687,10 @@ contract OPF7702Test is BaseContract {
             signature: hex""
         });
 
-        bytes32 userOpHash = P256NOKEY_CHALLENGE;
-        userOpHash = EfficientHashLib.sha2(userOpHash);
+        bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
+        console.logBytes32(userOpHash);
+
+        bytes32 hashToValidate = EfficientHashLib.sha2(userOpHash);
 
         PubKey memory pubKeyExecuteBatch =
             PubKey({x: P256NOKEY_PUBLIC_KEY_X, y: P256NOKEY_PUBLIC_KEY_Y});
@@ -698,19 +700,21 @@ contract OPF7702Test is BaseContract {
         );
 
         bool isValid = webAuthn.verifyP256Signature(
-            userOpHash,
+            hashToValidate,
             P256NOKEY_SIGNATURE_R,
             P256NOKEY_SIGNATURE_S,
             P256NOKEY_PUBLIC_KEY_X,
             P256NOKEY_PUBLIC_KEY_Y
         );
+        
         console.log("isValid", isValid);
-
         userOp.signature = _signature;
 
+        _etch();
         vm.prank(ENTRYPOINT_V8);
         account.validateUserOp(userOp, userOpHash, 0);
-
+        
+        _etch();
         vm.expectRevert(KeyManager__UsedChallenge.selector);
         vm.prank(ENTRYPOINT_V8);
         account.validateUserOp(userOp, userOpHash, 0);
