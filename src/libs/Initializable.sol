@@ -52,16 +52,37 @@ pragma solidity ^0.8.20;
  * }
  * ```
  * ====
+ *
+ * @custom:openfort-fork
+ * ====
+ * OPENFORT MODIFICATION:
+ * This contract is forked from OpenZeppelin's Initializable.sol to address storage layout conflicts
+ * in EIP-7702 delegated accounts.
+ *
+ * ISSUE: The original OpenZeppelin Initializable uses ERC-7201 namespaced storage which can conflict
+ * with the custom storage layout required by EIP-7702 accounts. EIP-7702 accounts use a specific
+ * base storage slot calculated as:
+ * keccak256(abi.encode(uint256(keccak256("openfort.baseAccount.7702.v1")) - 1)) & ~bytes32(uint256(0xff))
+ * = 0xeddd36aac8c71936fe1d5edb073ff947aa7c1b6174e87c15677c96ab9ad95400
+ *
+ * SOLUTION: This fork removes ERC-7201 namespaced storage and uses traditional storage slots
+ * to ensure compatibility with the EIP-7702 account's custom storage layout starting at
+ * slot 107588995614188179791452663824698570634674667931787294340862201729294267929600.
+ *
+ * The storage variables `_initialized` and `_initializing` now use consecutive storage slots
+ * instead of namespaced storage to avoid conflicts with the account's storage structure.
+ * ====
  */
 abstract contract Initializable {
     /**
-     * @dev Storage of the initializable contract.
-     *
-     * It's implemented on a custom ERC-7201 namespace to reduce the risk of storage collisions
-     * when using with upgradeable contracts.
-     *
+     * @dev Indicates whether the contract has been initialized.
+     * @custom:openfort Modified to use traditional storage slot instead of ERC-7201 namespaced storage
      */
     uint64 private _initialized;
+    /**
+     * @dev Indicates whether the contract is in the process of being initialized.
+     * @custom:openfort Modified to use traditional storage slot instead of ERC-7201 namespaced storage
+     */
     bool private _initializing;
 
     /**

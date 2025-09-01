@@ -4,7 +4,7 @@ out = "out"
 libs = ["lib"]
 via-ir = true
 optimizer = true
-optimizer_runs = 580
+optimizer_runs = 200
 dotenv = ".env.p256"
 
 fs_permissions = [
@@ -18,7 +18,7 @@ out = "out"
 libs = ["lib"]
 via-ir = true
 optimizer = true
-optimizer_runs = 580
+optimizer_runs = 200
 
 fs_permissions = [
   { access = "read", path = "./test/data" }
@@ -27,9 +27,3 @@ fs_permissions = [
 [fmt]
 line_length = 100
 bracket_spacing = false
-
-[profile.cov]
-ir_minimum = true      # enables viaIR with minimal opts
-optimizer = true       # allow minimal optimization under ir_minimum
-optimizer_runs = 200
-via_ir = true
