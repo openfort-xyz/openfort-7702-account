@@ -706,14 +706,14 @@ contract OPF7702Test is BaseContract {
             P256NOKEY_PUBLIC_KEY_X,
             P256NOKEY_PUBLIC_KEY_Y
         );
-        
+
         console.log("isValid", isValid);
         userOp.signature = _signature;
 
         _etch();
         vm.prank(ENTRYPOINT_V8);
         account.validateUserOp(userOp, userOpHash, 0);
-        
+
         _etch();
         vm.expectRevert(KeyManager__UsedChallenge.selector);
         vm.prank(ENTRYPOINT_V8);

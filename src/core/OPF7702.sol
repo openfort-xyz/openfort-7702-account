@@ -259,14 +259,13 @@ contract OPF7702 is Execution, Initializable {
         (bytes32 r, bytes32 sSig, PubKey memory pubKey) =
             abi.decode(signature, (bytes32, bytes32, PubKey));
 
-        bytes32 challenge = (sigType == KeyType.P256NONKEY)
-            ? EfficientHashLib.sha2(userOpHash)
-            : userOpHash;
+        bytes32 challenge =
+            (sigType == KeyType.P256NONKEY) ? EfficientHashLib.sha2(userOpHash) : userOpHash;
 
         if (usedChallenges[challenge]) {
             revert IKeysManager.KeyManager__UsedChallenge();
         }
-        
+
         bool sigOk = IWebAuthnVerifier(webAuthnVerifier()).verifyP256Signature(
             challenge, r, sSig, pubKey.x, pubKey.y
         );
