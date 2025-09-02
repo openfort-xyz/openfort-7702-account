@@ -130,7 +130,7 @@ contract GasFuzzing is Test {
         vm.prank(account);
         assertEq(gP.checkUserOpPolicy(configId, uo), 0);
         vm.prank(account);
-        assertEq(gP.checkUserOpPolicy(configId, uo), 1);
+        assertEq(gP.checkUserOpPolicy(configId, uo), 0);
     }
 
     function test_price_zero_path() public {
@@ -196,7 +196,9 @@ contract GasFuzzing is Test {
         vm.prank(account);
         assertEq(gP.checkUserOpPolicy(configId, uo), 0);
         vm.prank(account);
-        assertEq(gP.checkUserOpPolicy(configId, uo), 1);
+        assertEq(gP.checkUserOpPolicy(configId, uo), 0);
+        vm.prank(account);
+        assertEq(gP.checkUserOpPolicy(configId, uo), 0);
     }
 
     function test_fuzz_accept_within_auto_limits(

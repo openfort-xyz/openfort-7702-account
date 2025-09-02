@@ -354,8 +354,6 @@ contract OPF7702 is Execution, Initializable {
                     return false;
                 }
             }
-
-            sKey.consumeQuota();
             return true;
         }
 
@@ -369,8 +367,6 @@ contract OPF7702 is Execution, Initializable {
                     }
                 }
             }
-
-            sKey.consumeQuota();
             return true;
         }
 
@@ -391,6 +387,7 @@ contract OPF7702 is Execution, Initializable {
             return false;
         }
 
+        sKey.consumeQuota();
         if (call.value > 0) {
             unchecked {
                 sKey.ethLimit -= call.value;
