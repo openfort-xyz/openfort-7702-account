@@ -4,6 +4,7 @@ pragma solidity 0.8.29;
 
 import {Base} from "test/Base.sol";
 import {OPFMain} from "src/core/OPFMain.sol";
+import {GasPolicy} from "src/utils/GasPolicy.sol";
 import {LibEIP7702} from "lib/solady/src/accounts/LibEIP7702.sol";
 import {Script, console2 as console} from "lib/forge-std/src/Script.sol";
 
@@ -14,9 +15,11 @@ contract DeployUpgradeable is Script {
     uint256 constant LOCK_PERIOD = 5 days;
     uint256 constant SECURITY_PERIOD = 1.5 days;
     uint256 constant SECURITY_WINDOW = 0.5 days;
+    GasPolicy public gasPolicy;
 
     function run() public {
         vm.startBroadcast();
+        gasPolicy = new GasPolicy(110_000, 360_000, 240_000, 60_000, 60_000);
 
         OPFMain opf = new OPFMain(
             SEPOLIA_ENTRYPOINT,
@@ -24,7 +27,8 @@ contract DeployUpgradeable is Script {
             RECOVERY_PERIOD,
             LOCK_PERIOD,
             SECURITY_PERIOD,
-            SECURITY_WINDOW
+            SECURITY_WINDOW,
+            address(gasPolicy)
         );
 
         address proxy = LibEIP7702.deployProxy(address(opf), address(0));

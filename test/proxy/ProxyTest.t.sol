@@ -3,6 +3,7 @@
 pragma solidity 0.8.29;
 
 import {Base} from "test/Base.sol";
+import {GasPolicy} from "src/utils/GasPolicy.sol";
 import {OPFMain as OPF7702} from "src/core/OPFMain.sol";
 import {ISpendLimit} from "src/interfaces/ISpendLimit.sol";
 import {WebAuthnVerifier} from "src/utils/WebAuthnVerifier.sol";
@@ -19,6 +20,7 @@ contract ProxyTest is Base {
     IEntryPoint public entryPoint;
     WebAuthnVerifier public webAuthn;
     OPF7702 public account;
+    GasPolicy public gasPolicy;
 
     Key internal keyMK;
     PubKey internal pubKeyMK;
@@ -40,6 +42,7 @@ contract ProxyTest is Base {
 
         entryPoint = IEntryPoint(payable(SEPOLIA_ENTRYPOINT));
         webAuthn = WebAuthnVerifier(payable(SEPOLIA_WEBAUTHN));
+        gasPolicy = new GasPolicy(DEFAULT_PVG, DEFAULT_VGL, DEFAULT_CGL, DEFAULT_PMV, DEFAULT_PO);
         _createInitialGuradian();
 
         opf = new OPF7702(
@@ -48,7 +51,8 @@ contract ProxyTest is Base {
             RECOVERY_PERIOD,
             LOCK_PERIOD,
             SECURITY_PERIOD,
-            SECURITY_WINDOW
+            SECURITY_WINDOW,
+            address(gasPolicy)
         );
 
         impl = address(opf);
@@ -110,7 +114,7 @@ contract ProxyTest is Base {
 
         pubKeySK = PubKey({x: MINT_P256_PUBLIC_KEY_X, y: MINT_P256_PUBLIC_KEY_Y});
         keySK = Key({pubKey: pubKeySK, eoaAddress: address(0), keyType: KeyType.P256});
-        uint48 validUntil = uint48(1795096759);
+        uint48 validUntil = uint48(1_795_096_759);
         uint48 limit = uint48(20);
 
         keyDataSK = KeyReg({

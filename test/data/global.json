@@ -1,0 +1,41 @@
+{
+    "global" : {
+        "challenge": "0x249da8b691e7d0cab20568e9f260de4b537a5e4a91bb94268bc912f5d0a44bbb",
+        
+            "x": "0x76172b2be347a95e284ab6c0877c77b67d9754ef2a3ac38f91da53700dc73a1a",
+            "y": "0xcf8c42a672495950c371f28f27a9f2c27cc3bfdf90ec424fd4883b6d276567ee",
+            
+                "metadata": {
+                    "authenticatorData": "0x49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d97631d00000000",
+                    "clientDataJSON": "{\"type\":\"webauthn.get\",\"challenge\":\"JJ2otpHn0MqyBWjp8mDeS1N6XkqRu5Qmi8kS9dCkS7s\",\"origin\":\"http://localhost:5173\",\"crossOrigin\":false}",
+                    "challengeIndex": 23,
+                    "typeIndex": 1,
+                    "userVerificationRequired": true
+                },
+                "signature": {
+                    "r": "0xc8ca6abb3258316a591333e89b99b47f2e6b37157f9ad7e33341ef37af33a2cf",
+                    "s": "0x36eb5358ac01d64065d7f47074ab008c06284588ab5c6d6721ebadddadd0a95b"
+                }
+            
+            },
+
+        "globalSK" : {
+            "challenge": "0x249da8b691e7d0cab20568e9f260de4b537a5e4a91bb94268bc912f5d0a44aaa",
+            
+                "x": "0x049ea2c4cfb09e53eafb98fe1c39851cd7de29722e8ffde5c255e9bf8d63aa6c",
+                "y": "0x004c8ded375b77752361cf2ad092d87e128ac4df7153f9d6ef38c5a1a0a15021",
+                
+                    "metadata": {
+                        "authenticatorData": "0x49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d97631d00000000",
+                        "clientDataJSON": "{\"type\":\"webauthn.get\",\"challenge\":\"JJ2otpHn0MqyBWjp8mDeS1N6XkqRu5Qmi8kS9dCkSqo\",\"origin\":\"http://localhost:5173\",\"crossOrigin\":false}",
+                        "challengeIndex": 23,
+                        "typeIndex": 1,
+                        "userVerificationRequired": true
+                    },
+                    "signature": {
+                        "r": "0x6581789efede754d186bcade84d9a3a3994431098e00520b6f043641f72842f0",
+                        "s": "0x5d203ce6a6a266f01fda21e0f73ae2d9d4e749d933014a89a08b010bd73370de"
+                    }
+                
+                }
+}

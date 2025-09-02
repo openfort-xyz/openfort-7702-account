@@ -3,6 +3,7 @@
 pragma solidity ^0.8.29;
 
 import {Base} from "test/Base.sol";
+import {GasPolicy} from "src/utils/GasPolicy.sol";
 import {Test, console2 as console} from "lib/forge-std/src/Test.sol";
 import {EfficientHashLib} from "lib/solady/src/utils/EfficientHashLib.sol";
 import {EntryPoint} from "lib/account-abstraction/contracts/core/EntryPoint.sol";
@@ -26,6 +27,7 @@ contract RegistartionTest is Base {
     WebAuthnVerifier public webAuthn;
     OPF7702 public implementation;
     OPF7702 public account; // clone deployed at `owner`
+    GasPolicy public gasPolicy;
 
     /* ──────────────────────────────────────────────────────── key structures ── */
     Key internal keyMK;
@@ -49,6 +51,7 @@ contract RegistartionTest is Base {
         /* live contracts on fork */
         entryPoint = IEntryPoint(payable(SEPOLIA_ENTRYPOINT));
         webAuthn = WebAuthnVerifier(payable(SEPOLIA_WEBAUTHN));
+        gasPolicy = new GasPolicy(DEFAULT_PVG, DEFAULT_VGL, DEFAULT_CGL, DEFAULT_PMV, DEFAULT_PO);
 
         _createInitialGuradian();
         /* deploy implementation & bake it into `owner` address */
@@ -58,7 +61,8 @@ contract RegistartionTest is Base {
             RECOVERY_PERIOD,
             LOCK_PERIOD,
             SECURITY_PERIOD,
-            SECURITY_WINDOW
+            SECURITY_WINDOW,
+            address(gasPolicy)
         );
 
         vm.etch(owner, abi.encodePacked(bytes3(0xef0100), address(implementation)));
@@ -102,7 +106,7 @@ contract RegistartionTest is Base {
 
     function test_RegisterKeyEOAWithMK() public {
         console.log("/* ------------------------- test_RegisterKeyWithMK -------- */");
-        uint48 validUntil = uint48(1795096759);
+        uint48 validUntil = uint48(1_795_096_759);
         uint48 limit = uint48(3);
         pubKeySK = PubKey({
             x: 0x0000000000000000000000000000000000000000000000000000000000000000,
@@ -134,8 +138,8 @@ contract RegistartionTest is Base {
             nonce: nonce,
             initCode: hex"7702",
             callData: callData,
-            accountGasLimits: _packAccountGasLimits(600000, 400000),
-            preVerificationGas: 800000,
+            accountGasLimits: _packAccountGasLimits(600_000, 400_000),
+            preVerificationGas: 800_000,
             gasFees: _packGasFees(80 gwei, 15 gwei),
             paymasterAndData: hex"",
             signature: hex""
@@ -158,7 +162,9 @@ contract RegistartionTest is Base {
             pubKeyExecuteBatch
         );
 
-        bytes4 magicValue = account.isValidSignature(userOpHash, _signature);
+        (, bytes memory sigData) = abi.decode(_signature, (KeyType, bytes));
+
+        bytes4 magicValue = account.isValidSignature(userOpHash, sigData);
         bool usedChallenge = account.usedChallenges(userOpHash);
         console.log("usedChallenge", usedChallenge);
         console.logBytes4(magicValue);
@@ -198,7 +204,7 @@ contract RegistartionTest is Base {
 
     function test_RegisterKeyP256WithMK() public {
         console.log("/* ----------------------- test_RegisterKeyP256WithMK -------- */");
-        uint48 validUntil = uint48(1795096759);
+        uint48 validUntil = uint48(1_795_096_759);
         uint48 limit = uint48(3);
         pubKeySK = PubKey({x: P256_PUBLIC_KEY_X, y: P256_PUBLIC_KEY_Y});
 
@@ -226,8 +232,8 @@ contract RegistartionTest is Base {
             nonce: nonce,
             initCode: hex"7702",
             callData: callData,
-            accountGasLimits: _packAccountGasLimits(600000, 400000),
-            preVerificationGas: 800000,
+            accountGasLimits: _packAccountGasLimits(600_000, 400_000),
+            preVerificationGas: 800_000,
             gasFees: _packGasFees(80 gwei, 15 gwei),
             paymasterAndData: hex"",
             signature: hex""
@@ -250,7 +256,9 @@ contract RegistartionTest is Base {
             pubKeyExecuteBatch
         );
 
-        bytes4 magicValue = account.isValidSignature(userOpHash, _signature);
+        (, bytes memory sigData) = abi.decode(_signature, (KeyType, bytes));
+
+        bytes4 magicValue = account.isValidSignature(userOpHash, sigData);
         bool usedChallenge = account.usedChallenges(userOpHash);
         console.log("usedChallenge", usedChallenge);
         console.logBytes4(magicValue);
@@ -291,7 +299,7 @@ contract RegistartionTest is Base {
 
     function test_RegisterKeyP256NonKeyWithMK() public {
         console.log("/* ----------------------- test_RegisterKeyP256NonKeyWithMK -------- */");
-        uint48 validUntil = uint48(1795096759);
+        uint48 validUntil = uint48(1_795_096_759);
         uint48 limit = uint48(3);
         pubKeySK = PubKey({x: P256NOKEY_PUBLIC_KEY_X, y: P256NOKEY_PUBLIC_KEY_Y});
 
@@ -319,8 +327,8 @@ contract RegistartionTest is Base {
             nonce: nonce,
             initCode: hex"7702",
             callData: callData,
-            accountGasLimits: _packAccountGasLimits(600000, 400000),
-            preVerificationGas: 800000,
+            accountGasLimits: _packAccountGasLimits(600_000, 400_000),
+            preVerificationGas: 800_000,
             gasFees: _packGasFees(80 gwei, 15 gwei),
             paymasterAndData: hex"",
             signature: hex""
@@ -343,7 +351,9 @@ contract RegistartionTest is Base {
             pubKeyExecuteBatch
         );
 
-        bytes4 magicValue = account.isValidSignature(userOpHash, _signature);
+        (, bytes memory sigData) = abi.decode(_signature, (KeyType, bytes));
+
+        bytes4 magicValue = account.isValidSignature(userOpHash, sigData);
         bool usedChallenge = account.usedChallenges(userOpHash);
         console.log("usedChallenge", usedChallenge);
         console.logBytes4(magicValue);
@@ -501,7 +511,7 @@ contract RegistartionTest is Base {
 
         pubKeySK = PubKey({x: MINT_P256_PUBLIC_KEY_X, y: MINT_P256_PUBLIC_KEY_Y});
         keySK = Key({pubKey: pubKeySK, eoaAddress: address(0), keyType: KeyType.P256});
-        uint48 validUntil = uint48(1795096759);
+        uint48 validUntil = uint48(1_795_096_759);
         uint48 limit = uint48(20);
 
         keyDataSK = KeyReg({

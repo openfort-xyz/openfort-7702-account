@@ -4,7 +4,8 @@ pragma solidity ^0.8.4;
 /// @notice Gas optimized P256 wrapper.
 /// @author Solady (https://github.com/vectorized/solady/blob/main/src/utils/P256.sol)
 /// @author Modified from Daimo P256 Verifier (https://github.com/daimo-eth/p256-verifier/blob/master/src/P256.sol)
-/// @author Modified from OpenZeppelin (https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/utils/cryptography/P256.sol)
+/// @author Modified from OpenZeppelin
+/// (https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/utils/cryptography/P256.sol)
 library P256 {
     /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
     /*                        CUSTOM ERRORS                       */

@@ -3,6 +3,7 @@
 pragma solidity ^0.8.29;
 
 import {Base} from "test/Base.sol";
+import {GasPolicy} from "src/utils/GasPolicy.sol";
 import {Test, console2 as console} from "lib/forge-std/src/Test.sol";
 import {EfficientHashLib} from "lib/solady/src/utils/EfficientHashLib.sol";
 import {EntryPoint} from "lib/account-abstraction/contracts/core/EntryPoint.sol";
@@ -20,7 +21,7 @@ import {PackedUserOperation} from
 import {MessageHashUtils} from
     "lib/openzeppelin-contracts/contracts/utils/cryptography/MessageHashUtils.sol";
 
-contract DepositAndTransferETH is Base {
+contract UpgradeAddresses is Base {
     error NotFromEntryPoint();
 
     /* ───────────────────────────────────────────────────────────── contracts ── */
@@ -28,6 +29,7 @@ contract DepositAndTransferETH is Base {
     WebAuthnVerifier public webAuthn;
     OPF7702 public implementation;
     OPF7702 public account; // clone deployed at `owner`
+    GasPolicy public gasPolicy;
 
     /* ──────────────────────────────────────────────────────── key structures ── */
     Key internal keyMK;
@@ -50,6 +52,7 @@ contract DepositAndTransferETH is Base {
         /* live contracts on fork */
         entryPoint = IEntryPoint(payable(SEPOLIA_ENTRYPOINT));
         webAuthn = WebAuthnVerifier(payable(SEPOLIA_WEBAUTHN));
+        gasPolicy = new GasPolicy(DEFAULT_PVG, DEFAULT_VGL, DEFAULT_CGL, DEFAULT_PMV, DEFAULT_PO);
 
         _createInitialGuradian();
         /* deploy implementation & bake it into `owner` address */
@@ -59,7 +62,8 @@ contract DepositAndTransferETH is Base {
             RECOVERY_PERIOD,
             LOCK_PERIOD,
             SECURITY_PERIOD,
-            SECURITY_WINDOW
+            SECURITY_WINDOW,
+            address(gasPolicy)
         );
         vm.etch(owner, abi.encodePacked(bytes3(0xef0100), address(implementation)));
         account = OPF7702(payable(owner));
@@ -94,7 +98,7 @@ contract DepositAndTransferETH is Base {
             "/* -------------------------------- test_UpgradeEntryPointWithRootKey -------- */"
         );
         bytes memory callData =
-            abi.encodeWithSelector(BaseOPF7702.setEntryPoint.selector, address(789012));
+            abi.encodeWithSelector(BaseOPF7702.setEntryPoint.selector, address(789_012));
 
         uint256 nonce = entryPoint.getNonce(owner, 1);
 
@@ -105,8 +109,8 @@ contract DepositAndTransferETH is Base {
             nonce: nonce,
             initCode: hex"7702",
             callData: callData,
-            accountGasLimits: _packAccountGasLimits(600000, 400000),
-            preVerificationGas: 800000,
+            accountGasLimits: _packAccountGasLimits(600_000, 400_000),
+            preVerificationGas: 800_000,
             gasFees: _packGasFees(80 gwei, 15 gwei),
             paymasterAndData: hex"",
             signature: hex""
@@ -135,7 +139,7 @@ contract DepositAndTransferETH is Base {
 
         address ePoint_After = address(account.entryPoint());
         assertEq(ePoint_Before, address(entryPoint));
-        assertEq(ePoint_After, address(789012));
+        assertEq(ePoint_After, address(789_012));
         assertNotEq(ePoint_After, ePoint_Before);
         console.log(
             "/* -------------------------------- test_UpgradeEntryPointWithRootKey -------- */"
@@ -147,7 +151,7 @@ contract DepositAndTransferETH is Base {
             "/* -------------------------------- test_UpgradeWebAuthnVerifiertWithRootKey -------- */"
         );
         bytes memory callData =
-            abi.encodeWithSelector(BaseOPF7702.setWebAuthnVerifier.selector, address(123456));
+            abi.encodeWithSelector(BaseOPF7702.setWebAuthnVerifier.selector, address(123_456));
 
         uint256 nonce = entryPoint.getNonce(owner, 1);
 
@@ -158,8 +162,8 @@ contract DepositAndTransferETH is Base {
             nonce: nonce,
             initCode: hex"7702",
             callData: callData,
-            accountGasLimits: _packAccountGasLimits(600000, 400000),
-            preVerificationGas: 800000,
+            accountGasLimits: _packAccountGasLimits(600_000, 400_000),
+            preVerificationGas: 800_000,
             gasFees: _packGasFees(80 gwei, 15 gwei),
             paymasterAndData: hex"",
             signature: hex""
@@ -188,7 +192,7 @@ contract DepositAndTransferETH is Base {
 
         address webAuthnVerifier_After = account.webAuthnVerifier();
         assertEq(webAuthnVerifier_Before, WEBAUTHN_VERIFIER);
-        assertEq(webAuthnVerifier_After, address(123456));
+        assertEq(webAuthnVerifier_After, address(123_456));
         assertNotEq(webAuthnVerifier_After, webAuthnVerifier_Before);
         console.log(
             "/* -------------------------------- test_UpgradeWebAuthnVerifiertWithRootKey -------- */"
@@ -200,7 +204,7 @@ contract DepositAndTransferETH is Base {
             "/* -------------------------------- test_test_UpgradeEntryPointWithMasterKey -------- */"
         );
         bytes memory callData =
-            abi.encodeWithSelector(BaseOPF7702.setEntryPoint.selector, address(789012));
+            abi.encodeWithSelector(BaseOPF7702.setEntryPoint.selector, address(789_012));
 
         uint256 nonce = entryPoint.getNonce(owner, 1);
 
@@ -211,8 +215,8 @@ contract DepositAndTransferETH is Base {
             nonce: nonce,
             initCode: hex"7702",
             callData: callData,
-            accountGasLimits: _packAccountGasLimits(600000, 400000),
-            preVerificationGas: 800000,
+            accountGasLimits: _packAccountGasLimits(600_000, 400_000),
+            preVerificationGas: 800_000,
             gasFees: _packGasFees(80 gwei, 15 gwei),
             paymasterAndData: hex"",
             signature: hex""
@@ -235,7 +239,9 @@ contract DepositAndTransferETH is Base {
             pubKeyExecuteBatch
         );
 
-        bytes4 magicValue = account.isValidSignature(userOpHash, _signature);
+        (, bytes memory sigData) = abi.decode(_signature, (KeyType, bytes));
+
+        bytes4 magicValue = account.isValidSignature(userOpHash, sigData);
         bool usedChallenge = account.usedChallenges(userOpHash);
         console.log("usedChallenge", usedChallenge);
         console.logBytes4(magicValue);
@@ -270,7 +276,7 @@ contract DepositAndTransferETH is Base {
 
         address ePoint_After = address(account.entryPoint());
         assertEq(ePoint_Before, address(entryPoint));
-        assertEq(ePoint_After, address(789012));
+        assertEq(ePoint_After, address(789_012));
         assertNotEq(ePoint_After, ePoint_Before);
 
         console.log(
@@ -288,7 +294,7 @@ contract DepositAndTransferETH is Base {
 
         address ePoint_After = address(account.entryPoint());
         assertEq(ePoint_Before, address(entryPoint));
-        assertEq(ePoint_After, address(789012));
+        assertEq(ePoint_After, address(789_012));
         assertNotEq(ePoint_After, ePoint_Before);
 
         uint256 value = 1e18;
@@ -315,8 +321,8 @@ contract DepositAndTransferETH is Base {
             nonce: nonce,
             initCode: hex"7702",
             callData: callData,
-            accountGasLimits: _packAccountGasLimits(600000, 400000),
-            preVerificationGas: 800000,
+            accountGasLimits: _packAccountGasLimits(600_000, 400_000),
+            preVerificationGas: 800_000,
             gasFees: _packGasFees(80 gwei, 15 gwei),
             paymasterAndData: hex"",
             signature: hex""
@@ -339,7 +345,9 @@ contract DepositAndTransferETH is Base {
             pubKeyExecuteBatch
         );
 
-        bytes4 magicValue = account.isValidSignature(userOpHash, _signature);
+        (, bytes memory sigData) = abi.decode(_signature, (KeyType, bytes));
+
+        bytes4 magicValue = account.isValidSignature(userOpHash, sigData);
         bool usedChallenge = account.usedChallenges(userOpHash);
         console.log("usedChallenge", usedChallenge);
         console.logBytes4(magicValue);
@@ -380,7 +388,7 @@ contract DepositAndTransferETH is Base {
 
     function _upgradeEPoint() internal {
         bytes memory callData =
-            abi.encodeWithSelector(BaseOPF7702.setEntryPoint.selector, address(789012));
+            abi.encodeWithSelector(BaseOPF7702.setEntryPoint.selector, address(789_012));
 
         uint256 nonce = entryPoint.getNonce(owner, 1);
 
@@ -389,8 +397,8 @@ contract DepositAndTransferETH is Base {
             nonce: nonce,
             initCode: hex"7702",
             callData: callData,
-            accountGasLimits: _packAccountGasLimits(600000, 400000),
-            preVerificationGas: 800000,
+            accountGasLimits: _packAccountGasLimits(600_000, 400_000),
+            preVerificationGas: 800_000,
             gasFees: _packGasFees(80 gwei, 15 gwei),
             paymasterAndData: hex"",
             signature: hex""
@@ -413,7 +421,9 @@ contract DepositAndTransferETH is Base {
             pubKeyExecuteBatch
         );
 
-        bytes4 magicValue = account.isValidSignature(userOpHash, _signature);
+        (, bytes memory sigData) = abi.decode(_signature, (KeyType, bytes));
+
+        bytes4 magicValue = account.isValidSignature(userOpHash, sigData);
         bool usedChallenge = account.usedChallenges(userOpHash);
         console.log("usedChallenge", usedChallenge);
         console.logBytes4(magicValue);
@@ -620,5 +630,18 @@ contract DepositAndTransferETH is Base {
 
         vm.prank(address(entryPoint));
         account.initialize(keyMK, keyData, keySK, keyData, sig, initialGuardian);
+    }
+
+    function test_UpdateGasPolicy() public {
+        address newAddr = address(111101);
+        address oldAddr = account.gasPolicy();
+        vm.etch(owner, abi.encodePacked(bytes3(0xef0100), address(implementation)));
+        account = OPF7702(payable(owner));
+
+        vm.prank(owner);
+        account.setGasPolicy(newAddr);
+
+        assertEq(newAddr, account.gasPolicy());
+        assertNotEq(oldAddr, account.gasPolicy());
     }
 }

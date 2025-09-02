@@ -12,36 +12,47 @@ This documentation covers the implementation of EIP-7702 compatible smart contra
 
 ## Table of Contents
 
-* [Overview](#overview)
-* [Key Features](#key-features)
-  * [EIP-7702 Implementation](#eip-7702-implementation)
-  * [Session Keys](#session-keys)
-  * [WebAuthn & P-256 Support](#webauthn--p-256-support)
-  * [Spending Controls](#spending-controls)
-  * [Security Features](#security-features)
-* [Architecture](#architecture)
-  * [Core Components](#core-components)
-  * [Storage](#storage)
-  * [Key Types](#key-types)
-  * [Session Key Structure](#session-key-structure)
-  * [EIP-4337 / EIP-7702 Interplay](#eip-4337--eip-7702-interplay)
-  * [Guardian Lifecycle](#guardian-lifecycle)
-  * [Social Recovery](#social-recovery)
-* [Usage Guide](#usage-guide)
-  * [Account Initialization](#account-initialization)
-  * [Session Key Management](#session-key-management)
-  * [Transaction Execution](#transaction-execution)
-* [Security Considerations](#security-considerations)
-* [Implementation Details](#implementation-details)
-  * [Signature Verification](#signature-verification)
-  * [Storage Clearing](#storage-clearing)
-* [Examples](#examples)
-  * [Registering a WebAuthn or P-256 Session Key](#registering-a-webauthn-or-p-256-session-key)
-  * [Using EOA Session Keys](#using-eoa-session-keys)
-* [Testing](#testing)
-* [License](#license)
-* [Disclaimer](#disclaimer)
-* [Contact](#contact)
+- [Overview](#overview)
+- [Docs & Deep Dives](#docs--deep-dives)
+- [Key Features](#key-features)
+  - [EIP-7702 Implementation](#eip-7702-implementation)
+  - [Keys](#keys)
+  - [WebAuthn & P-256 Support](#webauthn--p-256-support)
+  - [Spending Controls](#spending-controls)
+  - [Security Features](#security-features)
+- [Architecture](#architecture)
+  - [Core Components](#core-components)
+  - [Storage](#storage)
+  - [Key Types](#key-types)
+  - [Key Structure](#key-structure)
+  - [EIP-4337 / EIP-7702 Interplay](#eip-4337--eip-7702-interplay)
+  - [Guardian Lifecycle](#guardian-lifecycle)
+  - [Social Recovery](#social-recovery)
+- [Usage Guide](#usage-guide)
+  - [Account Initialization](#account-initialization)
+  - [Key Management](#key-management)
+  - [Transaction Execution](#transaction-execution)
+- [Security Considerations](#security-considerations)
+- [Implementation Details](#implementation-details)
+  - [Signature Verification](#signature-verification)
+  - [Storage Clearing](#storage-clearing)
+- [Examples](#examples)
+  - [Registering a WebAuthn or P-256 Session Key](#registering-a-webauthn-or-p-256-session-key)
+  - [Using EOA Session Keys](#using-eoa-session-keys)
+- [Testing](#testing)
+- [License](#license)
+- [Disclaimer](#disclaimer)
+- [Contact](#contact)
+
+---
+
+## Docs & Deep Dives
+
+- **Architecture** — high-level design, modules, call flow, and data shapes: [docs/Architecture.md](Architecture.md)
+- **Keys** — registration, permissions, signature envelopes, and policy limits: [docs/SessionKeys.md](SessionKeys.md)
+- **Recovery** — guardians, timelines, EIP-712 digests, and invariants: [docs/Recovery.md](Recovery.md)
+- **Gas Policy** — per-session gas/cost/tx budgets, validation flow, defaults, and examples: [docs/GasPolicy.md](GasPolicy.md)
+- **AA Primer** — how this integrates with ERC-4337 and EIP-7702: [docs/AA.md](AA.md)
 
 ---
 
@@ -50,7 +61,7 @@ This documentation covers the implementation of EIP-7702 compatible smart contra
 Openfort's implementation of EIP-7702 (Account Implementation Contract Standard) allows smart contracts to be executed at any address without a deployment transaction. Our architecture includes:
 
 - **OPF7702**: A modular, production-ready smart account supporting ERC-4337 + session keys
-- **Session Keys**: Temporary keys (WebAuthn, EOA, P-256) with scoped permissions
+- **Keys**: Temporary keys (WebAuthn, EOA, P-256) with scoped permissions
 - **EIP-1271 + EIP-712**: Secure signature validation for typed and raw data
 
 ---
@@ -63,7 +74,7 @@ Openfort's implementation of EIP-7702 (Account Implementation Contract Standard)
 - Deterministic storage layout via fixed slots
 - Compatible with ERC-4337 bundlers and EntryPoint
 
-### Session Keys
+### Keys
 
 - Temporary session keys with limited scope
 - EOA, WebAuthn, and P-256 support
@@ -101,7 +112,7 @@ Openfort's implementation of EIP-7702 (Account Implementation Contract Standard)
 ### Storage
 
 ```solidity
-keccak256("openfort.baseAccount.7702.v1") = 0x801ae8efc2175d3d963e799b27e0e948b9a3fa84e2ce105a370245c8c127f368
+keccak256(abi.encode(uint256(keccak256("openfort.baseAccount.7702.v1")) - 1)) & ~bytes32(uint256(0xff)) = 0xeddd36aac8c71936fe1d5edb073ff947aa7c1b6174e87c15677c96ab9ad95400
 ```
 
 ### Key Types
@@ -115,29 +126,29 @@ enum KeyType {
 }
 ```
 
-### Session Key Structure
+### Key Structure
 
 ```solidity
-struct SessionKey {
-    PubKey pubKey;
-    bool isActive;
-    uint48 validUntil;
-    uint48 validAfter;
-    uint48 limit;
-    bool masterSessionKey;
-    bool whitelisting;
-    mapping(address => bool) whitelist;
-    bytes4[] allowedSelectors;
-    uint256 ethLimit;
-    SpendTokenInfo spendTokenInfo;
-}
+    struct KeyData {
+        PubKey pubKey;
+        bool isActive;
+        uint48 validUntil;
+        uint48 validAfter;
+        uint48 limit;
+        bool masterKey;
+        bool whitelisting;
+        mapping(address contractAddress => bool allowed) whitelist;
+        ISpendLimit.SpendTokenInfo spendTokenInfo;
+        bytes4[] allowedSelectors;
+        uint256 ethLimit;
+    }
 ```
 
 ## EIP-4337 / EIP-7702 Interplay
 
 The contract supports both:
 	•	Owner validation via EIP-712 / ECDSA
-	•	Session key validation via on-chain rules + signature
+	•	Key validation via on-chain rules + signature
 
 ## Social Recovery
 The OPF7702Recoverable contract extends the base smart account with advanced social recovery features that allow users to recover access through trusted guardians. These guardians can be EOAs or WebAuthn public keys.
@@ -148,86 +159,98 @@ The OPF7702Recoverable contract extends the base smart account with advanced soc
 
 ```solidity
 // Create a new account with an owner
-function initialize(
-    Key calldata _key,
-    SpendTokenInfo calldata _spendTokenInfo,
-    bytes4[] calldata _allowedSelectors,
-    bytes32 _hash,
-    bytes memory _signature,
-    uint256 _validUntil,
-    uint256 _nonce
-);
+    function initialize(
+        Key calldata _key,
+        KeyReg calldata _keyData,
+        Key calldata _sessionKey,
+        KeyReg calldata _sessionKeyData,
+        bytes memory _signature,
+        bytes32 _initialGuardian
+    );
 ```
 
-### Session Key Management
+### Key Management
 
 ```solidity
-// Register the session key
-  function registerSessionKey(
-      Key calldata _key,
-      uint48 _validUntil,
-      uint48 _validAfter,
-      uint48 _limit,
-      bool _whitelisting,
-      address _contractAddress,
-      SpendTokenInfo calldata _spendTokenInfo,
-      bytes4[] calldata _allowedSelectors,
-      uint256 _ethLimit
-    );
+// Register the key
+function registerKey(Key calldata _key, KeyReg calldata _keyData) 
 ```
 
 ### Transaction Execution
 
 ```solidity
-    function execute(Call[] calldata _transactions) external payable virtual nonReentrant {
+    function execute(bytes32 mode, bytes memory executionData)
+        public
+        payable
+        virtual
+        nonReentrant
+    {
+        // Authenticate *once* for the whole recursive run.
         _requireForExecute();
 
-        uint256 txCount = _transactions.length;
-        if (txCount == 0 || txCount > MAX_TX) {
-            revert OpenfortBaseAccount7702V1__InvalidTransactionLength();
-        }
-
-        for (uint256 i = 0; i < txCount;) {
-            Call calldata callItem = _transactions[i];
-            _executeCall(callItem.target, callItem.value, callItem.data);
-            unchecked {
-                ++i;
-            }
-        }
+        // Run the worker; revert if overall call‑count > MAX_TX.
+        _run(mode, executionData, 0);
     }
 
-    function executeBatch(
-        address[] calldata _target,
-        uint256[] calldata _value,
-        bytes[] calldata _data
-    ) public payable virtual nonReentrant {
-        _requireForExecute();
+        function _run(bytes32 mode, bytes memory data, uint256 counter) internal returns (uint256) {
+        uint256 id = _executionModeId(mode);
 
-        uint256 batchLength = _target.length;
-        if (
-            batchLength == 0 || batchLength > MAX_TX || batchLength != _value.length
-                || batchLength != _data.length
-        ) {
-            revert OpenfortBaseAccount7702V1__InvalidTransactionLength();
+        /* -------- mode 3 : batch‑of‑batches ----------------------- */
+        if (id == 3) {
+            // Clear the top‑level mode‑3 flag so inner batches can be
+            // parsed as mode 1 or 2.
+            mode ^= bytes32(uint256(3 << (22 * 8)));
+
+            bytes[] memory batches = abi.decode(data, (bytes[]));
+            _checkLength(batches.length); // per‑batch structural cap
+
+            for (uint256 i; i < batches.length; ++i) {
+                counter = _run(mode, batches[i], counter);
+            }
+            return counter;
         }
 
-        for (uint256 i = 0; i < batchLength;) {
-            _executeCall(_target[i], _value[i], _data[i]);
-            unchecked {
-                ++i;
+        /* -------- flat batch (mode 1 or 2) ------------------------ */
+        if (id == 0) revert IExecution.OpenfortBaseAccount7702V1__UnsupportedExecutionMode();
+
+        bool withOpData;
+        /// @solidity memory-safe-assembly
+        assembly {
+            let len := mload(data)
+            let flag := gt(mload(add(data, 0x20)), 0x3f)
+            withOpData := and(eq(id, 2), and(gt(len, 0x3f), flag))
+        }
+
+        Call[] memory calls;
+        bytes memory opData;
+        if (withOpData) {
+            (calls, opData) = abi.decode(data, (Call[], bytes));
+        } else {
+            calls = abi.decode(data, (Call[]));
+        }
+
+        _checkLength(calls.length); // per‑batch structural cap
+        if (opData.length != 0) revert IExecution.OpenfortBaseAccount7702V1__UnsupportedOpData();
+
+        for (uint256 i; i < calls.length; ++i) {
+            Call memory c = calls[i];
+            address to = c.target == address(0) ? address(this) : c.target;
+            _execute(to, c.value, c.data);
+
+            // ---- global counter enforcement -------------------- //
+            if (++counter > MAX_TX) {
+                revert IExecution.OpenfortBaseAccount7702V1__TooManyCalls(counter, MAX_TX);
             }
         }
+        return counter;
     }
 
-    function _executeCall(address _target, uint256 _value, bytes calldata _data) internal virtual {
-        if (_target == address(this)) {
-            revert OpenfortBaseAccount7702V1__InvalidTransactionTarget();
-        }
-
-        emit TransactionExecuted(_target, _value, _data);
-        (bool success, bytes memory returnData) = _target.call{value: _value}(_data);
-        if (!success) {
-            revert OpenfortBaseAccount7702V1__TransactionFailed(returnData);
+        function _execute(address to, uint256 value, bytes memory data) internal virtual {
+        (bool success, bytes memory result) = to.call{value: value}(data);
+        if (success) return;
+        /// @solidity memory-safe-assembly
+        assembly {
+            revert(add(result, 0x20), mload(result))
         }
     }
 ```
@@ -237,21 +260,21 @@ Guardians are managed via a lifecycle with scheduled delays and explicit confirm
 	•	Propose Guardian:
 A new guardian is proposed with a delay before activation.
 ```solidity
-function proposeGuardian(Key memory _guardian)
+function proposeGuardian(bytes32 _guardian)
 ```
 Emits: GuardianProposed
 
 	•	Confirm Guardian Proposal:
 After the delay, the guardian can be activated.
 ```solidity
-function confirmGuardianProposal(Key memory _guardian)
+function confirmGuardianProposal(bytes32 _guardian)
 ```
 Emits: GuardianAdded
 
 	•	Cancel Guardian Proposal:
 An unconfirmed proposal can be revoked.
 ```solidity
-function cancelGuardianProposal(Key memory _guardian)
+function cancelGuardianProposal(bytes32 _guardian)
 ```
 
 ## Security Considerations
@@ -263,13 +286,32 @@ function cancelGuardianProposal(Key memory _guardian)
 ## Storage Clearing
 
 ```solidity
-function _clearStorage() internal {
-    bytes32 baseSlot = keccak256("openfort.baseAccount.7702.v1");
-    for (uint256 i = 2; i < 6; i++) {
-        bytes32 slot = bytes32(uint256(baseSlot) + i);
-        assembly { sstore(slot, 0) }
+    function _clearStorage() internal {
+        bytes32 baseSlot = keccak256(
+            abi.encode(uint256(keccak256("openfort.baseAccount.7702.v1")) - 1)
+        ) & ~bytes32(uint256(0xff));
+
+        // clear slot 0, _EP_SLOT & _VERIFIER_SLOT
+        bytes32 epSlot = UpgradeAddress._EP_SLOT;
+        bytes32 verifierSlot = UpgradeAddress._VERIFIER_SLOT;
+        assembly {
+            sstore(baseSlot, 0)
+            sstore(epSlot, 0)
+            sstore(verifierSlot, 0)
+        }
+
+        // ---- Clear composite structs:
+        // recoveryData: starts at base+7, size 4 slots  -> [7,8,9,10]
+        // guardiansData: starts at base+11, size 3 slots -> [11,12,13]
+        unchecked {
+            for (uint256 i = 7; i <= 13; ++i) {
+                bytes32 slot = bytes32(uint256(baseSlot) + i);
+                assembly {
+                    sstore(slot, 0)
+                }
+            }
+        }
     }
-}
 ```
 
 ## License

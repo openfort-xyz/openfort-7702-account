@@ -93,8 +93,9 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
         uint256 _recoveryPeriod,
         uint256 _lockPeriod,
         uint256 _securityPeriod,
-        uint256 _securityWindow
-    ) OPF7702(_entryPoint, _webAuthnVerifier) EIP712("OPF7702Recoverable", "1") {
+        uint256 _securityWindow,
+        address _gasPolicy
+    ) OPF7702(_entryPoint, _webAuthnVerifier, _gasPolicy) EIP712("OPF7702Recoverable", "1") {
         if (_lockPeriod < _recoveryPeriod || _recoveryPeriod < _securityPeriod + _securityWindow) {
             revert IOPF7702Recoverable.OPF7702Recoverable_InsecurePeriod();
         }
@@ -140,7 +141,7 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
         _requireForExecute();
         _clearStorage();
 
-        _masterKeyValidation(_keyData);
+        _masterKeyValidation(_key, _keyData);
 
         bytes32 digest =
             getDigestToInit(_key, _keyData, _sessionKey, _sessionKeyData, _initialGuardian);
@@ -270,6 +271,7 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
         IOPF7702Recoverable.GuardianIdentity storage gi = guardiansData.data[_guardian];
 
         if (gi.pending == 0) revert IOPF7702Recoverable.OPF7702Recoverable__UnknownProposal();
+
         if (gi.isActive) revert IOPF7702Recoverable.OPF7702Recoverable__DuplicatedGuardian();
 
         emit IOPF7702Recoverable.GuardianProposalCancelled(_guardian);

@@ -1,0 +1,335 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<html lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>LCOV - lcov.info - test/by-contract/Data.sol</title>
+  <link rel="stylesheet" type="text/css" href="../../gcov.css">
+</head>
+
+<body>
+
+          <table width="100%" border=0 cellspacing=0 cellpadding=0>
+            <tr><td class="title">LCOV - code coverage report</td></tr>
+            <tr><td class="ruler"><img src="../../glass.png" width=3 height=3 alt=""></td></tr>
+
+            <tr>
+              <td width="100%">
+                <table cellpadding=1 border=0 width="100%">
+          <tr>
+            <td width="10%" class="headerItem">Current view:</td>
+            <td width="10%" class="headerValue"><a href="../../index.html" title="Click to go to top-level">top level</a> - <a href="index.html" title="Click to go to directory test/by-contract">test/by-contract</a> - Data.sol<span style="font-size: 80%;"> (source / <a href="Data.sol.func-c.html" title="Click to go to function table">functions</a>)</span></td>
+            <td width="5%"></td>
+            <td width="5%"></td>
+            <td width="5%" class="headerCovTableHead">Coverage</td>
+            <td width="5%" class="headerCovTableHead" title="Covered + Uncovered code">Total</td>
+            <td width="5%" class="headerCovTableHead" title="Exercised code only">Hit</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Test:</td>
+            <td class="headerValue">lcov.info</td>
+            <td></td>
+            <td class="headerItem">Lines:</td>
+            <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
+            <td class="headerCovTableEntry">47</td>
+            <td class="headerCovTableEntry">47</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Test Date:</td>
+            <td class="headerValue">2025-08-29 18:57:14</td>
+            <td></td>
+            <td class="headerItem">Functions:</td>
+            <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
+            <td class="headerCovTableEntry">10</td>
+            <td class="headerCovTableEntry">10</td>
+          </tr>
+                  <tr><td><img src="../../glass.png" width=3 height=3 alt=""></td></tr>
+                </table>
+              </td>
+            </tr>
+
+            <tr><td class="ruler"><img src="../../glass.png" width=3 height=3 alt=""></td></tr>
+          </table>
+
+          <table cellpadding=0 cellspacing=0 border=0>
+            <tr>
+              <td><br></td>
+            </tr>
+            <tr>
+              <td>
+<pre class="sourceHeading">            Line data    Source code</pre>
+<pre class="source">
+<span id="L1"><span class="lineNum">       1</span>              : // SPDX-License-Identifier: MIT</span>
+<span id="L2"><span class="lineNum">       2</span>              : </span>
+<span id="L3"><span class="lineNum">       3</span>              : pragma solidity ^0.8.29;</span>
+<span id="L4"><span class="lineNum">       4</span>              : </span>
+<span id="L5"><span class="lineNum">       5</span>              : import &quot;lib/forge-std/src/StdJson.sol&quot;;</span>
+<span id="L6"><span class="lineNum">       6</span>              : import {IKey} from &quot;src/interfaces/IKey.sol&quot;;</span>
+<span id="L7"><span class="lineNum">       7</span>              : import &quot;test/by-contract/EventsAndErrors.sol&quot;;</span>
+<span id="L8"><span class="lineNum">       8</span>              : import {ISpendLimit} from &quot;src/interfaces/ISpendLimit.sol&quot;;</span>
+<span id="L9"><span class="lineNum">       9</span>              : import {Test, console2 as console} from &quot;lib/forge-std/src/Test.sol&quot;;</span>
+<span id="L10"><span class="lineNum">      10</span>              : import {PackedUserOperation} from</span>
+<span id="L11"><span class="lineNum">      11</span>              :     &quot;lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol&quot;;</span>
+<span id="L12"><span class="lineNum">      12</span>              : </span>
+<span id="L13"><span class="lineNum">      13</span>              : contract Data is Test, IKey, EventsAndErrors {</span>
+<span id="L14"><span class="lineNum">      14</span>              :     /* ─────────────────────────────────────────────────────────────              ── */</span>
+<span id="L15"><span class="lineNum">      15</span>              :     address constant TOKEN = 0x9C0b94fb071Ed4066d7C18F4b68968e311A66209;</span>
+<span id="L16"><span class="lineNum">      16</span>              :     address constant ETH_RECIVE = 0xCdB635ee58926769ee2789fA0942Ef04A4ae9d16;</span>
+<span id="L17"><span class="lineNum">      17</span>              :     address constant ENTRYPOINT_V8 = 0x4337084D9E255Ff0702461CF8895CE9E3b5Ff108;</span>
+<span id="L18"><span class="lineNum">      18</span>              :     address constant SEPOLIA_WEBAUTHN = 0x83b7acb5A6aa8A34A97bdA13182aEA787AC3f10d;</span>
+<span id="L19"><span class="lineNum">      19</span>              : </span>
+<span id="L20"><span class="lineNum">      20</span>              :     /* ─────────────────────────────────────────────────────────────              ── */</span>
+<span id="L21"><span class="lineNum">      21</span>              :     bytes32 constant TYPE_HASH = keccak256(</span>
+<span id="L22"><span class="lineNum">      22</span>              :         &quot;EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)&quot;</span>
+<span id="L23"><span class="lineNum">      23</span>              :     );</span>
+<span id="L24"><span class="lineNum">      24</span>              :     bytes32 constant RECOVER_TYPEHASH =</span>
+<span id="L25"><span class="lineNum">      25</span>              :         0x9f7aca777caf11405930359f601a4db01fad1b2d79ef3f2f9e93c835e9feffa5;</span>
+<span id="L26"><span class="lineNum">      26</span>              :     bytes32 constant INIT_TYPEHASH =</span>
+<span id="L27"><span class="lineNum">      27</span>              :         0x82dc6262fca76342c646d126714aa4005dfcd866448478747905b2e7b9837183;</span>
+<span id="L28"><span class="lineNum">      28</span>              : </span>
+<span id="L29"><span class="lineNum">      29</span>              :     /* ─────────────────────────────────────────────────────────────              ── */</span>
+<span id="L30"><span class="lineNum">      30</span>              :     uint256 constant RECOVERY_PERIOD = 2 days;</span>
+<span id="L31"><span class="lineNum">      31</span>              :     uint256 constant LOCK_PERIOD = 5 days;</span>
+<span id="L32"><span class="lineNum">      32</span>              :     uint256 constant SECURITY_PERIOD = 1.5 days;</span>
+<span id="L33"><span class="lineNum">      33</span>              :     uint256 constant SECURITY_WINDOW = 0.5 days;</span>
+<span id="L34"><span class="lineNum">      34</span>              : </span>
+<span id="L35"><span class="lineNum">      35</span>              :     /* ─────────────────────────────────────────────────────────────              ── */</span>
+<span id="L36"><span class="lineNum">      36</span>              :     uint256 constant DEFAULT_PVG = 110_000; // packaging/bytes for P-256/WebAuthn-ish signatures</span>
+<span id="L37"><span class="lineNum">      37</span>              :     uint256 constant DEFAULT_VGL = 360_000; // validation (session key checks, EIP-1271/P-256 parsing)</span>
+<span id="L38"><span class="lineNum">      38</span>              :     uint256 constant DEFAULT_CGL = 240_000; // ERC20 transfer/batch-ish execution</span>
+<span id="L39"><span class="lineNum">      39</span>              :     uint256 constant DEFAULT_PMV = 60_000; // paymaster validate (if used)</span>
+<span id="L40"><span class="lineNum">      40</span>              :     uint256 constant DEFAULT_PO = 60_000; // postOp (token charge/refund)</span>
+<span id="L41"><span class="lineNum">      41</span>              : </span>
+<span id="L42"><span class="lineNum">      42</span>              :     /* ─────────────────────────────────────────────────────────────              ── */</span>
+<span id="L43"><span class="lineNum">      43</span>              :     uint256 internal ownerPK;</span>
+<span id="L44"><span class="lineNum">      44</span>              :     address internal owner;</span>
+<span id="L45"><span class="lineNum">      45</span>              : </span>
+<span id="L46"><span class="lineNum">      46</span>              :     uint256 internal sessionKeyPK;</span>
+<span id="L47"><span class="lineNum">      47</span>              :     address internal sessionKey;</span>
+<span id="L48"><span class="lineNum">      48</span>              : </span>
+<span id="L49"><span class="lineNum">      49</span>              :     uint256 internal senderPK;</span>
+<span id="L50"><span class="lineNum">      50</span>              :     address internal sender;</span>
+<span id="L51"><span class="lineNum">      51</span>              : </span>
+<span id="L52"><span class="lineNum">      52</span>              :     bytes32 internal initialGuardian;</span>
+<span id="L53"><span class="lineNum">      53</span>              :     uint256 public GUARDIAN_EOA_PRIVATE_KEY;</span>
+<span id="L54"><span class="lineNum">      54</span>              :     address internal GUARDIAN_EOA_ADDRESS;</span>
+<span id="L55"><span class="lineNum">      55</span>              : </span>
+<span id="L56"><span class="lineNum">      56</span>              :     /* ─────────────────────────────────────────────────────────────              ── */</span>
+<span id="L57"><span class="lineNum">      57</span>              :     Key internal keyMK;</span>
+<span id="L58"><span class="lineNum">      58</span>              :     PubKey internal pubKeyMK;</span>
+<span id="L59"><span class="lineNum">      59</span>              :     Key internal keySK;</span>
+<span id="L60"><span class="lineNum">      60</span>              :     PubKey internal pubKeySK;</span>
+<span id="L61"><span class="lineNum">      61</span>              : </span>
+<span id="L62"><span class="lineNum">      62</span>              :     KeyReg internal keyDataMK;</span>
+<span id="L63"><span class="lineNum">      63</span>              :     KeyReg internal keyDataSKP256NonKey;</span>
+<span id="L64"><span class="lineNum">      64</span>              : </span>
+<span id="L65"><span class="lineNum">      65</span>              :     Key internal keyGuardianEOA;</span>
+<span id="L66"><span class="lineNum">      66</span>              :     PubKey internal pubKeyGuardianEOA;</span>
+<span id="L67"><span class="lineNum">      67</span>              : </span>
+<span id="L68"><span class="lineNum">      68</span>              :     /* ─────────────────────────────────────────────────────────────              ── */</span>
+<span id="L69"><span class="lineNum">      69</span>              :     string public json_path = vm.readFile(&quot;test/data/global.json&quot;);</span>
+<span id="L70"><span class="lineNum">      70</span>              : </span>
+<span id="L71"><span class="lineNum">      71</span>              :     bytes32 public PUBLIC_KEY_X = stdJson.readBytes32(json_path, &quot;.global.x&quot;);</span>
+<span id="L72"><span class="lineNum">      72</span>              :     bytes32 public PUBLIC_KEY_Y = stdJson.readBytes32(json_path, &quot;.global.y&quot;);</span>
+<span id="L73"><span class="lineNum">      73</span>              : </span>
+<span id="L74"><span class="lineNum">      74</span>              :     bytes32 public CHALLENGE = stdJson.readBytes32(json_path, &quot;.global.challenge&quot;);</span>
+<span id="L75"><span class="lineNum">      75</span>              : </span>
+<span id="L76"><span class="lineNum">      76</span>              :     uint256 public CHALLENGE_INDEX = stdJson.readUint(json_path, &quot;.global.metadata.challengeIndex&quot;);</span>
+<span id="L77"><span class="lineNum">      77</span>              :     uint256 public TYPE_INDEX = stdJson.readUint(json_path, &quot;.global.metadata.typeIndex&quot;);</span>
+<span id="L78"><span class="lineNum">      78</span>              : </span>
+<span id="L79"><span class="lineNum">      79</span>              :     bytes32 public SIGNATURE_R = stdJson.readBytes32(json_path, &quot;.global.signature.r&quot;);</span>
+<span id="L80"><span class="lineNum">      80</span>              :     bytes32 public SIGNATURE_S = stdJson.readBytes32(json_path, &quot;.global.signature.s&quot;);</span>
+<span id="L81"><span class="lineNum">      81</span>              : </span>
+<span id="L82"><span class="lineNum">      82</span>              :     bytes public AUTHENTICATOR_DATA =</span>
+<span id="L83"><span class="lineNum">      83</span>              :         stdJson.readBytes(json_path, &quot;.global.metadata.authenticatorData&quot;);</span>
+<span id="L84"><span class="lineNum">      84</span>              : </span>
+<span id="L85"><span class="lineNum">      85</span>              :     string public CLIENT_DATA_JSON =</span>
+<span id="L86"><span class="lineNum">      86</span>              :         stdJson.readString(json_path, &quot;.global.metadata.clientDataJSON&quot;);</span>
+<span id="L87"><span class="lineNum">      87</span>              : </span>
+<span id="L88"><span class="lineNum">      88</span>              :     /* ─────────────────────────────────────────────────────────────              ── */</span>
+<span id="L89"><span class="lineNum">      89</span>              :     bytes32 public SK_CHALLENGE = stdJson.readBytes32(json_path, &quot;.globalSK.challenge&quot;);</span>
+<span id="L90"><span class="lineNum">      90</span>              : </span>
+<span id="L91"><span class="lineNum">      91</span>              :     bytes32 public SK_PUBLIC_KEY_X = stdJson.readBytes32(json_path, &quot;.globalSK.x&quot;);</span>
+<span id="L92"><span class="lineNum">      92</span>              :     bytes32 public SK_PUBLIC_KEY_Y = stdJson.readBytes32(json_path, &quot;.globalSK.y&quot;);</span>
+<span id="L93"><span class="lineNum">      93</span>              : </span>
+<span id="L94"><span class="lineNum">      94</span>              :     uint256 public SK_CHALLENGE_INDEX =</span>
+<span id="L95"><span class="lineNum">      95</span>              :         stdJson.readUint(json_path, &quot;.globalSK.metadata.challengeIndex&quot;);</span>
+<span id="L96"><span class="lineNum">      96</span>              :     uint256 public SK_TYPE_INDEX = stdJson.readUint(json_path, &quot;.globalSK.metadata.typeIndex&quot;);</span>
+<span id="L97"><span class="lineNum">      97</span>              : </span>
+<span id="L98"><span class="lineNum">      98</span>              :     bytes32 public SK_SIGNATURE_R = stdJson.readBytes32(json_path, &quot;.globalSK.signature.r&quot;);</span>
+<span id="L99"><span class="lineNum">      99</span>              :     bytes32 public SK_SIGNATURE_S = stdJson.readBytes32(json_path, &quot;.globalSK.signature.s&quot;);</span>
+<span id="L100"><span class="lineNum">     100</span>              : </span>
+<span id="L101"><span class="lineNum">     101</span>              :     bytes public SK_AUTHENTICATOR_DATA =</span>
+<span id="L102"><span class="lineNum">     102</span>              :         stdJson.readBytes(json_path, &quot;.globalSK.metadata.authenticatorData&quot;);</span>
+<span id="L103"><span class="lineNum">     103</span>              : </span>
+<span id="L104"><span class="lineNum">     104</span>              :     string public SK_CLIENT_DATA_JSON =</span>
+<span id="L105"><span class="lineNum">     105</span>              :         stdJson.readString(json_path, &quot;.globalSK.metadata.clientDataJSON&quot;);</span>
+<span id="L106"><span class="lineNum">     106</span>              : </span>
+<span id="L107"><span class="lineNum">     107</span>              :     /* ─────────────────────────────────────────────────────────────              ── */</span>
+<span id="L108"><span class="lineNum">     108</span>              :     string public json_path_p256 = vm.readFile(&quot;test/data/p256_global.json&quot;);</span>
+<span id="L109"><span class="lineNum">     109</span>              : </span>
+<span id="L110"><span class="lineNum">     110</span>              :     bytes32 P256NOKEY_CHALLENGE = stdJson.readBytes32(json_path_p256, &quot;.result2.challenge&quot;);</span>
+<span id="L111"><span class="lineNum">     111</span>              : </span>
+<span id="L112"><span class="lineNum">     112</span>              :     bytes32 P256NOKEY_PUBLIC_KEY_X = stdJson.readBytes32(json_path_p256, &quot;.result2.P256NONKEY_xHex&quot;);</span>
+<span id="L113"><span class="lineNum">     113</span>              :     bytes32 P256NOKEY_PUBLIC_KEY_Y = stdJson.readBytes32(json_path_p256, &quot;.result2.P256NONKEY_yHex&quot;);</span>
+<span id="L114"><span class="lineNum">     114</span>              : </span>
+<span id="L115"><span class="lineNum">     115</span>              :     bytes32 public P256NOKEY_SIGNATURE_R =</span>
+<span id="L116"><span class="lineNum">     116</span>              :         stdJson.readBytes32(json_path_p256, &quot;.result2.P256NONKEY_rHex&quot;);</span>
+<span id="L117"><span class="lineNum">     117</span>              :     bytes32 public P256NOKEY_SIGNATURE_S =</span>
+<span id="L118"><span class="lineNum">     118</span>              :         stdJson.readBytes32(json_path_p256, &quot;.result2.P256NONKEY_sHex&quot;);</span>
+<span id="L119"><span class="lineNum">     119</span>              : </span>
+<span id="L120"><span class="lineNum">     120</span>              :     /* ─────────────────────────────────────────────────────────────              ── */</span>
+<span id="L121"><span class="lineNum">     121</span> <span class="tlaGNC">         212 :     function _allowedSelectors() internal pure returns (bytes4[] memory sel) {</span></span>
+<span id="L122"><span class="lineNum">     122</span> <span class="tlaGNC">         212 :         sel = new bytes4[](3);</span></span>
+<span id="L123"><span class="lineNum">     123</span> <span class="tlaGNC">         212 :         sel[0] = 0xa9059cbb;</span></span>
+<span id="L124"><span class="lineNum">     124</span> <span class="tlaGNC">         212 :         sel[1] = 0x40c10f19;</span></span>
+<span id="L125"><span class="lineNum">     125</span> <span class="tlaGNC">         212 :         sel[2] = 0x00000000;</span></span>
+<span id="L126"><span class="lineNum">     126</span>              :     }</span>
+<span id="L127"><span class="lineNum">     127</span>              : </span>
+<span id="L128"><span class="lineNum">     128</span> <span class="tlaGNC">         212 :     function _getSpendTokenInfo(address _token, uint256 _limit)</span></span>
+<span id="L129"><span class="lineNum">     129</span>              :         internal</span>
+<span id="L130"><span class="lineNum">     130</span>              :         pure</span>
+<span id="L131"><span class="lineNum">     131</span>              :         returns (ISpendLimit.SpendTokenInfo memory spendInfo)</span>
+<span id="L132"><span class="lineNum">     132</span>              :     {</span>
+<span id="L133"><span class="lineNum">     133</span> <span class="tlaGNC">         212 :         spendInfo = ISpendLimit.SpendTokenInfo({token: _token, limit: _limit});</span></span>
+<span id="L134"><span class="lineNum">     134</span>              :     }</span>
+<span id="L135"><span class="lineNum">     135</span>              : </span>
+<span id="L136"><span class="lineNum">     136</span> <span class="tlaGNC">          97 :     function _createMKData() internal {</span></span>
+<span id="L137"><span class="lineNum">     137</span> <span class="tlaGNC">          97 :         pubKeyMK = PubKey({x: PUBLIC_KEY_X, y: PUBLIC_KEY_Y});</span></span>
+<span id="L138"><span class="lineNum">     138</span> <span class="tlaGNC">          97 :         keyMK = Key({pubKey: pubKeyMK, eoaAddress: address(0), keyType: KeyType.WEBAUTHN});</span></span>
+<span id="L139"><span class="lineNum">     139</span> <span class="tlaGNC">          97 :         ISpendLimit.SpendTokenInfo memory spendInfo = _getSpendTokenInfo(address(0), 0);</span></span>
+<span id="L140"><span class="lineNum">     140</span>              : </span>
+<span id="L141"><span class="lineNum">     141</span> <span class="tlaGNC">          97 :         keyDataMK = KeyReg({</span></span>
+<span id="L142"><span class="lineNum">     142</span>              :             validUntil: type(uint48).max,</span>
+<span id="L143"><span class="lineNum">     143</span>              :             validAfter: 0,</span>
+<span id="L144"><span class="lineNum">     144</span>              :             limit: 0,</span>
+<span id="L145"><span class="lineNum">     145</span>              :             whitelisting: false,</span>
+<span id="L146"><span class="lineNum">     146</span>              :             contractAddress: address(0),</span>
+<span id="L147"><span class="lineNum">     147</span>              :             spendTokenInfo: spendInfo,</span>
+<span id="L148"><span class="lineNum">     148</span>              :             allowedSelectors: _allowedSelectors(),</span>
+<span id="L149"><span class="lineNum">     149</span>              :             ethLimit: 0</span>
+<span id="L150"><span class="lineNum">     150</span>              :         });</span>
+<span id="L151"><span class="lineNum">     151</span>              :     }</span>
+<span id="L152"><span class="lineNum">     152</span>              : </span>
+<span id="L153"><span class="lineNum">     153</span> <span class="tlaGNC">           6 :     function _createSKWebAuthnData() internal {</span></span>
+<span id="L154"><span class="lineNum">     154</span> <span class="tlaGNC">           6 :         pubKeySK = PubKey({x: SK_PUBLIC_KEY_X, y: SK_PUBLIC_KEY_Y});</span></span>
+<span id="L155"><span class="lineNum">     155</span> <span class="tlaGNC">           6 :         keySK = Key({pubKey: pubKeySK, eoaAddress: address(0), keyType: KeyType.WEBAUTHN});</span></span>
+<span id="L156"><span class="lineNum">     156</span> <span class="tlaGNC">           6 :         ISpendLimit.SpendTokenInfo memory spendInfo = _getSpendTokenInfo(TOKEN, 100e18);</span></span>
+<span id="L157"><span class="lineNum">     157</span>              : </span>
+<span id="L158"><span class="lineNum">     158</span> <span class="tlaGNC">           6 :         uint48 validUntil = uint48(block.timestamp + 1 days);</span></span>
+<span id="L159"><span class="lineNum">     159</span>              : </span>
+<span id="L160"><span class="lineNum">     160</span> <span class="tlaGNC">           6 :         keyDataSKP256NonKey = KeyReg({</span></span>
+<span id="L161"><span class="lineNum">     161</span>              :             validUntil: validUntil,</span>
+<span id="L162"><span class="lineNum">     162</span>              :             validAfter: 0,</span>
+<span id="L163"><span class="lineNum">     163</span>              :             limit: 10,</span>
+<span id="L164"><span class="lineNum">     164</span>              :             whitelisting: true,</span>
+<span id="L165"><span class="lineNum">     165</span>              :             contractAddress: ETH_RECIVE,</span>
+<span id="L166"><span class="lineNum">     166</span>              :             spendTokenInfo: spendInfo,</span>
+<span id="L167"><span class="lineNum">     167</span>              :             allowedSelectors: _allowedSelectors(),</span>
+<span id="L168"><span class="lineNum">     168</span>              :             ethLimit: 1e18</span>
+<span id="L169"><span class="lineNum">     169</span>              :         });</span>
+<span id="L170"><span class="lineNum">     170</span>              :     }</span>
+<span id="L171"><span class="lineNum">     171</span>              : </span>
+<span id="L172"><span class="lineNum">     172</span> <span class="tlaGNC">          97 :     function _createSKP256NonKeyData() internal {</span></span>
+<span id="L173"><span class="lineNum">     173</span> <span class="tlaGNC">          97 :         pubKeySK = PubKey({x: P256NOKEY_PUBLIC_KEY_X, y: P256NOKEY_PUBLIC_KEY_Y});</span></span>
+<span id="L174"><span class="lineNum">     174</span> <span class="tlaGNC">          97 :         keySK = Key({pubKey: pubKeySK, eoaAddress: address(0), keyType: KeyType.P256NONKEY});</span></span>
+<span id="L175"><span class="lineNum">     175</span> <span class="tlaGNC">          97 :         ISpendLimit.SpendTokenInfo memory spendInfo = _getSpendTokenInfo(TOKEN, 100e18);</span></span>
+<span id="L176"><span class="lineNum">     176</span>              : </span>
+<span id="L177"><span class="lineNum">     177</span> <span class="tlaGNC">          97 :         uint48 validUntil = uint48(block.timestamp + 1 days);</span></span>
+<span id="L178"><span class="lineNum">     178</span>              : </span>
+<span id="L179"><span class="lineNum">     179</span> <span class="tlaGNC">          97 :         keyDataSKP256NonKey = KeyReg({</span></span>
+<span id="L180"><span class="lineNum">     180</span>              :             validUntil: validUntil,</span>
+<span id="L181"><span class="lineNum">     181</span>              :             validAfter: 0,</span>
+<span id="L182"><span class="lineNum">     182</span>              :             limit: 10,</span>
+<span id="L183"><span class="lineNum">     183</span>              :             whitelisting: true,</span>
+<span id="L184"><span class="lineNum">     184</span>              :             contractAddress: ETH_RECIVE,</span>
+<span id="L185"><span class="lineNum">     185</span>              :             spendTokenInfo: spendInfo,</span>
+<span id="L186"><span class="lineNum">     186</span>              :             allowedSelectors: _allowedSelectors(),</span>
+<span id="L187"><span class="lineNum">     187</span>              :             ethLimit: 1e18</span>
+<span id="L188"><span class="lineNum">     188</span>              :         });</span>
+<span id="L189"><span class="lineNum">     189</span>              :     }</span>
+<span id="L190"><span class="lineNum">     190</span>              : </span>
+<span id="L191"><span class="lineNum">     191</span> <span class="tlaGNC">          12 :     function _createAnyKey(</span></span>
+<span id="L192"><span class="lineNum">     192</span>              :         bytes32 _x,</span>
+<span id="L193"><span class="lineNum">     193</span>              :         bytes32 _y,</span>
+<span id="L194"><span class="lineNum">     194</span>              :         address _eoaAddress,</span>
+<span id="L195"><span class="lineNum">     195</span>              :         KeyType _keyType,</span>
+<span id="L196"><span class="lineNum">     196</span>              :         address _token,</span>
+<span id="L197"><span class="lineNum">     197</span>              :         uint256 _tokenLimit,</span>
+<span id="L198"><span class="lineNum">     198</span>              :         uint48 _validUntil,</span>
+<span id="L199"><span class="lineNum">     199</span>              :         uint48 _validAfter,</span>
+<span id="L200"><span class="lineNum">     200</span>              :         uint48 _limit,</span>
+<span id="L201"><span class="lineNum">     201</span>              :         address _contractAddress,</span>
+<span id="L202"><span class="lineNum">     202</span>              :         uint256 _ethLimit,</span>
+<span id="L203"><span class="lineNum">     203</span>              :         bytes4[] memory _allowedSelectorsArr</span>
+<span id="L204"><span class="lineNum">     204</span>              :     ) internal pure returns (PubKey memory pk, Key memory k, KeyReg memory kReg) {</span>
+<span id="L205"><span class="lineNum">     205</span> <span class="tlaGNC">          12 :         pk = PubKey({x: _x, y: _y});</span></span>
+<span id="L206"><span class="lineNum">     206</span> <span class="tlaGNC">          12 :         k = Key({pubKey: pk, eoaAddress: _eoaAddress, keyType: _keyType});</span></span>
+<span id="L207"><span class="lineNum">     207</span>              : </span>
+<span id="L208"><span class="lineNum">     208</span> <span class="tlaGNC">          12 :         ISpendLimit.SpendTokenInfo memory spendInfo = _getSpendTokenInfo(_token, _tokenLimit);</span></span>
+<span id="L209"><span class="lineNum">     209</span>              : </span>
+<span id="L210"><span class="lineNum">     210</span> <span class="tlaGNC">          12 :         kReg = KeyReg({</span></span>
+<span id="L211"><span class="lineNum">     211</span>              :             validUntil: _validUntil,</span>
+<span id="L212"><span class="lineNum">     212</span>              :             validAfter: _validAfter,</span>
+<span id="L213"><span class="lineNum">     213</span>              :             limit: _limit,</span>
+<span id="L214"><span class="lineNum">     214</span>              :             whitelisting: true,</span>
+<span id="L215"><span class="lineNum">     215</span>              :             contractAddress: _contractAddress,</span>
+<span id="L216"><span class="lineNum">     216</span>              :             spendTokenInfo: spendInfo,</span>
+<span id="L217"><span class="lineNum">     217</span>              :             allowedSelectors: _allowedSelectorsArr.length == 0</span>
+<span id="L218"><span class="lineNum">     218</span>              :                 ? _allowedSelectors()</span>
+<span id="L219"><span class="lineNum">     219</span>              :                 : _allowedSelectorsArr,</span>
+<span id="L220"><span class="lineNum">     220</span>              :             ethLimit: _ethLimit</span>
+<span id="L221"><span class="lineNum">     221</span>              :         });</span>
+<span id="L222"><span class="lineNum">     222</span>              :     }</span>
+<span id="L223"><span class="lineNum">     223</span>              : </span>
+<span id="L224"><span class="lineNum">     224</span> <span class="tlaGNC">          97 :     function _createInitialGuradian() public {</span></span>
+<span id="L225"><span class="lineNum">     225</span> <span class="tlaGNC">          97 :         pubKeyGuardianEOA = PubKey({x: bytes32(0), y: bytes32(0)});</span></span>
+<span id="L226"><span class="lineNum">     226</span> <span class="tlaGNC">          97 :         keyGuardianEOA =</span></span>
+<span id="L227"><span class="lineNum">     227</span>              :             Key({pubKey: pubKeyGuardianEOA, eoaAddress: GUARDIAN_EOA_ADDRESS, keyType: KeyType.EOA});</span>
+<span id="L228"><span class="lineNum">     228</span>              : </span>
+<span id="L229"><span class="lineNum">     229</span> <span class="tlaGNC">          97 :         address initialAddr = makeAddr(&quot;initialGuardian&quot;);</span></span>
+<span id="L230"><span class="lineNum">     230</span> <span class="tlaGNC">          97 :         initialGuardian = keccak256(abi.encodePacked(initialAddr));</span></span>
+<span id="L231"><span class="lineNum">     231</span>              :     }</span>
+<span id="L232"><span class="lineNum">     232</span>              : </span>
+<span id="L233"><span class="lineNum">     233</span> <span class="tlaGNC">           4 :     function _getUserOpFresh() internal view returns (PackedUserOperation memory userOp) {</span></span>
+<span id="L234"><span class="lineNum">     234</span> <span class="tlaGNC">           4 :         userOp.sender = owner;</span></span>
+<span id="L235"><span class="lineNum">     235</span> <span class="tlaGNC">           4 :         userOp.initCode = hex&quot;7702&quot;;</span></span>
+<span id="L236"><span class="lineNum">     236</span> <span class="tlaGNC">           4 :         userOp.callData = hex&quot;&quot;;</span></span>
+<span id="L237"><span class="lineNum">     237</span> <span class="tlaGNC">           4 :         userOp.accountGasLimits = hex&quot;&quot;;</span></span>
+<span id="L238"><span class="lineNum">     238</span> <span class="tlaGNC">           4 :         userOp.preVerificationGas = 0;</span></span>
+<span id="L239"><span class="lineNum">     239</span> <span class="tlaGNC">           4 :         userOp.gasFees = hex&quot;&quot;;</span></span>
+<span id="L240"><span class="lineNum">     240</span> <span class="tlaGNC">           4 :         userOp.paymasterAndData = hex&quot;&quot;;</span></span>
+<span id="L241"><span class="lineNum">     241</span> <span class="tlaGNC">           4 :         userOp.signature = hex&quot;&quot;;</span></span>
+<span id="L242"><span class="lineNum">     242</span>              :     }</span>
+<span id="L243"><span class="lineNum">     243</span>              : </span>
+<span id="L244"><span class="lineNum">     244</span> <span class="tlaGNC">          18 :     function _packAccountGasLimits(uint256 callGasLimit, uint256 verificationGasLimit)</span></span>
+<span id="L245"><span class="lineNum">     245</span>              :         internal</span>
+<span id="L246"><span class="lineNum">     246</span>              :         pure</span>
+<span id="L247"><span class="lineNum">     247</span>              :         returns (bytes32)</span>
+<span id="L248"><span class="lineNum">     248</span>              :     {</span>
+<span id="L249"><span class="lineNum">     249</span> <span class="tlaGNC">          18 :         return bytes32((callGasLimit &lt;&lt; 128) | verificationGasLimit);</span></span>
+<span id="L250"><span class="lineNum">     250</span>              :     }</span>
+<span id="L251"><span class="lineNum">     251</span>              : </span>
+<span id="L252"><span class="lineNum">     252</span> <span class="tlaGNC">          18 :     function _packGasFees(uint256 maxFeePerGas, uint256 maxPriorityFeePerGas)</span></span>
+<span id="L253"><span class="lineNum">     253</span>              :         internal</span>
+<span id="L254"><span class="lineNum">     254</span>              :         pure</span>
+<span id="L255"><span class="lineNum">     255</span>              :         returns (bytes32)</span>
+<span id="L256"><span class="lineNum">     256</span>              :     {</span>
+<span id="L257"><span class="lineNum">     257</span> <span class="tlaGNC">          18 :         return bytes32((maxFeePerGas &lt;&lt; 128) | maxPriorityFeePerGas);</span></span>
+<span id="L258"><span class="lineNum">     258</span>              :     }</span>
+<span id="L259"><span class="lineNum">     259</span>              : }</span>
+        </pre>
+              </td>
+            </tr>
+          </table>
+          <br>
+
+          <table width="100%" border=0 cellspacing=0 cellpadding=0>
+            <tr><td class="ruler"><img src="../../glass.png" width=3 height=3 alt=""></td></tr>
+            <tr><td class="versionInfo">Generated by: <a href="https://github.com//linux-test-project/lcov" target="_parent">LCOV version 2.3.2-1</a></td></tr>
+          </table>
+          <br>
+
+</body>
+</html>

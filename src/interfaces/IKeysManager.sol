@@ -4,9 +4,11 @@ pragma solidity 0.8.29;
 import {IKey} from "src/interfaces/IKey.sol";
 
 /// @title IKeysManager
-/// @notice Interface for `KeysManager`, which handles registration, revocation, and querying of keys (WebAuthn/P256/EOA) with spending limits and whitelisting support.
+/// @notice Interface for `KeysManager`, which handles registration, revocation, and querying of keys
+/// (WebAuthn/P256/EOA) with spending limits and whitelisting support.
 /// @dev Declares all externally‐visible functions, events, state getters, and errors.
-///      Note: KeyData structs contain mappings, so individual field getters or composite “getKeyData” functions are exposed instead of returning the full struct.
+///      Note: KeyData structs contain mappings, so individual field getters or composite “getKeyData” functions are
+/// exposed instead of returning the full struct.
 interface IKeysManager is IKey {
     // =============================================================
     //                            ERRORS
@@ -24,14 +26,18 @@ interface IKeysManager is IKey {
     error KeyManager__SelectorsListTooBig();
     /// @notice Thrown when attempting to register a key that is already active
     error KeyManager__KeyRegistered();
+    /// @notice Thrown when attempting to register a key that is been revoked
+    error KeyManager__KeyRevoked();
     /// @notice Thrown when signature length incorrect
     error KeyManager__InvalidSignatureLength();
     /// @notice Thrown when KeyReg of MasterKey incorrect
     error KeyManager__InvalidMasterKeyReg(KeyReg _keyData);
     /// @notice Thrown when KeyType incorrect
-    error KeyManager__InvalidKeyType(KeyType sigType);
+    error KeyManager__InvalidKeyType();
     /// @notice Thrown when challenge was already used
     error KeyManager__UsedChallenge();
+
+    error KeyManager__RevertGasPolicy();
 
     // =============================================================
     //                             EVENTS

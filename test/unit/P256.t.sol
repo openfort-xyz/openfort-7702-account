@@ -3,6 +3,7 @@ pragma solidity ^0.8.29;
 
 import {Test, console2 as console} from "lib/forge-std/src/Test.sol";
 import {Base} from "test/Base.sol";
+import {GasPolicy} from "src/utils/GasPolicy.sol";
 import {IEntryPoint} from "lib/account-abstraction/contracts/interfaces/IEntryPoint.sol";
 import {EntryPoint} from "lib/account-abstraction/contracts/core/EntryPoint.sol";
 import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
@@ -23,6 +24,7 @@ contract P256Test is Base {
     WebAuthnVerifier public webAuthn;
     OPF7702 public implementation;
     OPF7702 public account;
+    GasPolicy public gasPolicy;
 
     /* ──────────────────────────────────────────────────────── key structures ── */
     Key internal keyMK;
@@ -41,6 +43,7 @@ contract P256Test is Base {
         (GUARDIAN_EOA_ADDRESS, GUARDIAN_EOA_PRIVATE_KEY) = makeAddrAndKey("GUARDIAN_EOA_ADDRESS");
         entryPoint = IEntryPoint(payable(SEPOLIA_ENTRYPOINT));
         webAuthn = WebAuthnVerifier(payable(SEPOLIA_WEBAUTHN));
+        gasPolicy = new GasPolicy(DEFAULT_PVG, DEFAULT_VGL, DEFAULT_CGL, DEFAULT_PMV, DEFAULT_PO);
 
         _createInitialGuradian();
         implementation = new OPF7702(
@@ -49,7 +52,8 @@ contract P256Test is Base {
             RECOVERY_PERIOD,
             LOCK_PERIOD,
             SECURITY_PERIOD,
-            SECURITY_WINDOW
+            SECURITY_WINDOW,
+            address(gasPolicy)
         );
         vm.etch(owner, abi.encodePacked(bytes3(0xef0100), address(implementation)));
         account = OPF7702(payable(owner));
@@ -94,9 +98,9 @@ contract P256Test is Base {
             nonce: nonce,
             initCode: hex"7702",
             callData: callData,
-            accountGasLimits: _packAccountGasLimits(600000, 400000),
-            preVerificationGas: 800000,
-            gasFees: _packGasFees(80 gwei, 15 gwei),
+            accountGasLimits: _packAccountGasLimits(360_000, 240_000),
+            preVerificationGas: 110_000,
+            gasFees: _packGasFees(2 gwei, 50 gwei),
             paymasterAndData: hex"",
             signature: hex""
         });

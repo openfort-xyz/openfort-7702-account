@@ -17,17 +17,21 @@ pragma solidity ^0.8.29;
 import {IKey} from "src/interfaces/IKey.sol";
 import {KeyHashLib} from "src/libs/KeyHashLib.sol";
 import {BaseOPF7702} from "src/core/BaseOPF7702.sol";
+import {IUserOpPolicy} from "src/interfaces/IPolicy.sol";
 import {ValidationLib} from "src/libs/ValidationLib.sol";
 import {ISpendLimit} from "src/interfaces/ISpendLimit.sol";
 import {IKeysManager} from "src/interfaces/IKeysManager.sol";
+import {KeyDataValidationLib} from "src/libs/KeyDataValidationLib.sol";
 
 /// @title KeysManager
 /// @author Openfort@0xkoiner
-/// @notice Manages registration, revocation, and querying of keys (WebAuthn/P256/EOA) with spending limits and whitelisting support.
+/// @notice Manages registration, revocation, and querying of keys (WebAuthn/P256/EOA) with spending limits and
+/// whitelisting support.
 /// @dev Inherits BaseOPF7702 for account abstraction, IKey interface, and SpendLimit for token/ETH limits.
 abstract contract KeysManager is BaseOPF7702, IKey, ISpendLimit {
     using KeyHashLib for Key;
     using ValidationLib for *;
+    using KeyDataValidationLib for Key;
 
     // =============================================================
     //                          CONSTANTS
@@ -57,7 +61,8 @@ abstract contract KeysManager is BaseOPF7702, IKey, ISpendLimit {
 
     /**
      * @notice Registers a new  key with specified permissions and limits.
-     * @dev Only callable by ADMIN_ROLE via `_requireForExecute()`. Supports both WebAuthn/P256/P256NONKEY and EOA key types.
+     * @dev Only callable by ADMIN_ROLE via `_requireForExecute()`. Supports both WebAuthn/P256/P256NONKEY and EOA key
+     * types.
      *      - For WebAuthn/P256/P256NONKEY, computes `keyId = keccak256(pubKey.x, pubKey.y)`.
      *      - For EOA, uses `eoaAddress` as `keyId`.
      *      Requires `_validUntil > block.timestamp`, `_validAfter ≤ _validUntil`, and that the key is not active.
@@ -95,7 +100,8 @@ abstract contract KeysManager is BaseOPF7702, IKey, ISpendLimit {
 
     /**
      * @notice Revokes a specific key, marking it inactive and clearing its parameters.
-     * @dev Only callable by ADMIN_ROLE via `_requireForExecute()`. Works for both WebAuthn/P256/P256NONKEY and EOA keys.
+     * @dev Only callable by ADMIN_ROLE via `_requireForExecute()`. Works for both WebAuthn/P256/P256NONKEY and EOA
+     * keys.
      *      Emits `KeyRevoked(keyId)`.
      *
      * @param _key Struct containing key information to revoke:
@@ -156,8 +162,10 @@ abstract contract KeysManager is BaseOPF7702, IKey, ISpendLimit {
      * @param _key             Struct containing key information (PubKey or EOA).
      * @param _keyData KeyReg data structure containing permissions and limits
      */
-    /// Todo: enfore to check the if _keyData.whitelisting = true
     function _addKey(KeyData storage sKey, Key memory _key, KeyReg memory _keyData) internal {
+        if (sKey.whitelisting) {
+            revert IKeysManager.KeyManager__KeyRevoked();
+        }
         sKey.pubKey = _key.pubKey;
         sKey.isActive = true;
         sKey.validUntil = _keyData.validUntil;
@@ -167,6 +175,9 @@ abstract contract KeysManager is BaseOPF7702, IKey, ISpendLimit {
 
         // Only enforce limits if _limit > 0
         if (_keyData.limit > 0) {
+            IUserOpPolicy(GAS_POLICY).initializeGasPolicy(
+                address(this), _key.computeKeyId(), uint256(_keyData.limit)
+            );
             sKey.whitelisting = true;
             /// Session Key enforced to be whitelisting
             sKey.ethLimit = _keyData.ethLimit;
@@ -230,10 +241,10 @@ abstract contract KeysManager is BaseOPF7702, IKey, ISpendLimit {
     }
 
     /// @dev Master key must have: validUntil = max(uint48), validAfter = 0, limit = 0, whitelisting = false.
-    function _masterKeyValidation(KeyReg calldata _kReg) internal pure {
+    function _masterKeyValidation(Key calldata _k, KeyReg calldata _kReg) internal pure {
         if (
             _kReg.limit != 0 || _kReg.whitelisting // must be false
-                || _kReg.validAfter != 0 || _kReg.validUntil != type(uint48).max
+                || _kReg.validAfter != 0 || _kReg.validUntil != type(uint48).max || _k.checkKey()
         ) revert IKeysManager.KeyManager__InvalidMasterKeyReg(_kReg);
     }
 
@@ -319,8 +330,7 @@ abstract contract KeysManager is BaseOPF7702, IKey, ISpendLimit {
         bytes32 s,
         PubKey memory pubKey
     ) external pure returns (bytes memory) {
-        return abi.encode(
-            KeyType.WEBAUTHN,
+        bytes memory inner = abi.encode(
             requireUserVerification,
             authenticatorData,
             clientDataJSON,
@@ -330,6 +340,8 @@ abstract contract KeysManager is BaseOPF7702, IKey, ISpendLimit {
             s,
             pubKey
         );
+
+        return abi.encode(KeyType.WEBAUTHN, inner);
     }
 
     /**

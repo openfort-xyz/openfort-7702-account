@@ -71,7 +71,7 @@ contract InitProxy is Script, IKey {
 
         pubKeySK = PubKey({x: MINT_P256_PUBLIC_KEY_X, y: MINT_P256_PUBLIC_KEY_Y});
         keySK = Key({pubKey: pubKeySK, eoaAddress: address(0), keyType: KeyType.P256});
-        uint48 validUntil = uint48(1795096759);
+        uint48 validUntil = uint48(1_795_096_759);
         uint48 limit = uint48(20);
 
         ISpendLimit.SpendTokenInfo memory spendInfoSK =

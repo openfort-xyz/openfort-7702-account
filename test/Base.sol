@@ -34,6 +34,12 @@ contract Base is Test, IKey {
     uint256 constant SECURITY_PERIOD = 1.5 days;
     uint256 constant SECURITY_WINDOW = 0.5 days;
 
+    uint256 constant DEFAULT_PVG = 110_000; // packaging/bytes for P-256/WebAuthn-ish signatures
+    uint256 constant DEFAULT_VGL = 360_000; // validation (session key checks, EIP-1271/P-256 parsing)
+    uint256 constant DEFAULT_CGL = 240_000; // ERC20 transfer/batch-ish execution
+    uint256 constant DEFAULT_PMV = 60_000; // paymaster validate (if used)
+    uint256 constant DEFAULT_PO = 60_000; // postOp (token charge/refund)
+
     /* ─────────────────────────────────────────────────────────── actors/keys ── */
     uint256 internal senderPk;
     address internal sender;

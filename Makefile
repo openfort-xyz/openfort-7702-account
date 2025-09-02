@@ -41,12 +41,24 @@ test-execution:
 
 test-recovery:
 	forge test --mp test/unit/Recoverable.t.sol --rpc-url $(SEPOLIA_RPC_URL) -vv 
-	
+
+test-gas:
+	forge test --mp test/gas/GasFuzzing.t.sol --rpc-url $(SEPOLIA_RPC_URL) -vv  && forge test --mp test/gas/GasPolicyTest.t.sol --rpc-url $(SEPOLIA_RPC_URL) -vv 
+
 test-all:
 	npx tsx --experimental-global-webcrypto  script/P256_Single_Mint.ts && npx tsx --experimental-global-webcrypto  script/P256_ETH.ts && npx tsx --experimental-global-webcrypto  script/P256.ts && forge test -vv --rpc-url $(SEPOLIA_RPC_URL)
 
 coverage:
 	forge coverage --ir-minimum --rpc-url $(SEPOLIA_RPC_URL) >> coverage.txt
+
+report-debug:
+	forge coverage --match-path "src/core/BaseOPF7702.sol" --ir-minimum --rpc-url $(SEPOLIA_RPC_URL) >> report_debug_BaseOPF7702.txt
+
+report-json:
+	forge coverage --report json --ir-minimum --rpc-url $(SEPOLIA_RPC_URL) >> coverage.json
+
+lcov:
+	forge coverage --report lcov --ir-minimum --rpc-url $(SEPOLIA_RPC_URL)  && genhtml lcov.info -o coverage-html/ --ignore-errors inconsistent,corrupt
 
 gas:
 	forge test --gas-report --rpc-url $(SEPOLIA_RPC_URL)
@@ -113,4 +125,4 @@ script-init:
 	-vvvv
 
 push:
-	git push -u origin OPF7702_PROXY_After_Audit
+	git push -u origin OPF7702_PROXY_After_Audit_Gas_Policy_Module
