@@ -78,16 +78,16 @@ contract GasPolicy is IUserOpPolicy {
 
     // ---------------------- POLICY CHECK ----------------------
     /**
-    * @notice Validate a `PackedUserOperation` against configured gas budgets and account usage.
-    * @param id     Session/policy identifier (e.g., keccak256 over session public key).
-    * @param userOp The packed user operation being validated and accounted.
-    * @return validationCode `0` on success, `1` on failure (ERC-4337 policy semantics).
-    * @dev
-    * - Access: Only the account (`userOp.sender`) may call; prevents 3rd-party budget griefing.
-    * - Behavior: Computes the gas envelope (PVG+VGL+[PMV]+CGL+[PO]), checks cumulative gas and tx caps,
-    *   and increments usage counters optimistically.
-    * - Paymaster note: Only considered when `paymasterAndData.length >= PAYMASTER_DATA_OFFSET`.
-    */
+     * @notice Validate a `PackedUserOperation` against configured gas budgets and account usage.
+     * @param id     Session/policy identifier (e.g., keccak256 over session public key).
+     * @param userOp The packed user operation being validated and accounted.
+     * @return validationCode `0` on success, `1` on failure (ERC-4337 policy semantics).
+     * @dev
+     * - Access: Only the account (`userOp.sender`) may call; prevents 3rd-party budget griefing.
+     * - Behavior: Computes the gas envelope (PVG+VGL+[PMV]+CGL+[PO]), checks cumulative gas and tx caps,
+     *   and increments usage counters optimistically.
+     * - Paymaster note: Only considered when `paymasterAndData.length >= PAYMASTER_DATA_OFFSET`.
+     */
     function checkUserOpPolicy(bytes32 id, PackedUserOperation calldata userOp)
         external
         returns (uint256)
@@ -131,13 +131,7 @@ contract GasPolicy is IUserOpPolicy {
             cfg.txUsed += 1;
         }
 
-        emit GasPolicyAccounted(
-            id,
-            userOp.sender,
-            envelopeUnits,
-            cfg.gasUsed,
-            cfg.txUsed
-        );
+        emit GasPolicyAccounted(id, userOp.sender, envelopeUnits, cfg.gasUsed, cfg.txUsed);
 
         return VALIDATION_SUCCESS;
     }
@@ -214,11 +208,11 @@ contract GasPolicy is IUserOpPolicy {
     }
 
     /**
-    * @notice Apply auto-derived configuration and mark initialized (gas-only).
-    * @param cfg       Storage pointer to the target config.
-    * @param gasLimit  Total cumulative gas units allowed for the session.
-    * @param txLimit   Max number of operations (0 means unlimited).
-    */
+     * @notice Apply auto-derived configuration and mark initialized (gas-only).
+     * @param cfg       Storage pointer to the target config.
+     * @param gasLimit  Total cumulative gas units allowed for the session.
+     * @param txLimit   Max number of operations (0 means unlimited).
+     */
     function _applyAutoConfig(GasLimitConfig storage cfg, uint128 gasLimit, uint32 txLimit)
         private
     {
