@@ -143,8 +143,7 @@ contract OPF7702 is Execution, Initializable {
             return SIG_VALIDATION_SUCCESS;
         }
 
-        uint256 isValidGas =
-            IUserOpPolicy(GAS_POLICY).checkUserOpPolicy(keyId, userOp);
+        uint256 isValidGas = IUserOpPolicy(GAS_POLICY).checkUserOpPolicy(keyId, userOp);
         if (isValidGas == 1) return SIG_VALIDATION_FAILED;
 
         bool isValid = _keyValidation(sKey);
@@ -220,8 +219,7 @@ contract OPF7702 is Execution, Initializable {
                 return SIG_VALIDATION_SUCCESS;
             }
 
-            uint256 isValidGas =
-                IUserOpPolicy(GAS_POLICY).checkUserOpPolicy(keyId, userOp);
+            uint256 isValidGas = IUserOpPolicy(GAS_POLICY).checkUserOpPolicy(keyId, userOp);
             if (isValidGas == 1) return SIG_VALIDATION_FAILED;
 
             bool isValid = _keyValidation(sKey);
@@ -274,8 +272,7 @@ contract OPF7702 is Execution, Initializable {
             bytes32 keyId = pubKey.computeKeyId();
             KeyData storage sKey = keys[keyId];
 
-            uint256 isValidGas =
-                IUserOpPolicy(GAS_POLICY).checkUserOpPolicy(keyId, userOp);
+            uint256 isValidGas = IUserOpPolicy(GAS_POLICY).checkUserOpPolicy(keyId, userOp);
             if (isValidGas == 1) return SIG_VALIDATION_FAILED;
 
             bool isValid = _keyValidation(sKey);
