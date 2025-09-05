@@ -564,7 +564,9 @@ contract OPF7702 is Execution, Initializable {
         if (usedChallenges[_hash]) {
             return bytes4(0xffffffff);
         }
-        bool sigOk = IWebAuthnVerifier(webAuthnVerifier()).verifySignature(
+
+        bool sigOk;
+        try IWebAuthnVerifier(webAuthnVerifier()).verifySignature(
             _hash,
             requireUV,
             authenticatorData,
@@ -575,7 +577,12 @@ contract OPF7702 is Execution, Initializable {
             s,
             pubKey.x,
             pubKey.y
-        );
+        ) returns (bool ok) {
+            sigOk = ok;
+        } catch {
+            return bytes4(0xffffffff);
+        }
+
         if (!sigOk) {
             return bytes4(0xffffffff);
         }
