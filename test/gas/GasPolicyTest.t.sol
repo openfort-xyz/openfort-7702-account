@@ -71,7 +71,6 @@ contract GasPolicyTest is Test {
         pure
         returns (bytes32)
     {
-        // lib expects (verificationGasLimit << 128) | callGasLimit
         return bytes32((verificationGasLimit << 128) | callGasLimit);
     }
 

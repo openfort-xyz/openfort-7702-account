@@ -112,25 +112,16 @@ contract GasPolicy is IUserOpPolicy {
 
         envelopeUnits += cgl + postOp;
 
-        /// @dev Guards
         if (cfg.gasLimit > 0 && cfg.gasUsed + envelopeUnits > cfg.gasLimit) {
             return VALIDATION_FAILED;
         }
-
-        /// @dev Deprecated tx-limit guard (only when enabled)
-        /// @custom:remove-ignore-by-lint (uncomment to count txs)
-        // if (cfg.txLimit > 0 && cfg.txUsed + 1 > cfg.txLimit) return VALIDATION_FAILED;
 
         if (envelopeUnits > type(uint128).max) {
             return VALIDATION_FAILED;
         }
 
-        /// @dev Account usage (optimistic)
         unchecked {
             cfg.gasUsed += uint128(envelopeUnits);
-            /// @dev Deprecated tx-limit guard (only when enabled)
-            /// @custom:remove-ignore-by-lint (uncomment to count txs)
-            // cfg.txUsed += 1;
         }
 
         emit GasPolicyAccounted(id, userOp.sender, envelopeUnits, cfg.gasUsed);
@@ -204,9 +195,6 @@ contract GasPolicy is IUserOpPolicy {
     function _applyManualConfig(GasLimitConfig storage cfg, InitData memory d) private {
         // Required budgets already checked by caller
         cfg.gasLimit = d.gasLimit;
-        /// @custom:remove-ignore-by-lint (uncomment to count txs)
-        // cfg.txLimit = d.txLimit; // 0 allowed (unlimited)
-
         _resetCountersAndMarkInitialized(cfg);
     }
 
@@ -217,9 +205,6 @@ contract GasPolicy is IUserOpPolicy {
      */
     function _applyAutoConfig(GasLimitConfig storage cfg, uint128 gasLimit) private {
         cfg.gasLimit = gasLimit;
-        /// @custom:remove-ignore-by-lint (uncomment to count txs)
-        // cfg.txLimit = txLimit;
-
         _resetCountersAndMarkInitialized(cfg);
     }
 
@@ -229,8 +214,6 @@ contract GasPolicy is IUserOpPolicy {
      */
     function _resetCountersAndMarkInitialized(GasLimitConfig storage cfg) private {
         cfg.gasUsed = 0;
-        /// @custom:remove-ignore-by-lint (uncomment to count txs)
-        // cfg.txUsed = 0;
         cfg.initialized = true;
     }
 
@@ -295,7 +278,7 @@ contract GasPolicy is IUserOpPolicy {
  *     cumulatives by `limit`.
  *
  * - Arithmetic safety:
- *   * `checkUserOpPolicy` guards all mul/add overflows, including the final wei sum.
+ *   * `checkUserOpPolicy` guards all mul/add overflows, including the final gas sum.
  *   * Auto-init keeps an `unchecked` block but pre-checks every addition/multiplication
  *     to prevent wraparound before casting to `uint128`.
  *

@@ -17,14 +17,11 @@ interface IUserOpPolicy is IPolicy {
     error GasPolicy__InitializationIncorrect();
 
     // ---------------------- Events ----------------------
-    /// @custom:remove-ignore-by-lint (uncomment to count txs)   uint256 txLimit
     event GasPolicyInitialized(
         bytes32 indexed configId, address indexed account, uint256 gasLimit, bool autoInit
     );
 
     // cumulative gas units used
-    // cumulative ops used
-    /// @custom:remove-ignore-by-lint (uncomment to count txs) uint256 txUsedTotal
     event GasPolicyAccounted(
         bytes32 indexed configId,
         address indexed account,
@@ -40,8 +37,6 @@ interface IUserOpPolicy is IPolicy {
     struct GasLimitConfig {
         uint128 gasLimit; // cumulative envelope units budget (PVG+VGL+CGL+PM legs)
         uint128 gasUsed;
-        // uint32 txLimit; /// @custom:remove-ignore-by-lint (uncomment to count txs)
-        // uint32 txUsed;  /// @custom:remove-ignore-by-lint (uncomment to count txs)
         bool initialized;
     }
 
