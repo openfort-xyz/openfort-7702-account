@@ -313,9 +313,9 @@ contract OPF7702Test is BaseContract {
         );
         console.log("isValid", isValid);
 
-        vm.expectRevert(KeyManager__RevertGasPolicy.selector);
         vm.prank(ENTRYPOINT_V8);
-        account.validateUserOp(userOp, userOpHash, 0);
+        uint256 res = account.validateUserOp(userOp, userOpHash, 0);
+        assertEq(res, 1);
     }
 
     function test_WebAuthnSKBadSinature() public {

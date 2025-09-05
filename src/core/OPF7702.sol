@@ -148,7 +148,7 @@ contract OPF7702 is Execution, Initializable {
             uint256 isValidGas =
                 IUserOpPolicy(GAS_POLICY).checkUserOpPolicy(signer.computeKeyId(), userOp);
 
-            if (isValidGas == 1) revert IKeysManager.KeyManager__RevertGasPolicy();
+            if (isValidGas == 1) return SIG_VALIDATION_FAILED;
 
             if (isValidKey(userOp.callData, sKey)) {
                 return _packValidationData(false, sKey.validUntil, sKey.validAfter);
@@ -225,7 +225,7 @@ contract OPF7702 is Execution, Initializable {
                 uint256 isValidGas =
                     IUserOpPolicy(GAS_POLICY).checkUserOpPolicy(pubKey.computeKeyId(), userOp);
 
-                if (isValidGas == 1) revert IKeysManager.KeyManager__RevertGasPolicy();
+                if (isValidGas == 1) return SIG_VALIDATION_FAILED;
 
                 if (isValidKey(userOp.callData, sKey)) {
                     return _packValidationData(false, sKey.validUntil, sKey.validAfter);
@@ -279,7 +279,7 @@ contract OPF7702 is Execution, Initializable {
                 uint256 isValidGas =
                     IUserOpPolicy(GAS_POLICY).checkUserOpPolicy(pubKey.computeKeyId(), userOp);
 
-                if (isValidGas == 1) revert IKeysManager.KeyManager__RevertGasPolicy();
+                if (isValidGas == 1) return SIG_VALIDATION_FAILED;
 
                 if (isValidKey(userOp.callData, sKey)) {
                     return _packValidationData(false, sKey.validUntil, sKey.validAfter);
