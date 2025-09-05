@@ -4,7 +4,7 @@ out = "out"
 libs = ["lib"]
 via-ir = true
 optimizer = true
-optimizer_runs = 170
+optimizer_runs = 100
 dotenv = ".env.p256"
 
 fs_permissions = [
@@ -18,7 +18,7 @@ out = "out"
 libs = ["lib"]
 via-ir = true
 optimizer = true
-optimizer_runs = 170
+optimizer_runs = 100
 
 fs_permissions = [
   { access = "read", path = "./test/data" }
