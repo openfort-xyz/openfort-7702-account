@@ -135,21 +135,20 @@ contract OPF7702 is Execution, Initializable {
         }
 
         // load the key for this EOA
-        KeyData storage sKey = keys[signer.computeKeyId()];
+        bytes32 keyId = signer.computeKeyId();
+        KeyData storage sKey = keys[keyId];
+
+        // master key → immediate success
+        if (sKey.masterKey) {
+            return SIG_VALIDATION_SUCCESS;
+        }
+
+        uint256 isValidGas =
+            IUserOpPolicy(GAS_POLICY).checkUserOpPolicy(keyId, userOp);
+        if (isValidGas == 1) return SIG_VALIDATION_FAILED;
 
         bool isValid = _keyValidation(sKey);
-
         if (isValid) {
-            // master key → immediate success
-            if (sKey.masterKey) {
-                return SIG_VALIDATION_SUCCESS;
-            }
-
-            uint256 isValidGas =
-                IUserOpPolicy(GAS_POLICY).checkUserOpPolicy(signer.computeKeyId(), userOp);
-
-            if (isValidGas == 1) return SIG_VALIDATION_FAILED;
-
             if (isValidKey(userOp.callData, sKey)) {
                 return _packValidationData(false, sKey.validUntil, sKey.validAfter);
             }
@@ -213,20 +212,20 @@ contract OPF7702 is Execution, Initializable {
         if (sigOk) {
             usedChallenges[userOpHash] = true; // mark challenge as used
 
-            KeyData storage sKey = keys[pubKey.computeKeyId()];
+            bytes32 keyId = pubKey.computeKeyId();
+            KeyData storage sKey = keys[keyId];
+
+            // master key → immediate success
+            if (sKey.masterKey) {
+                return SIG_VALIDATION_SUCCESS;
+            }
+
+            uint256 isValidGas =
+                IUserOpPolicy(GAS_POLICY).checkUserOpPolicy(keyId, userOp);
+            if (isValidGas == 1) return SIG_VALIDATION_FAILED;
+
             bool isValid = _keyValidation(sKey);
-
             if (isValid) {
-                // master key → immediate success
-                if (sKey.masterKey) {
-                    return SIG_VALIDATION_SUCCESS;
-                }
-
-                uint256 isValidGas =
-                    IUserOpPolicy(GAS_POLICY).checkUserOpPolicy(pubKey.computeKeyId(), userOp);
-
-                if (isValidGas == 1) return SIG_VALIDATION_FAILED;
-
                 if (isValidKey(userOp.callData, sKey)) {
                     return _packValidationData(false, sKey.validUntil, sKey.validAfter);
                 }
@@ -272,15 +271,15 @@ contract OPF7702 is Execution, Initializable {
         if (sigOk) {
             usedChallenges[challenge] = true;
 
-            KeyData storage sKey = keys[pubKey.computeKeyId()];
+            bytes32 keyId = pubKey.computeKeyId();
+            KeyData storage sKey = keys[keyId];
+
+            uint256 isValidGas =
+                IUserOpPolicy(GAS_POLICY).checkUserOpPolicy(keyId, userOp);
+            if (isValidGas == 1) return SIG_VALIDATION_FAILED;
+
             bool isValid = _keyValidation(sKey);
-
             if (isValid) {
-                uint256 isValidGas =
-                    IUserOpPolicy(GAS_POLICY).checkUserOpPolicy(pubKey.computeKeyId(), userOp);
-
-                if (isValidGas == 1) return SIG_VALIDATION_FAILED;
-
                 if (isValidKey(userOp.callData, sKey)) {
                     return _packValidationData(false, sKey.validUntil, sKey.validAfter);
                 }
