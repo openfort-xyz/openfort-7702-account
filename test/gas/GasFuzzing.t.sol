@@ -14,7 +14,7 @@ contract GasFuzzing is Test {
     uint256 constant DEFAULT_VGL = 360_000;
     uint256 constant DEFAULT_CGL = 240_000;
     uint256 constant DEFAULT_PMV = 60_000;
-    uint256 constant DEFAULT_PO  = 60_000;
+    uint256 constant DEFAULT_PO = 60_000;
 
     function setUp() public {
         gP = new GasPolicy(DEFAULT_PVG, DEFAULT_VGL, DEFAULT_CGL, DEFAULT_PMV, DEFAULT_PO);

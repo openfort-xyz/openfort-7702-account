@@ -19,12 +19,8 @@ interface IUserOpPolicy is IPolicy {
     // ---------------------- Events ----------------------
     /// @custom:remove-ignore-by-lint (uncomment to count txs)   uint256 txLimit
     event GasPolicyInitialized(
-        bytes32 indexed configId,
-        address indexed account,
-        uint256 gasLimit,
-        bool autoInit
+        bytes32 indexed configId, address indexed account, uint256 gasLimit, bool autoInit
     );
-
 
     // cumulative gas units used
     // cumulative ops used
