@@ -137,13 +137,11 @@ contract GasPolicy is IUserOpPolicy {
      * @param gasLimitBE Gas budget values.
      * @dev Reverts if already initialized, or if `gasLimit` are zero.
      */
-    function initializeGasPolicy(address account, bytes32 configId, bytes16 gasLimitBE)
-        external
-    {
+    function initializeGasPolicy(address account, bytes32 configId, bytes16 gasLimitBE) external {
         require(account == msg.sender, GasPolicy__AccountMustBeSender());
         GasLimitConfig storage cfg = gasLimitConfigs[configId][account];
         if (cfg.initialized) revert GasPolicy__IdExistAlready();
-        
+
         uint128 gasLimit = uint128(gasLimitBE);
         if (gasLimit == 0) revert GasPolicy__ZeroBudgets();
 
