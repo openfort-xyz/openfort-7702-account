@@ -256,7 +256,7 @@ contract GasFuzzing is Test {
         bytes32 configId = keccak256(abi.encodePacked(uint256(14)));
         vm.fee(4e32);
         vm.prank(account);
-        gP.initializeGasPolicy(account, configId, 1);
+        gP.initializeGasPolicy(account, configId, uint256(1));
         vm.fee(0);
 
         (uint128 gasLimit, uint128 gasUsed) = gP.getGasConfig(configId, account);

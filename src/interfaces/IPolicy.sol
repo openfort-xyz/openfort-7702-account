@@ -29,11 +29,6 @@ interface IUserOpPolicy is IPolicy {
         uint256 gasUsedTotal
     );
 
-    struct InitData {
-        uint128 gasLimit;
-        uint32 txLimit; // 0 = disabled
-    }
-
     struct GasLimitConfig {
         uint128 gasLimit; // cumulative envelope units budget (PVG+VGL+CGL+PM legs)
         uint128 gasUsed;
@@ -44,10 +39,9 @@ interface IUserOpPolicy is IPolicy {
         external
         returns (uint256);
 
-    function initializeGasPolicy(address account, bytes32 configId, uint256 limit) external;
+    function initializeGasPolicy(address account, bytes32 configId, bytes16 gasLimitBE) external;
 
-    function initializeGasPolicy(address account, bytes32 configId, bytes calldata initData)
-        external;
+    function initializeGasPolicy(address account, bytes32 configId, uint256 limit) external;
 
     function getGasConfig(bytes32 configId, address userOpSender)
         external
