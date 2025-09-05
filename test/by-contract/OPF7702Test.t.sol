@@ -297,6 +297,7 @@ contract OPF7702Test is BaseContract {
         userOp.signature = _signature;
 
         bytes32 userOpHash = SK_CHALLENGE;
+
         _etch();
 
         bool isValid = webAuthn.verifySignature(
@@ -311,6 +312,7 @@ contract OPF7702Test is BaseContract {
             SK_PUBLIC_KEY_X,
             SK_PUBLIC_KEY_Y
         );
+
         console.log("isValid", isValid);
 
         vm.prank(ENTRYPOINT_V8);
