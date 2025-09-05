@@ -31,10 +31,9 @@ Enforces **per-session gas/cost/tx budgets** for EIP-7702 accounts and ERC-4337 
 ## Overview
 
 - **Who calls it?** The **account itself** (i.e., `msg.sender == userOp.sender`). This prevents third-party griefing.
-- **What it checks?** Gas envelope (`PVG+VGL+PMV+CGL+PO`), worst-case wei with price headroom, and optional penalty on `(CGL+PO)`.
+- **What it checks?** Gas envelope (`PVG+VGL+PMV+CGL+PO`), worst-case wei with price headroom.
 - **What it limits?**  
   - `gasLimit` / `costLimit` — cumulative ceilings  
-  - `perOpMaxCostWei` — per-operation cost cap  
   - `txLimit` — number of ops
 - **What it updates?** `gasUsed`, `costUsed`, `txUsed` — **optimistically** on success.
 
@@ -53,14 +52,13 @@ flowchart TD
 
   subgraph "GasPolicy"
     Compute["Compute envelope & price<br/>PVG+VGL(+PMV)+CGL(+PO)"]
-    Penalty["Penalty if (CGL+PO) ≥ threshold<br/>penaltyBps on (CGL+PO)"]
     Guards["Compare vs budgets<br/>gas/cost/per-op/tx"]
     Account["Account usage<br/>gasUsed/costUsed/txUsed"]
     Store[("(configId, account) -> GasLimitConfig")]
   end
 
   Validate --> PolicyCall
-  PolicyCall --> Compute --> Penalty --> Guards
+  PolicyCall --> Compute --> Guards
   Guards -- ok --> Account --> Store
   Guards -- fail --> PolicyCall
 ```
@@ -71,23 +69,12 @@ erDiagram
   GasLimitConfig {
     uint128 gasLimit      "Total gas units allowed"
     uint128 gasUsed       "Gas units consumed"
-    uint128 costLimit     "Total wei allowed"
-    uint128 costUsed      "Wei consumed"
-    uint128 perOpMaxCostWei "Max wei per op (0=off)"
-    uint32  txLimit       "Max ops (0=unlimited)"
-    uint32  txUsed        "Ops consumed"
-    uint16  penaltyBps    "Penalty BPS on (CGL+PO)"
-    uint32  penaltyThreshold "Gas threshold for penalty"
     bool    initialized   "Config active"
   }
 
   InitData {
-    uint128 gasLimit
-    uint128 costLimit
-    uint128 perOpMaxCostWei
-    uint32  txLimit
-    uint16  penaltyBps
-    uint32  penaltyThreshold
+      uint128 gasLimit;
+      uint32 txLimit; // 0 = disabled
   }
 ```
 GasLimitConfig is stored at gasLimitConfigs[configId][account].
@@ -103,12 +90,11 @@ sequenceDiagram
   A->>GP: initializeGasPolicy(account, configId, initData)
   GP->>GP: require(account == msg.sender)
   GP->>GP: revert if already initialized
-  GP->>GP: decode InitData (gasLimit, costLimit, ...)
-  GP->>GP: require(gasLimit > 0 && costLimit > 0)
+  GP->>GP: decode InitData (gasLimit, txLimit)
   GP->>GP: _applyManualConfig(cfg, d)
   GP-->>A: GasPolicyInitialized(configId, ...)
 ```
-Sets exact budgets and (optionally) custom penalty settings.
+Sets exact budgets settings.
 
 #### Auto Initialization
 ```mermaid
@@ -119,15 +105,11 @@ sequenceDiagram
   A->>GP: initializeGasPolicy(account, configId, limit)
   GP->>GP: require(account == msg.sender)
   GP->>GP: revert if already initialized
-  GP->>GP: require(0 < limit ≤ 2^32-1)
-  GP->>GP: perOpEnvelope = (DEFAULT_PVG + DEFAULT_VGL + DEFAULT_CGL + DEFAULT_PMV + DEFAULT_PO) * (1 + SAFETY_BPS)
-  GP->>GP: execSideAssumed = max(70% * envelope, DEFAULT_CGL + DEFAULT_PO)
-  GP->>GP: perOpPenaltyGas = penalty(execSideAssumed, DEFAULT_PENALTY_BPS, DEFAULT_PENALTY_THR)
-  GP->>GP: priceAssumption = max(basefee + 1 gwei, 2 gwei) * (1 + 10%)
-  GP->>GP: perOpMaxCostWei = (perOpEnvelope + perOpPenaltyGas) * priceAssumption
-  GP->>GP: gasLimit = perOpEnvelope * limit
-  GP->>GP: costLimit = perOpMaxCostWei * limit
-  GP->>GP: _applyAutoConfig(cfg, ...)
+  GP->>GP: require(limit > 0 && limit <= type(uint32).max)
+  GP->>GP: rawEnvelope = DEFAULT_PVG + DEFAULT_VGL + DEFAULT_CGL + DEFAULT_PMV + DEFAULT_PO
+  GP->>GP: perOpEnvelopeUnits = (rawEnvelope * SAFETY_BPS + BPS_CEIL_ROUNDING) / BPS_DENOMINATOR
+  GP->>GP: if(gasLimit256 > type(uint128).max)
+  GP->>GP: _applyAutoConfig(cfg, uint128(gasLimit256))
   GP-->>A: GasPolicyInitialized(configId, ...)
 ```
 Derives conservative budgets from defaults and the provided limit (allowed number of ops).
@@ -139,17 +121,14 @@ flowchart TD
   Sender["require(msg.sender == userOp.sender)"]
   Init["require(cfg.initialized)"]
   Unpack["Unpack gas legs:<br/>PVG + VGL + (PMV) + CGL + (PO)"]
-  Price["price = userOp.gasPrice()"]
-  Penalty["if (CGL+PO) ≥ thr → penaltyGas = (CGL+PO) * penaltyBps"]
-  WorstWei["worstCaseWei = (envelope + penaltyGas) * price"]
-  Guards["Compare:<br/>gasUsed+envelope ≤ gasLimit<br/>costUsed+worstWei ≤ costLimit<br/>worstWei ≤ perOpMaxCostWei? (if set)<br/>txUsed+1 ≤ txLimit? (if set)"]
+  Guards["envelopeUnits += cgl + postOp"]
   Overflow["Overflow checks for mul/add"]
-  Account["Update usage (unchecked):<br/>gasUsed += envelope<br/>costUsed += worstWei<br/>txUsed += 1"]
+  Account["Update usage (unchecked):<br/>gasUsed += uint128(envelopeUnits)"]
   Emit["emit GasPolicyAccounted(...)"]
   Ok["return 0 (success)"]
   Fail["return 1 (failed)"]
 
-  Start --> Sender --> Init --> Unpack --> Price --> Penalty --> WorstWei --> Overflow --> Guards
+  Start --> Sender --> Init --> Unpack --> Overflow --> Guards
   Guards -- OK --> Account --> Emit --> Ok
   Guards -- FAIL --> Fail
 ```
@@ -158,26 +137,10 @@ flowchart TD
 	•	envelopeUnits = PVG + VGL + CGL + postOp (+ PMV if paymaster present)
 	•	If paymasterAndData.length >= PAYMASTER_DATA_OFFSET, include PMV and PO.
 
-Pricing & Penalty Math
-	•	price = userOp.gasPrice() (= min(maxFeePerGas, basefee + maxPriorityFee)).
-	•	If (CGL + postOp) ≥ penaltyThreshold, add penalty gas:
-
-```ts
-penaltyGas = ceil( (CGL + postOp) * penaltyBps / 10_000 )
-```
-
-	•	Worst-case wei:
-```ts
-worstCaseWei = (envelopeUnits * price) + (penaltyGas * price)
-```
-
 #### Guards & Accounting
 	•	Reject if any of:
-	•	gasLimit > 0 && gasUsed + envelopeUnits > gasLimit
-	•	costLimit > 0 && costUsed + worstCaseWei > costLimit
-	•	perOpMaxCostWei > 0 && worstCaseWei > perOpMaxCostWei
-	•	txLimit > 0 && txUsed + 1 > txLimit
-	•	envelopeUnits or worstCaseWei exceeds uint128
+	•	cfg.gasLimit > 0 && cfg.gasUsed + envelopeUnits > cfg.gasLimit
+	•	nvelopeUnits > type(uint128).max
 	•	On success, increment counters and emit GasPolicyAccounted.
 
 ### API Reference
@@ -186,7 +149,7 @@ worstCaseWei = (envelopeUnits * price) + (penaltyGas * price)
 | Validate      | `checkUserOpPolicy(bytes32 id, PackedUserOperation userOp) returns (uint256)`                                          | Only `userOp.sender`| Validates & accounts against budgets. Returns `0` on success, `1` on failure.               |
 | Init (manual) | `initializeGasPolicy(address account, bytes32 configId, bytes initData)`                                              | `account == msg.sender` | Decodes `InitData` and sets exact budgets. Fails if already initialized.                |
 | Init (auto)   | `initializeGasPolicy(address account, bytes32 configId, uint256 limit)`                                               | `account == msg.sender` | Derives conservative budgets from defaults scaled by `limit`.                            |
-| View (compact)| `getGasConfig(bytes32 configId, address userOpSender) view returns (uint128 gasLimit, uint128 gasUsed, uint128 costLimit, uint128 costUsed)` | Any                 | Compact snapshot.                                                                           |
+| View (compact)| `getGasConfig(bytes32 configId, address userOpSender) view returns (uint128 gasLimit, uint128 gasUsed)` | Any                 | Compact snapshot.                                                                           |
 | View (full)   | `getGasConfigEx(bytes32 configId, address userOpSender) view returns (GasLimitConfig)`                                 | Any                 | Full struct snapshot.                                                                       |
 | ERC-165       | `supportsInterface(bytes4)`                                                                                            | Any                 | Supports `IERC165`, `IPolicy`, `IUserOpPolicy`.                                             |
 
@@ -204,7 +167,6 @@ These mirror constructor defaults and auto-init heuristics. Tune for your infra.
 
 •	Safety multipliers
 	•	SAFETY_BPS = +20% on the per-op gas envelope
-	•	Price headroom = max(basefee + 1 gwei, 2 gwei) * 1.10
 •	Penalty
 	•	DEFAULT_PENALTY_BPS = 10% on (CGL + PO)
 	•	DEFAULT_PENALTY_THR = 40_000 gas
@@ -222,11 +184,7 @@ gasPolicy.initializeGasPolicy(address(this), configId, 20);
 ```ts
 GasLimitConfig.InitData memory d = GasLimitConfig.InitData({
   gasLimit:        8_000_000,     // total gas units
-  costLimit:       0.05 ether,    // total wei
-  perOpMaxCostWei: 0.005 ether,   // cap per op
   txLimit:         20,            // max ops
-  penaltyBps:      1_000,         // 10%
-  penaltyThreshold: 40_000        // gas threshold
 });
 
 bytes memory initData = abi.encode(d);
