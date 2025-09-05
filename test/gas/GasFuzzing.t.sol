@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: MIT
-
 pragma solidity ^0.8.29;
 
 import {GasPolicy} from "src/utils/GasPolicy.sol";
@@ -15,7 +14,7 @@ contract GasFuzzing is Test {
     uint256 constant DEFAULT_VGL = 360_000;
     uint256 constant DEFAULT_CGL = 240_000;
     uint256 constant DEFAULT_PMV = 60_000;
-    uint256 constant DEFAULT_PO = 60_000;
+    uint256 constant DEFAULT_PO  = 60_000;
 
     function setUp() public {
         gP = new GasPolicy(DEFAULT_PVG, DEFAULT_VGL, DEFAULT_CGL, DEFAULT_PMV, DEFAULT_PO);
@@ -63,9 +62,6 @@ contract GasFuzzing is Test {
         });
     }
 
-    // REMOVED: price helper (no wei accounting anymore)
-    // function _calcPrice(...) internal view returns (uint256) { ... }
-
     function _initAuto(bytes32 configId, uint256 limit) internal {
         vm.prank(account);
         gP.initializeGasPolicy(account, configId, limit);
@@ -78,14 +74,11 @@ contract GasFuzzing is Test {
     function test_initialize_and_getters() public {
         bytes32 configId = keccak256(abi.encodePacked(uint256(1)));
         _initAuto(configId, 3);
-        // UPDATED tuple: (gasLimit, gasUsed, txLimit, txUsed)
-        (uint128 gasLimit, uint128 gasUsed, uint32 txLimit, uint32 txUsed) =
-            gP.getGasConfig(configId, account);
-        console.log(gasLimit, gasUsed, txLimit, txUsed);
+        // UPDATED: gas-only tuple
+        (uint128 gasLimit, uint128 gasUsed) = gP.getGasConfig(configId, account);
+        console.log(gasLimit, gasUsed);
         assertGt(gasLimit, 0);
         assertEq(gasUsed, 0);
-        assertGt(txLimit, 0);
-        assertEq(txUsed, 0);
     }
 
     function test_uninitialized_fails() public {
@@ -120,6 +113,7 @@ contract GasFuzzing is Test {
         }
     }
 
+    // tx-limit logic removed in policy => this always passes now
     function test_tx_limit_exceeded() public {
         bytes32 configId = keccak256(abi.encodePacked(uint256(5)));
         _initAuto(configId, 2);
@@ -142,9 +136,7 @@ contract GasFuzzing is Test {
             uint256 res = gP.checkUserOpPolicy(configId, uo);
             assertEq(res, 0);
         }
-        // UPDATED: check gasUsed & txUsed only
-        (uint128 gasLimit, uint128 gasUsed,, uint32 txUsed) = gP.getGasConfig(configId, account);
-        assertEq(txUsed, 3);
+        (uint128 gasLimit, uint128 gasUsed) = gP.getGasConfig(configId, account);
         assertLe(gasUsed, gasLimit);
     }
 
@@ -164,30 +156,30 @@ contract GasFuzzing is Test {
         vm.prank(account);
         assertEq(gP.checkUserOpPolicy(configIdB, atThr), 0);
 
-        // UPDATED: compare gasUsed instead of cost deltas
-        (uint128 gasLimitA, uint128 gasUsedA,,) = gP.getGasConfig(configIdA, account);
-        (uint128 gasLimitB, uint128 gasUsedB,,) = gP.getGasConfig(configIdB, account);
+        (uint128 gasLimitA, uint128 gasUsedA) = gP.getGasConfig(configIdA, account);
+        (uint128 gasLimitB, uint128 gasUsedB) = gP.getGasConfig(configIdB, account);
         assertLe(gasUsedA, gasLimitA);
         assertLe(gasUsedB, gasLimitB);
-        assertLt(gasUsedA, gasUsedB); // 39,999 < 40,000 path uses less gas units
+        assertLt(gasUsedA, gasUsedB); // 39,999 < 40,000 => fewer envelope units
     }
 
+    // per-op cost cap removed => should pass
     function test_perOpMaxCostWei_cap_triggers() public {
         bytes32 configId = keccak256(abi.encodePacked(uint256(9)));
         _initAuto(configId, 3);
         PackedUserOperation memory uo =
             _mkUserOp(account, 110_000, 300_000, 300_000, 10 gwei, 10 gwei, hex"");
         vm.prank(account);
-        // UPDATED: per-op cost cap removed; should pass under gas-only policy
         uint256 res = gP.checkUserOpPolicy(configId, uo);
         assertEq(res, 0);
     }
 
+    // cost-limit logic removed => ensure still OK
     function test_cumulative_cost_limit_exceeded() public {
         bytes32 configId = keccak256(abi.encodePacked(uint256(10)));
         _initAuto(configId, 2);
 
-        vm.fee(1 gwei); // basefee (no effect now, but harmless)
+        vm.fee(1 gwei); // basefee (no effect now)
         PackedUserOperation memory uo =
             _mkUserOp(account, 90_000, 200_000, 200_000, 2 gwei, 1 gwei, hex"");
 
@@ -231,12 +223,9 @@ contract GasFuzzing is Test {
             accGas += envelope;
         }
 
-        (uint128 gasLimit, uint128 gasUsed, uint32 txLimit, uint32 txUsed) =
-            gP.getGasConfig(configId, account);
+        (uint128 gasLimit, uint128 gasUsed) = gP.getGasConfig(configId, account);
         assertLe(gasUsed, gasLimit);
         assertEq(gasUsed, uint128(accGas));
-        assertEq(txUsed, nOps);
-        assertLe(txUsed, txLimit);
     }
 
     function test_malformed_paymaster_len_lt_offset_passes() public {
@@ -262,19 +251,17 @@ contract GasFuzzing is Test {
         assertEq(res, 0);
     }
 
+    // formerly reverted; with gas-only init it should succeed
     function test_auto_init_reverts_when_basefee_extreme() public {
         bytes32 configId = keccak256(abi.encodePacked(uint256(14)));
-        vm.fee(4e32); // previously caused revert; now should NOT affect init
+        vm.fee(4e32);
         vm.prank(account);
         gP.initializeGasPolicy(account, configId, 1);
         vm.fee(0);
 
-        (uint128 gasLimit, uint128 gasUsed, uint32 txLimit, uint32 txUsed) =
-            gP.getGasConfig(configId, account);
+        (uint128 gasLimit, uint128 gasUsed) = gP.getGasConfig(configId, account);
         assertGt(gasLimit, 0);
         assertEq(gasUsed, 0);
-        assertGt(txLimit, 0);
-        assertEq(txUsed, 0);
     }
 
     function test_fuzz_overflow_guard_in_check(
@@ -300,18 +287,13 @@ contract GasFuzzing is Test {
     }
 
     function test_auto_init_handles_extreme_u64_basefee() public {
-        bytes32 configId = keccak256(abi.encodePacked(uint256(14)));
-        // stay within CI’s limit
+        bytes32 configId = keccak256(abi.encodePacked(uint256(16)));
         vm.fee(type(uint64).max - 1);
         vm.prank(account);
         gP.initializeGasPolicy(account, configId, 1);
 
-        (uint128 gasLimit, uint128 gasUsed, uint32 txLimit, uint32 txUsed) =
-            gP.getGasConfig(configId, account);
-
+        (uint128 gasLimit, uint128 gasUsed) = gP.getGasConfig(configId, account);
         assertGt(gasLimit, 0);
         assertEq(gasUsed, 0);
-        assertGt(txLimit, 0);
-        assertEq(txUsed, 0);
     }
 }

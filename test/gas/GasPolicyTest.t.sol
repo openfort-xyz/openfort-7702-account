@@ -29,13 +29,10 @@ contract GasPolicyTest is Test {
         bytes32 configId = keccak256(abi.encodePacked(bytes32(0), bytes32(0)));
         _initGas(configId);
 
-        // UPDATED: gas-only tuple (gasLimit, gasUsed, txLimit, txUsed)
-        (uint128 gasLimit, uint128 gasUsed, uint32 txLimit, uint32 txUsed) =
-            gP.getGasConfig(configId, account);
+        // UPDATED: gas-only tuple (gasLimit, gasUsed)
+        (uint128 gasLimit, uint128 gasUsed) = gP.getGasConfig(configId, account);
         console.log(gasLimit);
         console.log(gasUsed);
-        console.log(txLimit);
-        console.log(txUsed);
     }
 
     function test_CheckUserOpPolicy() public {

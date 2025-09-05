@@ -17,22 +17,23 @@ interface IUserOpPolicy is IPolicy {
     error GasPolicy__InitializationIncorrect();
 
     // ---------------------- Events ----------------------
+    /// @custom:remove-ignore-by-lint (uncomment to count txs)   uint256 txLimit
     event GasPolicyInitialized(
         bytes32 indexed configId,
         address indexed account,
         uint256 gasLimit,
-        uint256 txLimit,
         bool autoInit
     );
 
+
     // cumulative gas units used
     // cumulative ops used
+    /// @custom:remove-ignore-by-lint (uncomment to count txs) uint256 txUsedTotal
     event GasPolicyAccounted(
         bytes32 indexed configId,
         address indexed account,
         uint256 envelopeUnits,
-        uint256 gasUsedTotal,
-        uint256 txUsedTotal
+        uint256 gasUsedTotal
     );
 
     struct InitData {
@@ -43,8 +44,8 @@ interface IUserOpPolicy is IPolicy {
     struct GasLimitConfig {
         uint128 gasLimit; // cumulative envelope units budget (PVG+VGL+CGL+PM legs)
         uint128 gasUsed;
-        uint32 txLimit; // optional tx count cap (0 = disabled)
-        uint32 txUsed;
+        // uint32 txLimit; /// @custom:remove-ignore-by-lint (uncomment to count txs)
+        // uint32 txUsed;  /// @custom:remove-ignore-by-lint (uncomment to count txs)
         bool initialized;
     }
 
@@ -60,7 +61,7 @@ interface IUserOpPolicy is IPolicy {
     function getGasConfig(bytes32 configId, address userOpSender)
         external
         view
-        returns (uint128 gasLimit, uint128 gasUsed, uint32 txLimit, uint32 txUsed);
+        returns (uint128 gasLimit, uint128 gasUsed);
 
     function getGasConfigEx(bytes32 configId, address userOpSender)
         external
