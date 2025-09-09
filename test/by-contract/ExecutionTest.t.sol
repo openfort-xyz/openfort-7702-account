@@ -12,7 +12,7 @@ contract ExecutionTest is BaseContract {
     bytes32 internal constant mode_2 = bytes32(uint256(0x01000000000078210001) << (22 * 8));
     bytes32 internal constant mode_3 = bytes32(uint256(0x01000000000078210002) << (22 * 8));
 
-    bytes32[3] internal modes = [mode_1, mode_2, mode_3];
+    bytes32[2] internal modes = [mode_1, mode_3];
 
     function test_supportsExecutionMode() public view {
         for (uint256 i = 0; i < modes.length;) {
@@ -59,7 +59,7 @@ contract ExecutionTest is BaseContract {
 
         _etch();
 
-        vm.expectRevert(OpenfortBaseAccount7702V1__UnsupportedOpData.selector);
+        vm.expectRevert(OpenfortBaseAccount7702V1__UnsupportedExecutionMode.selector);
         vm.prank(owner);
         account.execute(mode_2, executionData);
     }
@@ -116,7 +116,7 @@ contract ExecutionTest is BaseContract {
         account.execute(mode_1, executionData);
     }
 
-    function test_executeMode2RevertTooManyCalls() public {
+    function test_executeMode3RevertTooManyCalls() public {
         Call[] memory calls_1 = new Call[](5);
         Call[] memory calls_2 = new Call[](5);
         Call[] memory calls_3 = new Call[](5);
