@@ -112,26 +112,19 @@ contract GasPolicy is IUserOpPolicy {
 
         envelopeUnits += cgl + postOp;
 
-        /// @dev Guards
         if (cfg.gasLimit > 0 && cfg.gasUsed + envelopeUnits > cfg.gasLimit) {
             return VALIDATION_FAILED;
         }
-
-        /// @dev Deprecated tx-limit guard (only when enabled)
-        /// @custom:remove-ignore-by-lint (uncomment to count txs)
-        // if (cfg.txLimit > 0 && cfg.txUsed + 1 > cfg.txLimit) return VALIDATION_FAILED;
 
         if (envelopeUnits > type(uint128).max) {
             return VALIDATION_FAILED;
         }
 
-        /// @dev Account usage (optimistic)
         unchecked {
             cfg.gasUsed += uint128(envelopeUnits);
-            cfg.txUsed += 1;
         }
 
-        emit GasPolicyAccounted(id, userOp.sender, envelopeUnits, cfg.gasUsed, cfg.txUsed);
+        emit GasPolicyAccounted(id, userOp.sender, envelopeUnits, cfg.gasUsed);
 
         return VALIDATION_SUCCESS;
     }
@@ -141,22 +134,20 @@ contract GasPolicy is IUserOpPolicy {
      * @notice Initialize budgets manually for a given (configId, account).
      * @param account  The 7702 account or SCA whose budgets are being set. Must be the caller.
      * @param configId Session key / policy identifier.
-     * @param initData ABI-encoded `InitData` struct with exact budget values and settings.
-     * @dev Reverts if already initialized, or if `gasLimit`/`costLimit` are zero.
+     * @param gasLimitBE Gas budget values.
+     * @dev Reverts if already initialized, or if `gasLimit` are zero.
      */
-    function initializeGasPolicy(address account, bytes32 configId, bytes calldata initData)
-        external
-    {
+    function initializeGasPolicy(address account, bytes32 configId, bytes16 gasLimitBE) external {
         require(account == msg.sender, GasPolicy__AccountMustBeSender());
         GasLimitConfig storage cfg = gasLimitConfigs[configId][account];
         if (cfg.initialized) revert GasPolicy__IdExistAlready();
 
-        InitData memory d = abi.decode(initData, (InitData));
-        if (d.gasLimit == 0) revert GasPolicy__ZeroBudgets();
+        uint128 gasLimit = uint128(gasLimitBE);
+        if (gasLimit == 0) revert GasPolicy__ZeroBudgets();
 
-        _applyManualConfig(cfg, d);
+        _applyManualConfig(cfg, gasLimit);
 
-        emit GasPolicyInitialized(configId, account, cfg.gasLimit, cfg.txLimit, false);
+        emit GasPolicyInitialized(configId, account, cfg.gasLimit, false);
     }
 
     // ---------------------- INITIALIZATION (AUTO / DEFAULTS) ----------------------
@@ -188,22 +179,20 @@ contract GasPolicy is IUserOpPolicy {
 
             if (gasLimit256 > type(uint128).max) revert GasPolicy_GasLimitHigh();
 
-            _applyAutoConfig(cfg, uint128(gasLimit256), uint32(limit));
+            _applyAutoConfig(cfg, uint128(gasLimit256));
 
-            emit GasPolicyInitialized(configId, account, cfg.gasLimit, cfg.txLimit, false);
+            emit GasPolicyInitialized(configId, account, cfg.gasLimit, false);
         }
     }
 
     /**
      * @notice Apply manual configuration to a `GasLimitConfig` and mark initialized.
      * @param cfg Storage pointer to the target config.
-     * @param d   Decoded InitData with explicit budgetssettings.
+     * @param gasLimit Explicit budgetssettings.
      */
-    function _applyManualConfig(GasLimitConfig storage cfg, InitData memory d) private {
+    function _applyManualConfig(GasLimitConfig storage cfg, uint128 gasLimit) private {
         // Required budgets already checked by caller
-        cfg.gasLimit = d.gasLimit;
-        cfg.txLimit = d.txLimit; // 0 allowed (unlimited)
-
+        cfg.gasLimit = gasLimit;
         _resetCountersAndMarkInitialized(cfg);
     }
 
@@ -211,14 +200,9 @@ contract GasPolicy is IUserOpPolicy {
      * @notice Apply auto-derived configuration and mark initialized (gas-only).
      * @param cfg       Storage pointer to the target config.
      * @param gasLimit  Total cumulative gas units allowed for the session.
-     * @param txLimit   Max number of operations (0 means unlimited).
      */
-    function _applyAutoConfig(GasLimitConfig storage cfg, uint128 gasLimit, uint32 txLimit)
-        private
-    {
+    function _applyAutoConfig(GasLimitConfig storage cfg, uint128 gasLimit) private {
         cfg.gasLimit = gasLimit;
-        cfg.txLimit = txLimit;
-
         _resetCountersAndMarkInitialized(cfg);
     }
 
@@ -228,7 +212,6 @@ contract GasPolicy is IUserOpPolicy {
      */
     function _resetCountersAndMarkInitialized(GasLimitConfig storage cfg) private {
         cfg.gasUsed = 0;
-        cfg.txUsed = 0;
         cfg.initialized = true;
     }
 
@@ -239,15 +222,13 @@ contract GasPolicy is IUserOpPolicy {
     /// @param userOpSender  The account whose config is queried.
     /// @return gasLimit  Cumulative gas units allowed.
     /// @return gasUsed   Gas units consumed so far.
-    /// @return txLimit   Max number of ops (0 = unlimited).
-    /// @return txUsed    Ops consumed so far.
     function getGasConfig(bytes32 configId, address userOpSender)
         external
         view
-        returns (uint128 gasLimit, uint128 gasUsed, uint32 txLimit, uint32 txUsed)
+        returns (uint128 gasLimit, uint128 gasUsed)
     {
         GasLimitConfig storage c = gasLimitConfigs[configId][userOpSender];
-        return (c.gasLimit, c.gasUsed, c.txLimit, c.txUsed);
+        return (c.gasLimit, c.gasUsed);
     }
 
     /**
@@ -264,7 +245,7 @@ contract GasPolicy is IUserOpPolicy {
         return gasLimitConfigs[configId][userOpSender];
     }
 
-    // ---------------------- InitData for manual path ----------------------
+    // ---------------------- Supported Interfaces ----------------------
     function supportsInterface(bytes4 interfaceID) external pure override returns (bool) {
         return interfaceID == type(IERC165).interfaceId || interfaceID == type(IPolicy).interfaceId
             || interfaceID == type(IUserOpPolicy).interfaceId;
@@ -284,18 +265,14 @@ contract GasPolicy is IUserOpPolicy {
  *   a threshold. Ceil division is used for BPS math.
  *
  * - Limits:
- *   * `gasLimit` / `costLimit` — cumulative ceilings across the session.
- *   * `perOpMaxCostWei` — single-op ceiling (0 disables).
- *   * `txLimit` — max number of ops (0 = unlimited).
+ *   * `gasLimit`— cumulative ceilings across the session.
  *
  * - Initialization:
- *   * Manual: supply exact budgets via `InitData`.
- *   * Auto: derives conservative defaults from provided DEFAULT_* legs, a safety BPS,
- *     and `block.basefee` (+priority fee with floor), then scales
- *     cumulatives by `limit`.
+ *   * Manual: supply exact budgets.
+ *   * Auto: derives conservative defaults from provided DEFAULT_* limit, a safety BPS.
  *
  * - Arithmetic safety:
- *   * `checkUserOpPolicy` guards all mul/add overflows, including the final wei sum.
+ *   * `checkUserOpPolicy` guards all mul/add overflows, including the final gas sum.
  *   * Auto-init keeps an `unchecked` block but pre-checks every addition/multiplication
  *     to prevent wraparound before casting to `uint128`.
  *

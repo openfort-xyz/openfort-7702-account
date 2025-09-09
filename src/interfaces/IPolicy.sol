@@ -18,33 +18,20 @@ interface IUserOpPolicy is IPolicy {
 
     // ---------------------- Events ----------------------
     event GasPolicyInitialized(
-        bytes32 indexed configId,
-        address indexed account,
-        uint256 gasLimit,
-        uint256 txLimit,
-        bool autoInit
+        bytes32 indexed configId, address indexed account, uint256 gasLimit, bool autoInit
     );
 
     // cumulative gas units used
-    // cumulative ops used
     event GasPolicyAccounted(
         bytes32 indexed configId,
         address indexed account,
         uint256 envelopeUnits,
-        uint256 gasUsedTotal,
-        uint256 txUsedTotal
+        uint256 gasUsedTotal
     );
-
-    struct InitData {
-        uint128 gasLimit;
-        uint32 txLimit; // 0 = disabled
-    }
 
     struct GasLimitConfig {
         uint128 gasLimit; // cumulative envelope units budget (PVG+VGL+CGL+PM legs)
         uint128 gasUsed;
-        uint32 txLimit; // optional tx count cap (0 = disabled)
-        uint32 txUsed;
         bool initialized;
     }
 
@@ -52,15 +39,14 @@ interface IUserOpPolicy is IPolicy {
         external
         returns (uint256);
 
-    function initializeGasPolicy(address account, bytes32 configId, uint256 limit) external;
+    function initializeGasPolicy(address account, bytes32 configId, bytes16 gasLimitBE) external;
 
-    function initializeGasPolicy(address account, bytes32 configId, bytes calldata initData)
-        external;
+    function initializeGasPolicy(address account, bytes32 configId, uint256 limit) external;
 
     function getGasConfig(bytes32 configId, address userOpSender)
         external
         view
-        returns (uint128 gasLimit, uint128 gasUsed, uint32 txLimit, uint32 txUsed);
+        returns (uint128 gasLimit, uint128 gasUsed);
 
     function getGasConfigEx(bytes32 configId, address userOpSender)
         external

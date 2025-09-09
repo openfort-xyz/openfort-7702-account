@@ -135,24 +135,20 @@ contract OPF7702 is Execution, Initializable {
         }
 
         // load the key for this EOA
-        KeyData storage sKey = keys[signer.computeKeyId()];
+        bytes32 keyId = signer.computeKeyId();
+        KeyData storage sKey = keys[keyId];
 
         bool isValid = _keyValidation(sKey);
 
-        if (isValid) {
-            // master key → immediate success
-            if (sKey.masterKey) {
-                return SIG_VALIDATION_SUCCESS;
-            }
+        // master key → immediate success
+        if (sKey.masterKey && isValid) {
+            return SIG_VALIDATION_SUCCESS;
+        }
 
-            uint256 isValidGas =
-                IUserOpPolicy(GAS_POLICY).checkUserOpPolicy(signer.computeKeyId(), userOp);
+        uint256 isValidGas = IUserOpPolicy(GAS_POLICY).checkUserOpPolicy(keyId, userOp);
 
-            if (isValidGas == 1) revert IKeysManager.KeyManager__RevertGasPolicy();
-
-            if (isValidKey(userOp.callData, sKey)) {
-                return _packValidationData(false, sKey.validUntil, sKey.validAfter);
-            }
+        if (isValidKey(userOp.callData, sKey) && isValid && isValidGas == 0) {
+            return _packValidationData(false, sKey.validUntil, sKey.validAfter);
         }
 
         return SIG_VALIDATION_FAILED;
@@ -210,27 +206,21 @@ contract OPF7702 is Execution, Initializable {
             pubKey.y
         );
 
-        if (sigOk) {
-            usedChallenges[userOpHash] = true; // mark challenge as used
+        bytes32 keyId = pubKey.computeKeyId();
+        KeyData storage sKey = keys[keyId];
 
-            KeyData storage sKey = keys[pubKey.computeKeyId()];
-            bool isValid = _keyValidation(sKey);
+        bool isValid = _keyValidation(sKey);
 
-            if (isValid) {
-                // master key → immediate success
-                if (sKey.masterKey) {
-                    return SIG_VALIDATION_SUCCESS;
-                }
+        usedChallenges[userOpHash] = true; // mark challenge as used
 
-                uint256 isValidGas =
-                    IUserOpPolicy(GAS_POLICY).checkUserOpPolicy(pubKey.computeKeyId(), userOp);
+        if (sKey.masterKey && isValid && sigOk) {
+            return SIG_VALIDATION_SUCCESS;
+        }
 
-                if (isValidGas == 1) revert IKeysManager.KeyManager__RevertGasPolicy();
+        uint256 isValidGas = IUserOpPolicy(GAS_POLICY).checkUserOpPolicy(keyId, userOp);
 
-                if (isValidKey(userOp.callData, sKey)) {
-                    return _packValidationData(false, sKey.validUntil, sKey.validAfter);
-                }
-            }
+        if (isValidKey(userOp.callData, sKey) && isValid && sigOk && isValidGas == 0) {
+            return _packValidationData(false, sKey.validUntil, sKey.validAfter);
         }
 
         return SIG_VALIDATION_FAILED;
@@ -269,22 +259,18 @@ contract OPF7702 is Execution, Initializable {
         bool sigOk = IWebAuthnVerifier(webAuthnVerifier()).verifyP256Signature(
             challenge, r, sSig, pubKey.x, pubKey.y
         );
-        if (sigOk) {
-            usedChallenges[challenge] = true;
 
-            KeyData storage sKey = keys[pubKey.computeKeyId()];
-            bool isValid = _keyValidation(sKey);
+        bytes32 keyId = pubKey.computeKeyId();
+        KeyData storage sKey = keys[keyId];
 
-            if (isValid) {
-                uint256 isValidGas =
-                    IUserOpPolicy(GAS_POLICY).checkUserOpPolicy(pubKey.computeKeyId(), userOp);
+        bool isValid = _keyValidation(sKey);
 
-                if (isValidGas == 1) revert IKeysManager.KeyManager__RevertGasPolicy();
+        usedChallenges[challenge] = true;
 
-                if (isValidKey(userOp.callData, sKey)) {
-                    return _packValidationData(false, sKey.validUntil, sKey.validAfter);
-                }
-            }
+        uint256 isValidGas = IUserOpPolicy(GAS_POLICY).checkUserOpPolicy(keyId, userOp);
+
+        if (isValidKey(userOp.callData, sKey) && isValid && sigOk && isValidGas == 0) {
+            return _packValidationData(false, sKey.validUntil, sKey.validAfter);
         }
 
         return SIG_VALIDATION_FAILED;
@@ -568,7 +554,9 @@ contract OPF7702 is Execution, Initializable {
         if (usedChallenges[_hash]) {
             return bytes4(0xffffffff);
         }
-        bool sigOk = IWebAuthnVerifier(webAuthnVerifier()).verifySignature(
+
+        bool sigOk;
+        try IWebAuthnVerifier(webAuthnVerifier()).verifySignature(
             _hash,
             requireUV,
             authenticatorData,
@@ -579,7 +567,12 @@ contract OPF7702 is Execution, Initializable {
             s,
             pubKey.x,
             pubKey.y
-        );
+        ) returns (bool ok) {
+            sigOk = ok;
+        } catch {
+            return bytes4(0xffffffff);
+        }
+
         if (!sigOk) {
             return bytes4(0xffffffff);
         }

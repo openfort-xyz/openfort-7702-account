@@ -1,0 +1,198 @@
+OPF-2	
+9317d2d6c5792e900ebdcd2a72b9e5b0a80e7303
+```
+Removed the `_validateP256Signature` branch from `isValidSignature`. The functions `_validateEOASignature` and `_validateWebAuthnSignature` now validate only RootKey and MasterKey signatures.
+```
+
+OPF-3	
+e4e5fdea6ef029661cb041c0c7e818aa3bc45fa7
+```
+The function `_revokeKey()` has been updated to include deletion of `sKey.pubKey`.
+```
+
+OPF-4	
+c65b0a0d9812ac43f4436bb6e97742701df195ce
+```
+The function _validateTokenSpend accepts only ERC20 tokens that are registered in the Session Key's policy, as documented in the natspec:
+
+/**
+
+ * @notice Token spending limit information
+
+ * @param token ERC20 Token Address
+
+ * @param limit Spending Limit
+
+ */
+
+struct SpendTokenInfo {
+
+    address token;
+
+    uint256 limit;
+
+}
+
+According to the specification, the Session Key can interact with only one contract and one token. Supporting ERC-4626 or other extended token standards is out of scope as it would break the security model by involving three contracts in the transaction cycle.
+
+Example scenario: An owner registers a session key with AAVE v3 contract access and USDC token permissions. When the SK approves and deposits USDC to AAVE, the spending limit is decremented, and they receive aUSDC as the underlying receipt token. The session key is forbidden from accessing aUSDC since it's not the registered ERC20 token. In this case, only the owner can approve/transfer the aUSDC, while the session key could potentially trigger redemption operations.
+
+This design ensures strict access control boundaries and prevents unauthorized token manipulation beyond the explicitly granted permissions.
+
+Add to natspec more clarity about the usage of spending token policy:
+
+    /**      * @notice Validates a token transfer against the key’s token spend limit.      * @dev Loads `value` from the last 32 bytes of `innerData` (standard ERC-20 `_transfer(address,uint256)` signature).      * @dev Out of scope (not supported): Extended/alternative token interfaces where spend cannot be      *      inferred from the trailing 32 bytes, including but not limited to:      *        - ERC-777 (`send`, operator functions and hooks)      *        - ERC-1363 (`transferAndCall`, etc.)      *        - ERC-4626 vaults (`deposit`, `mint`, `withdraw`, `redeem`, etc.)      *        - Allowance changes (`approve`, `increaseAllowance`, `decreaseAllowance`)      *        - Permit-style signatures (EIP-2612) or any function where the amount is not the last arg.      *      Calls to those selectors MUST be blocked elsewhere (e.g., via `allowedSelectors`) because      *      this function will not correctly measure spend and may produce misleading deductions.      * @param sKey      Storage reference of the KeyData      * @param innerData The full encoded call data to the token contract.      * @return True if `value ≤ sKey.spendTokenInfo.limit`; false if it exceeds or is invalid.      */     function _validateTokenSpend(KeyData storage sKey, bytes memory innerData)
+```
+OPF-5	
+```
+Position. We acknowledge the theoretical risk, but this finding is outside the security boundary Openfort can control. Under EIP-7702, delegation preserves the account’s storage across implementations by design, and any implementation the user delegates to can write to those mappings. A subsequent re-delegation to OPF cannot retroactively “clean” or prove the absence of prior storage writes by third-party code.
+
+Threat model. Openfort’s supported flow assumes users delegate to an official OPF implementation from day zero (creation of the ephemeral EOA) and remain on OPF-signed implementations. We intentionally keep a stable storage layout across OPF upgrades (e.g., v1 → v2) so that user state remains intact; changing base slots or randomizing storage would break upgrade continuity and user data.
+
+User responsibility. If a user chooses to delegate to a non-OPF implementation (or previously used a malicious implementation) before returning to OPF, any storage poisoning performed by that third party is outside OPF’s ability to prevent or detect at re-attachment time. In such cases, the responsibility for the trust decision lies with the user and their wallet UX.
+
+	•	Documentation that OPF security guarantees apply when delegating to official OPF implementations only.
+	•	Publish and maintain the list of official OPF implementation addresses and recommend wallets warn when delegating to unrecognized addresses.
+	•	Clarify that returning from a non-OPF implementation does not imply prior storage was trustworthy.
+```
+
+OPF-6
+```
+ In our intended flow, when a session key includes a token spend policy (SpendTokenInfo), the registration process enforces ERC-20–only usage and constrains the selectors accordingly.
+ If SpendTokenInfo is set, the system automatically installs the canonical ERC-20 spending selectors (e.g., transfer(address,uint256), transferFrom(address,address,uint256)) and rejects any additional or unrelated selectors.
+ These “spending selectors” are intended only for the SpendTokenInfo.token address specified in the policy. Adding another ERC-20 contract to the key’s whitelist without its own SpendTokenInfo is treated as an invalid configuration and is blocked by our off-chain validation.
+ We will explicitly document that token spend limits apply to ERC-20 transfers only and must be paired with the token address declared in SpendTokenInfo
+```
+
+OPF-7
+7c4fe652d122c817a2a9e3fa69f22d73512bb7c2
+```
+Added function `_checkValidSignatureLength` to validate the length of `userOp.signature` based on the KeyType. This prevents gas griefing attacks where bundlers could exploit unbounded signature size during decoding.
+
+The function enforces maximum signature lengths for each key type, mitigating potential DoS vectors from malformed or excessively large signatures.
+```
+
+OPF-8
+ab2481c8e1f09760f42f2c5eb82245ebf9d5b45d
+```
+Changed to non-upgradeable `EIP712` and `ReentrancyGuard` contracts to prevent storage layout conflicts with custom namespace storage layout (ERC-7201).
+
+This ensures clean separation between inherited contract storage and the account's namespaced storage pattern, eliminating potential storage collision risks.
+```
+
+OPF-9
+e61bef3c5a7dee1818ff7b4a22e215f81c885b7b
+06744188364c13ec3028f8c21f3693ea5cb7c2ac
+```
+Added function `_masterKeyValidation` to validate master key data during initialization. This ensures master keys conform to required security parameters:
+
+/// @dev Master key must have: validUntil = max(uint48), validAfter = 0, limit = 0, whitelisting = false.
+function _masterKeyValidation(KeyReg calldata _kReg) internal pure {
+    if (
+        _kReg.limit != 0 ||
+        _kReg.whitelisting ||           // must be false
+        _kReg.validAfter != 0 ||
+        _kReg.validUntil != type(uint48).max
+    ) revert IKeysManager.KeyManager__InvalidMasterKeyReg(_kReg);
+}
+
+Additionally, in the _addKey function, the field sKey.whitelisting is now enforced to be true for session keys, ensuring proper access control differentiation between master keys and session keys.
+```
+
+OPF-10	
+ERC 7821 supoport mode=2
+```
+        bool withOpData;
+        /// @solidity memory-safe-assembly
+        assembly {
+            let len := mload(data)
+            let flag := gt(mload(add(data, 0x20)), 0x3f)
+            withOpData := and(eq(id, 2), and(gt(len, 0x3f), flag))
+        }
+
+        Call[] memory calls;
+        bytes memory opData;
+        if (withOpData) {
+            (calls, opData) = abi.decode(data, (Call[], bytes));
+        } else {
+            calls = abi.decode(data, (Call[]));
+        }
+
+        _checkLength(calls.length); // per‑batch structural cap
+        if (opData.length != 0) revert IExecution.OpenfortBaseAccount7702V1__UnsupportedOpData();
+```
+
+OPF-11	
+624080974a224e4b876eb427ecf971baed53c6bb
+```
+fixed all
+```
+
+OPF-12	
+624080974a224e4b876eb427ecf971baed53c6bb
+```
+fixed
+```
+
+OPF-13	
+9d906daa21466930cf94d259a666a2e71fb1fd43
+```
+fixed
+```
+
+OPF-14	
+e19b991c0a9c06edf30ac806d384339cef36a840
+```
+all params for initialize() signed
+```
+
+OPF-15	
+
+
+OPF-16	
+
+
+S1	
+f9f0978ef974e38506595c8bcc0a8a93154900b5
+```
+fixed
+```
+
+S2
+73681249694dfc172dbc818be125e341e486c8dc
+```
+fixed
+```
+
+S3
+bb8f8967432850732bed13aac06f40b02046bebd
+```
+add checker to constructor
+        if (_lockPeriod < _recoveryPeriod || _recoveryPeriod < _securityPeriod + _securityWindow) {
+            revert IOPF7702Recoverable.OPF7702Recoverable_InsecurePeriod();
+        }
+```
+
+S4
+8597d91f0ae783dc20d39bc156d9c3ffbddd7243
+```
+fixed
+```
+
+S5
+fe913253357eb552b5da0ce9086c30231fa13a04
+```
+comments and natspec fixed 
+```
+
+S6
+9d7824e1aa4733967352b65d0bf824a9c4dab663
+```
+fixed
+```
+
+S7
+5c06ca73b5808411e883fc475923e68b47096e5c
+```
+fixed
+```

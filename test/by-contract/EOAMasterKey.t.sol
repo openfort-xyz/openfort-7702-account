@@ -210,9 +210,9 @@ contract EOAMasterKey is Test, IKey {
             nonce: nonce,
             initCode: hex"7702",
             callData: callData,
-            accountGasLimits: _packAccountGasLimits(600_000, 400_000),
-            preVerificationGas: 800_000,
-            gasFees: _packGasFees(80 gwei, 15 gwei),
+            accountGasLimits: _packAccountGasLimits(360_000, 240_000),
+            preVerificationGas: 110_000,
+            gasFees: _packGasFees(2 gwei, 50 gwei),
             paymasterAndData: hex"",
             signature: hex""
         });

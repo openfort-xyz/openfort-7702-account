@@ -153,7 +153,6 @@ abstract contract Execution is KeysManager, ReentrancyGuard {
     function _executionModeId(bytes32 mode) internal pure returns (uint256 id) {
         uint256 m = (uint256(mode) >> (22 * 8)) & 0xffff00000000ffffffff;
         if (m == 0x01000000000078210002) id = 3;
-        if (m == 0x01000000000078210001) id = 2;
         if (m == 0x01000000000000000000) id = 1;
     }
 
