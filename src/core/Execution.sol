@@ -16,6 +16,7 @@ pragma solidity ^0.8.29;
 import {KeysManager} from "src/core/KeysManager.sol";
 import {IExecution} from "src/interfaces/IExecution.sol";
 import {ReentrancyGuard} from "lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
+import {console2 as console} from "lib/forge-std/src/Test.sol";
 
 /// @title Execution
 /// @author Openfort@0xkoiner
@@ -78,12 +79,11 @@ abstract contract Execution is KeysManager, ReentrancyGuard {
     /// @return counter Updated running total.
     function _run(bytes32 mode, bytes memory data, uint256 counter) internal returns (uint256) {
         uint256 id = _executionModeId(mode);
-
         /* -------- mode 3 : batch‑of‑batches ----------------------- */
         if (id == 3) {
             // Clear the top‑level mode‑3 flag so inner batches can be
-            // parsed as mode 1 or 2.
-            mode ^= bytes32(uint256(3 << (22 * 8)));
+            // parsed as mode 1
+            mode = mode_1;
 
             bytes[] memory batches = abi.decode(data, (bytes[]));
             _checkLength(batches.length); // per‑batch structural cap
@@ -94,27 +94,14 @@ abstract contract Execution is KeysManager, ReentrancyGuard {
             return counter;
         }
 
-        /* -------- flat batch (mode 1 or 2) ------------------------ */
         if (id == 0) revert IExecution.OpenfortBaseAccount7702V1__UnsupportedExecutionMode();
 
-        bool withOpData;
-        /// @solidity memory-safe-assembly
-        assembly {
-            let len := mload(data)
-            let flag := gt(mload(add(data, 0x20)), 0x3f)
-            withOpData := and(eq(id, 2), and(gt(len, 0x3f), flag))
-        }
-
+        /* -------- flat batch (mode 1) ------------------------ */
         Call[] memory calls;
-        bytes memory opData;
-        if (withOpData) {
-            (calls, opData) = abi.decode(data, (Call[], bytes));
-        } else {
-            calls = abi.decode(data, (Call[]));
-        }
+
+        calls = abi.decode(data, (Call[]));
 
         _checkLength(calls.length); // per‑batch structural cap
-        if (opData.length != 0) revert IExecution.OpenfortBaseAccount7702V1__UnsupportedOpData();
 
         for (uint256 i; i < calls.length; ++i) {
             Call memory c = calls[i];
@@ -148,7 +135,7 @@ abstract contract Execution is KeysManager, ReentrancyGuard {
     /* ────────────────────────────────────────────────────────────── */
 
     /// @dev Derive a small integer ID from the 10‑byte execution mode.
-    ///      0: unsupported, 1: flat batch, 2: flat batch + opData,
+    ///      0: unsupported, 1: flat batch, 2: unsupported,
     ///      3: batch‑of‑batches.
     function _executionModeId(bytes32 mode) internal pure returns (uint256 id) {
         uint256 m = (uint256(mode) >> (22 * 8)) & 0xffff00000000ffffffff;
