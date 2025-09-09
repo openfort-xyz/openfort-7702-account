@@ -38,7 +38,7 @@ contract DeployWebAuthnVerifierV2 is Script {
         // The CREATE2 deployer expects: salt (32 bytes) + creationCode
         bytes memory deploymentData = abi.encodePacked(salt, creationCode);
 
-        (bool success, ) = CREATE2_DEPLOYER.call(deploymentData);
+        (bool success,) = CREATE2_DEPLOYER.call(deploymentData);
 
         require(success, "CREATE2 deployment failed");
 
@@ -47,7 +47,6 @@ contract DeployWebAuthnVerifierV2 is Script {
 
         // Verify the deployment by checking code exists
         require(expectedAddress.code.length > 0, "No code at deployed address");
-
 
         console.log("Deployment completed successfully!");
 

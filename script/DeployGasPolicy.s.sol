@@ -21,7 +21,8 @@ contract DeployWebAuthnVerifierV2 is Script {
         vm.startBroadcast();
 
         // Get creation code with constructor args
-        bytes memory constructorArgs = abi.encodePacked(DEFAULT_PVG, DEFAULT_VGL, DEFAULT_CGL, DEFAULT_PMV, DEFAULT_PO);
+        bytes memory constructorArgs =
+            abi.encodePacked(DEFAULT_PVG, DEFAULT_VGL, DEFAULT_CGL, DEFAULT_PMV, DEFAULT_PO);
         console.logBytes(constructorArgs);
 
         bytes memory creationCode = abi.encodePacked(type(GasPolicy).creationCode, constructorArgs);
@@ -46,7 +47,7 @@ contract DeployWebAuthnVerifierV2 is Script {
         // The CREATE2 deployer expects: salt (32 bytes) + creationCode
         bytes memory deploymentData = abi.encodePacked(salt, creationCode);
 
-        (bool success, ) = CREATE2_DEPLOYER.call(deploymentData);
+        (bool success,) = CREATE2_DEPLOYER.call(deploymentData);
 
         require(success, "CREATE2 deployment failed");
 
@@ -55,7 +56,6 @@ contract DeployWebAuthnVerifierV2 is Script {
 
         // Verify the deployment by checking code exists
         require(expectedAddress.code.length > 0, "No code at deployed address");
-
 
         console.log("Deployment completed successfully!");
 
