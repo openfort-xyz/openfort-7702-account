@@ -248,10 +248,6 @@ abstract contract KeysManager is BaseOPF7702, IKey, ISpendLimit {
         ) revert IKeysManager.KeyManager__InvalidMasterKeyReg(_kReg);
     }
 
-    // =============================================================
-    //                   PUBLIC / EXTERNAL GETTERS
-    // =============================================================
-
     /**
      * @notice Retrieves registration info for a given key ID.
      * @param _id       Identifier (index) of the key to query.
