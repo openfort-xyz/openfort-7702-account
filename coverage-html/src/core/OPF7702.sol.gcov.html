@@ -31,18 +31,18 @@
             <td class="headerValue">lcov.info</td>
             <td></td>
             <td class="headerItem">Lines:</td>
-            <td class="headerCovTableEntryHi">97.0&nbsp;%</td>
-            <td class="headerCovTableEntry">166</td>
-            <td class="headerCovTableEntry">161</td>
+            <td class="headerCovTableEntryHi">93.9&nbsp;%</td>
+            <td class="headerCovTableEntry">181</td>
+            <td class="headerCovTableEntry">170</td>
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2025-08-29 18:57:14</td>
+            <td class="headerValue">2025-09-25 19:37:50</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
-            <td class="headerCovTableEntry">16</td>
-            <td class="headerCovTableEntry">16</td>
+            <td class="headerCovTableEntry">17</td>
+            <td class="headerCovTableEntry">17</td>
           </tr>
                   <tr><td><img src="../../glass.png" width=3 height=3 alt=""></td></tr>
                 </table>
@@ -117,11 +117,11 @@
 <span id="L55"><span class="lineNum">      55</span>              :     /// @notice Address of this implementation contract</span>
 <span id="L56"><span class="lineNum">      56</span>              :     address public immutable _OPENFORT_CONTRACT_ADDRESS;</span>
 <span id="L57"><span class="lineNum">      57</span>              : </span>
-<span id="L58"><span class="lineNum">      58</span> <span class="tlaGNC">         155 :     constructor(address _entryPoint, address _webAuthnVerifier, address _gasPolicy) {</span></span>
-<span id="L59"><span class="lineNum">      59</span> <span class="tlaGNC">         155 :         ENTRY_POINT = _entryPoint;</span></span>
-<span id="L60"><span class="lineNum">      60</span> <span class="tlaGNC">         155 :         WEBAUTHN_VERIFIER = _webAuthnVerifier;</span></span>
-<span id="L61"><span class="lineNum">      61</span> <span class="tlaGNC">         155 :         GAS_POLICY = _gasPolicy;</span></span>
-<span id="L62"><span class="lineNum">      62</span> <span class="tlaGNC">         155 :         _OPENFORT_CONTRACT_ADDRESS = address(this);</span></span>
+<span id="L58"><span class="lineNum">      58</span> <span class="tlaGNC">         157 :     constructor(address _entryPoint, address _webAuthnVerifier, address _gasPolicy) {</span></span>
+<span id="L59"><span class="lineNum">      59</span> <span class="tlaGNC">         157 :         ENTRY_POINT = _entryPoint;</span></span>
+<span id="L60"><span class="lineNum">      60</span> <span class="tlaGNC">         157 :         WEBAUTHN_VERIFIER = _webAuthnVerifier;</span></span>
+<span id="L61"><span class="lineNum">      61</span> <span class="tlaGNC">         157 :         GAS_POLICY = _gasPolicy;</span></span>
+<span id="L62"><span class="lineNum">      62</span> <span class="tlaGNC">         157 :         _OPENFORT_CONTRACT_ADDRESS = address(this);</span></span>
 <span id="L63"><span class="lineNum">      63</span> <span class="tlaUNC">           0 :         _disableInitializers();</span></span>
 <span id="L64"><span class="lineNum">      64</span>              :     }</span>
 <span id="L65"><span class="lineNum">      65</span>              : </span>
@@ -197,453 +197,484 @@
 <span id="L135"><span class="lineNum">     135</span>              :         }</span>
 <span id="L136"><span class="lineNum">     136</span>              : </span>
 <span id="L137"><span class="lineNum">     137</span>              :         // load the key for this EOA</span>
-<span id="L138"><span class="lineNum">     138</span> <span class="tlaGNC">           7 :         KeyData storage sKey = keys[signer.computeKeyId()];</span></span>
-<span id="L139"><span class="lineNum">     139</span>              : </span>
-<span id="L140"><span class="lineNum">     140</span> <span class="tlaGNC">           7 :         bool isValid = _keyValidation(sKey);</span></span>
-<span id="L141"><span class="lineNum">     141</span>              : </span>
-<span id="L142"><span class="lineNum">     142</span> <span class="tlaGNC">           7 :         if (!isValid) return SIG_VALIDATION_FAILED;</span></span>
-<span id="L143"><span class="lineNum">     143</span>              : </span>
-<span id="L144"><span class="lineNum">     144</span>              :         // master key → immediate success</span>
-<span id="L145"><span class="lineNum">     145</span> <span class="tlaGNC">           1 :         if (sKey.masterKey) {</span></span>
-<span id="L146"><span class="lineNum">     146</span> <span class="tlaGNC">           1 :             return SIG_VALIDATION_SUCCESS;</span></span>
-<span id="L147"><span class="lineNum">     147</span>              :         }</span>
-<span id="L148"><span class="lineNum">     148</span>              : </span>
-<span id="L149"><span class="lineNum">     149</span> <span class="tlaGNC">           6 :         uint256 isValidGas =</span></span>
-<span id="L150"><span class="lineNum">     150</span> <span class="tlaGNC">           6 :             IUserOpPolicy(GAS_POLICY).checkUserOpPolicy(signer.computeKeyId(), userOp);</span></span>
-<span id="L151"><span class="lineNum">     151</span>              : </span>
-<span id="L152"><span class="lineNum">     152</span> <span class="tlaGNC">           6 :         if (isValidGas == 1) revert IKeysManager.KeyManager__RevertGasPolicy();</span></span>
+<span id="L138"><span class="lineNum">     138</span> <span class="tlaGNC">           7 :         bytes32 keyId = signer.computeKeyId();</span></span>
+<span id="L139"><span class="lineNum">     139</span> <span class="tlaGNC">           7 :         KeyData storage sKey = keys[keyId];</span></span>
+<span id="L140"><span class="lineNum">     140</span>              : </span>
+<span id="L141"><span class="lineNum">     141</span> <span class="tlaGNC">           7 :         bool isValid = _keyValidation(sKey);</span></span>
+<span id="L142"><span class="lineNum">     142</span>              : </span>
+<span id="L143"><span class="lineNum">     143</span>              :         // master key → immediate success</span>
+<span id="L144"><span class="lineNum">     144</span> <span class="tlaGNC">           7 :         if (sKey.masterKey &amp;&amp; isValid) {</span></span>
+<span id="L145"><span class="lineNum">     145</span> <span class="tlaGNC">           1 :             return SIG_VALIDATION_SUCCESS;</span></span>
+<span id="L146"><span class="lineNum">     146</span>              :         }</span>
+<span id="L147"><span class="lineNum">     147</span>              : </span>
+<span id="L148"><span class="lineNum">     148</span> <span class="tlaGNC">           6 :         uint256 isValidGas = IUserOpPolicy(GAS_POLICY).checkUserOpPolicy(keyId, userOp);</span></span>
+<span id="L149"><span class="lineNum">     149</span>              : </span>
+<span id="L150"><span class="lineNum">     150</span> <span class="tlaGNC">           6 :         if (isValidKey(userOp.callData, sKey) &amp;&amp; isValid &amp;&amp; isValidGas == 0) {</span></span>
+<span id="L151"><span class="lineNum">     151</span> <span class="tlaGNC">           5 :             return _packValidationData(false, sKey.validUntil, sKey.validAfter);</span></span>
+<span id="L152"><span class="lineNum">     152</span>              :         }</span>
 <span id="L153"><span class="lineNum">     153</span>              : </span>
-<span id="L154"><span class="lineNum">     154</span> <span class="tlaGNC">           6 :         if (isValidKey(userOp.callData, sKey)) {</span></span>
-<span id="L155"><span class="lineNum">     155</span> <span class="tlaGNC">           5 :             return _packValidationData(false, sKey.validUntil, sKey.validAfter);</span></span>
-<span id="L156"><span class="lineNum">     156</span>              :         }</span>
-<span id="L157"><span class="lineNum">     157</span> <span class="tlaGNC">           1 :         return SIG_VALIDATION_FAILED;</span></span>
-<span id="L158"><span class="lineNum">     158</span>              :     }</span>
-<span id="L159"><span class="lineNum">     159</span>              : </span>
-<span id="L160"><span class="lineNum">     160</span>              :     /**</span>
-<span id="L161"><span class="lineNum">     161</span>              :      * @notice Validates a WebAuthn‐type signature (Solady verifier).</span>
-<span id="L162"><span class="lineNum">     162</span>              :      * @dev</span>
-<span id="L163"><span class="lineNum">     163</span>              :      *  • Reject reused challenges.</span>
-<span id="L164"><span class="lineNum">     164</span>              :      *  • Verify with `verifySignature`.</span>
-<span id="L165"><span class="lineNum">     165</span>              :      *  • If master Key, immediate success.</span>
-<span id="L166"><span class="lineNum">     166</span>              :      *  • Otherwise, call `isValidKey(...)`.</span>
-<span id="L167"><span class="lineNum">     167</span>              :      *</span>
-<span id="L168"><span class="lineNum">     168</span>              :      * @param userOpHash  The userOp hash (served as challenge).</span>
-<span id="L169"><span class="lineNum">     169</span>              :      * @param signature   ABI-encoded payload: (KeyType, bool requireUV, bytes authData, string clientDataJSON, uint256</span>
-<span id="L170"><span class="lineNum">     170</span>              :      * challengeIdx, uint256 typeIdx, bytes32 r, bytes32 s, PubKey pubKey).</span>
-<span id="L171"><span class="lineNum">     171</span>              :      * @param userOp      The packed user operation coming from EntryPoint.</span>
-<span id="L172"><span class="lineNum">     172</span>              :      * @return Packed validation output, or SIG_VALIDATION_FAILED.</span>
-<span id="L173"><span class="lineNum">     173</span>              :      */</span>
-<span id="L174"><span class="lineNum">     174</span> <span class="tlaGNC">          18 :     function _validateKeyTypeWEBAUTHN(</span></span>
-<span id="L175"><span class="lineNum">     175</span>              :         bytes memory signature,</span>
-<span id="L176"><span class="lineNum">     176</span>              :         bytes32 userOpHash,</span>
-<span id="L177"><span class="lineNum">     177</span>              :         PackedUserOperation calldata userOp</span>
-<span id="L178"><span class="lineNum">     178</span>              :     ) private returns (uint256) {</span>
-<span id="L179"><span class="lineNum">     179</span>              :         // decode everything in one shot</span>
-<span id="L180"><span class="lineNum">     180</span> <span class="tlaGNC">          18 :         (</span></span>
-<span id="L181"><span class="lineNum">     181</span>              :             bool requireUV,</span>
-<span id="L182"><span class="lineNum">     182</span>              :             bytes memory authenticatorData,</span>
-<span id="L183"><span class="lineNum">     183</span>              :             string memory clientDataJSON,</span>
-<span id="L184"><span class="lineNum">     184</span>              :             uint256 challengeIndex,</span>
-<span id="L185"><span class="lineNum">     185</span>              :             uint256 typeIndex,</span>
-<span id="L186"><span class="lineNum">     186</span>              :             bytes32 r,</span>
-<span id="L187"><span class="lineNum">     187</span>              :             bytes32 s,</span>
-<span id="L188"><span class="lineNum">     188</span>              :             PubKey memory pubKey</span>
-<span id="L189"><span class="lineNum">     189</span> <span class="tlaGNC">          18 :         ) = abi.decode(signature, (bool, bytes, string, uint256, uint256, bytes32, bytes32, PubKey));</span></span>
-<span id="L190"><span class="lineNum">     190</span>              : </span>
-<span id="L191"><span class="lineNum">     191</span> <span class="tlaGNC">          18 :         SigLengthLib.assertWebAuthnOuterLen(</span></span>
-<span id="L192"><span class="lineNum">     192</span>              :             userOp.signature.length, authenticatorData.length, bytes(clientDataJSON).length</span>
-<span id="L193"><span class="lineNum">     193</span>              :         );</span>
-<span id="L194"><span class="lineNum">     194</span>              : </span>
-<span id="L195"><span class="lineNum">     195</span> <span class="tlaGNC">           1 :         if (usedChallenges[userOpHash]) {</span></span>
-<span id="L196"><span class="lineNum">     196</span> <span class="tlaGNC">           1 :             revert IKeysManager.KeyManager__UsedChallenge();</span></span>
-<span id="L197"><span class="lineNum">     197</span>              :         }</span>
-<span id="L198"><span class="lineNum">     198</span> <span class="tlaGNC">          17 :         usedChallenges[userOpHash] = true; // mark challenge as used</span></span>
-<span id="L199"><span class="lineNum">     199</span>              : </span>
-<span id="L200"><span class="lineNum">     200</span> <span class="tlaGNC">          17 :         bool sigOk = IWebAuthnVerifier(webAuthnVerifier()).verifySignature(</span></span>
-<span id="L201"><span class="lineNum">     201</span>              :             userOpHash,</span>
-<span id="L202"><span class="lineNum">     202</span>              :             requireUV,</span>
-<span id="L203"><span class="lineNum">     203</span>              :             authenticatorData,</span>
-<span id="L204"><span class="lineNum">     204</span>              :             clientDataJSON,</span>
-<span id="L205"><span class="lineNum">     205</span>              :             challengeIndex,</span>
-<span id="L206"><span class="lineNum">     206</span>              :             typeIndex,</span>
-<span id="L207"><span class="lineNum">     207</span>              :             r,</span>
-<span id="L208"><span class="lineNum">     208</span>              :             s,</span>
-<span id="L209"><span class="lineNum">     209</span>              :             pubKey.x,</span>
-<span id="L210"><span class="lineNum">     210</span>              :             pubKey.y</span>
-<span id="L211"><span class="lineNum">     211</span>              :         );</span>
-<span id="L212"><span class="lineNum">     212</span> <span class="tlaGNC">          17 :         if (!sigOk) {</span></span>
-<span id="L213"><span class="lineNum">     213</span> <span class="tlaGNC">           1 :             return SIG_VALIDATION_FAILED;</span></span>
-<span id="L214"><span class="lineNum">     214</span>              :         }</span>
+<span id="L154"><span class="lineNum">     154</span> <span class="tlaGNC">           1 :         return SIG_VALIDATION_FAILED;</span></span>
+<span id="L155"><span class="lineNum">     155</span>              :     }</span>
+<span id="L156"><span class="lineNum">     156</span>              : </span>
+<span id="L157"><span class="lineNum">     157</span>              :     /**</span>
+<span id="L158"><span class="lineNum">     158</span>              :      * @notice Validates a WebAuthn‐type signature (Solady verifier).</span>
+<span id="L159"><span class="lineNum">     159</span>              :      * @dev</span>
+<span id="L160"><span class="lineNum">     160</span>              :      *  • Reject reused challenges.</span>
+<span id="L161"><span class="lineNum">     161</span>              :      *  • Verify with `verifySignature`.</span>
+<span id="L162"><span class="lineNum">     162</span>              :      *  • If master Key, immediate success.</span>
+<span id="L163"><span class="lineNum">     163</span>              :      *  • Otherwise, call `isValidKey(...)`.</span>
+<span id="L164"><span class="lineNum">     164</span>              :      *</span>
+<span id="L165"><span class="lineNum">     165</span>              :      * @param userOpHash  The userOp hash (served as challenge).</span>
+<span id="L166"><span class="lineNum">     166</span>              :      * @param signature   ABI-encoded payload: (KeyType, bool requireUV, bytes authData, string clientDataJSON, uint256</span>
+<span id="L167"><span class="lineNum">     167</span>              :      * challengeIdx, uint256 typeIdx, bytes32 r, bytes32 s, PubKey pubKey).</span>
+<span id="L168"><span class="lineNum">     168</span>              :      * @param userOp      The packed user operation coming from EntryPoint.</span>
+<span id="L169"><span class="lineNum">     169</span>              :      * @return Packed validation output, or SIG_VALIDATION_FAILED.</span>
+<span id="L170"><span class="lineNum">     170</span>              :      */</span>
+<span id="L171"><span class="lineNum">     171</span> <span class="tlaGNC">          18 :     function _validateKeyTypeWEBAUTHN(</span></span>
+<span id="L172"><span class="lineNum">     172</span>              :         bytes memory signature,</span>
+<span id="L173"><span class="lineNum">     173</span>              :         bytes32 userOpHash,</span>
+<span id="L174"><span class="lineNum">     174</span>              :         PackedUserOperation calldata userOp</span>
+<span id="L175"><span class="lineNum">     175</span>              :     ) private returns (uint256) {</span>
+<span id="L176"><span class="lineNum">     176</span>              :         // decode everything in one shot</span>
+<span id="L177"><span class="lineNum">     177</span> <span class="tlaGNC">          18 :         (</span></span>
+<span id="L178"><span class="lineNum">     178</span>              :             bool requireUV,</span>
+<span id="L179"><span class="lineNum">     179</span>              :             bytes memory authenticatorData,</span>
+<span id="L180"><span class="lineNum">     180</span>              :             string memory clientDataJSON,</span>
+<span id="L181"><span class="lineNum">     181</span>              :             uint256 challengeIndex,</span>
+<span id="L182"><span class="lineNum">     182</span>              :             uint256 typeIndex,</span>
+<span id="L183"><span class="lineNum">     183</span>              :             bytes32 r,</span>
+<span id="L184"><span class="lineNum">     184</span>              :             bytes32 s,</span>
+<span id="L185"><span class="lineNum">     185</span>              :             PubKey memory pubKey</span>
+<span id="L186"><span class="lineNum">     186</span> <span class="tlaGNC">          18 :         ) = abi.decode(signature, (bool, bytes, string, uint256, uint256, bytes32, bytes32, PubKey));</span></span>
+<span id="L187"><span class="lineNum">     187</span>              : </span>
+<span id="L188"><span class="lineNum">     188</span> <span class="tlaGNC">          18 :         SigLengthLib.assertWebAuthnOuterLen(</span></span>
+<span id="L189"><span class="lineNum">     189</span>              :             userOp.signature.length, authenticatorData.length, bytes(clientDataJSON).length</span>
+<span id="L190"><span class="lineNum">     190</span>              :         );</span>
+<span id="L191"><span class="lineNum">     191</span>              : </span>
+<span id="L192"><span class="lineNum">     192</span> <span class="tlaGNC">           1 :         if (usedChallenges[userOpHash]) {</span></span>
+<span id="L193"><span class="lineNum">     193</span> <span class="tlaGNC">           1 :             revert IKeysManager.KeyManager__UsedChallenge();</span></span>
+<span id="L194"><span class="lineNum">     194</span>              :         }</span>
+<span id="L195"><span class="lineNum">     195</span>              : </span>
+<span id="L196"><span class="lineNum">     196</span> <span class="tlaGNC">          17 :         bool sigOk = IWebAuthnVerifier(webAuthnVerifier()).verifySignature(</span></span>
+<span id="L197"><span class="lineNum">     197</span>              :             userOpHash,</span>
+<span id="L198"><span class="lineNum">     198</span>              :             requireUV,</span>
+<span id="L199"><span class="lineNum">     199</span>              :             authenticatorData,</span>
+<span id="L200"><span class="lineNum">     200</span>              :             clientDataJSON,</span>
+<span id="L201"><span class="lineNum">     201</span>              :             challengeIndex,</span>
+<span id="L202"><span class="lineNum">     202</span>              :             typeIndex,</span>
+<span id="L203"><span class="lineNum">     203</span>              :             r,</span>
+<span id="L204"><span class="lineNum">     204</span>              :             s,</span>
+<span id="L205"><span class="lineNum">     205</span>              :             pubKey.x,</span>
+<span id="L206"><span class="lineNum">     206</span>              :             pubKey.y</span>
+<span id="L207"><span class="lineNum">     207</span>              :         );</span>
+<span id="L208"><span class="lineNum">     208</span>              : </span>
+<span id="L209"><span class="lineNum">     209</span> <span class="tlaGNC">          17 :         bytes32 keyId = pubKey.computeKeyId();</span></span>
+<span id="L210"><span class="lineNum">     210</span> <span class="tlaGNC">          17 :         KeyData storage sKey = keys[keyId];</span></span>
+<span id="L211"><span class="lineNum">     211</span>              : </span>
+<span id="L212"><span class="lineNum">     212</span> <span class="tlaGNC">          17 :         bool isValid = _keyValidation(sKey);</span></span>
+<span id="L213"><span class="lineNum">     213</span>              : </span>
+<span id="L214"><span class="lineNum">     214</span> <span class="tlaGNC">          17 :         usedChallenges[userOpHash] = true; // mark challenge as used</span></span>
 <span id="L215"><span class="lineNum">     215</span>              : </span>
-<span id="L216"><span class="lineNum">     216</span> <span class="tlaGNC">          16 :         KeyData storage sKey = keys[pubKey.computeKeyId()];</span></span>
-<span id="L217"><span class="lineNum">     217</span>              : </span>
-<span id="L218"><span class="lineNum">     218</span> <span class="tlaGNC">          16 :         bool isValid = _keyValidation(sKey);</span></span>
+<span id="L216"><span class="lineNum">     216</span> <span class="tlaGNC">          17 :         if (sKey.masterKey &amp;&amp; isValid &amp;&amp; sigOk) {</span></span>
+<span id="L217"><span class="lineNum">     217</span> <span class="tlaGNC">          10 :             return SIG_VALIDATION_SUCCESS;</span></span>
+<span id="L218"><span class="lineNum">     218</span>              :         }</span>
 <span id="L219"><span class="lineNum">     219</span>              : </span>
-<span id="L220"><span class="lineNum">     220</span> <span class="tlaGNC">          16 :         if (!isValid) return SIG_VALIDATION_FAILED;</span></span>
+<span id="L220"><span class="lineNum">     220</span> <span class="tlaGNC">           7 :         uint256 isValidGas = IUserOpPolicy(GAS_POLICY).checkUserOpPolicy(keyId, userOp);</span></span>
 <span id="L221"><span class="lineNum">     221</span>              : </span>
-<span id="L222"><span class="lineNum">     222</span>              :         // master key → immediate success</span>
-<span id="L223"><span class="lineNum">     223</span> <span class="tlaGNC">          10 :         if (sKey.masterKey) {</span></span>
-<span id="L224"><span class="lineNum">     224</span> <span class="tlaGNC">          10 :             return SIG_VALIDATION_SUCCESS;</span></span>
-<span id="L225"><span class="lineNum">     225</span>              :         }</span>
-<span id="L226"><span class="lineNum">     226</span>              : </span>
-<span id="L227"><span class="lineNum">     227</span> <span class="tlaGNC">           6 :         uint256 isValidGas =</span></span>
-<span id="L228"><span class="lineNum">     228</span> <span class="tlaGNC">           6 :             IUserOpPolicy(GAS_POLICY).checkUserOpPolicy(pubKey.computeKeyId(), userOp);</span></span>
-<span id="L229"><span class="lineNum">     229</span>              : </span>
-<span id="L230"><span class="lineNum">     230</span> <span class="tlaGNC">           6 :         if (isValidGas == 1) revert IKeysManager.KeyManager__RevertGasPolicy();</span></span>
-<span id="L231"><span class="lineNum">     231</span>              : </span>
-<span id="L232"><span class="lineNum">     232</span> <span class="tlaGNC">           5 :         if (isValidKey(userOp.callData, sKey)) {</span></span>
-<span id="L233"><span class="lineNum">     233</span> <span class="tlaGNC">           1 :             return _packValidationData(false, sKey.validUntil, sKey.validAfter);</span></span>
-<span id="L234"><span class="lineNum">     234</span>              :         }</span>
-<span id="L235"><span class="lineNum">     235</span> <span class="tlaGNC">           4 :         return SIG_VALIDATION_FAILED;</span></span>
-<span id="L236"><span class="lineNum">     236</span>              :     }</span>
-<span id="L237"><span class="lineNum">     237</span>              : </span>
-<span id="L238"><span class="lineNum">     238</span>              :     /**</span>
-<span id="L239"><span class="lineNum">     239</span>              :      * @notice Validates P-256 / P-256NONKEY signatures.</span>
-<span id="L240"><span class="lineNum">     240</span>              :      * @dev</span>
-<span id="L241"><span class="lineNum">     241</span>              :      *  • For P256NONKEY, first SHA-256 the hash.</span>
-<span id="L242"><span class="lineNum">     242</span>              :      *  • Then `verifyP256Signature(...)`.</span>
-<span id="L243"><span class="lineNum">     243</span>              :      *  • If master Key, immediate success.</span>
-<span id="L244"><span class="lineNum">     244</span>              :      *  • Otherwise, call `isValidKey(...)`.</span>
-<span id="L245"><span class="lineNum">     245</span>              :      *</span>
-<span id="L246"><span class="lineNum">     246</span>              :      * @param signature     Encoded bytes: (r, s, PubKey).</span>
-<span id="L247"><span class="lineNum">     247</span>              :      * @param userOpHash  The original userOp hash.</span>
-<span id="L248"><span class="lineNum">     248</span>              :      * @param userOp      The packed user operation coming from EntryPoint.</span>
-<span id="L249"><span class="lineNum">     249</span>              :      * @param sigType     KeyType.P256 or KeyType.P256NONKEY.</span>
-<span id="L250"><span class="lineNum">     250</span>              :      * @return Packed validation output, or SIG_VALIDATION_FAILED.</span>
-<span id="L251"><span class="lineNum">     251</span>              :      */</span>
-<span id="L252"><span class="lineNum">     252</span> <span class="tlaGNC">          16 :     function _validateKeyTypeP256(</span></span>
-<span id="L253"><span class="lineNum">     253</span>              :         bytes memory signature,</span>
-<span id="L254"><span class="lineNum">     254</span>              :         bytes32 userOpHash,</span>
-<span id="L255"><span class="lineNum">     255</span>              :         PackedUserOperation calldata userOp,</span>
-<span id="L256"><span class="lineNum">     256</span>              :         KeyType sigType</span>
-<span id="L257"><span class="lineNum">     257</span>              :     ) private returns (uint256) {</span>
-<span id="L258"><span class="lineNum">     258</span> <span class="tlaGNC">          16 :         (bytes32 r, bytes32 sSig, PubKey memory pubKey) =</span></span>
-<span id="L259"><span class="lineNum">     259</span> <span class="tlaGNC">          16 :             abi.decode(signature, (bytes32, bytes32, PubKey));</span></span>
-<span id="L260"><span class="lineNum">     260</span>              : </span>
-<span id="L261"><span class="lineNum">     261</span> <span class="tlaGNC">           1 :         if (usedChallenges[userOpHash]) {</span></span>
-<span id="L262"><span class="lineNum">     262</span> <span class="tlaGNC">           1 :             revert IKeysManager.KeyManager__UsedChallenge();</span></span>
-<span id="L263"><span class="lineNum">     263</span>              :         }</span>
-<span id="L264"><span class="lineNum">     264</span> <span class="tlaGNC">          15 :         usedChallenges[userOpHash] = true;</span></span>
+<span id="L222"><span class="lineNum">     222</span> <span class="tlaGNC">           7 :         if (isValidKey(userOp.callData, sKey) &amp;&amp; isValid &amp;&amp; sigOk &amp;&amp; isValidGas == 0) {</span></span>
+<span id="L223"><span class="lineNum">     223</span> <span class="tlaGNC">           1 :             return _packValidationData(false, sKey.validUntil, sKey.validAfter);</span></span>
+<span id="L224"><span class="lineNum">     224</span>              :         }</span>
+<span id="L225"><span class="lineNum">     225</span>              : </span>
+<span id="L226"><span class="lineNum">     226</span> <span class="tlaGNC">           6 :         return SIG_VALIDATION_FAILED;</span></span>
+<span id="L227"><span class="lineNum">     227</span>              :     }</span>
+<span id="L228"><span class="lineNum">     228</span>              : </span>
+<span id="L229"><span class="lineNum">     229</span>              :     /**</span>
+<span id="L230"><span class="lineNum">     230</span>              :      * @notice Validates P-256 / P-256NONKEY signatures.</span>
+<span id="L231"><span class="lineNum">     231</span>              :      * @dev</span>
+<span id="L232"><span class="lineNum">     232</span>              :      *  • For P256NONKEY, first SHA-256 the hash.</span>
+<span id="L233"><span class="lineNum">     233</span>              :      *  • Then `verifyP256Signature(...)`.</span>
+<span id="L234"><span class="lineNum">     234</span>              :      *  • If master Key, immediate success.</span>
+<span id="L235"><span class="lineNum">     235</span>              :      *  • Otherwise, call `isValidKey(...)`.</span>
+<span id="L236"><span class="lineNum">     236</span>              :      *</span>
+<span id="L237"><span class="lineNum">     237</span>              :      * @param signature     Encoded bytes: (r, s, PubKey).</span>
+<span id="L238"><span class="lineNum">     238</span>              :      * @param userOpHash  The original userOp hash.</span>
+<span id="L239"><span class="lineNum">     239</span>              :      * @param userOp      The packed user operation coming from EntryPoint.</span>
+<span id="L240"><span class="lineNum">     240</span>              :      * @param sigType     KeyType.P256 or KeyType.P256NONKEY.</span>
+<span id="L241"><span class="lineNum">     241</span>              :      * @return Packed validation output, or SIG_VALIDATION_FAILED.</span>
+<span id="L242"><span class="lineNum">     242</span>              :      */</span>
+<span id="L243"><span class="lineNum">     243</span> <span class="tlaGNC">          16 :     function _validateKeyTypeP256(</span></span>
+<span id="L244"><span class="lineNum">     244</span>              :         bytes memory signature,</span>
+<span id="L245"><span class="lineNum">     245</span>              :         bytes32 userOpHash,</span>
+<span id="L246"><span class="lineNum">     246</span>              :         PackedUserOperation calldata userOp,</span>
+<span id="L247"><span class="lineNum">     247</span>              :         KeyType sigType</span>
+<span id="L248"><span class="lineNum">     248</span>              :     ) private returns (uint256) {</span>
+<span id="L249"><span class="lineNum">     249</span> <span class="tlaGNC">          16 :         (bytes32 r, bytes32 sSig, PubKey memory pubKey) =</span></span>
+<span id="L250"><span class="lineNum">     250</span> <span class="tlaGNC">          16 :             abi.decode(signature, (bytes32, bytes32, PubKey));</span></span>
+<span id="L251"><span class="lineNum">     251</span>              : </span>
+<span id="L252"><span class="lineNum">     252</span> <span class="tlaGNC">          16 :         bytes32 challenge =</span></span>
+<span id="L253"><span class="lineNum">     253</span> <span class="tlaGNC">          16 :             (sigType == KeyType.P256NONKEY) ? EfficientHashLib.sha2(userOpHash) : userOpHash;</span></span>
+<span id="L254"><span class="lineNum">     254</span>              : </span>
+<span id="L255"><span class="lineNum">     255</span> <span class="tlaGNC">           1 :         if (usedChallenges[challenge]) {</span></span>
+<span id="L256"><span class="lineNum">     256</span> <span class="tlaGNC">           1 :             revert IKeysManager.KeyManager__UsedChallenge();</span></span>
+<span id="L257"><span class="lineNum">     257</span>              :         }</span>
+<span id="L258"><span class="lineNum">     258</span>              : </span>
+<span id="L259"><span class="lineNum">     259</span> <span class="tlaGNC">          15 :         bool sigOk = IWebAuthnVerifier(webAuthnVerifier()).verifyP256Signature(</span></span>
+<span id="L260"><span class="lineNum">     260</span>              :             challenge, r, sSig, pubKey.x, pubKey.y</span>
+<span id="L261"><span class="lineNum">     261</span>              :         );</span>
+<span id="L262"><span class="lineNum">     262</span>              : </span>
+<span id="L263"><span class="lineNum">     263</span> <span class="tlaGNC">          15 :         bytes32 keyId = pubKey.computeKeyId();</span></span>
+<span id="L264"><span class="lineNum">     264</span> <span class="tlaGNC">          15 :         KeyData storage sKey = keys[keyId];</span></span>
 <span id="L265"><span class="lineNum">     265</span>              : </span>
-<span id="L266"><span class="lineNum">     266</span> <span class="tlaGNC">          15 :         if (sigType == KeyType.P256NONKEY) {</span></span>
-<span id="L267"><span class="lineNum">     267</span> <span class="tlaGNC">          11 :             userOpHash = EfficientHashLib.sha2(userOpHash);</span></span>
-<span id="L268"><span class="lineNum">     268</span>              :         }</span>
+<span id="L266"><span class="lineNum">     266</span> <span class="tlaGNC">          15 :         bool isValid = _keyValidation(sKey);</span></span>
+<span id="L267"><span class="lineNum">     267</span>              : </span>
+<span id="L268"><span class="lineNum">     268</span> <span class="tlaGNC">          15 :         usedChallenges[challenge] = true;</span></span>
 <span id="L269"><span class="lineNum">     269</span>              : </span>
-<span id="L270"><span class="lineNum">     270</span> <span class="tlaGNC">          15 :         bool sigOk = IWebAuthnVerifier(webAuthnVerifier()).verifyP256Signature(</span></span>
-<span id="L271"><span class="lineNum">     271</span>              :             userOpHash, r, sSig, pubKey.x, pubKey.y</span>
-<span id="L272"><span class="lineNum">     272</span>              :         );</span>
-<span id="L273"><span class="lineNum">     273</span> <span class="tlaGNC">          15 :         if (!sigOk) {</span></span>
-<span id="L274"><span class="lineNum">     274</span> <span class="tlaGNC">           2 :             return SIG_VALIDATION_FAILED;</span></span>
-<span id="L275"><span class="lineNum">     275</span>              :         }</span>
-<span id="L276"><span class="lineNum">     276</span>              : </span>
-<span id="L277"><span class="lineNum">     277</span> <span class="tlaGNC">          13 :         KeyData storage sKey = keys[pubKey.computeKeyId()];</span></span>
+<span id="L270"><span class="lineNum">     270</span> <span class="tlaGNC">          15 :         uint256 isValidGas = IUserOpPolicy(GAS_POLICY).checkUserOpPolicy(keyId, userOp);</span></span>
+<span id="L271"><span class="lineNum">     271</span>              : </span>
+<span id="L272"><span class="lineNum">     272</span> <span class="tlaGNC">          15 :         if (isValidKey(userOp.callData, sKey) &amp;&amp; isValid &amp;&amp; sigOk &amp;&amp; isValidGas == 0) {</span></span>
+<span id="L273"><span class="lineNum">     273</span> <span class="tlaGNC">           8 :             return _packValidationData(false, sKey.validUntil, sKey.validAfter);</span></span>
+<span id="L274"><span class="lineNum">     274</span>              :         }</span>
+<span id="L275"><span class="lineNum">     275</span>              : </span>
+<span id="L276"><span class="lineNum">     276</span> <span class="tlaGNC">           7 :         return SIG_VALIDATION_FAILED;</span></span>
+<span id="L277"><span class="lineNum">     277</span>              :     }</span>
 <span id="L278"><span class="lineNum">     278</span>              : </span>
-<span id="L279"><span class="lineNum">     279</span> <span class="tlaGNC">          13 :         bool isValid = _keyValidation(sKey);</span></span>
-<span id="L280"><span class="lineNum">     280</span>              : </span>
-<span id="L281"><span class="lineNum">     281</span> <span class="tlaGNC">          13 :         if (!isValid) return SIG_VALIDATION_FAILED;</span></span>
-<span id="L282"><span class="lineNum">     282</span>              : </span>
-<span id="L283"><span class="lineNum">     283</span> <span class="tlaGNC">          12 :         uint256 isValidGas =</span></span>
-<span id="L284"><span class="lineNum">     284</span> <span class="tlaGNC">          12 :             IUserOpPolicy(GAS_POLICY).checkUserOpPolicy(pubKey.computeKeyId(), userOp);</span></span>
-<span id="L285"><span class="lineNum">     285</span>              : </span>
-<span id="L286"><span class="lineNum">     286</span> <span class="tlaGNC">          12 :         if (isValidGas == 1) revert IKeysManager.KeyManager__RevertGasPolicy();</span></span>
+<span id="L279"><span class="lineNum">     279</span>              :     /// @notice Validates if a key is registered and active</span>
+<span id="L280"><span class="lineNum">     280</span>              :     /// @param sKey Storage reference to the key data to validate</span>
+<span id="L281"><span class="lineNum">     281</span>              :     /// @return isValid True if key is both registered and active, false otherwise</span>
+<span id="L282"><span class="lineNum">     282</span> <span class="tlaGNC">          39 :     function _keyValidation(KeyData storage sKey) internal view returns (bool isValid) {</span></span>
+<span id="L283"><span class="lineNum">     283</span>              :         // Check if key is valid and active</span>
+<span id="L284"><span class="lineNum">     284</span> <span class="tlaGNC">          39 :         if (!(sKey.isRegistered() &amp;&amp; sKey.isActive)) {</span></span>
+<span id="L285"><span class="lineNum">     285</span> <span class="tlaGNC">           1 :             return false; // Early return for invalid key</span></span>
+<span id="L286"><span class="lineNum">     286</span>              :         }</span>
 <span id="L287"><span class="lineNum">     287</span>              : </span>
-<span id="L288"><span class="lineNum">     288</span> <span class="tlaGNC">          12 :         if (isValidKey(userOp.callData, sKey)) {</span></span>
-<span id="L289"><span class="lineNum">     289</span> <span class="tlaGNC">           7 :             return _packValidationData(false, sKey.validUntil, sKey.validAfter);</span></span>
-<span id="L290"><span class="lineNum">     290</span>              :         }</span>
-<span id="L291"><span class="lineNum">     291</span> <span class="tlaGNC">           5 :         return SIG_VALIDATION_FAILED;</span></span>
-<span id="L292"><span class="lineNum">     292</span>              :     }</span>
-<span id="L293"><span class="lineNum">     293</span>              : </span>
-<span id="L294"><span class="lineNum">     294</span>              :     /// @notice Validates if a key is registered and active</span>
-<span id="L295"><span class="lineNum">     295</span>              :     /// @param sKey Storage reference to the key data to validate</span>
-<span id="L296"><span class="lineNum">     296</span>              :     /// @return isValid True if key is both registered and active, false otherwise</span>
-<span id="L297"><span class="lineNum">     297</span> <span class="tlaGNC">          36 :     function _keyValidation(KeyData storage sKey) internal view returns (bool isValid) {</span></span>
-<span id="L298"><span class="lineNum">     298</span>              :         // Check if key is valid and active</span>
-<span id="L299"><span class="lineNum">     299</span> <span class="tlaGNC">          36 :         if (!(sKey.isRegistered() &amp;&amp; sKey.isActive)) {</span></span>
-<span id="L300"><span class="lineNum">     300</span> <span class="tlaGNC">           1 :             return false; // Early return for invalid key</span></span>
-<span id="L301"><span class="lineNum">     301</span>              :         }</span>
+<span id="L288"><span class="lineNum">     288</span> <span class="tlaGNC">          38 :         return true;</span></span>
+<span id="L289"><span class="lineNum">     289</span>              :     }</span>
+<span id="L290"><span class="lineNum">     290</span>              : </span>
+<span id="L291"><span class="lineNum">     291</span>              :     /// @dev Authorizes `_callData` for `sKey`.</span>
+<span id="L292"><span class="lineNum">     292</span>              :     ///      Supports only `execute(bytes32,bytes)` (selector 0xe9ae5c53) and</span>
+<span id="L293"><span class="lineNum">     293</span>              :     ///      defers granular checks to `_validateExecuteCall(...)`.</span>
+<span id="L294"><span class="lineNum">     294</span>              :     ///      Unknown selectors return false. May consume per-key quotas/limits downstream.</span>
+<span id="L295"><span class="lineNum">     295</span> <span class="tlaGNC">          28 :     function isValidKey(bytes calldata _callData, KeyData storage sKey)</span></span>
+<span id="L296"><span class="lineNum">     296</span>              :         internal</span>
+<span id="L297"><span class="lineNum">     297</span>              :         virtual</span>
+<span id="L298"><span class="lineNum">     298</span>              :         returns (bool)</span>
+<span id="L299"><span class="lineNum">     299</span>              :     {</span>
+<span id="L300"><span class="lineNum">     300</span>              :         // Extract function selector from callData execute(bytes32,bytes)</span>
+<span id="L301"><span class="lineNum">     301</span> <span class="tlaGNC">          28 :         bytes4 funcSelector = bytes4(_callData[:4]);</span></span>
 <span id="L302"><span class="lineNum">     302</span>              : </span>
-<span id="L303"><span class="lineNum">     303</span> <span class="tlaGNC">          35 :         return true;</span></span>
-<span id="L304"><span class="lineNum">     304</span>              :     }</span>
-<span id="L305"><span class="lineNum">     305</span>              : </span>
-<span id="L306"><span class="lineNum">     306</span>              :     /// @dev Authorizes `_callData` for `sKey`.</span>
-<span id="L307"><span class="lineNum">     307</span>              :     ///      Supports only `execute(bytes32,bytes)` (selector 0xe9ae5c53) and</span>
-<span id="L308"><span class="lineNum">     308</span>              :     ///      defers granular checks to `_validateExecuteCall(...)`.</span>
-<span id="L309"><span class="lineNum">     309</span>              :     ///      Unknown selectors return false. May consume per-key quotas/limits downstream.</span>
-<span id="L310"><span class="lineNum">     310</span> <span class="tlaGNC">          23 :     function isValidKey(bytes calldata _callData, KeyData storage sKey)</span></span>
-<span id="L311"><span class="lineNum">     311</span>              :         internal</span>
-<span id="L312"><span class="lineNum">     312</span>              :         virtual</span>
-<span id="L313"><span class="lineNum">     313</span>              :         returns (bool)</span>
-<span id="L314"><span class="lineNum">     314</span>              :     {</span>
-<span id="L315"><span class="lineNum">     315</span>              :         // Extract function selector from callData execute(bytes32,bytes)</span>
-<span id="L316"><span class="lineNum">     316</span> <span class="tlaGNC">          23 :         bytes4 funcSelector = bytes4(_callData[:4]);</span></span>
-<span id="L317"><span class="lineNum">     317</span>              : </span>
-<span id="L318"><span class="lineNum">     318</span> <span class="tlaGNC">          23 :         if (funcSelector == 0xe9ae5c53) {</span></span>
-<span id="L319"><span class="lineNum">     319</span> <span class="tlaGNC">          22 :             return _validateExecuteCall(sKey, _callData);</span></span>
-<span id="L320"><span class="lineNum">     320</span>              :         }</span>
-<span id="L321"><span class="lineNum">     321</span> <span class="tlaGNC">           1 :         return false;</span></span>
-<span id="L322"><span class="lineNum">     322</span>              :     }</span>
-<span id="L323"><span class="lineNum">     323</span>              : </span>
-<span id="L324"><span class="lineNum">     324</span>              :     /**</span>
-<span id="L325"><span class="lineNum">     325</span>              :      * @notice Validates a single `execute(target, value, data)` call.</span>
-<span id="L326"><span class="lineNum">     326</span>              :      * @dev</span>
-<span id="L327"><span class="lineNum">     327</span>              :      *  • Decode `execute(bytes32,bytes)`.</span>
-<span id="L328"><span class="lineNum">     328</span>              :      *  • If `toContract == address(this)`, revert.</span>
-<span id="L329"><span class="lineNum">     329</span>              :      *  • If `masterKey`, immediate true.</span>
-<span id="L330"><span class="lineNum">     330</span>              :      *  • Else enforce:</span>
-<span id="L331"><span class="lineNum">     331</span>              :      *      - limit &gt; 0</span>
-<span id="L332"><span class="lineNum">     332</span>              :      *      - ethLimit ≥ amount</span>
-<span id="L333"><span class="lineNum">     333</span>              :      *      - `bytes4(innerData)` ∈ `allowedSelectors`</span>
-<span id="L334"><span class="lineNum">     334</span>              :      *      - Decrement `limit` and subtract `amount` from `ethLimit`</span>
-<span id="L335"><span class="lineNum">     335</span>              :      *      - If `spendTokenInfo.token == toContract`, call `_validateTokenSpend(...)`</span>
-<span id="L336"><span class="lineNum">     336</span>              :      *      - If whitelisting enable and target is whitelisted</span>
-<span id="L337"><span class="lineNum">     337</span>              :      *      - If `whitelisting`, ensure `toContract` ∈ `whitelist`</span>
-<span id="L338"><span class="lineNum">     338</span>              :      *</span>
-<span id="L339"><span class="lineNum">     339</span>              :      * @param sKey       Storage reference of the KeyData</span>
-<span id="L340"><span class="lineNum">     340</span>              :      * @param _callData  Encoded as: `execute(address,uint256,bytes)`</span>
-<span id="L341"><span class="lineNum">     341</span>              :      * @return True if allowed, false otherwise.</span>
-<span id="L342"><span class="lineNum">     342</span>              :      */</span>
-<span id="L343"><span class="lineNum">     343</span> <span class="tlaGNC">          22 :     function _validateExecuteCall(KeyData storage sKey, bytes calldata _callData)</span></span>
-<span id="L344"><span class="lineNum">     344</span>              :         internal</span>
-<span id="L345"><span class="lineNum">     345</span>              :         returns (bool)</span>
-<span id="L346"><span class="lineNum">     346</span>              :     {</span>
-<span id="L347"><span class="lineNum">     347</span> <span class="tlaGNC">          22 :         bytes32 mode;</span></span>
-<span id="L348"><span class="lineNum">     348</span> <span class="tlaGNC">          22 :         bytes memory executionData;</span></span>
-<span id="L349"><span class="lineNum">     349</span> <span class="tlaGNC">          22 :         (mode, executionData) = abi.decode(_callData[4:], (bytes32, bytes));</span></span>
-<span id="L350"><span class="lineNum">     350</span>              : </span>
-<span id="L351"><span class="lineNum">     351</span> <span class="tlaGNC">          22 :         if (mode == mode_1) {</span></span>
-<span id="L352"><span class="lineNum">     352</span> <span class="tlaGNC">          17 :             Call[] memory calls = abi.decode(executionData, (Call[]));</span></span>
-<span id="L353"><span class="lineNum">     353</span> <span class="tlaGNC">          17 :             for (uint256 i = 0; i &lt; calls.length; i++) {</span></span>
-<span id="L354"><span class="lineNum">     354</span> <span class="tlaGNC">          26 :                 if (!_validateCall(sKey, calls[i])) {</span></span>
-<span id="L355"><span class="lineNum">     355</span> <span class="tlaGNC">           7 :                     return false;</span></span>
-<span id="L356"><span class="lineNum">     356</span>              :                 }</span>
-<span id="L357"><span class="lineNum">     357</span>              :             }</span>
-<span id="L358"><span class="lineNum">     358</span> <span class="tlaGNC">          10 :             return true;</span></span>
-<span id="L359"><span class="lineNum">     359</span>              :         }</span>
-<span id="L360"><span class="lineNum">     360</span>              : </span>
-<span id="L361"><span class="lineNum">     361</span> <span class="tlaGNC">           5 :         if (mode == mode_3) {</span></span>
-<span id="L362"><span class="lineNum">     362</span> <span class="tlaGNC">           4 :             bytes[] memory batches = abi.decode(executionData, (bytes[]));</span></span>
-<span id="L363"><span class="lineNum">     363</span> <span class="tlaGNC">           4 :             for (uint256 i = 0; i &lt; batches.length; i++) {</span></span>
-<span id="L364"><span class="lineNum">     364</span> <span class="tlaGNC">          10 :                 Call[] memory calls = abi.decode(batches[i], (Call[]));</span></span>
-<span id="L365"><span class="lineNum">     365</span> <span class="tlaGNC">          10 :                 for (uint256 j = 0; j &lt; calls.length; j++) {</span></span>
-<span id="L366"><span class="lineNum">     366</span> <span class="tlaGNC">          16 :                     if (!_validateCall(sKey, calls[j])) {</span></span>
-<span id="L367"><span class="lineNum">     367</span> <span class="tlaGNC">           1 :                         return false;</span></span>
-<span id="L368"><span class="lineNum">     368</span>              :                     }</span>
-<span id="L369"><span class="lineNum">     369</span>              :                 }</span>
-<span id="L370"><span class="lineNum">     370</span>              :             }</span>
-<span id="L371"><span class="lineNum">     371</span> <span class="tlaGNC">           3 :             return true;</span></span>
-<span id="L372"><span class="lineNum">     372</span>              :         }</span>
-<span id="L373"><span class="lineNum">     373</span>              : </span>
-<span id="L374"><span class="lineNum">     374</span> <span class="tlaGNC">           1 :         return false;</span></span>
-<span id="L375"><span class="lineNum">     375</span>              :     }</span>
-<span id="L376"><span class="lineNum">     376</span>              : </span>
-<span id="L377"><span class="lineNum">     377</span> <span class="tlaGNC">          42 :     function _validateCall(KeyData storage sKey, Call memory call) private returns (bool) {</span></span>
-<span id="L378"><span class="lineNum">     378</span> <span class="tlaGNC">          42 :         if (call.target == address(this)) return false;</span></span>
-<span id="L379"><span class="lineNum">     379</span> <span class="tlaGNC">          42 :         if (!sKey.passesCallGuards(call.value)) return false;</span></span>
-<span id="L380"><span class="lineNum">     380</span>              : </span>
-<span id="L381"><span class="lineNum">     381</span> <span class="tlaGNC">          38 :         bytes memory innerData = call.data;</span></span>
-<span id="L382"><span class="lineNum">     382</span> <span class="tlaGNC">          38 :         bytes4 innerSelector;</span></span>
-<span id="L383"><span class="lineNum">     383</span>              :         assembly {</span>
-<span id="L384"><span class="lineNum">     384</span> <span class="tlaUNC">           0 :             innerSelector := mload(add(innerData, 0x20))</span></span>
-<span id="L385"><span class="lineNum">     385</span>              :         }</span>
-<span id="L386"><span class="lineNum">     386</span>              : </span>
-<span id="L387"><span class="lineNum">     387</span> <span class="tlaGNC">          38 :         if (!_isAllowedSelector(sKey.allowedSelectors, innerSelector)) {</span></span>
-<span id="L388"><span class="lineNum">     388</span> <span class="tlaGNC">           2 :             return false;</span></span>
-<span id="L389"><span class="lineNum">     389</span>              :         }</span>
-<span id="L390"><span class="lineNum">     390</span>              : </span>
-<span id="L391"><span class="lineNum">     391</span> <span class="tlaGNC">          36 :         sKey.consumeQuota();</span></span>
-<span id="L392"><span class="lineNum">     392</span> <span class="tlaGNC">          36 :         if (call.value &gt; 0) {</span></span>
-<span id="L393"><span class="lineNum">     393</span>              :             unchecked {</span>
-<span id="L394"><span class="lineNum">     394</span> <span class="tlaGNC">           7 :                 sKey.ethLimit -= call.value;</span></span>
-<span id="L395"><span class="lineNum">     395</span>              :             }</span>
-<span id="L396"><span class="lineNum">     396</span>              :         }</span>
-<span id="L397"><span class="lineNum">     397</span>              : </span>
-<span id="L398"><span class="lineNum">     398</span> <span class="tlaGNC">          36 :         if (sKey.spendTokenInfo.token == call.target) {</span></span>
-<span id="L399"><span class="lineNum">     399</span> <span class="tlaGNC">          27 :             bool validSpend = _validateTokenSpend(sKey, innerData);</span></span>
-<span id="L400"><span class="lineNum">     400</span> <span class="tlaGNC">          27 :             if (!validSpend) return false;</span></span>
-<span id="L401"><span class="lineNum">     401</span>              :         }</span>
-<span id="L402"><span class="lineNum">     402</span>              : </span>
-<span id="L403"><span class="lineNum">     403</span> <span class="tlaGNC">          35 :         if (!(sKey.whitelisting &amp;&amp; sKey.whitelist[call.target])) {</span></span>
-<span id="L404"><span class="lineNum">     404</span> <span class="tlaGNC">           1 :             return false;</span></span>
-<span id="L405"><span class="lineNum">     405</span>              :         }</span>
-<span id="L406"><span class="lineNum">     406</span> <span class="tlaGNC">          34 :         return true;</span></span>
-<span id="L407"><span class="lineNum">     407</span>              :     }</span>
-<span id="L408"><span class="lineNum">     408</span>              : </span>
-<span id="L409"><span class="lineNum">     409</span>              :     /**</span>
-<span id="L410"><span class="lineNum">     410</span>              :      * @notice Validates a token transfer against the key’s token spend limit.</span>
-<span id="L411"><span class="lineNum">     411</span>              :      * @dev Loads `value` from the last 32 bytes of `innerData` (standard ERC-20 `_transfer(address,uint256)`</span>
-<span id="L412"><span class="lineNum">     412</span>              :      * signature).</span>
-<span id="L413"><span class="lineNum">     413</span>              :      * @dev Out of scope (not supported): Extended/alternative token interfaces where spend cannot be</span>
-<span id="L414"><span class="lineNum">     414</span>              :      *      inferred from the trailing 32 bytes, including but not limited to:</span>
-<span id="L415"><span class="lineNum">     415</span>              :      *        - ERC-777 (`send`, operator functions and hooks)</span>
-<span id="L416"><span class="lineNum">     416</span>              :      *        - ERC-1363 (`transferAndCall`, etc.)</span>
-<span id="L417"><span class="lineNum">     417</span>              :      *        - ERC-4626 vaults (`deposit`, `mint`, `withdraw`, `redeem`, etc.)</span>
-<span id="L418"><span class="lineNum">     418</span>              :      *        - Allowance changes (`approve`, `increaseAllowance`, `decreaseAllowance`)</span>
-<span id="L419"><span class="lineNum">     419</span>              :      *        - Permit-style signatures (EIP-2612) or any function where the amount is not the last arg.</span>
-<span id="L420"><span class="lineNum">     420</span>              :      *      Calls to those selectors MUST be blocked elsewhere (e.g., via `allowedSelectors`) because</span>
-<span id="L421"><span class="lineNum">     421</span>              :      *      this function will not correctly measure spend and may produce misleading deductions.</span>
-<span id="L422"><span class="lineNum">     422</span>              :      * @param sKey      Storage reference of the KeyData</span>
-<span id="L423"><span class="lineNum">     423</span>              :      * @param innerData The full encoded call data to the token contract.</span>
-<span id="L424"><span class="lineNum">     424</span>              :      * @return True if `value ≤ sKey.spendTokenInfo.limit`; false if it exceeds or is invalid.</span>
-<span id="L425"><span class="lineNum">     425</span>              :      */</span>
-<span id="L426"><span class="lineNum">     426</span> <span class="tlaGNC">          27 :     function _validateTokenSpend(KeyData storage sKey, bytes memory innerData)</span></span>
-<span id="L427"><span class="lineNum">     427</span>              :         internal</span>
-<span id="L428"><span class="lineNum">     428</span>              :         returns (bool)</span>
-<span id="L429"><span class="lineNum">     429</span>              :     {</span>
-<span id="L430"><span class="lineNum">     430</span> <span class="tlaGNC">          27 :         uint256 len = innerData.length;</span></span>
-<span id="L431"><span class="lineNum">     431</span>              :         // load the last 32 bytes from innerData</span>
-<span id="L432"><span class="lineNum">     432</span> <span class="tlaGNC">          27 :         uint256 value;</span></span>
-<span id="L433"><span class="lineNum">     433</span>              :         assembly {</span>
-<span id="L434"><span class="lineNum">     434</span> <span class="tlaUNC">           0 :             value := mload(add(add(innerData, 0x20), sub(len, 0x20)))</span></span>
-<span id="L435"><span class="lineNum">     435</span>              :         }</span>
-<span id="L436"><span class="lineNum">     436</span> <span class="tlaGNC">          27 :         if (value &gt; sKey.spendTokenInfo.limit) {</span></span>
-<span id="L437"><span class="lineNum">     437</span> <span class="tlaGNC">           1 :             return false;</span></span>
-<span id="L438"><span class="lineNum">     438</span>              :         }</span>
-<span id="L439"><span class="lineNum">     439</span> <span class="tlaGNC">          26 :         if (value &gt; 0) {</span></span>
-<span id="L440"><span class="lineNum">     440</span>              :             unchecked {</span>
-<span id="L441"><span class="lineNum">     441</span> <span class="tlaGNC">          26 :                 sKey.spendTokenInfo.limit -= value;</span></span>
-<span id="L442"><span class="lineNum">     442</span>              :             }</span>
-<span id="L443"><span class="lineNum">     443</span>              :         }</span>
-<span id="L444"><span class="lineNum">     444</span> <span class="tlaGNC">          26 :         return true;</span></span>
-<span id="L445"><span class="lineNum">     445</span>              :     }</span>
-<span id="L446"><span class="lineNum">     446</span>              : </span>
-<span id="L447"><span class="lineNum">     447</span>              :     /**</span>
-<span id="L448"><span class="lineNum">     448</span>              :      * @notice Checks whether `selector` is included in the `selectors` array.</span>
-<span id="L449"><span class="lineNum">     449</span>              :      * @param selectors Array of allowed selectors (in storage).</span>
-<span id="L450"><span class="lineNum">     450</span>              :      * @param selector  The 4-byte function selector to check.</span>
-<span id="L451"><span class="lineNum">     451</span>              :      * @return True if found; false otherwise.</span>
-<span id="L452"><span class="lineNum">     452</span>              :      */</span>
-<span id="L453"><span class="lineNum">     453</span> <span class="tlaGNC">          38 :     function _isAllowedSelector(bytes4[] storage selectors, bytes4 selector)</span></span>
-<span id="L454"><span class="lineNum">     454</span>              :         internal</span>
-<span id="L455"><span class="lineNum">     455</span>              :         view</span>
-<span id="L456"><span class="lineNum">     456</span>              :         returns (bool)</span>
-<span id="L457"><span class="lineNum">     457</span>              :     {</span>
-<span id="L458"><span class="lineNum">     458</span> <span class="tlaGNC">          38 :         uint256 len = selectors.length;</span></span>
-<span id="L459"><span class="lineNum">     459</span> <span class="tlaGNC">          38 :         for (uint256 i = 0; i &lt; len;) {</span></span>
-<span id="L460"><span class="lineNum">     460</span> <span class="tlaGNC">          72 :             if (selectors[i] == selector) {</span></span>
-<span id="L461"><span class="lineNum">     461</span> <span class="tlaGNC">          36 :                 return true;</span></span>
-<span id="L462"><span class="lineNum">     462</span>              :             }</span>
-<span id="L463"><span class="lineNum">     463</span>              :             unchecked {</span>
-<span id="L464"><span class="lineNum">     464</span> <span class="tlaGNC">          36 :                 ++i;</span></span>
-<span id="L465"><span class="lineNum">     465</span>              :             }</span>
-<span id="L466"><span class="lineNum">     466</span>              :         }</span>
-<span id="L467"><span class="lineNum">     467</span> <span class="tlaUNC">           0 :         return false;</span></span>
-<span id="L468"><span class="lineNum">     468</span>              :     }</span>
-<span id="L469"><span class="lineNum">     469</span>              : </span>
-<span id="L470"><span class="lineNum">     470</span>              :     /**</span>
-<span id="L471"><span class="lineNum">     471</span>              :      * @notice ERC-1271 on-chain signature validation.</span>
-<span id="L472"><span class="lineNum">     472</span>              :      * @dev `isValidSignature` used only in case of RootKey/Master Key (EOA/WebAuthn) signer.</span>
-<span id="L473"><span class="lineNum">     473</span>              :      *  • EOA (ECDSA) path recovers `signer`. If `signer == this`, return `isValidSignature.selector`.</span>
-<span id="L474"><span class="lineNum">     474</span>              :      *    Else packed WebAuthn signature, load `key = keys[keyHash]` and enforce:</span>
-<span id="L475"><span class="lineNum">     475</span>              :      *      - (masterKey)</span>
-<span id="L476"><span class="lineNum">     476</span>              :      * @dev The session key does not undergo ERC-1271 validation, preventing granted roles</span>
-<span id="L477"><span class="lineNum">     477</span>              :      *      from utilizing Permit2 to bypass the established spending policy limits defined in the signature.</span>
-<span id="L478"><span class="lineNum">     478</span>              :      * @param _hash       The hash that was signed.</span>
-<span id="L479"><span class="lineNum">     479</span>              :      * @param _signature  The signature blob to verify.</span>
-<span id="L480"><span class="lineNum">     480</span>              :      * @return `this.isValidSignature.selector` if valid; otherwise `0xffffffff`.</span>
-<span id="L481"><span class="lineNum">     481</span>              :      */</span>
-<span id="L482"><span class="lineNum">     482</span> <span class="tlaGNC">          27 :     function isValidSignature(bytes32 _hash, bytes memory _signature)</span></span>
-<span id="L483"><span class="lineNum">     483</span>              :         external</span>
-<span id="L484"><span class="lineNum">     484</span>              :         view</span>
-<span id="L485"><span class="lineNum">     485</span>              :         returns (bytes4)</span>
-<span id="L486"><span class="lineNum">     486</span>              :     {</span>
-<span id="L487"><span class="lineNum">     487</span> <span class="tlaGNC">          27 :         if (_signature.length &lt; 32) {</span></span>
-<span id="L488"><span class="lineNum">     488</span> <span class="tlaGNC">           1 :             return bytes4(0xffffffff);</span></span>
-<span id="L489"><span class="lineNum">     489</span>              :         }</span>
-<span id="L490"><span class="lineNum">     490</span>              : </span>
-<span id="L491"><span class="lineNum">     491</span> <span class="tlaGNC">          26 :         if (_signature.length == 64 || _signature.length == 65) {</span></span>
-<span id="L492"><span class="lineNum">     492</span> <span class="tlaGNC">          14 :             return _validateEOASignature(_signature, _hash);</span></span>
-<span id="L493"><span class="lineNum">     493</span>              :         } else {</span>
-<span id="L494"><span class="lineNum">     494</span> <span class="tlaGNC">          12 :             return _validateWebAuthnSignature(_signature, _hash);</span></span>
-<span id="L495"><span class="lineNum">     495</span>              :         }</span>
-<span id="L496"><span class="lineNum">     496</span>              :     }</span>
-<span id="L497"><span class="lineNum">     497</span>              : </span>
-<span id="L498"><span class="lineNum">     498</span>              :     /**</span>
-<span id="L499"><span class="lineNum">     499</span>              :      * @notice Validate a EOA signature on-chain via ERC-1271.</span>
-<span id="L500"><span class="lineNum">     500</span>              :      * @param _signature  v,r,s components of signature</span>
-<span id="L501"><span class="lineNum">     501</span>              :      * @param _hash       The hash to verify.</span>
-<span id="L502"><span class="lineNum">     502</span>              :      * @return `this.isValidSignature.selector` if valid; otherwise `0xffffffff`.</span>
-<span id="L503"><span class="lineNum">     503</span>              :      */</span>
-<span id="L504"><span class="lineNum">     504</span> <span class="tlaGNC">          14 :     function _validateEOASignature(bytes memory _signature, bytes32 _hash)</span></span>
-<span id="L505"><span class="lineNum">     505</span>              :         internal</span>
-<span id="L506"><span class="lineNum">     506</span>              :         view</span>
-<span id="L507"><span class="lineNum">     507</span>              :         returns (bytes4)</span>
-<span id="L508"><span class="lineNum">     508</span>              :     {</span>
-<span id="L509"><span class="lineNum">     509</span> <span class="tlaGNC">          14 :         address signer = ECDSA.recover(_hash, _signature);</span></span>
+<span id="L303"><span class="lineNum">     303</span> <span class="tlaGNC">          28 :         if (funcSelector == 0xe9ae5c53) {</span></span>
+<span id="L304"><span class="lineNum">     304</span> <span class="tlaGNC">          27 :             return _validateExecuteCall(sKey, _callData);</span></span>
+<span id="L305"><span class="lineNum">     305</span>              :         }</span>
+<span id="L306"><span class="lineNum">     306</span> <span class="tlaGNC">           1 :         return false;</span></span>
+<span id="L307"><span class="lineNum">     307</span>              :     }</span>
+<span id="L308"><span class="lineNum">     308</span>              : </span>
+<span id="L309"><span class="lineNum">     309</span>              :     /**</span>
+<span id="L310"><span class="lineNum">     310</span>              :      * @notice Validates a single `execute(target, value, data)` call.</span>
+<span id="L311"><span class="lineNum">     311</span>              :      * @dev</span>
+<span id="L312"><span class="lineNum">     312</span>              :      *  • Decode `execute(bytes32,bytes)`.</span>
+<span id="L313"><span class="lineNum">     313</span>              :      *  • If `toContract == address(this)`, revert.</span>
+<span id="L314"><span class="lineNum">     314</span>              :      *  • If `masterKey`, immediate true.</span>
+<span id="L315"><span class="lineNum">     315</span>              :      *  • Else enforce:</span>
+<span id="L316"><span class="lineNum">     316</span>              :      *      - limit &gt; 0</span>
+<span id="L317"><span class="lineNum">     317</span>              :      *      - ethLimit ≥ amount</span>
+<span id="L318"><span class="lineNum">     318</span>              :      *      - `bytes4(innerData)` ∈ `allowedSelectors`</span>
+<span id="L319"><span class="lineNum">     319</span>              :      *      - Decrement `limit` and subtract `amount` from `ethLimit`</span>
+<span id="L320"><span class="lineNum">     320</span>              :      *      - If `spendTokenInfo.token == toContract`, call `_validateTokenSpend(...)`</span>
+<span id="L321"><span class="lineNum">     321</span>              :      *      - If whitelisting enable and target is whitelisted</span>
+<span id="L322"><span class="lineNum">     322</span>              :      *      - If `whitelisting`, ensure `toContract` ∈ `whitelist`</span>
+<span id="L323"><span class="lineNum">     323</span>              :      *</span>
+<span id="L324"><span class="lineNum">     324</span>              :      * @param sKey       Storage reference of the KeyData</span>
+<span id="L325"><span class="lineNum">     325</span>              :      * @param _callData  Encoded as: `execute(address,uint256,bytes)`</span>
+<span id="L326"><span class="lineNum">     326</span>              :      * @return True if allowed, false otherwise.</span>
+<span id="L327"><span class="lineNum">     327</span>              :      */</span>
+<span id="L328"><span class="lineNum">     328</span> <span class="tlaGNC">          27 :     function _validateExecuteCall(KeyData storage sKey, bytes calldata _callData)</span></span>
+<span id="L329"><span class="lineNum">     329</span>              :         internal</span>
+<span id="L330"><span class="lineNum">     330</span>              :         returns (bool)</span>
+<span id="L331"><span class="lineNum">     331</span>              :     {</span>
+<span id="L332"><span class="lineNum">     332</span> <span class="tlaGNC">          27 :         bytes32 mode;</span></span>
+<span id="L333"><span class="lineNum">     333</span> <span class="tlaGNC">          27 :         bytes memory executionData;</span></span>
+<span id="L334"><span class="lineNum">     334</span> <span class="tlaGNC">          27 :         (mode, executionData) = abi.decode(_callData[4:], (bytes32, bytes));</span></span>
+<span id="L335"><span class="lineNum">     335</span>              : </span>
+<span id="L336"><span class="lineNum">     336</span> <span class="tlaGNC">          27 :         if (mode == mode_1) {</span></span>
+<span id="L337"><span class="lineNum">     337</span> <span class="tlaGNC">          22 :             Call[] memory calls = abi.decode(executionData, (Call[]));</span></span>
+<span id="L338"><span class="lineNum">     338</span> <span class="tlaGNC">          22 :             for (uint256 i = 0; i &lt; calls.length; i++) {</span></span>
+<span id="L339"><span class="lineNum">     339</span> <span class="tlaGNC">          31 :                 if (!_validateCall(sKey, calls[i])) {</span></span>
+<span id="L340"><span class="lineNum">     340</span> <span class="tlaGNC">          11 :                     return false;</span></span>
+<span id="L341"><span class="lineNum">     341</span>              :                 }</span>
+<span id="L342"><span class="lineNum">     342</span>              :             }</span>
+<span id="L343"><span class="lineNum">     343</span> <span class="tlaGNC">          11 :             return true;</span></span>
+<span id="L344"><span class="lineNum">     344</span>              :         }</span>
+<span id="L345"><span class="lineNum">     345</span>              : </span>
+<span id="L346"><span class="lineNum">     346</span> <span class="tlaGNC">           5 :         if (mode == mode_3) {</span></span>
+<span id="L347"><span class="lineNum">     347</span> <span class="tlaGNC">           4 :             bytes[] memory batches = abi.decode(executionData, (bytes[]));</span></span>
+<span id="L348"><span class="lineNum">     348</span> <span class="tlaGNC">           4 :             for (uint256 i = 0; i &lt; batches.length; i++) {</span></span>
+<span id="L349"><span class="lineNum">     349</span> <span class="tlaGNC">          10 :                 Call[] memory calls = abi.decode(batches[i], (Call[]));</span></span>
+<span id="L350"><span class="lineNum">     350</span> <span class="tlaGNC">          10 :                 for (uint256 j = 0; j &lt; calls.length; j++) {</span></span>
+<span id="L351"><span class="lineNum">     351</span> <span class="tlaGNC">          16 :                     if (!_validateCall(sKey, calls[j])) {</span></span>
+<span id="L352"><span class="lineNum">     352</span> <span class="tlaGNC">           1 :                         return false;</span></span>
+<span id="L353"><span class="lineNum">     353</span>              :                     }</span>
+<span id="L354"><span class="lineNum">     354</span>              :                 }</span>
+<span id="L355"><span class="lineNum">     355</span>              :             }</span>
+<span id="L356"><span class="lineNum">     356</span> <span class="tlaGNC">           3 :             return true;</span></span>
+<span id="L357"><span class="lineNum">     357</span>              :         }</span>
+<span id="L358"><span class="lineNum">     358</span>              : </span>
+<span id="L359"><span class="lineNum">     359</span> <span class="tlaGNC">           1 :         return false;</span></span>
+<span id="L360"><span class="lineNum">     360</span>              :     }</span>
+<span id="L361"><span class="lineNum">     361</span>              : </span>
+<span id="L362"><span class="lineNum">     362</span> <span class="tlaGNC">          47 :     function _validateCall(KeyData storage sKey, Call memory call) private returns (bool) {</span></span>
+<span id="L363"><span class="lineNum">     363</span> <span class="tlaGNC">          47 :         if (call.target == address(this)) return false;</span></span>
+<span id="L364"><span class="lineNum">     364</span> <span class="tlaGNC">          47 :         if (!sKey.passesCallGuards(call.value)) return false;</span></span>
+<span id="L365"><span class="lineNum">     365</span>              : </span>
+<span id="L366"><span class="lineNum">     366</span> <span class="tlaGNC">          39 :         bytes memory innerData = call.data;</span></span>
+<span id="L367"><span class="lineNum">     367</span> <span class="tlaGNC">          39 :         bytes4 innerSelector;</span></span>
+<span id="L368"><span class="lineNum">     368</span>              :         assembly {</span>
+<span id="L369"><span class="lineNum">     369</span> <span class="tlaUNC">           0 :             innerSelector := mload(add(innerData, 0x20))</span></span>
+<span id="L370"><span class="lineNum">     370</span>              :         }</span>
+<span id="L371"><span class="lineNum">     371</span>              : </span>
+<span id="L372"><span class="lineNum">     372</span> <span class="tlaGNC">          39 :         if (!_isAllowedSelector(sKey.allowedSelectors, innerSelector)) {</span></span>
+<span id="L373"><span class="lineNum">     373</span> <span class="tlaGNC">           2 :             return false;</span></span>
+<span id="L374"><span class="lineNum">     374</span>              :         }</span>
+<span id="L375"><span class="lineNum">     375</span>              : </span>
+<span id="L376"><span class="lineNum">     376</span> <span class="tlaGNC">          37 :         sKey.consumeQuota();</span></span>
+<span id="L377"><span class="lineNum">     377</span> <span class="tlaGNC">          37 :         if (call.value &gt; 0) {</span></span>
+<span id="L378"><span class="lineNum">     378</span>              :             unchecked {</span>
+<span id="L379"><span class="lineNum">     379</span> <span class="tlaGNC">           7 :                 sKey.ethLimit -= call.value;</span></span>
+<span id="L380"><span class="lineNum">     380</span>              :             }</span>
+<span id="L381"><span class="lineNum">     381</span>              :         }</span>
+<span id="L382"><span class="lineNum">     382</span>              : </span>
+<span id="L383"><span class="lineNum">     383</span> <span class="tlaGNC">          37 :         if (sKey.spendTokenInfo.token == call.target) {</span></span>
+<span id="L384"><span class="lineNum">     384</span> <span class="tlaGNC">          27 :             bool validSpend = _validateTokenSpend(sKey, innerData);</span></span>
+<span id="L385"><span class="lineNum">     385</span> <span class="tlaGNC">          27 :             if (!validSpend) return false;</span></span>
+<span id="L386"><span class="lineNum">     386</span>              :         }</span>
+<span id="L387"><span class="lineNum">     387</span>              : </span>
+<span id="L388"><span class="lineNum">     388</span> <span class="tlaGNC">          36 :         if (!(sKey.whitelisting &amp;&amp; sKey.whitelist[call.target])) {</span></span>
+<span id="L389"><span class="lineNum">     389</span> <span class="tlaGNC">           1 :             return false;</span></span>
+<span id="L390"><span class="lineNum">     390</span>              :         }</span>
+<span id="L391"><span class="lineNum">     391</span> <span class="tlaGNC">          35 :         return true;</span></span>
+<span id="L392"><span class="lineNum">     392</span>              :     }</span>
+<span id="L393"><span class="lineNum">     393</span>              : </span>
+<span id="L394"><span class="lineNum">     394</span>              :     /**</span>
+<span id="L395"><span class="lineNum">     395</span>              :      * @notice Validates a token transfer against the key’s token spend limit.</span>
+<span id="L396"><span class="lineNum">     396</span>              :      * @dev Loads `value` from the last 32 bytes of `innerData` (standard ERC-20 `_transfer(address,uint256)`</span>
+<span id="L397"><span class="lineNum">     397</span>              :      * signature).</span>
+<span id="L398"><span class="lineNum">     398</span>              :      * @dev Out of scope (not supported): Extended/alternative token interfaces where spend cannot be</span>
+<span id="L399"><span class="lineNum">     399</span>              :      *      inferred from the trailing 32 bytes, including but not limited to:</span>
+<span id="L400"><span class="lineNum">     400</span>              :      *        - ERC-777 (`send`, operator functions and hooks)</span>
+<span id="L401"><span class="lineNum">     401</span>              :      *        - ERC-1363 (`transferAndCall`, etc.)</span>
+<span id="L402"><span class="lineNum">     402</span>              :      *        - ERC-4626 vaults (`deposit`, `mint`, `withdraw`, `redeem`, etc.)</span>
+<span id="L403"><span class="lineNum">     403</span>              :      *        - Allowance changes (`approve`, `increaseAllowance`, `decreaseAllowance`)</span>
+<span id="L404"><span class="lineNum">     404</span>              :      *        - Permit-style signatures (EIP-2612) or any function where the amount is not the last arg.</span>
+<span id="L405"><span class="lineNum">     405</span>              :      *      Calls to those selectors MUST be blocked elsewhere (e.g., via `allowedSelectors`) because</span>
+<span id="L406"><span class="lineNum">     406</span>              :      *      this function will not correctly measure spend and may produce misleading deductions.</span>
+<span id="L407"><span class="lineNum">     407</span>              :      * @param sKey      Storage reference of the KeyData</span>
+<span id="L408"><span class="lineNum">     408</span>              :      * @param innerData The full encoded call data to the token contract.</span>
+<span id="L409"><span class="lineNum">     409</span>              :      * @return True if `value ≤ sKey.spendTokenInfo.limit`; false if it exceeds or is invalid.</span>
+<span id="L410"><span class="lineNum">     410</span>              :      */</span>
+<span id="L411"><span class="lineNum">     411</span> <span class="tlaGNC">          27 :     function _validateTokenSpend(KeyData storage sKey, bytes memory innerData)</span></span>
+<span id="L412"><span class="lineNum">     412</span>              :         internal</span>
+<span id="L413"><span class="lineNum">     413</span>              :         returns (bool)</span>
+<span id="L414"><span class="lineNum">     414</span>              :     {</span>
+<span id="L415"><span class="lineNum">     415</span> <span class="tlaGNC">          27 :         uint256 len = innerData.length;</span></span>
+<span id="L416"><span class="lineNum">     416</span>              :         // load the last 32 bytes from innerData</span>
+<span id="L417"><span class="lineNum">     417</span> <span class="tlaGNC">          27 :         uint256 value;</span></span>
+<span id="L418"><span class="lineNum">     418</span>              :         assembly {</span>
+<span id="L419"><span class="lineNum">     419</span> <span class="tlaUNC">           0 :             value := mload(add(add(innerData, 0x20), sub(len, 0x20)))</span></span>
+<span id="L420"><span class="lineNum">     420</span>              :         }</span>
+<span id="L421"><span class="lineNum">     421</span> <span class="tlaGNC">          27 :         if (value &gt; sKey.spendTokenInfo.limit) {</span></span>
+<span id="L422"><span class="lineNum">     422</span> <span class="tlaGNC">           1 :             return false;</span></span>
+<span id="L423"><span class="lineNum">     423</span>              :         }</span>
+<span id="L424"><span class="lineNum">     424</span> <span class="tlaGNC">          26 :         if (value &gt; 0) {</span></span>
+<span id="L425"><span class="lineNum">     425</span>              :             unchecked {</span>
+<span id="L426"><span class="lineNum">     426</span> <span class="tlaGNC">          26 :                 sKey.spendTokenInfo.limit -= value;</span></span>
+<span id="L427"><span class="lineNum">     427</span>              :             }</span>
+<span id="L428"><span class="lineNum">     428</span>              :         }</span>
+<span id="L429"><span class="lineNum">     429</span> <span class="tlaGNC">          26 :         return true;</span></span>
+<span id="L430"><span class="lineNum">     430</span>              :     }</span>
+<span id="L431"><span class="lineNum">     431</span>              : </span>
+<span id="L432"><span class="lineNum">     432</span>              :     /**</span>
+<span id="L433"><span class="lineNum">     433</span>              :      * @notice Checks whether `selector` is included in the `selectors` array.</span>
+<span id="L434"><span class="lineNum">     434</span>              :      * @param selectors Array of allowed selectors (in storage).</span>
+<span id="L435"><span class="lineNum">     435</span>              :      * @param selector  The 4-byte function selector to check.</span>
+<span id="L436"><span class="lineNum">     436</span>              :      * @return True if found; false otherwise.</span>
+<span id="L437"><span class="lineNum">     437</span>              :      */</span>
+<span id="L438"><span class="lineNum">     438</span> <span class="tlaGNC">          39 :     function _isAllowedSelector(bytes4[] storage selectors, bytes4 selector)</span></span>
+<span id="L439"><span class="lineNum">     439</span>              :         internal</span>
+<span id="L440"><span class="lineNum">     440</span>              :         view</span>
+<span id="L441"><span class="lineNum">     441</span>              :         returns (bool)</span>
+<span id="L442"><span class="lineNum">     442</span>              :     {</span>
+<span id="L443"><span class="lineNum">     443</span> <span class="tlaGNC">          39 :         uint256 len = selectors.length;</span></span>
+<span id="L444"><span class="lineNum">     444</span> <span class="tlaGNC">          39 :         for (uint256 i = 0; i &lt; len;) {</span></span>
+<span id="L445"><span class="lineNum">     445</span> <span class="tlaGNC">          75 :             if (selectors[i] == selector) {</span></span>
+<span id="L446"><span class="lineNum">     446</span> <span class="tlaGNC">          37 :                 return true;</span></span>
+<span id="L447"><span class="lineNum">     447</span>              :             }</span>
+<span id="L448"><span class="lineNum">     448</span>              :             unchecked {</span>
+<span id="L449"><span class="lineNum">     449</span> <span class="tlaGNC">          38 :                 ++i;</span></span>
+<span id="L450"><span class="lineNum">     450</span>              :             }</span>
+<span id="L451"><span class="lineNum">     451</span>              :         }</span>
+<span id="L452"><span class="lineNum">     452</span> <span class="tlaUNC">           0 :         return false;</span></span>
+<span id="L453"><span class="lineNum">     453</span>              :     }</span>
+<span id="L454"><span class="lineNum">     454</span>              : </span>
+<span id="L455"><span class="lineNum">     455</span>              :     /**</span>
+<span id="L456"><span class="lineNum">     456</span>              :      * @notice ERC-1271 on-chain signature validation.</span>
+<span id="L457"><span class="lineNum">     457</span>              :      * @dev `isValidSignature` used only in case of RootKey/Master Key (EOA/WebAuthn) signer.</span>
+<span id="L458"><span class="lineNum">     458</span>              :      *  • EOA (ECDSA) path recovers `signer`. If `signer == this`, return `isValidSignature.selector`.</span>
+<span id="L459"><span class="lineNum">     459</span>              :      *    Else packed WebAuthn signature, load `key = keys[keyHash]` and enforce:</span>
+<span id="L460"><span class="lineNum">     460</span>              :      *      - (masterKey)</span>
+<span id="L461"><span class="lineNum">     461</span>              :      * @dev The session key does not undergo ERC-1271 validation, preventing granted roles</span>
+<span id="L462"><span class="lineNum">     462</span>              :      *      from utilizing Permit2 to bypass the established spending policy limits defined in the signature.</span>
+<span id="L463"><span class="lineNum">     463</span>              :      * @param _hash       The hash that was signed.</span>
+<span id="L464"><span class="lineNum">     464</span>              :      * @param _signature  The signature blob to verify.</span>
+<span id="L465"><span class="lineNum">     465</span>              :      * @return `this.isValidSignature.selector` if valid; otherwise `0xffffffff`.</span>
+<span id="L466"><span class="lineNum">     466</span>              :      */</span>
+<span id="L467"><span class="lineNum">     467</span> <span class="tlaGNC">          27 :     function isValidSignature(bytes32 _hash, bytes memory _signature)</span></span>
+<span id="L468"><span class="lineNum">     468</span>              :         external</span>
+<span id="L469"><span class="lineNum">     469</span>              :         view</span>
+<span id="L470"><span class="lineNum">     470</span>              :         returns (bytes4)</span>
+<span id="L471"><span class="lineNum">     471</span>              :     {</span>
+<span id="L472"><span class="lineNum">     472</span> <span class="tlaGNC">          27 :         if (_signature.length &lt; 32) {</span></span>
+<span id="L473"><span class="lineNum">     473</span> <span class="tlaGNC">           1 :             return bytes4(0xffffffff);</span></span>
+<span id="L474"><span class="lineNum">     474</span>              :         }</span>
+<span id="L475"><span class="lineNum">     475</span>              : </span>
+<span id="L476"><span class="lineNum">     476</span> <span class="tlaGNC">          26 :         if (_signature.length == 64 || _signature.length == 65) {</span></span>
+<span id="L477"><span class="lineNum">     477</span> <span class="tlaGNC">          14 :             return _validateEOASignature(_signature, _hash);</span></span>
+<span id="L478"><span class="lineNum">     478</span>              :         } else {</span>
+<span id="L479"><span class="lineNum">     479</span> <span class="tlaGNC">          12 :             return _validateWebAuthnSignature(_signature, _hash);</span></span>
+<span id="L480"><span class="lineNum">     480</span>              :         }</span>
+<span id="L481"><span class="lineNum">     481</span>              :     }</span>
+<span id="L482"><span class="lineNum">     482</span>              : </span>
+<span id="L483"><span class="lineNum">     483</span>              :     /**</span>
+<span id="L484"><span class="lineNum">     484</span>              :      * @notice Validate a EOA signature on-chain via ERC-1271.</span>
+<span id="L485"><span class="lineNum">     485</span>              :      * @param _signature  v,r,s components of signature</span>
+<span id="L486"><span class="lineNum">     486</span>              :      * @param _hash       The hash to verify.</span>
+<span id="L487"><span class="lineNum">     487</span>              :      * @return `this.isValidSignature.selector` if valid; otherwise `0xffffffff`.</span>
+<span id="L488"><span class="lineNum">     488</span>              :      */</span>
+<span id="L489"><span class="lineNum">     489</span> <span class="tlaGNC">          14 :     function _validateEOASignature(bytes memory _signature, bytes32 _hash)</span></span>
+<span id="L490"><span class="lineNum">     490</span>              :         internal</span>
+<span id="L491"><span class="lineNum">     491</span>              :         view</span>
+<span id="L492"><span class="lineNum">     492</span>              :         returns (bytes4)</span>
+<span id="L493"><span class="lineNum">     493</span>              :     {</span>
+<span id="L494"><span class="lineNum">     494</span> <span class="tlaGNC">          14 :         (address signer, ECDSA.RecoverError err,) = ECDSA.tryRecover(_hash, _signature);</span></span>
+<span id="L495"><span class="lineNum">     495</span> <span class="tlaGNC">          14 :         if (err != ECDSA.RecoverError.NoError) {</span></span>
+<span id="L496"><span class="lineNum">     496</span> <span class="tlaUNC">           0 :             return bytes4(0xffffffff);</span></span>
+<span id="L497"><span class="lineNum">     497</span>              :         }</span>
+<span id="L498"><span class="lineNum">     498</span>              : </span>
+<span id="L499"><span class="lineNum">     499</span> <span class="tlaGNC">          14 :         if (signer == address(this)) {</span></span>
+<span id="L500"><span class="lineNum">     500</span> <span class="tlaGNC">           9 :             return this.isValidSignature.selector;</span></span>
+<span id="L501"><span class="lineNum">     501</span>              :         }</span>
+<span id="L502"><span class="lineNum">     502</span>              : </span>
+<span id="L503"><span class="lineNum">     503</span> <span class="tlaGNC">           5 :         bytes32 keyHash = signer.computeKeyId();</span></span>
+<span id="L504"><span class="lineNum">     504</span> <span class="tlaGNC">           5 :         KeyData storage sKey = keys[keyHash];</span></span>
+<span id="L505"><span class="lineNum">     505</span>              : </span>
+<span id="L506"><span class="lineNum">     506</span>              :         if (sKey.masterKey) return this.isValidSignature.selector;</span>
+<span id="L507"><span class="lineNum">     507</span>              : </span>
+<span id="L508"><span class="lineNum">     508</span> <span class="tlaGNC">           5 :         return bytes4(0xffffffff);</span></span>
+<span id="L509"><span class="lineNum">     509</span>              :     }</span>
 <span id="L510"><span class="lineNum">     510</span>              : </span>
-<span id="L511"><span class="lineNum">     511</span> <span class="tlaGNC">          14 :         if (signer == address(this)) {</span></span>
-<span id="L512"><span class="lineNum">     512</span> <span class="tlaGNC">           9 :             return this.isValidSignature.selector;</span></span>
-<span id="L513"><span class="lineNum">     513</span>              :         }</span>
-<span id="L514"><span class="lineNum">     514</span>              : </span>
-<span id="L515"><span class="lineNum">     515</span> <span class="tlaGNC">           5 :         bytes32 keyHash = signer.computeKeyId();</span></span>
-<span id="L516"><span class="lineNum">     516</span> <span class="tlaGNC">           5 :         KeyData storage sKey = keys[keyHash];</span></span>
-<span id="L517"><span class="lineNum">     517</span>              : </span>
-<span id="L518"><span class="lineNum">     518</span>              :         if (sKey.masterKey) return this.isValidSignature.selector;</span>
-<span id="L519"><span class="lineNum">     519</span>              : </span>
-<span id="L520"><span class="lineNum">     520</span> <span class="tlaGNC">           5 :         return bytes4(0xffffffff);</span></span>
-<span id="L521"><span class="lineNum">     521</span>              :     }</span>
-<span id="L522"><span class="lineNum">     522</span>              : </span>
-<span id="L523"><span class="lineNum">     523</span>              :     /**</span>
-<span id="L524"><span class="lineNum">     524</span>              :      * @notice Validate a WebAuthn signature on-chain via ERC-1271.</span>
-<span id="L525"><span class="lineNum">     525</span>              :      * @param _signature  ABI-encoded: (bool UV, bytes authData, string cDataJSON, uint256 cIdx, uint256 tIdx, bytes32</span>
-<span id="L526"><span class="lineNum">     526</span>              :      * r, bytes32 s, PubKey pubKey)</span>
-<span id="L527"><span class="lineNum">     527</span>              :      * @param _hash       The hash to verify.</span>
-<span id="L528"><span class="lineNum">     528</span>              :      * @return `this.isValidSignature.selector` if valid; otherwise `0xffffffff`.</span>
-<span id="L529"><span class="lineNum">     529</span>              :      */</span>
-<span id="L530"><span class="lineNum">     530</span> <span class="tlaGNC">          12 :     function _validateWebAuthnSignature(bytes memory _signature, bytes32 _hash)</span></span>
-<span id="L531"><span class="lineNum">     531</span>              :         internal</span>
-<span id="L532"><span class="lineNum">     532</span>              :         view</span>
-<span id="L533"><span class="lineNum">     533</span>              :         returns (bytes4)</span>
-<span id="L534"><span class="lineNum">     534</span>              :     {</span>
-<span id="L535"><span class="lineNum">     535</span> <span class="tlaGNC">          12 :         (</span></span>
-<span id="L536"><span class="lineNum">     536</span>              :             bool requireUV,</span>
-<span id="L537"><span class="lineNum">     537</span>              :             bytes memory authenticatorData,</span>
-<span id="L538"><span class="lineNum">     538</span>              :             string memory clientDataJSON,</span>
-<span id="L539"><span class="lineNum">     539</span>              :             uint256 challengeIndex,</span>
-<span id="L540"><span class="lineNum">     540</span>              :             uint256 typeIndex,</span>
-<span id="L541"><span class="lineNum">     541</span>              :             bytes32 r,</span>
-<span id="L542"><span class="lineNum">     542</span>              :             bytes32 s,</span>
-<span id="L543"><span class="lineNum">     543</span>              :             PubKey memory pubKey</span>
-<span id="L544"><span class="lineNum">     544</span> <span class="tlaGNC">          12 :         ) = abi.decode(</span></span>
-<span id="L545"><span class="lineNum">     545</span>              :             _signature, (bool, bytes, string, uint256, uint256, bytes32, bytes32, PubKey)</span>
-<span id="L546"><span class="lineNum">     546</span>              :         );</span>
-<span id="L547"><span class="lineNum">     547</span>              : </span>
-<span id="L548"><span class="lineNum">     548</span> <span class="tlaGNC">           1 :         if (usedChallenges[_hash]) {</span></span>
-<span id="L549"><span class="lineNum">     549</span> <span class="tlaGNC">           1 :             return bytes4(0xffffffff);</span></span>
-<span id="L550"><span class="lineNum">     550</span>              :         }</span>
-<span id="L551"><span class="lineNum">     551</span> <span class="tlaGNC">          11 :         bool sigOk = IWebAuthnVerifier(webAuthnVerifier()).verifySignature(</span></span>
-<span id="L552"><span class="lineNum">     552</span>              :             _hash,</span>
-<span id="L553"><span class="lineNum">     553</span>              :             requireUV,</span>
-<span id="L554"><span class="lineNum">     554</span>              :             authenticatorData,</span>
-<span id="L555"><span class="lineNum">     555</span>              :             clientDataJSON,</span>
-<span id="L556"><span class="lineNum">     556</span>              :             challengeIndex,</span>
-<span id="L557"><span class="lineNum">     557</span>              :             typeIndex,</span>
-<span id="L558"><span class="lineNum">     558</span>              :             r,</span>
-<span id="L559"><span class="lineNum">     559</span>              :             s,</span>
-<span id="L560"><span class="lineNum">     560</span>              :             pubKey.x,</span>
-<span id="L561"><span class="lineNum">     561</span>              :             pubKey.y</span>
-<span id="L562"><span class="lineNum">     562</span>              :         );</span>
-<span id="L563"><span class="lineNum">     563</span> <span class="tlaGNC">          11 :         if (!sigOk) {</span></span>
-<span id="L564"><span class="lineNum">     564</span> <span class="tlaGNC">           1 :             return bytes4(0xffffffff);</span></span>
-<span id="L565"><span class="lineNum">     565</span>              :         }</span>
-<span id="L566"><span class="lineNum">     566</span>              : </span>
-<span id="L567"><span class="lineNum">     567</span> <span class="tlaGNC">          10 :         bytes32 keyHash = pubKey.computeKeyId();</span></span>
-<span id="L568"><span class="lineNum">     568</span> <span class="tlaGNC">          10 :         KeyData storage sKey = keys[keyHash];</span></span>
-<span id="L569"><span class="lineNum">     569</span>              : </span>
-<span id="L570"><span class="lineNum">     570</span>              :         if (sKey.masterKey) return this.isValidSignature.selector;</span>
-<span id="L571"><span class="lineNum">     571</span>              : </span>
-<span id="L572"><span class="lineNum">     572</span> <span class="tlaGNC">           1 :         return bytes4(0xffffffff);</span></span>
-<span id="L573"><span class="lineNum">     573</span>              :     }</span>
-<span id="L574"><span class="lineNum">     574</span>              : </span>
-<span id="L575"><span class="lineNum">     575</span>              :     /**</span>
-<span id="L576"><span class="lineNum">     576</span>              :      * @notice Internal helper to validate an ECDSA signature over `hash`.</span>
-<span id="L577"><span class="lineNum">     577</span>              :      * @param hash       The digest that was signed.</span>
-<span id="L578"><span class="lineNum">     578</span>              :      * @param signature  The signature bytes (v,r,s) or 64-byte compact.</span>
-<span id="L579"><span class="lineNum">     579</span>              :      * @return True if recovered == this contract, false otherwise.</span>
-<span id="L580"><span class="lineNum">     580</span>              :      */</span>
-<span id="L581"><span class="lineNum">     581</span> <span class="tlaGNC">         152 :     function _checkSignature(bytes32 hash, bytes memory signature) internal view returns (bool) {</span></span>
-<span id="L582"><span class="lineNum">     582</span> <span class="tlaGNC">         152 :         return ECDSA.recover(hash, signature) == address(this);</span></span>
-<span id="L583"><span class="lineNum">     583</span>              :     }</span>
-<span id="L584"><span class="lineNum">     584</span>              : }</span>
+<span id="L511"><span class="lineNum">     511</span>              :     /**</span>
+<span id="L512"><span class="lineNum">     512</span>              :      * @notice Validate a WebAuthn signature on-chain via ERC-1271.</span>
+<span id="L513"><span class="lineNum">     513</span>              :      * @param _signature  ABI-encoded: (bool UV, bytes authData, string cDataJSON, uint256 cIdx, uint256 tIdx, bytes32</span>
+<span id="L514"><span class="lineNum">     514</span>              :      * r, bytes32 s, PubKey pubKey)</span>
+<span id="L515"><span class="lineNum">     515</span>              :      * @param _hash       The hash to verify.</span>
+<span id="L516"><span class="lineNum">     516</span>              :      * @return `this.isValidSignature.selector` if valid; otherwise `0xffffffff`.</span>
+<span id="L517"><span class="lineNum">     517</span>              :      */</span>
+<span id="L518"><span class="lineNum">     518</span> <span class="tlaGNC">          12 :     function _validateWebAuthnSignature(bytes memory _signature, bytes32 _hash)</span></span>
+<span id="L519"><span class="lineNum">     519</span>              :         internal</span>
+<span id="L520"><span class="lineNum">     520</span>              :         view</span>
+<span id="L521"><span class="lineNum">     521</span>              :         returns (bytes4)</span>
+<span id="L522"><span class="lineNum">     522</span>              :     {</span>
+<span id="L523"><span class="lineNum">     523</span> <span class="tlaGNC">          12 :         bool requireUV;</span></span>
+<span id="L524"><span class="lineNum">     524</span> <span class="tlaGNC">          12 :         bytes memory authenticatorData;</span></span>
+<span id="L525"><span class="lineNum">     525</span> <span class="tlaGNC">          12 :         string memory clientDataJSON;</span></span>
+<span id="L526"><span class="lineNum">     526</span> <span class="tlaGNC">          12 :         uint256 challengeIndex;</span></span>
+<span id="L527"><span class="lineNum">     527</span> <span class="tlaGNC">          12 :         uint256 typeIndex;</span></span>
+<span id="L528"><span class="lineNum">     528</span> <span class="tlaGNC">          12 :         bytes32 r;</span></span>
+<span id="L529"><span class="lineNum">     529</span> <span class="tlaGNC">          12 :         bytes32 s;</span></span>
+<span id="L530"><span class="lineNum">     530</span> <span class="tlaGNC">          12 :         PubKey memory pubKey;</span></span>
+<span id="L531"><span class="lineNum">     531</span>              : </span>
+<span id="L532"><span class="lineNum">     532</span> <span class="tlaGNC">          12 :         try this._decodeWebAuthn1271(_signature) returns (</span></span>
+<span id="L533"><span class="lineNum">     533</span>              :             bool _requireUV,</span>
+<span id="L534"><span class="lineNum">     534</span>              :             bytes memory _authData,</span>
+<span id="L535"><span class="lineNum">     535</span>              :             string memory _cData,</span>
+<span id="L536"><span class="lineNum">     536</span>              :             uint256 _cIdx,</span>
+<span id="L537"><span class="lineNum">     537</span>              :             uint256 _tIdx,</span>
+<span id="L538"><span class="lineNum">     538</span>              :             bytes32 _r,</span>
+<span id="L539"><span class="lineNum">     539</span>              :             bytes32 _s,</span>
+<span id="L540"><span class="lineNum">     540</span>              :             PubKey memory _pk</span>
+<span id="L541"><span class="lineNum">     541</span>              :         ) {</span>
+<span id="L542"><span class="lineNum">     542</span> <span class="tlaGNC">          12 :             requireUV = _requireUV;</span></span>
+<span id="L543"><span class="lineNum">     543</span> <span class="tlaGNC">          12 :             authenticatorData = _authData;</span></span>
+<span id="L544"><span class="lineNum">     544</span> <span class="tlaGNC">          12 :             clientDataJSON = _cData;</span></span>
+<span id="L545"><span class="lineNum">     545</span> <span class="tlaGNC">          12 :             challengeIndex = _cIdx;</span></span>
+<span id="L546"><span class="lineNum">     546</span> <span class="tlaGNC">          12 :             typeIndex = _tIdx;</span></span>
+<span id="L547"><span class="lineNum">     547</span> <span class="tlaGNC">          12 :             r = _r;</span></span>
+<span id="L548"><span class="lineNum">     548</span> <span class="tlaGNC">          12 :             s = _s;</span></span>
+<span id="L549"><span class="lineNum">     549</span> <span class="tlaGNC">          12 :             pubKey = _pk;</span></span>
+<span id="L550"><span class="lineNum">     550</span> <span class="tlaUNC">           0 :         } catch {</span></span>
+<span id="L551"><span class="lineNum">     551</span> <span class="tlaUNC">           0 :             return bytes4(0xffffffff);</span></span>
+<span id="L552"><span class="lineNum">     552</span>              :         }</span>
+<span id="L553"><span class="lineNum">     553</span>              : </span>
+<span id="L554"><span class="lineNum">     554</span> <span class="tlaGNC">           1 :         if (usedChallenges[_hash]) {</span></span>
+<span id="L555"><span class="lineNum">     555</span> <span class="tlaGNC">           1 :             return bytes4(0xffffffff);</span></span>
+<span id="L556"><span class="lineNum">     556</span>              :         }</span>
+<span id="L557"><span class="lineNum">     557</span>              : </span>
+<span id="L558"><span class="lineNum">     558</span> <span class="tlaGNC">          11 :         bool sigOk;</span></span>
+<span id="L559"><span class="lineNum">     559</span> <span class="tlaGNC">          11 :         try IWebAuthnVerifier(webAuthnVerifier()).verifySignature(</span></span>
+<span id="L560"><span class="lineNum">     560</span>              :             _hash,</span>
+<span id="L561"><span class="lineNum">     561</span>              :             requireUV,</span>
+<span id="L562"><span class="lineNum">     562</span>              :             authenticatorData,</span>
+<span id="L563"><span class="lineNum">     563</span>              :             clientDataJSON,</span>
+<span id="L564"><span class="lineNum">     564</span>              :             challengeIndex,</span>
+<span id="L565"><span class="lineNum">     565</span>              :             typeIndex,</span>
+<span id="L566"><span class="lineNum">     566</span>              :             r,</span>
+<span id="L567"><span class="lineNum">     567</span>              :             s,</span>
+<span id="L568"><span class="lineNum">     568</span>              :             pubKey.x,</span>
+<span id="L569"><span class="lineNum">     569</span>              :             pubKey.y</span>
+<span id="L570"><span class="lineNum">     570</span>              :         ) returns (bool ok) {</span>
+<span id="L571"><span class="lineNum">     571</span> <span class="tlaGNC">          11 :             sigOk = ok;</span></span>
+<span id="L572"><span class="lineNum">     572</span> <span class="tlaUNC">           0 :         } catch {</span></span>
+<span id="L573"><span class="lineNum">     573</span> <span class="tlaUNC">           0 :             return bytes4(0xffffffff);</span></span>
+<span id="L574"><span class="lineNum">     574</span>              :         }</span>
+<span id="L575"><span class="lineNum">     575</span>              : </span>
+<span id="L576"><span class="lineNum">     576</span> <span class="tlaUNC">           0 :         if (!sigOk) {</span></span>
+<span id="L577"><span class="lineNum">     577</span> <span class="tlaGNC">           1 :             return bytes4(0xffffffff);</span></span>
+<span id="L578"><span class="lineNum">     578</span>              :         }</span>
+<span id="L579"><span class="lineNum">     579</span>              : </span>
+<span id="L580"><span class="lineNum">     580</span> <span class="tlaGNC">          10 :         bytes32 keyHash = pubKey.computeKeyId();</span></span>
+<span id="L581"><span class="lineNum">     581</span> <span class="tlaGNC">          10 :         KeyData storage sKey = keys[keyHash];</span></span>
+<span id="L582"><span class="lineNum">     582</span>              : </span>
+<span id="L583"><span class="lineNum">     583</span>              :         if (sKey.masterKey) return this.isValidSignature.selector;</span>
+<span id="L584"><span class="lineNum">     584</span>              : </span>
+<span id="L585"><span class="lineNum">     585</span> <span class="tlaGNC">           1 :         return bytes4(0xffffffff);</span></span>
+<span id="L586"><span class="lineNum">     586</span>              :     }</span>
+<span id="L587"><span class="lineNum">     587</span>              : </span>
+<span id="L588"><span class="lineNum">     588</span>              :     /// @dev helper ONLY for 1271 decoding so we can try/catch</span>
+<span id="L589"><span class="lineNum">     589</span> <span class="tlaGNC">          12 :     function _decodeWebAuthn1271(bytes memory sig)</span></span>
+<span id="L590"><span class="lineNum">     590</span>              :         external</span>
+<span id="L591"><span class="lineNum">     591</span>              :         pure</span>
+<span id="L592"><span class="lineNum">     592</span>              :         returns (</span>
+<span id="L593"><span class="lineNum">     593</span>              :             bool requireUV,</span>
+<span id="L594"><span class="lineNum">     594</span>              :             bytes memory authenticatorData,</span>
+<span id="L595"><span class="lineNum">     595</span>              :             string memory clientDataJSON,</span>
+<span id="L596"><span class="lineNum">     596</span>              :             uint256 challengeIndex,</span>
+<span id="L597"><span class="lineNum">     597</span>              :             uint256 typeIndex,</span>
+<span id="L598"><span class="lineNum">     598</span>              :             bytes32 r,</span>
+<span id="L599"><span class="lineNum">     599</span>              :             bytes32 s,</span>
+<span id="L600"><span class="lineNum">     600</span>              :             PubKey memory pubKey</span>
+<span id="L601"><span class="lineNum">     601</span>              :         )</span>
+<span id="L602"><span class="lineNum">     602</span>              :     {</span>
+<span id="L603"><span class="lineNum">     603</span> <span class="tlaGNC">          12 :         return abi.decode(sig, (bool, bytes, string, uint256, uint256, bytes32, bytes32, PubKey));</span></span>
+<span id="L604"><span class="lineNum">     604</span>              :     }</span>
+<span id="L605"><span class="lineNum">     605</span>              : </span>
+<span id="L606"><span class="lineNum">     606</span>              :     /**</span>
+<span id="L607"><span class="lineNum">     607</span>              :      * @notice Internal helper to validate an ECDSA signature over `hash`.</span>
+<span id="L608"><span class="lineNum">     608</span>              :      * @param hash       The digest that was signed.</span>
+<span id="L609"><span class="lineNum">     609</span>              :      * @param signature  The signature bytes (v,r,s) or 64-byte compact.</span>
+<span id="L610"><span class="lineNum">     610</span>              :      * @return True if recovered == this contract, false otherwise.</span>
+<span id="L611"><span class="lineNum">     611</span>              :      */</span>
+<span id="L612"><span class="lineNum">     612</span> <span class="tlaGNC">         154 :     function _checkSignature(bytes32 hash, bytes memory signature) internal view returns (bool) {</span></span>
+<span id="L613"><span class="lineNum">     613</span> <span class="tlaGNC">         154 :         return ECDSA.recover(hash, signature) == address(this);</span></span>
+<span id="L614"><span class="lineNum">     614</span>              :     }</span>
+<span id="L615"><span class="lineNum">     615</span>              : }</span>
         </pre>
               </td>
             </tr>

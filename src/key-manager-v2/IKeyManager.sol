@@ -54,6 +54,7 @@ interface IKeyManager {
     error KeyManager__TokenAddressZero();
     error KeyManager__TokenSpendNotSet();
     error KeyManager__CallCheckerNotSet();
+    error KeyManager__TargetAddressZero();
     error KeyManager__MasterKeyDisallowed();
     error KeyManager__TokenSpendAlreadySet();
     error KeyManager__CallCheckerAlreadySet();

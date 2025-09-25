@@ -4,12 +4,14 @@ pragma solidity 0.8.29;
 
 import {IKey} from "././IKey.sol";
 import {IKeyManager} from "././IKeyManager.sol";
+import {KeManagerLib, KeyId} from "././KeManagerLib.sol";
 import {EnumerableSetLib} from "lib/solady/src/utils/EnumerableSetLib.sol";
 import {EnumerableMapLib} from "lib/solady/src/utils/EnumerableMapLib.sol";
 
-contract KeyManager is IKeyManager, IKey {
+contract KeysManager is IKeyManager, IKey {
     using EnumerableSetLib for *;
     using EnumerableMapLib for *;
+    using KeManagerLib for *;
 
     // =============================================================
     //                          CONSTANTS
@@ -42,7 +44,10 @@ contract KeyManager is IKeyManager, IKey {
     function registerKey(KeyDataReg calldata _keyData) public {
         _requireForExecute();
         if (_keyData.key.length == 0) revert KeyManager__KeyCantBeZero();
+        // _keyData.keyCantBeZero();
         if (_keyData.limits == 0) revert KeyManager__MustHaveLimits();
+        // _keyData.mustHaveLimits();
+
 
         uint48 validUntil = _keyData.validUntil;
         if (
@@ -85,6 +90,7 @@ contract KeyManager is IKeyManager, IKey {
         KeyData storage sKey = keys[_keyId];
         if (!sKey.isActive) revert KeyManager__KeyNotActive();
         if (sKey.masterKey) revert KeyManager__MasterKeyDisallowed();
+        if (_target == address(0)) revert KeyManager__TargetAddressZero();
         if (_target == address(this)) revert KeyManager__TargetIsThis();
 
         _setCanCall(_keyId, _target, _funSel, can);
@@ -97,6 +103,7 @@ contract KeyManager is IKeyManager, IKey {
         if (!sKey.isActive) revert KeyManager__KeyNotActive();
         if (sKey.masterKey) revert KeyManager__MasterKeyDisallowed();
         if (_target == address(this)) revert KeyManager__TargetIsThis();
+        if (_target == address(0)) revert KeyManager__TargetAddressZero();
         if (_checker == address(0)) revert KeyManager__AddressZero();
 
         _setCallChecker(_keyId, _target, _checker, false);
@@ -111,7 +118,7 @@ contract KeyManager is IKeyManager, IKey {
 
         if (
             _validUntil <= sKey.validUntil || _validUntil <= block.timestamp
-                || _validUntil < sKey.validAfter
+                || _validUntil < sKey.validAfter || _validUntil == type(uint48).max
         ) revert KeyManager__BadTimestamps();
         if (_limits == 0) revert KeyManager__MustHaveLimits();
 
@@ -204,6 +211,7 @@ contract KeyManager is IKeyManager, IKey {
         _sKey.validAfter = 0;
         _sKey.limits = 0;
         delete _sKey.key;
+        delete _sKey.keyType;
     }
 
     function _setTokenSpend(
@@ -296,7 +304,7 @@ contract KeyManager is IKeyManager, IKey {
         returns (address target, bytes4 fnSel)
     {
         assembly ("memory-safe") {
-            target := shr(96, shl(96, packed))
+            target := shr(96, packed)
             fnSel := shl(224, packed)
         }
     }

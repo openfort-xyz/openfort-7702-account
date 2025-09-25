@@ -11,6 +11,12 @@ fs_permissions = [
   { access = "read", path = "./test/data" }
 ]
 
+[profile.default.fuzz]
+runs = 100000                               
+seed = '0x3e8'  
+
+
+
 # Add CI profile with same settings
 [profile.ci]
 src = "src"

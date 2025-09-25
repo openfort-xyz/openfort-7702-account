@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2025-08-29 18:57:14</td>
+            <td class="headerValue">2025-09-25 19:37:50</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryMed">83.3&nbsp;%</td>
@@ -386,11 +386,11 @@
 <span id="L324"><span class="lineNum">     324</span>              :     string public ERC1271_CLIENT_DATA_JSON =</span>
 <span id="L325"><span class="lineNum">     325</span>              :         stdJson.readString(json_erc1271, &quot;.isValidSignature.metadata.clientDataJSON&quot;);</span>
 <span id="L326"><span class="lineNum">     326</span>              : </span>
-<span id="L327"><span class="lineNum">     327</span> <span class="tlaGNC">         728 :     function _allowedSelectors() internal pure returns (bytes4[] memory sel) {</span></span>
-<span id="L328"><span class="lineNum">     328</span> <span class="tlaGNC">         728 :         sel = new bytes4[](3);</span></span>
-<span id="L329"><span class="lineNum">     329</span> <span class="tlaGNC">         728 :         sel[0] = 0xa9059cbb;</span></span>
-<span id="L330"><span class="lineNum">     330</span> <span class="tlaGNC">         728 :         sel[1] = 0x40c10f19;</span></span>
-<span id="L331"><span class="lineNum">     331</span> <span class="tlaGNC">         728 :         sel[2] = 0x00000000;</span></span>
+<span id="L327"><span class="lineNum">     327</span> <span class="tlaGNC">         732 :     function _allowedSelectors() internal pure returns (bytes4[] memory sel) {</span></span>
+<span id="L328"><span class="lineNum">     328</span> <span class="tlaGNC">         732 :         sel = new bytes4[](3);</span></span>
+<span id="L329"><span class="lineNum">     329</span> <span class="tlaGNC">         732 :         sel[0] = 0xa9059cbb;</span></span>
+<span id="L330"><span class="lineNum">     330</span> <span class="tlaGNC">         732 :         sel[1] = 0x40c10f19;</span></span>
+<span id="L331"><span class="lineNum">     331</span> <span class="tlaGNC">         732 :         sel[2] = 0x00000000;</span></span>
 <span id="L332"><span class="lineNum">     332</span>              :     }</span>
 <span id="L333"><span class="lineNum">     333</span>              : </span>
 <span id="L334"><span class="lineNum">     334</span> <span class="tlaUNC">           0 :     function _allowedSelectorsEmpty() internal pure returns (bytes4[] memory sel) {</span></span>
@@ -414,25 +414,25 @@
 <span id="L352"><span class="lineNum">     352</span> <span class="tlaGNC">          30 :         return bytes32((maxFeePerGas &lt;&lt; 128) | maxPriorityFeePerGas);</span></span>
 <span id="L353"><span class="lineNum">     353</span>              :     }</span>
 <span id="L354"><span class="lineNum">     354</span>              : </span>
-<span id="L355"><span class="lineNum">     355</span> <span class="tlaGNC">          52 :     function _deal() public {</span></span>
-<span id="L356"><span class="lineNum">     356</span> <span class="tlaGNC">          52 :         deal(owner, 10e18);</span></span>
-<span id="L357"><span class="lineNum">     357</span> <span class="tlaGNC">          52 :         deal(sender, 10e18);</span></span>
+<span id="L355"><span class="lineNum">     355</span> <span class="tlaGNC">          53 :     function _deal() public {</span></span>
+<span id="L356"><span class="lineNum">     356</span> <span class="tlaGNC">          53 :         deal(owner, 10e18);</span></span>
+<span id="L357"><span class="lineNum">     357</span> <span class="tlaGNC">          53 :         deal(sender, 10e18);</span></span>
 <span id="L358"><span class="lineNum">     358</span>              :     }</span>
 <span id="L359"><span class="lineNum">     359</span>              : </span>
-<span id="L360"><span class="lineNum">     360</span> <span class="tlaGNC">          52 :     function _createInitialGuradian() public {</span></span>
-<span id="L361"><span class="lineNum">     361</span> <span class="tlaGNC">          52 :         pubKeyGuardianEOA = PubKey({</span></span>
+<span id="L360"><span class="lineNum">     360</span> <span class="tlaGNC">          53 :     function _createInitialGuradian() public {</span></span>
+<span id="L361"><span class="lineNum">     361</span> <span class="tlaGNC">          53 :         pubKeyGuardianEOA = PubKey({</span></span>
 <span id="L362"><span class="lineNum">     362</span>              :             x: 0x0000000000000000000000000000000000000000000000000000000000000000,</span>
 <span id="L363"><span class="lineNum">     363</span>              :             y: 0x0000000000000000000000000000000000000000000000000000000000000000</span>
 <span id="L364"><span class="lineNum">     364</span>              :         });</span>
-<span id="L365"><span class="lineNum">     365</span> <span class="tlaGNC">          52 :         keyGuardianEOA =</span></span>
+<span id="L365"><span class="lineNum">     365</span> <span class="tlaGNC">          53 :         keyGuardianEOA =</span></span>
 <span id="L366"><span class="lineNum">     366</span>              :             Key({pubKey: pubKeyGuardianEOA, eoaAddress: GUARDIAN_EOA_ADDRESS, keyType: KeyType.EOA});</span>
 <span id="L367"><span class="lineNum">     367</span>              : </span>
-<span id="L368"><span class="lineNum">     368</span> <span class="tlaGNC">          52 :         pubKeyGuardianWebAuthn = PubKey({x: GUARDIAN_PUBLIC_KEY_X, y: GUARDIAN_PUBLIC_KEY_Y});</span></span>
-<span id="L369"><span class="lineNum">     369</span> <span class="tlaGNC">          52 :         keyGuardianWebAuthn =</span></span>
+<span id="L368"><span class="lineNum">     368</span> <span class="tlaGNC">          53 :         pubKeyGuardianWebAuthn = PubKey({x: GUARDIAN_PUBLIC_KEY_X, y: GUARDIAN_PUBLIC_KEY_Y});</span></span>
+<span id="L369"><span class="lineNum">     369</span> <span class="tlaGNC">          53 :         keyGuardianWebAuthn =</span></span>
 <span id="L370"><span class="lineNum">     370</span>              :             Key({pubKey: pubKeyGuardianWebAuthn, eoaAddress: address(0), keyType: KeyType.WEBAUTHN});</span>
 <span id="L371"><span class="lineNum">     371</span>              : </span>
-<span id="L372"><span class="lineNum">     372</span> <span class="tlaGNC">          52 :         address initialAddr = makeAddr(&quot;initialGuardian&quot;);</span></span>
-<span id="L373"><span class="lineNum">     373</span> <span class="tlaGNC">          52 :         initialGuardian = keccak256(abi.encodePacked(initialAddr));</span></span>
+<span id="L372"><span class="lineNum">     372</span> <span class="tlaGNC">          53 :         address initialAddr = makeAddr(&quot;initialGuardian&quot;);</span></span>
+<span id="L373"><span class="lineNum">     373</span> <span class="tlaGNC">          53 :         initialGuardian = keccak256(abi.encodePacked(initialAddr));</span></span>
 <span id="L374"><span class="lineNum">     374</span>              :     }</span>
 <span id="L375"><span class="lineNum">     375</span>              : }</span>
         </pre>
