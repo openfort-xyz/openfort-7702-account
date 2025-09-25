@@ -528,7 +528,14 @@ contract KeysManagerV2Reverts is Test, IKey, IKeyManager {
     }
 
     function test_registerKeyRevert_BadTimestamps() public {
-        _createKey(1010, 101010, uint48(block.timestamp + 10 days), uint48(block.timestamp + 11 days), 10, false);
+        _createKey(
+            1010,
+            101010,
+            uint48(block.timestamp + 10 days),
+            uint48(block.timestamp + 11 days),
+            10,
+            false
+        );
 
         vm.expectRevert(KeyManager__BadTimestamps.selector);
         vm.prank(address(KM));
@@ -602,7 +609,7 @@ contract KeysManagerV2Reverts is Test, IKey, IKeyManager {
         vm.prank(address(KM));
         KM.registerKey(kDG);
 
-        (bytes32 keyId, ) = KM.keyAt(0);
+        (bytes32 keyId,) = KM.keyAt(0);
 
         vm.expectRevert(KeyManager__TokenAddressZero.selector);
         vm.prank(address(KM));
@@ -631,11 +638,10 @@ contract KeysManagerV2Reverts is Test, IKey, IKeyManager {
         vm.expectRevert(KeyManager__TokenAddressZero.selector);
         vm.prank(address(KM));
         KM.updateTokenSpend(keyId, address(0), 0, SpendPeriod.Month);
-    
+
         vm.expectRevert(KeyManager__MustHaveLimits.selector);
         vm.prank(address(KM));
         KM.updateTokenSpend(keyId, address(12456), 0, SpendPeriod.Month);
-
     }
 
     function test_setTokenSpendRevert_MustHaveLimits() public {
@@ -644,7 +650,7 @@ contract KeysManagerV2Reverts is Test, IKey, IKeyManager {
         vm.prank(address(KM));
         KM.registerKey(kDG);
 
-        (bytes32 keyId, ) = KM.keyAt(0);
+        (bytes32 keyId,) = KM.keyAt(0);
 
         vm.expectRevert(KeyManager__MustHaveLimits.selector);
         vm.prank(address(KM));
@@ -657,7 +663,7 @@ contract KeysManagerV2Reverts is Test, IKey, IKeyManager {
         vm.prank(address(KM));
         KM.registerKey(kDG);
 
-        (bytes32 keyId, ) = KM.keyAt(0);
+        (bytes32 keyId,) = KM.keyAt(0);
 
         vm.prank(address(KM));
         KM.setTokenSpend(keyId, address(erc20), 10e18, SpendPeriod.Month);
@@ -673,7 +679,7 @@ contract KeysManagerV2Reverts is Test, IKey, IKeyManager {
         vm.prank(address(KM));
         KM.registerKey(kDG);
 
-        (bytes32 keyId, ) = KM.keyAt(0);
+        (bytes32 keyId,) = KM.keyAt(0);
 
         vm.prank(address(KM));
         KM.setCallChecker(keyId, address(erc20), address(2123456));
@@ -689,7 +695,7 @@ contract KeysManagerV2Reverts is Test, IKey, IKeyManager {
         vm.prank(address(KM));
         KM.registerKey(kDG);
 
-        (bytes32 keyId, ) = KM.keyAt(0);
+        (bytes32 keyId,) = KM.keyAt(0);
 
         vm.expectRevert(KeyManager__BadTimestamps.selector);
         vm.prank(address(KM));
@@ -701,7 +707,7 @@ contract KeysManagerV2Reverts is Test, IKey, IKeyManager {
 
         vm.expectRevert(KeyManager__MustHaveLimits.selector);
         vm.prank(address(KM));
-        KM.updateKeyData(keyId, uint48(block.timestamp + 11 days), 0); 
+        KM.updateKeyData(keyId, uint48(block.timestamp + 11 days), 0);
     }
 
     function test_updateTokenSpend_TokenSpendNotSet() public {
@@ -710,7 +716,7 @@ contract KeysManagerV2Reverts is Test, IKey, IKeyManager {
         vm.prank(address(KM));
         KM.registerKey(kDG);
 
-        (bytes32 keyId, ) = KM.keyAt(0);
+        (bytes32 keyId,) = KM.keyAt(0);
 
         vm.prank(address(KM));
         KM.setTokenSpend(keyId, address(12346789), 10, SpendPeriod.Month);
@@ -726,7 +732,7 @@ contract KeysManagerV2Reverts is Test, IKey, IKeyManager {
         vm.prank(address(KM));
         KM.registerKey(kDG);
 
-        (bytes32 keyId, ) = KM.keyAt(0);
+        (bytes32 keyId,) = KM.keyAt(0);
 
         vm.prank(address(KM));
         KM.setCallChecker(keyId, address(erc20), address(2123456));
@@ -742,7 +748,7 @@ contract KeysManagerV2Reverts is Test, IKey, IKeyManager {
         vm.prank(address(KM));
         KM.registerKey(kDG);
 
-        (bytes32 keyId, ) = KM.keyAt(0);
+        (bytes32 keyId,) = KM.keyAt(0);
 
         vm.expectRevert(KeyManager__KeyAlreadyActive.selector);
         vm.prank(address(KM));
@@ -750,7 +756,7 @@ contract KeysManagerV2Reverts is Test, IKey, IKeyManager {
 
         vm.prank(address(KM));
         KM.pauseKey(keyId);
-        
+
         vm.expectRevert(KeyManager__KeyAlreadyPaused.selector);
         vm.prank(address(KM));
         KM.pauseKey(keyId);
@@ -822,7 +828,7 @@ contract KeysManagerV2Reverts is Test, IKey, IKeyManager {
         vm.prank(address(KM));
         KM.registerKey(kDG);
 
-        (bytes32 keyId, ) = KM.keyAt(0);
+        (bytes32 keyId,) = KM.keyAt(0);
 
         vm.prank(address(KM));
         KM.setTokenSpend(keyId, address(12346789), 10, SpendPeriod.Month);
@@ -832,9 +838,18 @@ contract KeysManagerV2Reverts is Test, IKey, IKeyManager {
         KM.removeTokenSpend(keyId, address(123789));
     }
 
-    function _createKey(uint256 _saltX, uint256 _saltY, uint48 _validUntil, uint48 _validAfter, uint48 _limits, bool isBytes32) internal {
+    function _createKey(
+        uint256 _saltX,
+        uint256 _saltY,
+        uint48 _validUntil,
+        uint48 _validAfter,
+        uint48 _limits,
+        bool isBytes32
+    ) internal {
         vm.prank(address(KM));
-        kDG = KMHelper.createDataRegCustom(_saltX, _saltY, _validUntil, _validAfter, _limits, isBytes32);
+        kDG = KMHelper.createDataRegCustom(
+            _saltX, _saltY, _validUntil, _validAfter, _limits, isBytes32
+        );
     }
 }
 
@@ -877,11 +892,14 @@ contract KeysManagerV2Helper is IKey {
         });
     }
 
-    function createDataRegCustom(uint256 _saltX, uint256 _saltY, uint48 _validUntil, uint48 _validAfter, uint48 _limits, bool _bytes32Zero)
-        public
-        view
-        returns (KeyDataReg memory kDG)
-    {   
+    function createDataRegCustom(
+        uint256 _saltX,
+        uint256 _saltY,
+        uint48 _validUntil,
+        uint48 _validAfter,
+        uint48 _limits,
+        bool _bytes32Zero
+    ) public view returns (KeyDataReg memory kDG) {
         bytes memory empty;
 
         (bytes32 x, bytes32 y) = randomKey(_saltX, _saltY);

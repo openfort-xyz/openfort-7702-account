@@ -48,7 +48,6 @@ contract KeysManager is IKeyManager, IKey {
         if (_keyData.limits == 0) revert KeyManager__MustHaveLimits();
         // _keyData.mustHaveLimits();
 
-
         uint48 validUntil = _keyData.validUntil;
         if (
             validUntil == type(uint48).max || validUntil <= block.timestamp
