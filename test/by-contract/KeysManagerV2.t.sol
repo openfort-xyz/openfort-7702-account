@@ -41,6 +41,24 @@ contract KeysManagerV2 is Test, IKey, IKeyManager {
         assertEq(data.key, kDG.key);
         assertTrue(data.isActive);
         assertFalse(data.masterKey);
+
+        KeyData memory k = KM.getKey(keyId);
+        assertEq(uint256(k.keyType), uint256(kDG.keyType));
+        assertEq(k.validUntil, kDG.validUntil);
+        assertEq(k.validAfter, kDG.validAfter);
+        assertEq(k.limits, kDG.limits);
+        assertEq(k.key, kDG.key);
+        assertTrue(k.isActive);
+        assertFalse(k.masterKey);
+
+        bool isReg = KM.isRegistered(keyId);
+        assertTrue(isReg);
+
+        bool isAct = KM.isKeyActive(keyId);
+        assertTrue(isAct);
+
+        uint256 id = KM.keyCount();
+        assertEq(id, 1);
     }
 
     function test_setTokenSpend(
@@ -113,6 +131,9 @@ contract KeysManagerV2 is Test, IKey, IKeyManager {
         (address target_, bytes4 fnSel_) = KM.canExecuteAt(keyId, 0);
         assertEq(target_, _target);
         assertEq(fnSel_, _funSel);
+
+        bool hasCall = KM.hasCanCall(keyId, _target, _funSel);
+        assertTrue(hasCall);
     }
 
     function test_setCallChecker(uint256 _saltX, uint256 _saltY, address _target, address _checker)
@@ -141,6 +162,51 @@ contract KeysManagerV2 is Test, IKey, IKeyManager {
         (bool exists, address checker_) = KM.getCallChecker(keyId, _target);
         assertTrue(exists);
         assertEq(_checker, checker_);
+    }
+
+    function test_clearExecutePermissions(uint256 _saltX, uint256 _saltY, address _target, bytes4 _funSel, address _checker) public {
+        vm.assume(_target != address(0) && _target != address(KM));
+        vm.assume(
+            _target != address(0) && _target != address(uint160(SOLADY_SENTINEL))
+                && _checker != address(0) && _checker != address(uint160(SOLADY_SENTINEL))
+                && _target != address(KM) && _checker != address(KM)
+        );
+
+        _createKey(_saltX, _saltY);
+        _register();
+
+        (bytes32 keyId,) = KM.keyAt(0);
+
+        vm.prank(address(KM));
+        KM.setCanCall(keyId, _target, _funSel, true);
+
+        vm.prank(address(KM));
+        KM.setCallChecker(keyId, _target, _checker);
+
+        vm.prank(address(KM));
+        KM.clearExecutePermissions(keyId);
+
+        bytes32[] memory permissions = KM.canExecutePackedInfos(keyId);
+
+        for (uint256 i = 0; i < permissions.length;) {
+            assertEq(permissions[i], bytes32(0));
+            (address target, bytes4 fnSel) = KMHelper._unpackCanExecute(permissions[i]);
+            assertEq(target, address(0));
+            assertEq(fnSel, bytes4(0));
+            unchecked {
+                i++;
+            }
+        }
+
+        uint256 L = KM.canExecuteLength(keyId);
+        assertEq(L, 0);
+
+        uint256 _L = KM.callCheckersLength(keyId);
+        assertEq(0, _L);
+
+        (bool exists, address checker_) = KM.getCallChecker(keyId, _target);
+        assertFalse(exists);
+        assertEq(address(0), checker_);
     }
 
     function test_revokeKey(
