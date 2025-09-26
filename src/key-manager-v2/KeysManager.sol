@@ -4,14 +4,14 @@ pragma solidity 0.8.29;
 
 import {IKey} from "././IKey.sol";
 import {IKeyManager} from "././IKeyManager.sol";
-import {KeManagerLib, KeyId} from "././KeManagerLib.sol";
+import {KeyManagerLib, KeyId} from "././KeManagerLib.sol";
 import {EnumerableSetLib} from "lib/solady/src/utils/EnumerableSetLib.sol";
 import {EnumerableMapLib} from "lib/solady/src/utils/EnumerableMapLib.sol";
 
 contract KeysManager is IKeyManager, IKey {
     using EnumerableSetLib for *;
     using EnumerableMapLib for *;
-    using KeManagerLib for *;
+    using KeyManagerLib for *;
 
     // =============================================================
     //                          CONSTANTS
@@ -43,16 +43,11 @@ contract KeysManager is IKeyManager, IKey {
     ////////////// Setters //////////////
     function registerKey(KeyDataReg calldata _keyData) public {
         _requireForExecute();
-        if (_keyData.key.length == 0) revert KeyManager__KeyCantBeZero();
-        // _keyData.keyCantBeZero();
-        if (_keyData.limits == 0) revert KeyManager__MustHaveLimits();
-        // _keyData.mustHaveLimits();
 
-        uint48 validUntil = _keyData.validUntil;
-        if (
-            validUntil == type(uint48).max || validUntil <= block.timestamp
-                || validUntil < _keyData.validAfter
-        ) revert KeyManager__BadTimestamps();
+        _keyData.keyCantBeZero();
+        _keyData.mustHaveLimits();
+
+        KeyManagerLib.validateTimestamps(_keyData.validUntil, _keyData.validAfter, 0, false);
 
         _addKey(_keyData);
     }
@@ -60,8 +55,7 @@ contract KeysManager is IKeyManager, IKey {
     function revokeKey(bytes32 _keyId) public {
         _requireForExecute();
         KeyData storage sKey = keys[_keyId];
-        if (!sKey.isActive) revert KeyManager__KeyNotActive();
-        if (sKey.masterKey) revert KeyManager__MasterKeyCannotBeRevoked();
+        sKey.validateKeyBefore();
 
         _revoke(sKey);
         emit KeyRevoked(_keyId);
@@ -75,10 +69,10 @@ contract KeysManager is IKeyManager, IKey {
     {
         _requireForExecute();
         KeyData storage sKey = keys[_keyId];
-        if (!sKey.isActive) revert KeyManager__KeyNotActive();
-        if (sKey.masterKey) revert KeyManager__MasterKeyDisallowed();
-        if (_token == address(0)) revert KeyManager__TokenAddressZero();
-        if (_limit == 0) revert KeyManager__MustHaveLimits();
+        sKey.validateKeyBefore();
+
+        _token.checkAddress();
+        _limit.checkLimits();
 
         _setTokenSpend(_keyId, _token, _limit, _period, false);
         emit TokenSpendSet(_keyId, _token, _period, _limit);
@@ -87,10 +81,9 @@ contract KeysManager is IKeyManager, IKey {
     function setCanCall(bytes32 _keyId, address _target, bytes4 _funSel, bool can) public {
         _requireForExecute();
         KeyData storage sKey = keys[_keyId];
-        if (!sKey.isActive) revert KeyManager__KeyNotActive();
-        if (sKey.masterKey) revert KeyManager__MasterKeyDisallowed();
-        if (_target == address(0)) revert KeyManager__TargetAddressZero();
-        if (_target == address(this)) revert KeyManager__TargetIsThis();
+        sKey.validateKeyBefore();
+
+        _target.checkTargetAddress();
 
         _setCanCall(_keyId, _target, _funSel, can);
         emit CanCallSet(_keyId, _target, _funSel, can);
@@ -99,11 +92,10 @@ contract KeysManager is IKeyManager, IKey {
     function setCallChecker(bytes32 _keyId, address _target, address _checker) public {
         _requireForExecute();
         KeyData storage sKey = keys[_keyId];
-        if (!sKey.isActive) revert KeyManager__KeyNotActive();
-        if (sKey.masterKey) revert KeyManager__MasterKeyDisallowed();
-        if (_target == address(this)) revert KeyManager__TargetIsThis();
-        if (_target == address(0)) revert KeyManager__TargetAddressZero();
-        if (_checker == address(0)) revert KeyManager__AddressZero();
+        sKey.validateKeyBefore();
+
+        _target.checkTargetAddress();
+        _checker.checkAddress();
 
         _setCallChecker(_keyId, _target, _checker, false);
         emit CallCheckerSet(_keyId, _target, _checker);
@@ -113,13 +105,11 @@ contract KeysManager is IKeyManager, IKey {
     function updateKeyData(bytes32 _keyId, uint48 _validUntil, uint48 _limits) public {
         _requireForExecute();
         KeyData storage sKey = keys[_keyId];
-        if (!sKey.isActive) revert KeyManager__KeyNotActive();
+        sKey.validateKeyBefore();
 
-        if (
-            _validUntil <= sKey.validUntil || _validUntil <= block.timestamp
-                || _validUntil < sKey.validAfter || _validUntil == type(uint48).max
-        ) revert KeyManager__BadTimestamps();
-        if (_limits == 0) revert KeyManager__MustHaveLimits();
+        KeyManagerLib.validateTimestamps(_validUntil, sKey.validAfter, sKey.validUntil, true);
+        
+        _limits.checkLimits();
 
         sKey.validUntil = _validUntil;
         sKey.limits = _limits;
@@ -131,10 +121,10 @@ contract KeysManager is IKeyManager, IKey {
     {
         _requireForExecute();
         KeyData storage sKey = keys[_keyId];
-        if (!sKey.isActive) revert KeyManager__KeyNotActive();
-        if (sKey.masterKey) revert KeyManager__MasterKeyDisallowed();
-        if (_token == address(0)) revert KeyManager__TokenAddressZero();
-        if (_limit == 0) revert KeyManager__MustHaveLimits();
+        sKey.validateKeyBefore();
+
+        _token.checkAddress();
+        _limit.checkLimits();
 
         _setTokenSpend(_keyId, _token, _limit, _period, true);
         emit TokenSpendSet(_keyId, _token, _period, _limit);
@@ -143,10 +133,10 @@ contract KeysManager is IKeyManager, IKey {
     function updateCallChecker(bytes32 _keyId, address _target, address _checker) public {
         _requireForExecute();
         KeyData storage sKey = keys[_keyId];
-        if (!sKey.isActive) revert KeyManager__KeyNotActive();
-        if (sKey.masterKey) revert KeyManager__MasterKeyDisallowed();
-        if (_target == address(this)) revert KeyManager__TargetIsThis();
-        if (_checker == address(0)) revert KeyManager__AddressZero();
+        sKey.validateKeyBefore();
+
+        _target.checkTargetAddress();
+        _checker.checkAddress();
 
         _setCallChecker(_keyId, _target, _checker, true);
         emit CallCheckerSet(_keyId, _target, _checker);
@@ -156,8 +146,8 @@ contract KeysManager is IKeyManager, IKey {
     function removeTokenSpend(bytes32 _keyId, address _token) public {
         _requireForExecute();
         KeyData storage sKey = keys[_keyId];
-        if (!sKey.isActive) revert KeyManager__KeyNotActive();
-        if (sKey.masterKey) revert KeyManager__MasterKeyDisallowed();
+        sKey.validateKeyBefore();
+
         _removeTokenSpend(_keyId, _token);
         emit TokenSpendRemoved(_keyId, _token);
     }
@@ -165,8 +155,7 @@ contract KeysManager is IKeyManager, IKey {
     function removeCallChecker(bytes32 _keyId, address _target) public {
         _requireForExecute();
         KeyData storage sKey = keys[_keyId];
-        if (!sKey.isActive) revert KeyManager__KeyNotActive();
-        if (sKey.masterKey) revert KeyManager__MasterKeyDisallowed();
+        sKey.validateKeyBefore();
 
         _removeCallChecker(_keyId, _target);
         emit CallCheckerRemoved(_keyId, _target);
@@ -177,7 +166,7 @@ contract KeysManager is IKeyManager, IKey {
     // =============================================================
 
     function _addKey(KeyDataReg calldata _keyData) internal {
-        bytes32 keyId = computeKeyId(_keyData.keyType, _keyData.key);
+        bytes32 keyId = _keyData.keyType.computeKeyId(_keyData.key);
         KeyData storage sKey = keys[keyId];
 
         if (sKey.isActive) revert KeyManager__KeyRegistered();
@@ -245,7 +234,7 @@ contract KeysManager is IKeyManager, IKey {
 
     function _setCanCall(bytes32 _keyId, address _target, bytes4 _funSel, bool can) internal {
         ExecutePermissions storage sExecute = permissions[_keyId];
-        sExecute.canExecute.update(_packCanExecute(_target, _funSel), can, 2048);
+        sExecute.canExecute.update(_target.packCanExecute(_funSel), can, 2048);
     }
 
     function _setCallChecker(bytes32 _keyId, address _target, address _checker, bool update)
@@ -273,39 +262,9 @@ contract KeysManager is IKeyManager, IKey {
     // =============================================================
     //                          HELPERS
     // =============================================================
-    function computeKeyId(KeyType _keyType, bytes calldata _key)
-        public
-        pure
-        returns (bytes32 result)
-    {
-        uint256 v0 = uint8(_keyType);
-        uint256 v1 = uint256(keccak256(_key));
-        assembly {
-            mstore(0x00, v0)
-            mstore(0x20, v1)
-            result := keccak256(0x00, 0x40)
-        }
-    }
 
     function _requireForExecute() internal view {
         require(msg.sender == address(this), "OnlyThis");
-    }
-
-    function _packCanExecute(address target, bytes4 fnSel) internal pure returns (bytes32 result) {
-        assembly ("memory-safe") {
-            result := or(shl(96, target), shr(224, fnSel))
-        }
-    }
-
-    function _unpackCanExecute(bytes32 packed)
-        internal
-        pure
-        returns (address target, bytes4 fnSel)
-    {
-        assembly ("memory-safe") {
-            target := shr(96, packed)
-            fnSel := shl(224, packed)
-        }
     }
 
     // =============================================================
@@ -347,7 +306,7 @@ contract KeysManager is IKeyManager, IKey {
         returns (address target, bytes4 fnSel)
     {
         bytes32 packed = permissions[_keyId].canExecute.at(i);
-        return _unpackCanExecute(packed);
+        return packed.unpackCanExecute();
     }
 
     function hasCanCall(bytes32 _keyId, address _target, bytes4 _funSel)
@@ -355,7 +314,7 @@ contract KeysManager is IKeyManager, IKey {
         view
         returns (bool)
     {
-        return permissions[_keyId].canExecute.contains(_packCanExecute(_target, _funSel));
+        return permissions[_keyId].canExecute.contains(_target.packCanExecute(_funSel));
     }
 
     function callCheckersLength(bytes32 _keyId) external view returns (uint256) {

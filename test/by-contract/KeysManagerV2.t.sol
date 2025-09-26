@@ -164,7 +164,13 @@ contract KeysManagerV2 is Test, IKey, IKeyManager {
         assertEq(_checker, checker_);
     }
 
-    function test_clearExecutePermissions(uint256 _saltX, uint256 _saltY, address _target, bytes4 _funSel, address _checker) public {
+    function test_clearExecutePermissions(
+        uint256 _saltX,
+        uint256 _saltY,
+        address _target,
+        bytes4 _funSel,
+        address _checker
+    ) public {
         vm.assume(_target != address(0) && _target != address(KM));
         vm.assume(
             _target != address(0) && _target != address(uint160(SOLADY_SENTINEL))
@@ -677,11 +683,11 @@ contract KeysManagerV2Reverts is Test, IKey, IKeyManager {
 
         (bytes32 keyId,) = KM.keyAt(0);
 
-        vm.expectRevert(KeyManager__TokenAddressZero.selector);
+        vm.expectRevert(KeyManager__AddressZero.selector);
         vm.prank(address(KM));
         KM.setTokenSpend(keyId, address(0), 10e18, SpendPeriod.Month);
 
-        vm.expectRevert(KeyManager__TargetAddressZero.selector);
+        vm.expectRevert(KeyManager__AddressZero.selector);
         vm.prank(address(KM));
         KM.setCanCall(keyId, address(0), 0xdeadbabe, true);
 
@@ -689,7 +695,7 @@ contract KeysManagerV2Reverts is Test, IKey, IKeyManager {
         vm.prank(address(KM));
         KM.setCanCall(keyId, address(KM), 0xdeadbabe, true);
 
-        vm.expectRevert(KeyManager__TargetAddressZero.selector);
+        vm.expectRevert(KeyManager__AddressZero.selector);
         vm.prank(address(KM));
         KM.setCallChecker(keyId, address(0), address(0));
 
@@ -701,7 +707,7 @@ contract KeysManagerV2Reverts is Test, IKey, IKeyManager {
         vm.prank(address(KM));
         KM.setCallChecker(keyId, address(123456789), address(0));
 
-        vm.expectRevert(KeyManager__TokenAddressZero.selector);
+        vm.expectRevert(KeyManager__AddressZero.selector);
         vm.prank(address(KM));
         KM.updateTokenSpend(keyId, address(0), 0, SpendPeriod.Month);
 

@@ -59,6 +59,7 @@ interface IKeyManager {
     error KeyManager__TokenSpendAlreadySet();
     error KeyManager__CallCheckerAlreadySet();
     error KeyManager__MasterKeyCannotBeRevoked();
+    error KeyManager__MasterKeyCanDoAll();
 
     // =============================================================
     //                            EVENTS
