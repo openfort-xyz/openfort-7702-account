@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.29;
 
+import {IKey} from "src/interfaces/IKey.sol";
 import {IExecution} from "src/interfaces/IExecution.sol";
 import {IKeysManager} from "src/interfaces/IKeysManager.sol";
 import {IERC1271} from "lib/openzeppelin-contracts/contracts/interfaces/IERC1271.sol";
@@ -9,13 +10,13 @@ import {IERC165} from "lib/openzeppelin-contracts/contracts/utils/introspection/
 /// @title IOPF7702
 /// @notice Interface for the `OPF7702` contract, combining execution, key‐management, and ERC-1271 logic.
 /// @dev Extends `IExecution`, `IKeysManager`, `IERC1271`, and `IERC165`. Declares all externally‐callable members.
-interface IOPF7702 is IExecution, IKeysManager, IERC1271, IERC165 {
+interface IOPF7702 is IExecution, IKeysManager, IERC1271, IERC165, IKey {
     // =============================================================
     //                             EVENTS
     // =============================================================
 
     /// @notice Emitted when the account is initialized with a masterKey
-    event Initialized(Key indexed masterKey);
+    event Initialized(IKey.KeyDataReg indexed masterKey);
 
     // =============================================================
     //                         EXTERNAL FUNCTIONS

@@ -4,14 +4,16 @@ pragma solidity 0.8.29;
 
 import {IKey} from "././IKey.sol";
 import {IKeyManager} from "././IKeyManager.sol";
-import {KeyManagerLib, KeyId} from "././KeManagerLib.sol";
+import {KeyManagerLib} from "././KeysManagerLib.sol";
+import {BaseOPF7702} from "src/core/BaseOPF7702.sol";
+import {IUserOpPolicy} from "src/interfaces/IPolicy.sol";
 import {EnumerableSetLib} from "lib/solady/src/utils/EnumerableSetLib.sol";
 import {EnumerableMapLib} from "lib/solady/src/utils/EnumerableMapLib.sol";
 
 contract KeysManager is IKeyManager, IKey {
+    using KeyManagerLib for *;
     using EnumerableSetLib for *;
     using EnumerableMapLib for *;
-    using KeyManagerLib for *;
 
     // =============================================================
     //                          CONSTANTS
@@ -108,7 +110,7 @@ contract KeysManager is IKeyManager, IKey {
         sKey.validateKeyBefore();
 
         KeyManagerLib.validateTimestamps(_validUntil, sKey.validAfter, sKey.validUntil, true);
-        
+
         _limits.checkLimits();
 
         sKey.validUntil = _validUntil;
@@ -178,6 +180,12 @@ contract KeysManager is IKeyManager, IKey {
         sKey.limits = _keyData.limits;
         sKey.masterKey = (_keyData.limits == 0);
         sKey.isActive = true;
+
+        // if (_keyData.limit > 0) {
+        //     IUserOpPolicy(GAS_POLICY).initializeGasPolicy(
+        //         address(this), keyId, uint256(_keyData.limit)
+        //     );
+        // }
 
         idKeys[id] = keyId;
         unchecked {
@@ -403,5 +411,77 @@ contract KeysManager is IKeyManager, IKey {
         }
 
         emit ExecutePermissionsCleared(_keyId);
+    }
+
+    /// @dev Master key must have: validUntil = max(uint48), validAfter = 0, limit = 0, whitelisting = false.
+    // function _masterKeyValidation(Key calldata _k, KeyReg calldata _kReg) internal pure {
+    //     if (
+    //         _kReg.limit != 0 || _kReg.whitelisting // must be false
+    //             || _kReg.validAfter != 0 || _kReg.validUntil != type(uint48).max || _k.checkKey()
+    //     ) revert IKeysManager.KeyManager__InvalidMasterKeyReg(_kReg);
+    // }
+
+    /**
+     * @notice Encodes WebAuthn signature parameters into a bytes payload for submission.
+     * @param requireUserVerification Whether user verification is required.
+     * @param authenticatorData       Raw authenticator data from WebAuthn device.
+     * @param clientDataJSON          JSON‐formatted client data from WebAuthn challenge.
+     * @param challengeIndex          Index in clientDataJSON for the challenge field.
+     * @param typeIndex               Index in clientDataJSON for the type field.
+     * @param r                       R component of the ECDSA signature (32 bytes).
+     * @param s                       S component of the ECDSA signature (32 bytes).
+     * @param pubKey                  Public key (x, y) used for verifying signature.
+     * @return ABI‐encoded payload as:
+     *         KeyType.WEBAUTHN, requireUserVerification, authenticatorData, clientDataJSON,
+     *         challengeIndex, typeIndex, r, s, pubKey.
+     */
+    function encodeWebAuthnSignature(
+        bool requireUserVerification,
+        bytes memory authenticatorData,
+        string memory clientDataJSON,
+        uint256 challengeIndex,
+        uint256 typeIndex,
+        bytes32 r,
+        bytes32 s,
+        bytes memory pubKey
+    ) external pure returns (bytes memory) {
+        bytes memory inner = abi.encode(
+            requireUserVerification,
+            authenticatorData,
+            clientDataJSON,
+            challengeIndex,
+            typeIndex,
+            r,
+            s,
+            pubKey
+        );
+
+        return abi.encode(KeyType.WEBAUTHN, inner);
+    }
+
+    /**
+     * @notice Encodes a P-256 signature payload (KeyType.P256 || KeyType.P256NONKEY).
+     * @param r       R component of the P-256 signature (32 bytes).
+     * @param s       S component of the P-256 signature (32 bytes).
+     * @param pubKey  Public key (x, y) used for signing.3
+     * @param _keyType  KeyType of key.
+     * @return ABI‐encoded payload as: KeyType.P256, abi.encode(r, s, pubKey).
+     */
+    function encodeP256Signature(bytes32 r, bytes32 s, bytes memory pubKey, KeyType _keyType)
+        external
+        pure
+        returns (bytes memory)
+    {
+        bytes memory inner = abi.encode(r, s, pubKey);
+        return abi.encode(_keyType, inner);
+    }
+
+    /**
+     * @notice Encodes an EOA signature for KeyType.EOA.
+     * @param _signature Raw ECDSA signature bytes over the UserOperation digest.
+     * @return ABI‐encoded payload as: KeyType.EOA, _signature.
+     */
+    function encodeEOASignature(bytes calldata _signature) external pure returns (bytes memory) {
+        return abi.encode(KeyType.EOA, _signature);
     }
 }

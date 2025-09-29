@@ -12,294 +12,417 @@
 
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.29;
+pragma solidity 0.8.29;
 
 import {IKey} from "src/interfaces/IKey.sol";
-import {KeyHashLib} from "src/libs/KeyHashLib.sol";
 import {BaseOPF7702} from "src/core/BaseOPF7702.sol";
 import {IUserOpPolicy} from "src/interfaces/IPolicy.sol";
-import {ValidationLib} from "src/libs/ValidationLib.sol";
-import {ISpendLimit} from "src/interfaces/ISpendLimit.sol";
+import {KeysManagerLib} from "src/libs/KeysManagerLib.sol";
 import {IKeysManager} from "src/interfaces/IKeysManager.sol";
-import {KeyDataValidationLib} from "src/libs/KeyDataValidationLib.sol";
+import {EnumerableSetLib} from "lib/solady/src/utils/EnumerableSetLib.sol";
+import {EnumerableMapLib} from "lib/solady/src/utils/EnumerableMapLib.sol";
 
-/// @title KeysManager
-/// @author Openfort@0xkoiner
-/// @notice Manages registration, revocation, and querying of keys (WebAuthn/P256/EOA) with spending limits and
-/// whitelisting support.
-/// @dev Inherits BaseOPF7702 for account abstraction, IKey interface, and SpendLimit for token/ETH limits.
-abstract contract KeysManager is BaseOPF7702, IKey, ISpendLimit {
-    using KeyHashLib for Key;
-    using ValidationLib for *;
-    using KeyDataValidationLib for Key;
+abstract contract KeysManager is BaseOPF7702, IKeysManager, IKey {
+    using KeysManagerLib for *;
+    using EnumerableSetLib for *;
+    using EnumerableMapLib for *;
 
     // =============================================================
     //                          CONSTANTS
     // =============================================================
 
-    /// @notice Maximum number of allowed function selectors per key
-    uint256 internal constant MAX_SELECTORS = 10;
+    address internal constant ANY_TARGET = 0x3232323232323232323232323232323232323232;
+    bytes4 internal constant ANY_FN_SEL = 0x32323232;
+    bytes4 internal constant EMPTY_CALLDATA_FN_SEL = 0xe0e0e0e0;
+    address internal constant NATIVE_ADDRESS = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
 
     // =============================================================
     //                          STATE VARIABLES
     // =============================================================
 
-    /// @notice Incremental ID for WebAuthn/P256/P256NONKEY keys
-    /// @dev Id = 0 always saved for MasterKey (Admin)
     uint256 public id;
+    mapping(uint256 => bytes32) public idKeys;
+    mapping(bytes32 => KeyData) internal keys;
 
-    /// @notice Mapping from key ID to Key struct (WebAuthn/P256/P256NONKEY)
-    mapping(uint256 => Key) public idKeys;
-    /// @notice Mapping from hashed public key to Key struct (WebAuthn/P256/P256NONKEY)
-    mapping(bytes32 => KeyData) public keys;
-    /// @notice Tracks used challenges (to prevent replay) in WebAuthn
-    mapping(bytes32 => bool) public usedChallenges;
+    mapping(bytes32 => ExecutePermissions) internal permissions;
+
+    mapping(bytes32 => SpendStorage) internal spendStore;
 
     // =============================================================
     //                 PUBLIC / EXTERNAL FUNCTIONS
     // =============================================================
 
-    /**
-     * @notice Registers a new  key with specified permissions and limits.
-     * @dev Only callable by ADMIN_ROLE via `_requireForExecute()`. Supports both WebAuthn/P256/P256NONKEY and EOA key
-     * types.
-     *      - For WebAuthn/P256/P256NONKEY, computes `keyId = keccak256(pubKey.x, pubKey.y)`.
-     *      - For EOA, uses `eoaAddress` as `keyId`.
-     *      Requires `_validUntil > block.timestamp`, `_validAfter ≤ _validUntil`, and that the key is not active.
-     *      Emits `KeyRegistrated(keyId)`.
-     *
-     * @param _key             Struct containing key information (PubKey or EOA).
-     * @param _keyData KeyReg data structure containing permissions and limits
-     */
-    function registerKey(Key calldata _key, KeyReg calldata _keyData) public {
+    ////////////// Setters //////////////
+    function registerKey(KeyDataReg calldata _keyData) public {
         _requireForExecute();
-        // Must have limit checks to prevent register masterKey
-        _keyData.limit.ensureLimit();
+        _keyData.keyCantBeZero();
+        _keyData.mustHaveLimits();
 
-        // Validate timestamps
-        ValidationLib.ensureValidTimestamps(_keyData.validAfter, _keyData.validUntil);
+        KeysManagerLib.validateTimestamps(_keyData.validUntil, _keyData.validAfter, 0, false);
 
-        bytes32 keyId = _key.computeKeyId();
+        _addKey(_keyData);
+    }
 
+    function revokeKey(bytes32 _keyId) public {
+        _requireForExecute();
+        KeyData storage sKey = keys[_keyId];
+        sKey.validateKeyBefore();
+
+        _revoke(sKey);
+        emit KeyRevoked(_keyId);
+
+        clearExecutePermissions(_keyId);
+        clearSpendPermissions(_keyId);
+    }
+
+    function setTokenSpend(bytes32 _keyId, address _token, uint256 _limit, SpendPeriod _period)
+        public
+    {
+        _requireForExecute();
+        KeyData storage sKey = keys[_keyId];
+        sKey.validateKeyBefore();
+
+        _token.checkAddress();
+        _limit.checkLimits();
+
+        _setTokenSpend(_keyId, _token, _limit, _period, false);
+        emit TokenSpendSet(_keyId, _token, _period, _limit);
+    }
+
+    function setCanCall(bytes32 _keyId, address _target, bytes4 _funSel, bool can) public {
+        _requireForExecute();
+        KeyData storage sKey = keys[_keyId];
+        sKey.validateKeyBefore();
+
+        _target.checkTargetAddress();
+
+        _setCanCall(_keyId, _target, _funSel, can);
+        emit CanCallSet(_keyId, _target, _funSel, can);
+    }
+
+    function setCallChecker(bytes32 _keyId, address _target, address _checker) public {
+        _requireForExecute();
+        KeyData storage sKey = keys[_keyId];
+        sKey.validateKeyBefore();
+
+        _target.checkTargetAddress();
+        _checker.checkAddress();
+
+        _setCallChecker(_keyId, _target, _checker, false);
+        emit CallCheckerSet(_keyId, _target, _checker);
+    }
+
+    ////////////// Updatterd //////////////
+    function updateKeyData(bytes32 _keyId, uint48 _validUntil, uint48 _limits) public {
+        _requireForExecute();
+        KeyData storage sKey = keys[_keyId];
+        sKey.validateKeyBefore();
+
+        KeysManagerLib.validateTimestamps(_validUntil, sKey.validAfter, sKey.validUntil, true);
+
+        _limits.checkLimits();
+
+        sKey.validUntil = _validUntil;
+        sKey.limits = _limits;
+        emit KeyUpdated(_keyId, _validUntil, _limits);
+    }
+
+    function updateTokenSpend(bytes32 _keyId, address _token, uint256 _limit, SpendPeriod _period)
+        public
+    {
+        _requireForExecute();
+        KeyData storage sKey = keys[_keyId];
+        sKey.validateKeyBefore();
+
+        _token.checkAddress();
+        _limit.checkLimits();
+
+        _setTokenSpend(_keyId, _token, _limit, _period, true);
+        emit TokenSpendSet(_keyId, _token, _period, _limit);
+    }
+
+    function updateCallChecker(bytes32 _keyId, address _target, address _checker) public {
+        _requireForExecute();
+        KeyData storage sKey = keys[_keyId];
+        sKey.validateKeyBefore();
+
+        _target.checkTargetAddress();
+        _checker.checkAddress();
+
+        _setCallChecker(_keyId, _target, _checker, true);
+        emit CallCheckerSet(_keyId, _target, _checker);
+    }
+
+    ////////////// Removers //////////////
+    function removeTokenSpend(bytes32 _keyId, address _token) public {
+        _requireForExecute();
+        KeyData storage sKey = keys[_keyId];
+        sKey.validateKeyBefore();
+
+        _removeTokenSpend(_keyId, _token);
+        emit TokenSpendRemoved(_keyId, _token);
+    }
+
+    function removeCallChecker(bytes32 _keyId, address _target) public {
+        _requireForExecute();
+        KeyData storage sKey = keys[_keyId];
+        sKey.validateKeyBefore();
+
+        _removeCallChecker(_keyId, _target);
+        emit CallCheckerRemoved(_keyId, _target);
+    }
+
+    // =============================================================
+    //                 INTERNAL / PRIVATE
+    // =============================================================
+
+    function _addKey(KeyDataReg memory _keyData) internal {
+        bytes32 keyId = _keyData.computeKeyId();
         KeyData storage sKey = keys[keyId];
 
-        if (sKey.isActive) {
-            revert IKeysManager.KeyManager__KeyRegistered();
+        if (sKey.isActive) revert KeyManager__KeyRegistered();
+
+        sKey.keyType = _keyData.keyType;
+        sKey.key = _keyData.key;
+        sKey.validUntil = _keyData.validUntil;
+        sKey.validAfter = _keyData.validAfter;
+        sKey.limits = _keyData.limits;
+        sKey.masterKey = (_keyData.limits == 0);
+        sKey.isActive = true;
+
+        if (_keyData.limits > 0) {
+            IUserOpPolicy(GAS_POLICY).initializeGasPolicy(
+                address(this), keyId, uint256(_keyData.limits)
+            );
         }
 
-        _addKey(sKey, _key, _keyData);
+        idKeys[id] = keyId;
 
-        // Store Key struct by ID and increment
-        idKeys[id] = _key;
         unchecked {
             id++;
         }
 
-        emit IKeysManager.KeyRegistrated(keyId);
+        emit KeyRegistered(
+            keyId,
+            _keyData.keyType,
+            sKey.masterKey,
+            _keyData.validAfter,
+            _keyData.validUntil,
+            _keyData.limits
+        );
     }
 
-    /**
-     * @notice Revokes a specific key, marking it inactive and clearing its parameters.
-     * @dev Only callable by ADMIN_ROLE via `_requireForExecute()`. Works for both WebAuthn/P256/P256NONKEY and EOA
-     * keys.
-     *      Emits `KeyRevoked(keyId)`.
-     *
-     * @param _key Struct containing key information to revoke:
-     *             • For WebAuthn/P256/P256NONKEY: uses `pubKey` to compute `keyId`.
-     *             • For EOA: uses `eoaAddress` (must be non‐zero).
-     */
-    function revokeKey(Key calldata _key) external {
-        _requireForExecute();
-
-        bytes32 keyId = _key.computeKeyId();
-
-        KeyData storage sKey = keys[keyId];
-        _revokeKey(sKey);
-        emit IKeysManager.KeyRevoked(keyId);
+    function _revoke(KeyData storage _sKey) internal {
+        _sKey.isActive = false;
+        _sKey.validUntil = 0;
+        _sKey.validAfter = 0;
+        _sKey.limits = 0;
+        delete _sKey.key;
+        delete _sKey.keyType;
     }
 
-    /**
-     * @notice Revokes all registered keys (WebAuthn/P256/P256NONKEY and EOA).
-     * @dev Only callable by ADMIN_ROLE via `_requireForExecute()`. Iterates through all IDs and revokes each.
-     *      Emits `KeyRevoked(keyId)` for each.
-     */
-    function revokeAllKeys() external {
-        _requireForExecute();
-        /// @dev i = 1 --> id = 0 always saved for MasterKey (Admin)
-        // Revoke WebAuthn/P256/P256NONKEY/EOA keys
-        for (uint256 i = 1; i < id;) {
-            Key memory k = idKeys[i];
+    function _setTokenSpend(
+        bytes32 _keyId,
+        address _token,
+        uint256 _limit,
+        SpendPeriod _period,
+        bool update
+    ) internal {
+        SpendStorage storage sSpend = spendStore[_keyId];
 
-            bytes32 keyId = k.computeKeyId();
-
-            KeyData storage sKey = keys[keyId];
-
-            if (!sKey.isActive) {
-                unchecked {
-                    ++i;
-                }
-                continue;
-            }
-
-            _revokeKey(sKey);
-            emit IKeysManager.KeyRevoked(keyId);
-            unchecked {
-                ++i;
-            }
+        if (!update) {
+            bool inSet = sSpend.tokens.add(_token, 64);
+            if (!inSet) revert KeyManager__TokenSpendAlreadySet();
+        } else if (update) {
+            if (!sSpend.tokens.contains(_token)) revert KeyManager__TokenSpendNotSet();
         }
+
+        TokenSpendPeriod storage sTokenSpend = sSpend.tokenData[_token];
+        sTokenSpend.period = _period;
+        sTokenSpend.limit = _limit;
+        sTokenSpend.spent = 0;
+        sTokenSpend.lastUpdated = 0;
+    }
+
+    function _removeTokenSpend(bytes32 _keyId, address _token) internal {
+        SpendStorage storage sSpend = spendStore[_keyId];
+        if (!sSpend.tokens.contains(_token)) revert KeyManager__TokenSpendNotSet();
+        delete sSpend.tokenData[_token];
+        sSpend.tokens.remove(_token);
+    }
+
+    function _setCanCall(bytes32 _keyId, address _target, bytes4 _funSel, bool can) internal {
+        ExecutePermissions storage sExecute = permissions[_keyId];
+        sExecute.canExecute.update(_target.packCanExecute(_funSel), can, 2048);
+    }
+
+    function _setCallChecker(bytes32 _keyId, address _target, address _checker, bool update)
+        internal
+    {
+        ExecutePermissions storage sExecute = permissions[_keyId];
+
+        if (!update) {
+            (bool exists,) = sExecute.callCheckers.tryGet(_target);
+            if (exists) revert KeyManager__CallCheckerAlreadySet();
+        } else if (update) {
+            if (!sExecute.callCheckers.contains(_target)) revert KeyManager__CallCheckerNotSet();
+        }
+
+        sExecute.callCheckers.set(_target, _checker);
+    }
+
+    function _removeCallChecker(bytes32 _keyId, address _target) internal {
+        ExecutePermissions storage sExecute = permissions[_keyId];
+        if (!sExecute.callCheckers.contains(_target)) revert KeyManager__CallCheckerNotSet();
+
+        sExecute.callCheckers.remove(_target);
     }
 
     // =============================================================
-    //                 INTERNAL / PRIVATE HELPERS
+    //                   PUBLIC / EXTERNAL GETTERS
     // =============================================================
 
-    /**
-     * @notice Internal helper to configure a newly registered key’s parameters.
-     * @dev Sets common fields on `KeyData` storage, enforces whitelisting and spend‐limit logic.
-     *      Only called from `registerKey`.
-     *
-     * @param sKey             Storage reference to the `KeyData` being populated.
-     * @param _key             Struct containing key information (PubKey or EOA).
-     * @param _keyData KeyReg data structure containing permissions and limits
-     */
-    function _addKey(KeyData storage sKey, Key memory _key, KeyReg memory _keyData) internal {
-        if (sKey.whitelisting) {
-            revert IKeysManager.KeyManager__KeyRevoked();
-        }
-        sKey.pubKey = _key.pubKey;
-        sKey.isActive = true;
-        sKey.validUntil = _keyData.validUntil;
-        sKey.validAfter = _keyData.validAfter;
-        sKey.limit = _keyData.limit;
-        sKey.masterKey = (_keyData.limit == 0);
-
-        // Only enforce limits if _limit > 0
-        if (_keyData.limit > 0) {
-            IUserOpPolicy(GAS_POLICY).initializeGasPolicy(
-                address(this), _key.computeKeyId(), uint256(_keyData.limit)
-            );
-            sKey.whitelisting = true;
-            /// Session Key enforced to be whitelisting
-            sKey.ethLimit = _keyData.ethLimit;
-
-            // Whitelist contract and token if requested
-            if (_keyData.whitelisting) {
-                _keyData.contractAddress.ensureNotZero();
-                // Add the contract itself
-                sKey.whitelist[_keyData.contractAddress] = true;
-
-                // Validate token address
-                address tokenAddr = _keyData.spendTokenInfo.token;
-                tokenAddr.ensureNotZero();
-                sKey.whitelist[tokenAddr] = true;
-
-                uint256 selCount = _keyData.allowedSelectors.length;
-                selCount.ensureSelectorsLen();
-                for (uint256 i = 0; i < selCount;) {
-                    sKey.allowedSelectors.push(_keyData.allowedSelectors[i]);
-                    unchecked {
-                        ++i;
-                    }
-                }
-            }
-
-            _keyData.spendTokenInfo.token.ensureNotZero();
-
-            // Configure spendTokenInfo regardless of whitelisting
-            sKey.spendTokenInfo.token = _keyData.spendTokenInfo.token;
-            sKey.spendTokenInfo.limit = _keyData.spendTokenInfo.limit;
-        }
+    function keyCount() external view returns (uint256) {
+        return id;
     }
 
-    /**
-     * @notice Internal helper to revoke a key’s data.
-     * @dev Clears all `KeyData` struct fields, marks it inactive, resets limits and whitelists.
-     * @dev Sets `isActive = false`, zeroes validity windows and spend limits, deletes
-     *      `allowedSelectors` and `spendTokenInfo`, and **deletes the stored public key** (`pubKey`).
-     * @dev Intentionally **does not** clear `whitelisting`. If this key ever had whitelisting
-     *      enabled, the flag remains `true` as a tombstone so that any attempt to re-register the same
-     *      keyId will revert in the registration path (see `KeyManager__ReactivationForbiddenDueToWhitelist`).
-     *      The `whitelist` mapping itself cannot be deleted in Solidity; keeping the flag set prevents
-     *      any residual entries from being reactivated.
-     * @param sKey Storage reference to the `KeyData` being revoked.
-     */
-    function _revokeKey(KeyData storage sKey) internal {
-        if (!sKey.isActive) {
-            revert IKeysManager.KeyManager__KeyInactive();
-        }
+    function keyAt(uint256 i) public view returns (bytes32 keyId, KeyData memory data) {
+        keyId = idKeys[i];
+        data = keys[keyId];
+    }
+
+    function getKey(bytes32 _keyId) external view returns (KeyData memory) {
+        return keys[_keyId];
+    }
+
+    function isRegistered(bytes32 _keyId) external view returns (bool) {
+        return keys[_keyId].validUntil != 0 || keys[_keyId].isActive;
+    }
+
+    function isKeyActive(bytes32 _keyId) external view returns (bool) {
+        return keys[_keyId].isActive;
+    }
+
+    function canExecutePackedInfos(bytes32 _keyId) public view returns (bytes32[] memory) {
+        return permissions[_keyId].canExecute.values();
+    }
+
+    function canExecuteLength(bytes32 _keyId) external view returns (uint256) {
+        return permissions[_keyId].canExecute.length();
+    }
+
+    function canExecuteAt(bytes32 _keyId, uint256 i)
+        external
+        view
+        returns (address target, bytes4 fnSel)
+    {
+        bytes32 packed = permissions[_keyId].canExecute.at(i);
+        return packed.unpackCanExecute();
+    }
+
+    function hasCanCall(bytes32 _keyId, address _target, bytes4 _funSel)
+        external
+        view
+        returns (bool)
+    {
+        return permissions[_keyId].canExecute.contains(_target.packCanExecute(_funSel));
+    }
+
+    function callCheckersLength(bytes32 _keyId) external view returns (uint256) {
+        return permissions[_keyId].callCheckers.length();
+    }
+
+    function callCheckerAt(bytes32 _keyId, uint256 i)
+        external
+        view
+        returns (address target, address checker)
+    {
+        return permissions[_keyId].callCheckers.at(i);
+    }
+
+    function getCallChecker(bytes32 _keyId, address _target)
+        public
+        view
+        returns (bool exists, address checker)
+    {
+        return permissions[_keyId].callCheckers.tryGet(_target);
+    }
+
+    function spendTokens(bytes32 _keyId) external view returns (address[] memory) {
+        return spendStore[_keyId].tokens.values();
+    }
+
+    function hasTokenSpend(bytes32 _keyId, address _token) public view returns (bool) {
+        return spendStore[_keyId].tokens.contains(_token);
+    }
+
+    function tokenSpend(bytes32 _keyId, address _token)
+        external
+        view
+        returns (SpendPeriod period, uint256 limit, uint256 spent, uint256 lastUpdated)
+    {
+        TokenSpendPeriod storage s = spendStore[_keyId].tokenData[_token];
+        return (s.period, s.limit, s.spent, s.lastUpdated);
+    }
+
+    // =============================================================
+    //                          ADMIN FUNC.
+    // =============================================================
+
+    function pauseKey(bytes32 _keyId) public {
+        _requireForExecute();
+        KeyData storage sKey = keys[_keyId];
+        if (!sKey.isActive) revert KeyManager__KeyAlreadyPaused();
+
         sKey.isActive = false;
-        sKey.validUntil = 0;
-        sKey.validAfter = 0;
-        sKey.limit = 0;
-        sKey.masterKey = false;
-        sKey.ethLimit = 0;
+        emit KeyPaused(_keyId);
+    }
 
-        delete sKey.allowedSelectors;
-        delete sKey.spendTokenInfo;
+    function unpauseKey(bytes32 _keyId) public {
+        _requireForExecute();
+        KeyData storage sKey = keys[_keyId];
+        if (sKey.isActive) revert KeyManager__KeyAlreadyActive();
 
-        delete sKey.pubKey;
+        sKey.isActive = true;
+        emit KeyUnpaused(_keyId);
+    }
+
+    function clearSpendPermissions(bytes32 _keyId) public {
+        _requireForExecute();
+        SpendStorage storage sSpend = spendStore[_keyId];
+
+        while (sSpend.tokens.length() != 0) {
+            address token = sSpend.tokens.at(sSpend.tokens.length() - 1);
+            delete sSpend.tokenData[token];
+            sSpend.tokens.remove(token);
+        }
+        emit SpendPermissionsCleared(_keyId);
+    }
+
+    function clearExecutePermissions(bytes32 _keyId) public {
+        _requireForExecute();
+        ExecutePermissions storage sExecute = permissions[_keyId];
+
+        while (sExecute.canExecute.length() != 0) {
+            bytes32 packed = sExecute.canExecute.at(sExecute.canExecute.length() - 1);
+            sExecute.canExecute.remove(packed);
+        }
+
+        while (sExecute.callCheckers.length() != 0) {
+            (address k,) = sExecute.callCheckers.at(sExecute.callCheckers.length() - 1);
+            sExecute.callCheckers.remove(k);
+        }
+
+        emit ExecutePermissionsCleared(_keyId);
     }
 
     /// @dev Master key must have: validUntil = max(uint48), validAfter = 0, limit = 0, whitelisting = false.
-    function _masterKeyValidation(Key calldata _k, KeyReg calldata _kReg) internal pure {
+    function _masterKeyValidation(KeyDataReg calldata _keyData) internal pure {
+        _keyData.keyCantBeZero();
         if (
-            _kReg.limit != 0 || _kReg.whitelisting // must be false
-                || _kReg.validAfter != 0 || _kReg.validUntil != type(uint48).max || _k.checkKey()
-        ) revert IKeysManager.KeyManager__InvalidMasterKeyReg(_kReg);
-    }
-
-    /**
-     * @notice Retrieves registration info for a given key ID.
-     * @param _id       Identifier (index) of the key to query.
-     * @return keyType       The type of the key that was registered.
-     * @return isActive      Whether the key is currently active.
-     */
-    function getKeyRegistrationInfo(uint256 _id)
-        external
-        view
-        returns (KeyType keyType, bool isActive)
-    {
-        Key memory k = idKeys[_id];
-        bytes32 keyId = k.computeKeyId();
-
-        KeyData storage sKey = keys[keyId];
-
-        return (k.keyType, sKey.isActive);
-    }
-
-    /**
-     * @notice Retrieves the `KeyData` struct stored at a given ID.
-     * @param _id       Identifier index for the key to retrieve.
-     * @return A `KeyData` struct containing key type and relevant public key or EOA address.
-     */
-    function getKeyById(uint256 _id) public view returns (Key memory) {
-        return idKeys[_id];
-    }
-
-    /**
-     * @notice Retrieves key metadata for a WebAuthn/P256/P256NONKEY key by its hash.
-     * @param _keyHash  Keccak256 hash of public key coordinates (x, y).
-     * @return isActive   Whether the key is active.
-     * @return validUntil UNIX timestamp until which the key is valid.
-     * @return validAfter UNIX timestamp after which the key is valid.
-     * @return limit      Remaining number of transactions allowed.
-     */
-    function getKeyData(bytes32 _keyHash)
-        external
-        view
-        returns (bool isActive, uint48 validUntil, uint48 validAfter, uint48 limit)
-    {
-        KeyData storage sKey = keys[_keyHash];
-        return (sKey.isActive, sKey.validUntil, sKey.validAfter, sKey.limit);
-    }
-
-    /**
-     * @notice Checks if a WebAuthn/P256/P256NONKEY key is active.
-     * @param keyHash  Keccak256 hash of public key coordinates (x, y).
-     * @return True if the key is active; false otherwise.
-     */
-    function isKeyActive(bytes32 keyHash) external view returns (bool) {
-        return keys[keyHash].isActive;
+            _keyData.limits != 0 || _keyData.validAfter != 0
+                || _keyData.validUntil != type(uint48).max
+        ) revert IKeysManager.KeyManager__InvalidMasterKeyReg(_keyData);
     }
 
     /**
@@ -324,7 +447,7 @@ abstract contract KeysManager is BaseOPF7702, IKey, ISpendLimit {
         uint256 typeIndex,
         bytes32 r,
         bytes32 s,
-        PubKey memory pubKey
+        bytes memory pubKey
     ) external pure returns (bytes memory) {
         bytes memory inner = abi.encode(
             requireUserVerification,
@@ -344,11 +467,11 @@ abstract contract KeysManager is BaseOPF7702, IKey, ISpendLimit {
      * @notice Encodes a P-256 signature payload (KeyType.P256 || KeyType.P256NONKEY).
      * @param r       R component of the P-256 signature (32 bytes).
      * @param s       S component of the P-256 signature (32 bytes).
-     * @param pubKey  Public key (x, y) used for signing.
+     * @param pubKey  Public key (x, y) used for signing.3
      * @param _keyType  KeyType of key.
      * @return ABI‐encoded payload as: KeyType.P256, abi.encode(r, s, pubKey).
      */
-    function encodeP256Signature(bytes32 r, bytes32 s, PubKey memory pubKey, KeyType _keyType)
+    function encodeP256Signature(bytes32 r, bytes32 s, bytes memory pubKey, KeyType _keyType)
         external
         pure
         returns (bytes memory)

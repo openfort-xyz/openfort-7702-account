@@ -34,23 +34,14 @@ library KeyDataValidationLib {
     /// @dev Master‑keys have unlimited tx budget; sub‑keys consume one unit per tx.
     /// @return true if the caller *may* execute one more tx right now.
     function hasQuota(IKey.KeyData storage sKey) internal view returns (bool) {
-        return sKey.masterKey || sKey.limit > 0;
-    }
-
-    /// @return true if `weiValue` is within the key’s ETH spend allowance.
-    function withinEthLimit(IKey.KeyData storage sKey, uint256 weiValue)
-        internal
-        view
-        returns (bool)
-    {
-        return sKey.ethLimit >= weiValue;
+        return sKey.masterKey || sKey.limits > 0;
     }
 
     /// @notice Decrements the tx counter for sub‑keys in an unchecked block (gas).
     function consumeQuota(IKey.KeyData storage sKey) internal {
-        if (!sKey.masterKey && sKey.limit > 0) {
+        if (!sKey.masterKey && sKey.limits > 0) {
             unchecked {
-                sKey.limit -= 1;
+                sKey.limits -= 1;
             }
         }
     }
@@ -63,21 +54,7 @@ library KeyDataValidationLib {
     }
 
     /// @return ok True when the key survives *every* guard used by `_validateCall`.
-    function passesCallGuards(IKey.KeyData storage sKey, uint256 weiValue)
-        internal
-        view
-        returns (bool ok)
-    {
-        ok = hasQuota(sKey) && withinEthLimit(sKey, weiValue);
-    }
-
-    /// @return ok True if neither an EOA address nor a public key is set.
-    function checkKey(IKey.Key memory sKey) internal pure returns (bool ok) {
-        // Key is non-empty if it has an EOA address...
-        bool hasAddress = sKey.eoaAddress != address(0);
-        // ...or any non-zero pubkey coordinate.
-        bool hasPubKey = sKey.pubKey.x != bytes32(0) || sKey.pubKey.y != bytes32(0);
-
-        ok = !hasAddress && !hasPubKey; // Returns only when both representations are absent.
+    function passesCallGuards(IKey.KeyData storage sKey) internal view returns (bool ok) {
+        ok = hasQuota(sKey);
     }
 }

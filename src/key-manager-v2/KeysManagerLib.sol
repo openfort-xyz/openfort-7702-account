@@ -5,8 +5,6 @@ pragma solidity 0.8.29;
 import {IKey} from "././IKey.sol";
 import {IKeyManager} from "././IKeyManager.sol";
 
-type KeyId is bytes32;
-
 library KeyManagerLib {
     // ============================================================
     //                      VALIDATION HELPERS
@@ -39,7 +37,7 @@ library KeyManagerLib {
         bool isInvalidRange = _validUntil < _validAfter;
         bool isMaxValue = _validUntil == type(uint48).max;
         bool isNotExtending = isUpdate && (_validUntil <= _currentValidUntil);
-        
+
         if (isExpired || isInvalidRange || isMaxValue || isNotExtending) {
             revert IKeyManager.KeyManager__BadTimestamps();
         }

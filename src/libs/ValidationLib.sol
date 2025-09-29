@@ -23,7 +23,7 @@ library ValidationLib {
      *         for sub-keys.
      */
     function ensureLimit(uint48 _limit) internal pure {
-        if (_limit == 0) revert IKeysManager.KeyManager__MustIncludeLimits();
+        if (_limit == 0) revert IKeysManager.KeyManager__MustHaveLimits();
     }
 
     /**
@@ -31,7 +31,7 @@ library ValidationLib {
      */
     function ensureValidTimestamps(uint48 _after, uint48 _until) internal view {
         if (_until <= block.timestamp || _after > _until) {
-            revert IKeysManager.KeyManager__InvalidTimestamp();
+            revert IKeysManager.KeyManager__BadTimestamps();
         }
     }
 
@@ -39,13 +39,6 @@ library ValidationLib {
      * @notice Guard-clause against the ubiquitous zero-address footgun.
      */
     function ensureNotZero(address _addr) internal pure {
-        if (_addr == address(0)) revert IKeysManager.KeyManager__AddressCantBeZero();
-    }
-
-    /**
-     * @notice Makes sure we never exceed the hard cap defined for selectors.
-     */
-    function ensureSelectorsLen(uint256 _len) internal pure {
-        if (_len > MAX_SELECTORS) revert IKeysManager.KeyManager__SelectorsListTooBig();
+        if (_addr == address(0)) revert IKeysManager.KeyManager__AddressZero();
     }
 }

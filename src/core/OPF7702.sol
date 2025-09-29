@@ -14,12 +14,16 @@
 pragma solidity ^0.8.29;
 
 import {Execution} from "src/core/Execution.sol";
-import {KeyHashLib} from "src/libs/KeyHashLib.sol";
 import {SigLengthLib} from "src/libs/SigLengthLib.sol";
 import {IUserOpPolicy} from "src/interfaces/IPolicy.sol";
+import {LibBytes} from "lib/solady/src/utils/LibBytes.sol";
+import {KeysManagerLib} from "src/libs/KeysManagerLib.sol";
 import {IKeysManager} from "src/interfaces/IKeysManager.sol";
+import {DateTimeLib} from "lib/solady/src/utils/DateTimeLib.sol";
 import {IWebAuthnVerifier} from "src/interfaces/IWebAuthnVerifier.sol";
 import {EfficientHashLib} from "lib/solady/src/utils/EfficientHashLib.sol";
+import {EnumerableSetLib} from "lib/solady/src/utils/EnumerableSetLib.sol";
+import {FixedPointMathLib as Math} from "lib/solady/src/utils/FixedPointMathLib.sol";
 import {KeyDataValidationLib as KeyValidation} from "src/libs/KeyDataValidationLib.sol";
 import {ECDSA} from "lib/openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
 import {PackedUserOperation} from
@@ -30,6 +34,7 @@ import {
     _packValidationData
 } from "lib/account-abstraction/contracts/core/Helpers.sol";
 import {Initializable} from "src/libs/Initializable.sol";
+import {ICallChecker} from "src/interfaces/ICallChecker.sol";
 
 /**
  * @title   Openfort Base Account 7702 with ERC-4337 Support
@@ -45,11 +50,10 @@ import {Initializable} from "src/libs/Initializable.sol";
  *
  */
 contract OPF7702 is Execution, Initializable {
+    using KeysManagerLib for *;
+    using EnumerableSetLib for *;
     using ECDSA for bytes32;
-    using KeyHashLib for Key;
-    using KeyHashLib for PubKey;
     using SigLengthLib for bytes;
-    using KeyHashLib for address;
     using KeyValidation for KeyData;
 
     /// @notice Address of this implementation contract
@@ -135,7 +139,7 @@ contract OPF7702 is Execution, Initializable {
         }
 
         // load the key for this EOA
-        bytes32 keyId = signer.computeKeyId();
+        bytes32 keyId = KeyType.EOA.computeKeyId(abi.encode(signer));
         KeyData storage sKey = keys[keyId];
 
         bool isValid = _keyValidation(sKey);
@@ -189,10 +193,6 @@ contract OPF7702 is Execution, Initializable {
             userOp.signature.length, authenticatorData.length, bytes(clientDataJSON).length
         );
 
-        if (usedChallenges[userOpHash]) {
-            revert IKeysManager.KeyManager__UsedChallenge();
-        }
-
         bool sigOk = IWebAuthnVerifier(webAuthnVerifier()).verifySignature(
             userOpHash,
             requireUV,
@@ -206,12 +206,11 @@ contract OPF7702 is Execution, Initializable {
             pubKey.y
         );
 
-        bytes32 keyId = pubKey.computeKeyId();
+        // bytes32 keyId = pubKey.computeKeyId();
+        bytes32 keyId = KeyType.WEBAUTHN.computeKeyId(abi.encode(pubKey.x, pubKey.y));
         KeyData storage sKey = keys[keyId];
 
         bool isValid = _keyValidation(sKey);
-
-        usedChallenges[userOpHash] = true; // mark challenge as used
 
         if (sKey.masterKey && isValid && sigOk) {
             return SIG_VALIDATION_SUCCESS;
@@ -252,20 +251,17 @@ contract OPF7702 is Execution, Initializable {
         bytes32 challenge =
             (sigType == KeyType.P256NONKEY) ? EfficientHashLib.sha2(userOpHash) : userOpHash;
 
-        if (usedChallenges[challenge]) {
-            revert IKeysManager.KeyManager__UsedChallenge();
-        }
-
         bool sigOk = IWebAuthnVerifier(webAuthnVerifier()).verifyP256Signature(
             challenge, r, sSig, pubKey.x, pubKey.y
         );
 
-        bytes32 keyId = pubKey.computeKeyId();
+        // bytes32 keyId = pubKey.computeKeyId();
+        bytes32 keyId = KeyType.P256 == sigType
+            ? KeyType.P256.computeKeyId(abi.encode(pubKey.x, pubKey.y))
+            : KeyType.P256NONKEY.computeKeyId(abi.encode(pubKey.x, pubKey.y));
         KeyData storage sKey = keys[keyId];
 
         bool isValid = _keyValidation(sKey);
-
-        usedChallenges[challenge] = true;
 
         uint256 isValidGas = IUserOpPolicy(GAS_POLICY).checkUserOpPolicy(keyId, userOp);
 
@@ -361,95 +357,126 @@ contract OPF7702 is Execution, Initializable {
 
     function _validateCall(KeyData storage sKey, Call memory call) private returns (bool) {
         if (call.target == address(this)) return false;
-        if (!sKey.passesCallGuards(call.value)) return false;
+        if (!sKey.hasQuota()) return false;
 
-        bytes memory innerData = call.data;
-        bytes4 innerSelector;
-        assembly {
-            innerSelector := mload(add(innerData, 0x20))
-        }
+        bytes32 keyId = sKey.keyType.computeKeyId(sKey.key);
 
-        if (!_isAllowedSelector(sKey.allowedSelectors, innerSelector)) {
+        if (!_isCanCall(keyId, call.target, call.data)) {
             return false;
         }
 
         sKey.consumeQuota();
-        if (call.value > 0) {
-            unchecked {
-                sKey.ethLimit -= call.value;
+
+        if (hasTokenSpend(keyId, call.target)) {
+            if (!_isTokenSpend(keyId, call.target, call.value, call.data)) {
+                return false;
             }
         }
 
-        if (sKey.spendTokenInfo.token == call.target) {
-            bool validSpend = _validateTokenSpend(sKey, innerData);
-            if (!validSpend) return false;
-        }
-
-        if (!(sKey.whitelisting && sKey.whitelist[call.target])) {
-            return false;
-        }
         return true;
     }
 
-    /**
-     * @notice Validates a token transfer against the key’s token spend limit.
-     * @dev Loads `value` from the last 32 bytes of `innerData` (standard ERC-20 `_transfer(address,uint256)`
-     * signature).
-     * @dev Out of scope (not supported): Extended/alternative token interfaces where spend cannot be
-     *      inferred from the trailing 32 bytes, including but not limited to:
-     *        - ERC-777 (`send`, operator functions and hooks)
-     *        - ERC-1363 (`transferAndCall`, etc.)
-     *        - ERC-4626 vaults (`deposit`, `mint`, `withdraw`, `redeem`, etc.)
-     *        - Allowance changes (`approve`, `increaseAllowance`, `decreaseAllowance`)
-     *        - Permit-style signatures (EIP-2612) or any function where the amount is not the last arg.
-     *      Calls to those selectors MUST be blocked elsewhere (e.g., via `allowedSelectors`) because
-     *      this function will not correctly measure spend and may produce misleading deductions.
-     * @param sKey      Storage reference of the KeyData
-     * @param innerData The full encoded call data to the token contract.
-     * @return True if `value ≤ sKey.spendTokenInfo.limit`; false if it exceeds or is invalid.
-     */
-    function _validateTokenSpend(KeyData storage sKey, bytes memory innerData)
-        internal
-        returns (bool)
-    {
-        uint256 len = innerData.length;
-        // load the last 32 bytes from innerData
-        uint256 value;
-        assembly {
-            value := mload(add(add(innerData, 0x20), sub(len, 0x20)))
-        }
-        if (value > sKey.spendTokenInfo.limit) {
-            return false;
-        }
-        if (value > 0) {
-            unchecked {
-                sKey.spendTokenInfo.limit -= value;
-            }
-        }
-        return true;
-    }
-
-    /**
-     * @notice Checks whether `selector` is included in the `selectors` array.
-     * @param selectors Array of allowed selectors (in storage).
-     * @param selector  The 4-byte function selector to check.
-     * @return True if found; false otherwise.
-     */
-    function _isAllowedSelector(bytes4[] storage selectors, bytes4 selector)
+    function _isCanCall(bytes32 _keyId, address _target, bytes memory _data)
         internal
         view
         returns (bool)
     {
-        uint256 len = selectors.length;
-        for (uint256 i = 0; i < len;) {
-            if (selectors[i] == selector) {
-                return true;
-            }
-            unchecked {
-                ++i;
+        bytes4 fnSel = ANY_FN_SEL;
+
+        if (_data.length >= 4) {
+            assembly {
+                fnSel := mload(add(_data, 0x20))
             }
         }
+
+        if (_data.length == uint256(0)) fnSel = EMPTY_CALLDATA_FN_SEL;
+
+        EnumerableSetLib.Bytes32Set storage canCallSet = permissions[_keyId].canExecute;
+
+        if (canCallSet.length() != 0) {
+            if (canCallSet.contains(KeysManagerLib.packCanExecute(_target, fnSel))) return true;
+            if (canCallSet.contains(KeysManagerLib.packCanExecute(_target, ANY_FN_SEL))) {
+                return true;
+            }
+            if (canCallSet.contains(KeysManagerLib.packCanExecute(ANY_TARGET, fnSel))) return true;
+            if (canCallSet.contains(KeysManagerLib.packCanExecute(ANY_TARGET, ANY_FN_SEL))) {
+                return true;
+            }
+        }
+
+        if (_checkCall(_keyId, _target, _target, _data)) return true;
+        if (_checkCall(_keyId, ANY_TARGET, _target, _data)) return true;
+
         return false;
+    }
+
+    /// @dev Returns if the call can be executed via consulting a 3rd party checker.
+    function _checkCall(bytes32 _keyHash, address _forTarget, address _target, bytes memory _data)
+        internal
+        view
+        returns (bool)
+    {
+        (bool exists, address checker) = getCallChecker(_keyHash, _forTarget);
+        if (exists) return ICallChecker(checker).canExecute(_keyHash, _target, _data);
+        return false;
+    }
+
+    function _isTokenSpend(bytes32 _keyId, address _target, uint256 _value, bytes memory _data)
+        internal
+        returns (bool)
+    {
+        bytes4 fnSel = ANY_FN_SEL;
+
+        if (_data.length >= 4) {
+            assembly {
+                fnSel := mload(add(_data, 0x20))
+            }
+        }
+
+        if (_data.length == uint256(0)) fnSel = EMPTY_CALLDATA_FN_SEL;
+
+        uint256 tokenAmout;
+
+        if (fnSel == EMPTY_CALLDATA_FN_SEL) {
+            tokenAmout = _value;
+            _target = NATIVE_ADDRESS;
+        } else if (fnSel == 0xa9059cbb) {
+            // `transfer(address,uint256)`.
+            tokenAmout = uint256(LibBytes.load(_data, 0x24));
+        } else if (fnSel == 0x23b872dd) {
+            // `transferFrom(address,address,uint256)`.
+            tokenAmout = uint256(LibBytes.load(_data, 0x44));
+        } else if (fnSel == 0x095ea7b3) {
+            // `approve(address,uint256)`.
+            tokenAmout = uint256(LibBytes.load(_data, 0x24));
+        }
+
+        if (!_manageTokenSpend(_keyId, _target, tokenAmout)) return false;
+
+        return true;
+    }
+
+    function _manageTokenSpend(bytes32 _keyId, address _target, uint256 _tokenAmout)
+        private
+        returns (bool)
+    {
+        TokenSpendPeriod storage tokenSpend = spendStore[_keyId].tokenData[_target];
+        if (uint8(tokenSpend.period) == 0 || tokenSpend.limit == 0) return false;
+
+        uint256 current = startOfSpendPeriod(block.timestamp, tokenSpend.period);
+
+        if (tokenSpend.lastUpdated < current) {
+            tokenSpend.lastUpdated = current;
+            tokenSpend.spent = 0;
+        }
+
+        if ((tokenSpend.spent + _tokenAmout) > tokenSpend.limit) return false;
+
+        unchecked {
+            tokenSpend.spent += _tokenAmout;
+        }
+
+        return true;
     }
 
     /**
@@ -500,7 +527,7 @@ contract OPF7702 is Execution, Initializable {
             return this.isValidSignature.selector;
         }
 
-        bytes32 keyHash = signer.computeKeyId();
+        bytes32 keyHash = KeyType.EOA.computeKeyId(abi.encode(signer));
         KeyData storage sKey = keys[keyHash];
 
         if (sKey.masterKey) return this.isValidSignature.selector;
@@ -551,10 +578,6 @@ contract OPF7702 is Execution, Initializable {
             return bytes4(0xffffffff);
         }
 
-        if (usedChallenges[_hash]) {
-            return bytes4(0xffffffff);
-        }
-
         bool sigOk;
         try IWebAuthnVerifier(webAuthnVerifier()).verifySignature(
             _hash,
@@ -577,7 +600,7 @@ contract OPF7702 is Execution, Initializable {
             return bytes4(0xffffffff);
         }
 
-        bytes32 keyHash = pubKey.computeKeyId();
+        bytes32 keyHash = KeyType.WEBAUTHN.computeKeyId(abi.encode(pubKey.x, pubKey.y));
         KeyData storage sKey = keys[keyHash];
 
         if (sKey.masterKey) return this.isValidSignature.selector;
@@ -611,5 +634,22 @@ contract OPF7702 is Execution, Initializable {
      */
     function _checkSignature(bytes32 hash, bytes memory signature) internal view returns (bool) {
         return ECDSA.recover(hash, signature) == address(this);
+    }
+
+    function startOfSpendPeriod(uint256 unixTimestamp, SpendPeriod period)
+        public
+        pure
+        returns (uint256)
+    {
+        if (period == SpendPeriod.Minute) return Math.rawMul(Math.rawDiv(unixTimestamp, 60), 60);
+        if (period == SpendPeriod.Hour) return Math.rawMul(Math.rawDiv(unixTimestamp, 3600), 3600);
+        if (period == SpendPeriod.Day) return Math.rawMul(Math.rawDiv(unixTimestamp, 86400), 86400);
+        if (period == SpendPeriod.Week) return DateTimeLib.mondayTimestamp(unixTimestamp);
+        (uint256 year, uint256 month,) = DateTimeLib.timestampToDate(unixTimestamp);
+        // Note: DateTimeLib's months and month-days start from 1.
+        if (period == SpendPeriod.Month) return DateTimeLib.dateToTimestamp(year, month, 1);
+        if (period == SpendPeriod.Year) return DateTimeLib.dateToTimestamp(year, 1, 1);
+        if (period == SpendPeriod.Forever) return 1; // Non-zero to differentiate from not set.
+        revert(); // We shouldn't hit here.
     }
 }

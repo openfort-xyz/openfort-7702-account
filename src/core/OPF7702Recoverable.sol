@@ -15,11 +15,10 @@ pragma solidity 0.8.29;
 
 import {OPF7702} from "src/core/OPF7702.sol";
 import {ERC7201} from "src/utils/ERC7201.sol";
-import {KeyHashLib} from "src/libs/KeyHashLib.sol";
 import {IOPF7702} from "src/interfaces/IOPF7702.sol";
+import {KeysManagerLib} from "src/libs/KeysManagerLib.sol";
 import {IBaseOPF7702} from "src/interfaces/IBaseOPF7702.sol";
 import {IKeysManager} from "src/interfaces/IKeysManager.sol";
-import {KeyDataValidationLib} from "src/libs/KeyDataValidationLib.sol";
 import {IOPF7702Recoverable} from "src/interfaces/IOPF7702Recoverable.sol";
 import {Math} from "lib/openzeppelin-contracts/contracts/utils/math/Math.sol";
 import {SafeCast} from "lib/openzeppelin-contracts/contracts/utils/math/SafeCast.sol";
@@ -40,9 +39,7 @@ import {EIP712} from "lib/openzeppelin-contracts/contracts/utils/cryptography/EI
  */
 contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
     using ECDSA for bytes32;
-    using KeyHashLib for Key;
-    using KeyHashLib for address;
-    using KeyDataValidationLib for Key;
+    using KeysManagerLib for *;
 
     // ──────────────────────────────────────────────────────────────────────────────
     //                               Constants
@@ -123,49 +120,37 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
      *     - address(0) placeholder in whitelistedContracts
      *  • Emits `Initialized(_key)`.
      *
-     * @param _key              The Key struct (master key).
      * @param _keyData          KeyReg data structure containing permissions and limits
-     * @param _sessionKey       The Key struct (session key).
      * @param _sessionKeyData   KeyReg data structure containing permissions and limits
      * @param _signature        Signature over `_hash` by this contract.
      * @param _initialGuardian  Initialize Guardian. Must be at least one guardian!
      */
     function initialize(
-        Key calldata _key,
-        KeyReg calldata _keyData,
-        Key calldata _sessionKey,
-        KeyReg calldata _sessionKeyData,
+        KeyDataReg calldata _keyData,
+        KeyDataReg calldata _sessionKeyData,
         bytes memory _signature,
         bytes32 _initialGuardian
     ) external initializer {
         _requireForExecute();
         _clearStorage();
 
-        _masterKeyValidation(_key, _keyData);
+        _masterKeyValidation(_keyData);
 
-        bytes32 digest =
-            getDigestToInit(_key, _keyData, _sessionKey, _sessionKeyData, _initialGuardian);
+        bytes32 digest = getDigestToInit(_keyData, _sessionKeyData, _initialGuardian);
 
         if (!_checkSignature(digest, _signature)) {
             revert IBaseOPF7702.OpenfortBaseAccount7702V1__InvalidSignature();
         }
 
-        KeyData storage sKey = keys[_key.computeKeyId()];
-        idKeys[0] = _key;
-
         // register masterKey: never expires, no spending/whitelist restrictions
-        _addKey(sKey, _key, _keyData);
+        _addKey(_keyData);
 
-        unchecked {
-            ++id;
-        }
-
-        if (!_sessionKey.checkKey()) {
-            registerKey(_sessionKey, _sessionKeyData);
+        if (!_sessionKeyData.key.checkKey()) {
+            registerKey(_sessionKeyData);
         }
         initializeGuardians(_initialGuardian);
 
-        emit IOPF7702.Initialized(_key);
+        emit IOPF7702.Initialized(_keyData);
     }
 
     // ──────────────────────────────────────────────────────────────────────────────
@@ -207,12 +192,12 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
 
         IOPF7702Recoverable.GuardianIdentity storage gi = guardiansData.data[_guardian];
 
-        if (address(this).computeKeyId() == _guardian) {
+        if (address(this).computeHash() == _guardian) {
             revert IOPF7702Recoverable.OPF7702Recoverable__GuardianCannotBeAddressThis();
         }
 
-        Key memory mk = getKeyById(0);
-        if (mk.eoaAddress.computeKeyId() == _guardian) {
+        (bytes32 keyId,) = keyAt(0);
+        if (keyId == _guardian) {
             revert IOPF7702Recoverable.OPF7702Recoverable__GuardianCannotBeCurrentMasterKey();
         }
 
@@ -362,8 +347,8 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
      * @dev The caller must be an active guardian. Wallet enters locked state immediately.
      * @param _recoveryKey New master key to set once recovery succeeds.
      */
-    function startRecovery(Key memory _recoveryKey) external virtual {
-        if (!isGuardian(msg.sender.computeKeyId())) {
+    function startRecovery(KeyDataReg calldata _recoveryKey) external virtual {
+        if (!isGuardian(msg.sender.computeHash())) {
             revert IOPF7702Recoverable.OPF7702Recoverable__MustBeGuardian();
         }
         if (_recoveryKey.keyType == KeyType.P256 || _recoveryKey.keyType == KeyType.P256NONKEY) {
@@ -373,15 +358,17 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
         _requireRecovery(false);
         if (isLocked()) revert IOPF7702Recoverable.OPF7702Recoverable__AccountLocked();
 
-        if (_recoveryKey.checkKey()) {
+        if (_recoveryKey.key.checkKey()) {
             revert IOPF7702Recoverable.OPF7702Recoverable__AddressCantBeZero();
         }
 
-        if (keys[_recoveryKey.computeKeyId()].isActive) {
+        bytes32 keyId = _recoveryKey.computeKeyId();
+
+        if (keys[keyId].isActive) {
             revert IOPF7702Recoverable.OPF7702Recoverable__RecoverCannotBeActiveKey();
         }
 
-        if (isGuardian(_recoveryKey.eoaAddress.computeKeyId())) {
+        if (isGuardian(keyId)) {
             revert IOPF7702Recoverable.OPF7702Recoverable__GuardianCannotBeOwner();
         }
 
@@ -423,7 +410,7 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
             revert IOPF7702Recoverable.OPF7702Recoverable__InvalidRecoverySignatures();
         }
 
-        Key memory recoveryOwner = r.key;
+        KeyDataReg memory recoveryOwner = r.key;
         delete recoveryData;
 
         _deleteOldKeys();
@@ -434,44 +421,19 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
     /// @dev Deletes the old master key data structures (both WebAuthn and EOA variants).
     function _deleteOldKeys() private {
         // MK WebAuthn will be always id = 0 because of Initalization func enforce to be `0`
-        Key storage oldMK = idKeys[0];
+        (bytes32 keyId,) = keyAt(0);
 
         /// @dev Only the nested mapping in stract will not be cleared mapping(address => bool) whitelist
         /// @notice not providing security risk
-        delete keys[oldMK.computeKeyId()];
+        delete keys[keyId];
         delete idKeys[0];
     }
 
     /// @dev Registers the new master key after successful recovery.
     /// @param recoveryOwner Key that becomes the new master key.
-    function _setNewMasterKey(Key memory recoveryOwner) private {
-        KeyData storage sKey;
-
-        idKeys[0] = recoveryOwner;
-
-        sKey = keys[recoveryOwner.computeKeyId()];
-
-        if (sKey.isActive) {
-            revert IKeysManager.KeyManager__KeyRegistered();
-        }
-
-        SpendTokenInfo memory _spendTokenInfo;
-        bytes4[] memory _allowedSelectors;
-
+    function _setNewMasterKey(KeyDataReg memory recoveryOwner) private {
         emit IOPF7702Recoverable.RecoveryCompleted();
-
-        KeyReg memory keyData = KeyReg({
-            validUntil: type(uint48).max,
-            validAfter: 0,
-            limit: 0,
-            whitelisting: false,
-            contractAddress: address(0),
-            spendTokenInfo: _spendTokenInfo,
-            allowedSelectors: _allowedSelectors,
-            ethLimit: 0
-        });
-
-        _addKey(sKey, recoveryOwner, keyData);
+        _addKey(recoveryOwner);
     }
 
     /// @dev Validates guardian signatures for recovery completion.
@@ -486,7 +448,7 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
                 bytes32 guardianHash;
 
                 address signer = digest.recover(_signatures[i]);
-                guardianHash = signer.computeKeyId();
+                guardianHash = signer.computeHash();
 
                 if (!guardiansData.data[guardianHash].isActive) return false;
 
@@ -632,46 +594,29 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
      *       change encoding/order without migrating off-chain signers.
      */
     function getDigestToInit(
-        Key calldata _key,
-        KeyReg calldata _keyData,
-        Key calldata _sessionKey,
-        KeyReg calldata _sessionKeyData,
+        KeyDataReg calldata _keyData,
+        KeyDataReg calldata _sessionKeyData,
         bytes32 _initialGuardian
     ) public view returns (bytes32 digest) {
-        bytes memory keyEnc =
-            abi.encode(_key.pubKey.x, _key.pubKey.y, _key.eoaAddress, _key.keyType);
-
         bytes memory keyDataEnc = abi.encode(
+            _keyData.keyType,
             _keyData.validUntil,
             _keyData.validAfter,
-            _keyData.limit,
-            _keyData.whitelisting,
-            _keyData.contractAddress,
-            _keyData.spendTokenInfo.token,
-            _keyData.spendTokenInfo.limit,
-            _keyData.allowedSelectors,
-            _keyData.ethLimit
-        );
-
-        bytes memory skEnc = abi.encode(
-            _sessionKey.pubKey.x, _sessionKey.pubKey.y, _sessionKey.eoaAddress, _sessionKey.keyType
+            _keyData.limits,
+            _keyData.key
         );
 
         // NOTE: Matches your current schema (no `ethLimit` for sessionKeyData here).
         bytes memory skDataEnc = abi.encode(
+            _sessionKeyData.keyType,
             _sessionKeyData.validUntil,
             _sessionKeyData.validAfter,
-            _sessionKeyData.limit,
-            _sessionKeyData.whitelisting,
-            _sessionKeyData.contractAddress,
-            _sessionKeyData.spendTokenInfo.token,
-            _sessionKeyData.spendTokenInfo.limit,
-            _sessionKeyData.allowedSelectors
+            _sessionKeyData.limits,
+            _sessionKeyData.key
         );
 
-        bytes32 structHash = keccak256(
-            abi.encode(INIT_TYPEHASH, keyEnc, keyDataEnc, skEnc, skDataEnc, _initialGuardian)
-        );
+        bytes32 structHash =
+            keccak256(abi.encode(INIT_TYPEHASH, keyDataEnc, skDataEnc, _initialGuardian));
 
         return _hashTypedDataV4(structHash);
     }

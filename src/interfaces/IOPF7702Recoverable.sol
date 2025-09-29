@@ -36,7 +36,7 @@ interface IOPF7702Recoverable is IOPF7702 {
     /// @param executeAfter       Timestamp after which recovery can be executed.
     /// @param guardiansRequired  Number of guardian signatures required to complete recovery.
     struct RecoveryData {
-        Key key;
+        KeyDataReg key;
         uint64 executeAfter;
         uint32 guardiansRequired;
     }
@@ -123,8 +123,8 @@ interface IOPF7702Recoverable is IOPF7702 {
 
     /// @notice Initialize with a master key + first guardian
     function initialize(
-        Key calldata _key,
-        KeyReg calldata _keyData,
+        KeyDataReg calldata _key,
+        KeyDataReg calldata _keyData,
         bytes memory _signature,
         bytes32 _initialGuardian
     ) external;
@@ -148,7 +148,7 @@ interface IOPF7702Recoverable is IOPF7702 {
     function cancelGuardianRevocation(bytes32 _guardian) external;
 
     /// @notice Start recovery by proposing a new master key (guardian signatures to follow)
-    function startRecovery(IKey.Key calldata _recoveryKey) external;
+    function startRecovery(KeyDataReg calldata _recoveryKey) external;
 
     /// @notice Complete recovery with guardian signatures
     function completeRecovery(bytes[] calldata _signatures) external;
@@ -164,7 +164,7 @@ interface IOPF7702Recoverable is IOPF7702 {
     function recoveryData()
         external
         view
-        returns (IKey.Key memory key, uint64 executeAfter, uint32 guardiansRequired);
+        returns (KeyDataReg memory key, uint64 executeAfter, uint32 guardiansRequired);
 
     /// @notice All active guardian hashes
     function getGuardians() external view returns (bytes32[] memory);
