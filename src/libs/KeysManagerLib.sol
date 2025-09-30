@@ -10,7 +10,7 @@ library KeysManagerLib {
     //                      VALIDATION HELPERS
     // ============================================================
 
-    function keyCantBeZero(IKey.KeyDataReg calldata k) internal pure {
+    function keyCantBeZero(IKey.KeyDataReg memory k) internal pure {
         if (k.key.length == 0) revert IKeysManager.KeyManager__KeyCantBeZero();
     }
 

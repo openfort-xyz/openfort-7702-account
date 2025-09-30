@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.29;
-
-import {ISpendLimit} from "src/interfaces/ISpendLimit.sol";
+pragma solidity 0.8.29;
 
 interface IKey {
     /**
@@ -23,6 +21,11 @@ interface IKey {
         P256NONKEY
     }
 
+    enum KeyControl {
+        Self,
+        Custodial
+    }
+
     struct PubKey {
         bytes32 x;
         bytes32 y;
@@ -32,6 +35,7 @@ interface IKey {
         KeyType keyType;
         bool isActive;
         bool masterKey;
+        bool isDelegatedControl;
         uint48 validUntil;
         uint48 validAfter;
         uint48 limits;
@@ -44,5 +48,6 @@ interface IKey {
         uint48 validAfter;
         uint48 limits;
         bytes key;
+        KeyControl keyControl;
     }
 }

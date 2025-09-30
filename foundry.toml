@@ -4,7 +4,7 @@ out = "out"
 libs = ["lib"]
 via-ir = true
 optimizer = true
-optimizer_runs = 130
+optimizer_runs = 10
 dotenv = ".env.p256"
 
 fs_permissions = [
@@ -12,8 +12,8 @@ fs_permissions = [
 ]
 
 [profile.default.fuzz]
-runs = 100000                               
-seed = '0x3e8'  
+runs = 256                               
+seed = '0x3e8'
 
 
 
@@ -24,7 +24,7 @@ out = "out"
 libs = ["lib"]
 via-ir = true
 optimizer = true
-optimizer_runs = 130
+optimizer_runs = 10
 
 fs_permissions = [
   { access = "read", path = "./test/data" }

@@ -136,34 +136,6 @@ contract KeysManagerV2 is Test, IKey, IKeyManager {
         assertTrue(hasCall);
     }
 
-    function test_setCallChecker(uint256 _saltX, uint256 _saltY, address _target, address _checker)
-        public
-    {
-        vm.assume(
-            _target != address(0) && _target != address(uint160(SOLADY_SENTINEL))
-                && _checker != address(0) && _checker != address(uint160(SOLADY_SENTINEL))
-                && _target != address(KM) && _checker != address(KM)
-        );
-        _createKey(_saltX, _saltY);
-        _register();
-
-        (bytes32 keyId,) = KM.keyAt(0);
-
-        vm.prank(address(KM));
-        KM.setCallChecker(keyId, _target, _checker);
-
-        uint256 L = KM.callCheckersLength(keyId);
-        assertEq(1, L);
-
-        (address target, address checker) = KM.callCheckerAt(keyId, 0);
-        assertEq(_target, target);
-        assertEq(_checker, checker);
-
-        (bool exists, address checker_) = KM.getCallChecker(keyId, _target);
-        assertTrue(exists);
-        assertEq(_checker, checker_);
-    }
-
     function test_clearExecutePermissions(
         uint256 _saltX,
         uint256 _saltY,
@@ -187,9 +159,6 @@ contract KeysManagerV2 is Test, IKey, IKeyManager {
         KM.setCanCall(keyId, _target, _funSel, true);
 
         vm.prank(address(KM));
-        KM.setCallChecker(keyId, _target, _checker);
-
-        vm.prank(address(KM));
         KM.clearExecutePermissions(keyId);
 
         bytes32[] memory permissions = KM.canExecutePackedInfos(keyId);
@@ -206,13 +175,6 @@ contract KeysManagerV2 is Test, IKey, IKeyManager {
 
         uint256 L = KM.canExecuteLength(keyId);
         assertEq(L, 0);
-
-        uint256 _L = KM.callCheckersLength(keyId);
-        assertEq(0, _L);
-
-        (bool exists, address checker_) = KM.getCallChecker(keyId, _target);
-        assertFalse(exists);
-        assertEq(address(0), checker_);
     }
 
     function test_revokeKey(
@@ -357,43 +319,6 @@ contract KeysManagerV2 is Test, IKey, IKeyManager {
         assertEq(lastUpdated, 0);
     }
 
-    function test_updateCallChecker(
-        uint256 _saltX,
-        uint256 _saltY,
-        address _target,
-        address _checker,
-        address _newChecker
-    ) public {
-        vm.assume(
-            _target != address(0) && _target != address(uint160(SOLADY_SENTINEL))
-                && _checker != address(0) && _checker != address(uint160(SOLADY_SENTINEL))
-                && _target != address(KM) && _newChecker != address(0) && _checker != address(KM)
-                && _newChecker != address(KM) && _newChecker != address(uint160(SOLADY_SENTINEL))
-        );
-
-        _createKey(_saltX, _saltY);
-        _register();
-
-        (bytes32 keyId,) = KM.keyAt(0);
-
-        vm.prank(address(KM));
-        KM.setCallChecker(keyId, _target, _checker);
-
-        vm.prank(address(KM));
-        KM.updateCallChecker(keyId, _target, _newChecker);
-
-        uint256 L = KM.callCheckersLength(keyId);
-        assertEq(1, L);
-
-        (address target, address checker) = KM.callCheckerAt(keyId, 0);
-        assertEq(_target, target);
-        assertEq(_newChecker, checker);
-
-        (bool exists, address checker_) = KM.getCallChecker(keyId, _target);
-        assertTrue(exists);
-        assertEq(_newChecker, checker_);
-    }
-
     function test_removeTokenSpend(
         uint256 _saltX,
         uint256 _saltY,
@@ -466,37 +391,6 @@ contract KeysManagerV2 is Test, IKey, IKeyManager {
 
         uint256 L = KM.canExecuteLength(keyId);
         assertEq(L, 0);
-    }
-
-    function test_removeCallChecker(
-        uint256 _saltX,
-        uint256 _saltY,
-        address _target,
-        address _checker
-    ) public {
-        vm.assume(
-            _target != address(0) && _target != address(uint160(SOLADY_SENTINEL))
-                && _checker != address(0) && _checker != address(uint160(SOLADY_SENTINEL))
-                && _target != address(KM) && _checker != address(KM)
-        );
-
-        _createKey(_saltX, _saltY);
-        _register();
-
-        (bytes32 keyId,) = KM.keyAt(0);
-
-        vm.prank(address(KM));
-        KM.setCallChecker(keyId, _target, _checker);
-
-        vm.prank(address(KM));
-        KM.removeCallChecker(keyId, _target);
-
-        uint256 L = KM.callCheckersLength(keyId);
-        assertEq(0, L);
-
-        (bool exists, address checker_) = KM.getCallChecker(keyId, _target);
-        assertFalse(exists);
-        assertEq(address(0), checker_);
     }
 
     function test_pauseKey(uint256 _saltX, uint256 _saltY) public {
@@ -652,10 +546,6 @@ contract KeysManagerV2Reverts is Test, IKey, IKeyManager {
 
         vm.expectRevert(KeyManager__KeyNotActive.selector);
         vm.prank(address(KM));
-        KM.setCallChecker(hex"12345678", address(1234564789), address(1234564789));
-
-        vm.expectRevert(KeyManager__KeyNotActive.selector);
-        vm.prank(address(KM));
         KM.updateKeyData(hex"12345678", 0, 0);
 
         vm.expectRevert(KeyManager__KeyNotActive.selector);
@@ -664,15 +554,7 @@ contract KeysManagerV2Reverts is Test, IKey, IKeyManager {
 
         vm.expectRevert(KeyManager__KeyNotActive.selector);
         vm.prank(address(KM));
-        KM.updateCallChecker(hex"12345678", address(123), address(123456));
-
-        vm.expectRevert(KeyManager__KeyNotActive.selector);
-        vm.prank(address(KM));
         KM.removeTokenSpend(hex"12345678", address(123));
-
-        vm.expectRevert(KeyManager__KeyNotActive.selector);
-        vm.prank(address(KM));
-        KM.removeCallChecker(hex"12345678", address(123));
     }
 
     function test_Revert_TokenAddressZero_TargetAddressZero_TargetIsThis_AddressZer() public {
@@ -694,18 +576,6 @@ contract KeysManagerV2Reverts is Test, IKey, IKeyManager {
         vm.expectRevert(KeyManager__TargetIsThis.selector);
         vm.prank(address(KM));
         KM.setCanCall(keyId, address(KM), 0xdeadbabe, true);
-
-        vm.expectRevert(KeyManager__AddressZero.selector);
-        vm.prank(address(KM));
-        KM.setCallChecker(keyId, address(0), address(0));
-
-        vm.expectRevert(KeyManager__TargetIsThis.selector);
-        vm.prank(address(KM));
-        KM.setCallChecker(keyId, address(KM), address(0));
-
-        vm.expectRevert(KeyManager__AddressZero.selector);
-        vm.prank(address(KM));
-        KM.setCallChecker(keyId, address(123456789), address(0));
 
         vm.expectRevert(KeyManager__AddressZero.selector);
         vm.prank(address(KM));
@@ -745,22 +615,6 @@ contract KeysManagerV2Reverts is Test, IKey, IKeyManager {
         KM.setTokenSpend(keyId, address(erc20), 10e18, SpendPeriod.Month);
     }
 
-    function test__setCallCheckerRevert_CallCheckerAlreadySet() public {
-        _createKey(1010, 101010, uint48(block.timestamp + 10 days), 0, 10, false);
-
-        vm.prank(address(KM));
-        KM.registerKey(kDG);
-
-        (bytes32 keyId,) = KM.keyAt(0);
-
-        vm.prank(address(KM));
-        KM.setCallChecker(keyId, address(erc20), address(2123456));
-
-        vm.expectRevert(KeyManager__CallCheckerAlreadySet.selector);
-        vm.prank(address(KM));
-        KM.setCallChecker(keyId, address(erc20), address(2123456));
-    }
-
     function test_updateKeyDataRevert_KeyRegistered_MustHaveLimits() public {
         _createKey(1010, 101010, uint48(block.timestamp + 10 days), 0, 10, false);
 
@@ -796,22 +650,6 @@ contract KeysManagerV2Reverts is Test, IKey, IKeyManager {
         vm.expectRevert(KeyManager__TokenSpendNotSet.selector);
         vm.prank(address(KM));
         KM.updateTokenSpend(keyId, address(123789), 10, SpendPeriod.Month);
-    }
-
-    function test__updateCallChecker_CallCheckerNotSet() public {
-        _createKey(1010, 101010, uint48(block.timestamp + 10 days), 0, 10, false);
-
-        vm.prank(address(KM));
-        KM.registerKey(kDG);
-
-        (bytes32 keyId,) = KM.keyAt(0);
-
-        vm.prank(address(KM));
-        KM.setCallChecker(keyId, address(erc20), address(2123456));
-
-        vm.expectRevert(KeyManager__CallCheckerNotSet.selector);
-        vm.prank(address(KM));
-        KM.updateCallChecker(keyId, address(123456), address(2123456));
     }
 
     function test_pauseKey_unpauseKeyRevert_KeyAlreadyPaused_KeyAlreadyActive() public {
@@ -855,19 +693,11 @@ contract KeysManagerV2Reverts is Test, IKey, IKeyManager {
 
         vm.expectRevert(abi.encodePacked("OnlyThis"));
         vm.prank(address(this));
-        KM.setCallChecker(bytes32(0), address(0), address(0));
-
-        vm.expectRevert(abi.encodePacked("OnlyThis"));
-        vm.prank(address(this));
         KM.updateKeyData(bytes32(0), 0, 0);
 
         vm.expectRevert(abi.encodePacked("OnlyThis"));
         vm.prank(address(this));
         KM.updateTokenSpend(bytes32(0), address(0), 0, SpendPeriod.Month);
-
-        vm.expectRevert(abi.encodePacked("OnlyThis"));
-        vm.prank(address(this));
-        KM.updateCallChecker(bytes32(0), address(0), address(0));
 
         vm.expectRevert(abi.encodePacked("OnlyThis"));
         vm.prank(address(this));

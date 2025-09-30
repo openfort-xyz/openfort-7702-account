@@ -62,7 +62,10 @@ lcov:
 
 gas:
 	forge test --gas-report --rpc-url $(SEPOLIA_RPC_URL)
-	
+
+size:
+	forge clean && forge build --sizes
+
 storage:
 	forge clean && forge inspect src/core/OPFMain.sol:OPFMain storageLayout
 	

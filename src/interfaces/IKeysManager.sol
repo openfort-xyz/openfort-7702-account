@@ -4,7 +4,6 @@ pragma solidity 0.8.29;
 
 import {IKey} from "././IKey.sol";
 import {EnumerableSetLib} from "lib/solady/src/utils/EnumerableSetLib.sol";
-import {EnumerableMapLib} from "lib/solady/src/utils/EnumerableMapLib.sol";
 
 interface IKeysManager {
     // =============================================================
@@ -23,7 +22,6 @@ interface IKeysManager {
 
     struct ExecutePermissions {
         EnumerableSetLib.Bytes32Set canExecute;
-        EnumerableMapLib.AddressToAddressMap callCheckers;
     }
 
     struct TokenSpendPeriod {
@@ -52,17 +50,11 @@ interface IKeysManager {
     error KeyManager__InvalidKeyType();
     error KeyManager__KeyAlreadyPaused();
     error KeyManager__KeyAlreadyActive();
-    error KeyManager__TokenAddressZero();
     error KeyManager__TokenSpendNotSet();
-    error KeyManager__CallCheckerNotSet();
-    error KeyManager__TargetAddressZero();
-    error KeyManager__MasterKeyDisallowed();
-    error KeyManager__TokenSpendAlreadySet();
-    error KeyManager__CallCheckerAlreadySet();
-    error KeyManager__InvalidSignatureLength();
-    error KeyManager__MasterKeyCannotBeRevoked();
-    error KeyManager__InvalidMasterKeyReg(IKey.KeyDataReg _keyData_);
     error KeyManager__MasterKeyCanDoAll();
+    error KeyManager__TokenSpendAlreadySet();
+    error KeyManager__InvalidSignatureLength();
+    error KeyManager__InvalidMasterKeyReg(IKey.KeyDataReg _keyData_);
 
     // =============================================================
     //                            EVENTS
@@ -70,6 +62,7 @@ interface IKeysManager {
 
     event KeyRegistered(
         bytes32 indexed keyId,
+        IKey.KeyControl indexed keyControl,
         IKey.KeyType keyType,
         bool masterKey,
         uint48 validAfter,

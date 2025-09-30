@@ -100,18 +100,6 @@ abstract contract KeysManager is BaseOPF7702, IKeysManager, IKey {
         emit CanCallSet(_keyId, _target, _funSel, can);
     }
 
-    function setCallChecker(bytes32 _keyId, address _target, address _checker) public {
-        _requireForExecute();
-        KeyData storage sKey = keys[_keyId];
-        sKey.validateKeyBefore();
-
-        _target.checkTargetAddress();
-        _checker.checkAddress();
-
-        _setCallChecker(_keyId, _target, _checker, false);
-        emit CallCheckerSet(_keyId, _target, _checker);
-    }
-
     ////////////// Updatterd //////////////
     function updateKeyData(bytes32 _keyId, uint48 _validUntil, uint48 _limits) public {
         _requireForExecute();
@@ -141,18 +129,6 @@ abstract contract KeysManager is BaseOPF7702, IKeysManager, IKey {
         emit TokenSpendSet(_keyId, _token, _period, _limit);
     }
 
-    function updateCallChecker(bytes32 _keyId, address _target, address _checker) public {
-        _requireForExecute();
-        KeyData storage sKey = keys[_keyId];
-        sKey.validateKeyBefore();
-
-        _target.checkTargetAddress();
-        _checker.checkAddress();
-
-        _setCallChecker(_keyId, _target, _checker, true);
-        emit CallCheckerSet(_keyId, _target, _checker);
-    }
-
     ////////////// Removers //////////////
     function removeTokenSpend(bytes32 _keyId, address _token) public {
         _requireForExecute();
@@ -161,15 +137,6 @@ abstract contract KeysManager is BaseOPF7702, IKeysManager, IKey {
 
         _removeTokenSpend(_keyId, _token);
         emit TokenSpendRemoved(_keyId, _token);
-    }
-
-    function removeCallChecker(bytes32 _keyId, address _target) public {
-        _requireForExecute();
-        KeyData storage sKey = keys[_keyId];
-        sKey.validateKeyBefore();
-
-        _removeCallChecker(_keyId, _target);
-        emit CallCheckerRemoved(_keyId, _target);
     }
 
     // =============================================================
@@ -189,8 +156,10 @@ abstract contract KeysManager is BaseOPF7702, IKeysManager, IKey {
         sKey.limits = _keyData.limits;
         sKey.masterKey = (_keyData.limits == 0);
         sKey.isActive = true;
+        sKey.isDelegatedControl = false;
 
-        if (_keyData.limits > 0) {
+        if (_keyData.keyControl == KeyControl.Custodial) {
+            sKey.isDelegatedControl = true;
             IUserOpPolicy(GAS_POLICY).initializeGasPolicy(
                 address(this), keyId, uint256(_keyData.limits)
             );
@@ -204,6 +173,7 @@ abstract contract KeysManager is BaseOPF7702, IKeysManager, IKey {
 
         emit KeyRegistered(
             keyId,
+            _keyData.keyControl,
             _keyData.keyType,
             sKey.masterKey,
             _keyData.validAfter,
@@ -214,6 +184,7 @@ abstract contract KeysManager is BaseOPF7702, IKeysManager, IKey {
 
     function _revoke(KeyData storage _sKey) internal {
         _sKey.isActive = false;
+        _sKey.isDelegatedControl = false;
         _sKey.validUntil = 0;
         _sKey.validAfter = 0;
         _sKey.limits = 0;
@@ -254,28 +225,6 @@ abstract contract KeysManager is BaseOPF7702, IKeysManager, IKey {
     function _setCanCall(bytes32 _keyId, address _target, bytes4 _funSel, bool can) internal {
         ExecutePermissions storage sExecute = permissions[_keyId];
         sExecute.canExecute.update(_target.packCanExecute(_funSel), can, 2048);
-    }
-
-    function _setCallChecker(bytes32 _keyId, address _target, address _checker, bool update)
-        internal
-    {
-        ExecutePermissions storage sExecute = permissions[_keyId];
-
-        if (!update) {
-            (bool exists,) = sExecute.callCheckers.tryGet(_target);
-            if (exists) revert KeyManager__CallCheckerAlreadySet();
-        } else if (update) {
-            if (!sExecute.callCheckers.contains(_target)) revert KeyManager__CallCheckerNotSet();
-        }
-
-        sExecute.callCheckers.set(_target, _checker);
-    }
-
-    function _removeCallChecker(bytes32 _keyId, address _target) internal {
-        ExecutePermissions storage sExecute = permissions[_keyId];
-        if (!sExecute.callCheckers.contains(_target)) revert KeyManager__CallCheckerNotSet();
-
-        sExecute.callCheckers.remove(_target);
     }
 
     // =============================================================
@@ -326,26 +275,6 @@ abstract contract KeysManager is BaseOPF7702, IKeysManager, IKey {
         returns (bool)
     {
         return permissions[_keyId].canExecute.contains(_target.packCanExecute(_funSel));
-    }
-
-    function callCheckersLength(bytes32 _keyId) external view returns (uint256) {
-        return permissions[_keyId].callCheckers.length();
-    }
-
-    function callCheckerAt(bytes32 _keyId, uint256 i)
-        external
-        view
-        returns (address target, address checker)
-    {
-        return permissions[_keyId].callCheckers.at(i);
-    }
-
-    function getCallChecker(bytes32 _keyId, address _target)
-        public
-        view
-        returns (bool exists, address checker)
-    {
-        return permissions[_keyId].callCheckers.tryGet(_target);
     }
 
     function spendTokens(bytes32 _keyId) external view returns (address[] memory) {
@@ -408,20 +337,18 @@ abstract contract KeysManager is BaseOPF7702, IKeysManager, IKey {
             sExecute.canExecute.remove(packed);
         }
 
-        while (sExecute.callCheckers.length() != 0) {
-            (address k,) = sExecute.callCheckers.at(sExecute.callCheckers.length() - 1);
-            sExecute.callCheckers.remove(k);
-        }
-
         emit ExecutePermissionsCleared(_keyId);
     }
 
     /// @dev Master key must have: validUntil = max(uint48), validAfter = 0, limit = 0, whitelisting = false.
-    function _masterKeyValidation(KeyDataReg calldata _keyData) internal pure {
+    function _masterKeyValidation(KeyDataReg memory _keyData) internal pure {
         _keyData.keyCantBeZero();
         if (
             _keyData.limits != 0 || _keyData.validAfter != 0
                 || _keyData.validUntil != type(uint48).max
+                || _keyData.keyControl != KeyControl.Self
+                || _keyData.keyType == KeyType.P256 
+                || _keyData.keyType == KeyType.P256NONKEY
         ) revert IKeysManager.KeyManager__InvalidMasterKeyReg(_keyData);
     }
 

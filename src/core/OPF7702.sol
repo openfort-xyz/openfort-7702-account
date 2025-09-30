@@ -34,7 +34,6 @@ import {
     _packValidationData
 } from "lib/account-abstraction/contracts/core/Helpers.sol";
 import {Initializable} from "src/libs/Initializable.sol";
-import {ICallChecker} from "src/interfaces/ICallChecker.sol";
 
 /**
  * @title   Openfort Base Account 7702 with ERC-4337 Support
@@ -149,7 +148,10 @@ contract OPF7702 is Execution, Initializable {
             return SIG_VALIDATION_SUCCESS;
         }
 
-        uint256 isValidGas = IUserOpPolicy(GAS_POLICY).checkUserOpPolicy(keyId, userOp);
+        uint256 isValidGas;
+        if (sKey.isDelegatedControl) {
+            isValidGas = IUserOpPolicy(GAS_POLICY).checkUserOpPolicy(keyId, userOp);
+        }
 
         if (isValidKey(userOp.callData, sKey) && isValid && isValidGas == 0) {
             return _packValidationData(false, sKey.validUntil, sKey.validAfter);
@@ -216,7 +218,10 @@ contract OPF7702 is Execution, Initializable {
             return SIG_VALIDATION_SUCCESS;
         }
 
-        uint256 isValidGas = IUserOpPolicy(GAS_POLICY).checkUserOpPolicy(keyId, userOp);
+        uint256 isValidGas;
+        if (sKey.isDelegatedControl) {
+            isValidGas = IUserOpPolicy(GAS_POLICY).checkUserOpPolicy(keyId, userOp);
+        }
 
         if (isValidKey(userOp.callData, sKey) && isValid && sigOk && isValidGas == 0) {
             return _packValidationData(false, sKey.validUntil, sKey.validAfter);
@@ -263,7 +268,10 @@ contract OPF7702 is Execution, Initializable {
 
         bool isValid = _keyValidation(sKey);
 
-        uint256 isValidGas = IUserOpPolicy(GAS_POLICY).checkUserOpPolicy(keyId, userOp);
+        uint256 isValidGas;
+        if (sKey.isDelegatedControl) {
+            isValidGas = IUserOpPolicy(GAS_POLICY).checkUserOpPolicy(keyId, userOp);
+        }
 
         if (isValidKey(userOp.callData, sKey) && isValid && sigOk && isValidGas == 0) {
             return _packValidationData(false, sKey.validUntil, sKey.validAfter);
@@ -365,13 +373,13 @@ contract OPF7702 is Execution, Initializable {
             return false;
         }
 
-        sKey.consumeQuota();
-
         if (hasTokenSpend(keyId, call.target)) {
             if (!_isTokenSpend(keyId, call.target, call.value, call.data)) {
                 return false;
             }
         }
+
+        sKey.consumeQuota();
 
         return true;
     }
@@ -404,20 +412,6 @@ contract OPF7702 is Execution, Initializable {
             }
         }
 
-        if (_checkCall(_keyId, _target, _target, _data)) return true;
-        if (_checkCall(_keyId, ANY_TARGET, _target, _data)) return true;
-
-        return false;
-    }
-
-    /// @dev Returns if the call can be executed via consulting a 3rd party checker.
-    function _checkCall(bytes32 _keyHash, address _forTarget, address _target, bytes memory _data)
-        internal
-        view
-        returns (bool)
-    {
-        (bool exists, address checker) = getCallChecker(_keyHash, _forTarget);
-        if (exists) return ICallChecker(checker).canExecute(_keyHash, _target, _data);
         return false;
     }
 

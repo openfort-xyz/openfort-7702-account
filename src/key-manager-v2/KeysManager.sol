@@ -5,7 +5,6 @@ pragma solidity 0.8.29;
 import {IKey} from "././IKey.sol";
 import {IKeyManager} from "././IKeyManager.sol";
 import {KeyManagerLib} from "././KeysManagerLib.sol";
-import {BaseOPF7702} from "src/core/BaseOPF7702.sol";
 import {IUserOpPolicy} from "src/interfaces/IPolicy.sol";
 import {EnumerableSetLib} from "lib/solady/src/utils/EnumerableSetLib.sol";
 import {EnumerableMapLib} from "lib/solady/src/utils/EnumerableMapLib.sol";

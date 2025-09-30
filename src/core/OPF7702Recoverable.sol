@@ -145,7 +145,7 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
         // register masterKey: never expires, no spending/whitelist restrictions
         _addKey(_keyData);
 
-        if (!_sessionKeyData.key.checkKey()) {
+        if (_sessionKeyData.key.checkKey()) {
             registerKey(_sessionKeyData);
         }
         initializeGuardians(_initialGuardian);
@@ -432,6 +432,7 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
     /// @dev Registers the new master key after successful recovery.
     /// @param recoveryOwner Key that becomes the new master key.
     function _setNewMasterKey(KeyDataReg memory recoveryOwner) private {
+        _masterKeyValidation(recoveryOwner);
         emit IOPF7702Recoverable.RecoveryCompleted();
         _addKey(recoveryOwner);
     }
@@ -603,7 +604,8 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
             _keyData.validUntil,
             _keyData.validAfter,
             _keyData.limits,
-            _keyData.key
+            _keyData.key,
+            _keyData.keyControl
         );
 
         // NOTE: Matches your current schema (no `ethLimit` for sessionKeyData here).
@@ -612,7 +614,8 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
             _sessionKeyData.validUntil,
             _sessionKeyData.validAfter,
             _sessionKeyData.limits,
-            _sessionKeyData.key
+            _sessionKeyData.key,
+            _sessionKeyData.keyControl
         );
 
         bytes32 structHash =
