@@ -851,17 +851,12 @@ contract KeysManagerMasterKey is Deploy {
 
     function test_MKinitializeRevert() external {
         bytes memory _key = new bytes(0);
-        _createCustomFreshKey(
-            true, KeyType.WEBAUTHN, type(uint48).max, 0, 0, _key, KeyControl.Self
-        );
+        _createCustomFreshKey(true, KeyType.WEBAUTHN, type(uint48).max, 0, 0, _key, KeyControl.Self);
 
         vm.expectRevert(KeyManager__KeyCantBeZero.selector);
         _initializeAccount();
 
-        PubKey memory pK = PubKey({
-            x: keccak256("x.MK"),
-            y: keccak256("x.MK")
-        });
+        PubKey memory pK = PubKey({x: keccak256("x.MK"), y: keccak256("x.MK")});
 
         _createCustomFreshKey(
             true, KeyType.WEBAUTHN, type(uint48).max, 0, 1, _getKeyP256(pK), KeyControl.Self
@@ -878,7 +873,13 @@ contract KeysManagerMasterKey is Deploy {
         _initializeAccount();
 
         _createCustomFreshKey(
-            true, KeyType.WEBAUTHN, uint48(block.timestamp + 10 days), 0, 0, _getKeyP256(pK), KeyControl.Self
+            true,
+            KeyType.WEBAUTHN,
+            uint48(block.timestamp + 10 days),
+            0,
+            0,
+            _getKeyP256(pK),
+            KeyControl.Self
         );
 
         vm.expectRevert(abi.encodeWithSelector(KeyManager__InvalidMasterKeyReg.selector, mkReg));

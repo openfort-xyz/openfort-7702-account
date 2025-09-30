@@ -345,10 +345,8 @@ abstract contract KeysManager is BaseOPF7702, IKeysManager, IKey {
         _keyData.keyCantBeZero();
         if (
             _keyData.limits != 0 || _keyData.validAfter != 0
-                || _keyData.validUntil != type(uint48).max
-                || _keyData.keyControl != KeyControl.Self
-                || _keyData.keyType == KeyType.P256 
-                || _keyData.keyType == KeyType.P256NONKEY
+                || _keyData.validUntil != type(uint48).max || _keyData.keyControl != KeyControl.Self
+                || _keyData.keyType == KeyType.P256 || _keyData.keyType == KeyType.P256NONKEY
         ) revert IKeysManager.KeyManager__InvalidMasterKeyReg(_keyData);
     }
 
