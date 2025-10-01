@@ -502,7 +502,8 @@ contract Execution is Deploy {
         bytes32 userOpHash = _getUserOpHash(userOp);
         console.log("userOpHash:", vm.toString(userOpHash));
 
-        bytes memory signature = _encodeP256Signature(EXE_BATCH_P256.R, EXE_BATCH_P256.S, pK_SK, KeyType.P256);
+        bytes memory signature =
+            _encodeP256Signature(EXE_BATCH_P256.R, EXE_BATCH_P256.S, pK_SK, KeyType.P256);
         userOp.signature = signature;
 
         _relayUserOp(userOp);
@@ -514,7 +515,13 @@ contract Execution is Deploy {
     function test_ExecuteBatchAAWithSKP256NonSelfAndTrasfer()
         external
         registerSkP256NonSelf
-        setTokenSpend(KeyType.P256NONKEY, _getKeyP256(pK_SK), address(erc20), 10 ether, SpendPeriod.Month)
+        setTokenSpend(
+            KeyType.P256NONKEY,
+            _getKeyP256(pK_SK),
+            address(erc20),
+            10 ether,
+            SpendPeriod.Month
+        )
         setCanCall(KeyType.P256NONKEY, _getKeyP256(pK_SK), address(erc20), ANY_FN_SEL, true)
     {
         _getBalances(true);
@@ -538,7 +545,8 @@ contract Execution is Deploy {
         bytes32 userOpHash = _getUserOpHash(userOp);
         console.log("userOpHash:", vm.toString(userOpHash));
 
-        bytes memory signature = _encodeP256Signature(EXE_P256_NON.R, EXE_P256_NON.S, pK_SK, KeyType.P256NONKEY);
+        bytes memory signature =
+            _encodeP256Signature(EXE_P256_NON.R, EXE_P256_NON.S, pK_SK, KeyType.P256NONKEY);
         userOp.signature = signature;
 
         _relayUserOp(userOp);
@@ -550,7 +558,13 @@ contract Execution is Deploy {
     function test_ExecuteBatchofBatchesAAWithSKP256NonSelfAndTrasfer()
         external
         registerSkP256NonSelfBatchs
-        setTokenSpend(KeyType.P256NONKEY, _getKeyP256(pK_SK), address(erc20), 30 ether, SpendPeriod.Month)
+        setTokenSpend(
+            KeyType.P256NONKEY,
+            _getKeyP256(pK_SK),
+            address(erc20),
+            30 ether,
+            SpendPeriod.Month
+        )
         setCanCall(KeyType.P256NONKEY, _getKeyP256(pK_SK), address(erc20), ANY_FN_SEL, true)
     {
         _getBalances(true);
@@ -579,7 +593,9 @@ contract Execution is Deploy {
         bytes32 userOpHash = _getUserOpHash(userOp);
         console.log("userOpHash:", vm.toString(userOpHash));
 
-        bytes memory signature = _encodeP256Signature(EXE_BATCH_P256_NON.R, EXE_BATCH_P256_NON.S, pK_SK, KeyType.P256NONKEY);
+        bytes memory signature = _encodeP256Signature(
+            EXE_BATCH_P256_NON.R, EXE_BATCH_P256_NON.S, pK_SK, KeyType.P256NONKEY
+        );
         userOp.signature = signature;
 
         _relayUserOp(userOp);
