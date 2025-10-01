@@ -34,10 +34,10 @@ test-registartion:
 	forge test --mp test/unit/Registartion.t.sol -vv --rpc-url $(SEPOLIA_RPC_URL)
 
 test-eth:
-	npx tsx --experimental-global-webcrypto script/P256_ETH.ts && forge test --mp test/unit/DepositAndTransferETH.t.sol -vv --rpc-url $(SEPOLIA_RPC_URL)
+	npx tsx --experimental-global-webcrypto script/P256_ETH.ts && npx tsx --experimental-global-webcrypto script/P256_ETH_Batch.ts && forge test --mc DepositAndTransferETH -vv
 
 test-execution:
-	npx tsx --experimental-global-webcrypto script/P256_Single_Mint.ts && npx tsx --experimental-global-webcrypto script/P256.ts && forge test --mp test/unit/Execution.t.sol -vv --rpc-url $(SEPOLIA_RPC_URL)
+	npx tsx --experimental-global-webcrypto script/P256_EXE.ts && npx tsx --experimental-global-webcrypto script/P256_EXE_Batch.ts && forge test --mc Execution -vv
 
 test-recovery:
 	forge test --mp test/unit/Recoverable.t.sol --rpc-url $(SEPOLIA_RPC_URL) -vv 
