@@ -368,12 +368,13 @@ contract OPF7702 is Execution, Initializable {
         if (!sKey.hasQuota()) return false;
 
         bytes32 keyId = sKey.keyType.computeKeyId(sKey.key);
-
         if (!_isCanCall(keyId, call.target, call.data)) {
             return false;
         }
 
-        if (hasTokenSpend(keyId, call.target)) {
+        address token = call.value > 0 ? NATIVE_ADDRESS : call.target;
+
+        if (hasTokenSpend(keyId, token)) {
             if (!_isTokenSpend(keyId, call.target, call.value, call.data)) {
                 return false;
             }

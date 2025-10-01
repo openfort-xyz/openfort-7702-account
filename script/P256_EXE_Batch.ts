@@ -43,7 +43,7 @@ export const p256Data = (async () => {
   const P256_xHex = toHex(pubKey.slice(1, 33));
   const P256_yHex = toHex(pubKey.slice(33));
 
-  const challengeBytesHex = '0x423f7f9f2bb16989d41df8edf72ef77c380afc24b333370986f63b1fd8f9e40a';
+  const challengeBytesHex = '0xc55f1fb5dff588d52e0bcef549ec8bbda32120c8a4ca92692026fa8a49da582f';
   const challengeBytes = fromHex(challengeBytesHex, 'bytes');
   const P256_hashHex = toHex(challengeBytes);
 
@@ -147,7 +147,7 @@ export const p256Data = (async () => {
     };
     
     writeFileSync(
-      "test/data/p256_eth.json",
+      "test/data/p256_exe_batch.json",
       JSON.stringify({result: jsonSafeResult, result2: jsonSafeResult2}, null, 2)
     );
     

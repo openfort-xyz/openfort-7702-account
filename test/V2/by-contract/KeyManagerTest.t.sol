@@ -12,11 +12,6 @@ contract KeyManagerTest is Deploy {
     KeyDataReg kDG;
     KeysManagerV2Helper KMHelper;
 
-    address internal constant ANY_TARGET = 0x3232323232323232323232323232323232323232;
-    bytes4 internal constant ANY_FN_SEL = 0x32323232;
-    bytes4 internal constant EMPTY_CALLDATA_FN_SEL = 0xe0e0e0e0;
-    address internal constant NATIVE_ADDRESS = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
-
     function setUp() public virtual override {
         super.setUp();
         _quickInitializeAccount();

@@ -10,6 +10,8 @@ import {WebAuthnVerifierV2} from "src/utils/WebAuthnVerifierV2.sol";
 import {IEntryPoint} from "lib/account-abstraction/contracts/interfaces/IEntryPoint.sol";
 import {MessageHashUtils} from
     "lib/openzeppelin-contracts/contracts/utils/cryptography/MessageHashUtils.sol";
+import {PackedUserOperation} from
+    "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
 
 contract Deploy is BaseData {
     string internal RPC_URL = vm.envString("SEPOLIA_RPC_URL");
@@ -20,7 +22,6 @@ contract Deploy is BaseData {
         (sender, senderPK) = makeAddrAndKey("sender");
         (sessionKey, sessionKeyPK) = makeAddrAndKey("sessionKey");
         (guardian, guardianPK) = makeAddrAndKey("GUARDIAN_EOA_ADDRESS");
-        _deal();
 
         forkId = vm.createFork(RPC_URL);
         vm.selectFork(forkId);
@@ -48,6 +49,11 @@ contract Deploy is BaseData {
         _etch();
 
         vm.stopPrank();
+
+        _deal();
+
+        vm.prank(sender);
+        entryPoint.depositTo{value: 1e18}(owner);
     }
 
     function _etch() internal {
@@ -111,5 +117,90 @@ contract Deploy is BaseData {
 
         vm.prank(owner);
         account.initialize(mkReg, skReg, sig, _initialGuardian);
+    }
+
+    function _populateUserOp(
+        PackedUserOperation memory _userOp,
+        bytes memory _callData,
+        bytes32 _accountGasLimits,
+        uint256 _preVerificationGas,
+        bytes32 _gasFees,
+        bytes memory _paymasterAndData
+    ) internal view returns (PackedUserOperation memory) {
+        _userOp.nonce = entryPoint.getNonce(owner, 1);
+        _userOp.callData = _callData;
+        _userOp.accountGasLimits = _accountGasLimits;
+        _userOp.preVerificationGas = _preVerificationGas;
+        _userOp.gasFees = _gasFees;
+        _userOp.paymasterAndData = _paymasterAndData;
+
+        return _userOp;
+    }
+
+    function _getUserOpHash(PackedUserOperation memory _userOp)
+        internal
+        view
+        returns (bytes32 hash)
+    {
+        hash = entryPoint.getUserOpHash(_userOp);
+    }
+
+    function _signUserOp(PackedUserOperation memory _userOp)
+        internal
+        view
+        returns (bytes memory signature)
+    {
+        bytes32 userOpHash = _getUserOpHash(_userOp);
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPK, userOpHash);
+        signature = abi.encodePacked(r, s, v);
+    }
+
+    function _signUserOpWithSK(PackedUserOperation memory _userOp)
+        internal
+        view
+        returns (bytes memory signature)
+    {
+        bytes32 userOpHash = _getUserOpHash(_userOp);
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(sessionKeyPK, userOpHash);
+        signature = abi.encodePacked(r, s, v);
+    }
+
+    function _encodeEOASignature(bytes memory _signature) internal pure returns (bytes memory) {
+        return abi.encode(KeyType.EOA, _signature);
+    }
+
+    function _encodeWebAuthnSignature(
+        bool requireUserVerification,
+        bytes memory authenticatorData,
+        string memory clientDataJSON,
+        uint256 challengeIndex,
+        uint256 typeIndex,
+        bytes32 r,
+        bytes32 s,
+        PubKey memory pubKey
+    ) internal pure returns (bytes memory) {
+        bytes memory inner = abi.encode(
+            requireUserVerification,
+            authenticatorData,
+            clientDataJSON,
+            challengeIndex,
+            typeIndex,
+            r,
+            s,
+            pubKey
+        );
+
+        return abi.encode(KeyType.WEBAUTHN, inner);
+    }
+
+    function _encodeP256Signature(bytes32 r, bytes32 s, PubKey memory pubKey, KeyType _keyType)
+        internal
+        pure
+        returns (bytes memory)
+    {
+        bytes memory inner = abi.encode(r, s, pubKey);
+        return abi.encode(_keyType, inner);
     }
 }

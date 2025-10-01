@@ -9,6 +9,8 @@ import {OPFMain as OPF7702} from "src/core/OPFMain.sol";
 import {WebAuthnVerifierV2} from "src/utils/WebAuthnVerifierV2.sol";
 import {EntryPoint} from "lib/account-abstraction/contracts/core/EntryPoint.sol";
 import {IEntryPoint} from "lib/account-abstraction/contracts/interfaces/IEntryPoint.sol";
+import {PackedUserOperation} from
+    "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
 
 contract BaseData is Data {
     uint256 internal ownerPK;
@@ -137,5 +139,52 @@ contract BaseData is Data {
 
     function _computeKeyId(KeyDataReg memory _keyData) internal pure returns (bytes32) {
         return _computeKeyId(_keyData.keyType, _keyData.key);
+    }
+
+    function _createCall(address _target, uint256 _value, bytes memory _data)
+        internal
+        pure
+        returns (Call memory call)
+    {
+        call = Call({target: _target, value: _value, data: _data});
+    }
+
+    function _packCallData(bytes32 _mode, Call[] memory _calls)
+        internal
+        pure
+        returns (bytes memory callData)
+    {
+        bytes memory executionData = abi.encode(_calls);
+        callData = abi.encodeWithSelector(
+            bytes4(keccak256("execute(bytes32,bytes)")), _mode, executionData
+        );
+    }
+
+    function _getFreshUserOp() internal view returns (PackedUserOperation memory userOp) {
+        userOp = PackedUserOperation({
+            sender: owner,
+            nonce: 0,
+            initCode: hex"7702",
+            callData: hex"",
+            accountGasLimits: hex"",
+            preVerificationGas: 0,
+            gasFees: hex"",
+            paymasterAndData: hex"",
+            signature: hex""
+        });
+    }
+
+    function _getCalls(uint256 _indx, address _target, uint256 _value, bytes memory _data)
+        internal
+        pure
+        returns (Call[] memory calls)
+    {
+        calls = new Call[](_indx);
+        for (uint256 i = 0; i < _indx;) {
+            calls[i] = _createCall(_target, _value, _data);
+            unchecked {
+                ++i;
+            }
+        }
     }
 }

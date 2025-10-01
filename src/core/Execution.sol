@@ -16,7 +16,6 @@ pragma solidity ^0.8.29;
 import {KeysManager} from "src/core/KeysManager.sol";
 import {IExecution} from "src/interfaces/IExecution.sol";
 import {ReentrancyGuard} from "lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
-import {console2 as console} from "lib/forge-std/src/Test.sol";
 
 /// @title Execution
 /// @author Openfort@0xkoiner

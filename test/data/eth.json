@@ -1,21 +1,34 @@
 {
-    "eth" : {
-        "challenge": "0xa3a4f8183a9157195c48538bc1bee0b8effe608ffddac3fdcd589d254901d1f8",
-        
-            "x": "0xe5a3fe2f831377233f24e655f2295b470fac386552824223a7c122dbbc8fe131",
-            "y": "0xed289d65087d2ea63e98abf88a285af69efa092f91a64cf291811a6fbf613172",
-            
-                "metadata": {
-                    "authenticatorData": "0x49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d97631d00000000",
-                    "clientDataJSON": "{\"type\":\"webauthn.get\",\"challenge\":\"Y1yXvJsHU5Zn_8jqabvNabhg3lbDycXc_s2IDZAeSek\",\"origin\":\"http://localhost:5173\",\"crossOrigin\":false,\"other_keys_can_be_added_here\":\"do not compare clientDataJSON against a template. See https://goo.gl/yabPex\"}",
-                    "challengeIndex": 23,
-                    "typeIndex": 1,
-                    "userVerificationRequired": true
-                },
-                "signature": {
-                    "r": "0x8cb07856075999abb8717c185e052839aae1c280d3cc2044266858ad78e791f3",
-                    "s": "0x7c912c1b64f712f28e339fa17fffe45b5447dc575ad8426196efad65a67a86e3"
-                }
-            
-            }
+    "eth": {
+        "challenge": "0x423f7f9f2bb16989d41df8edf72ef77c380afc24b333370986f63b1fd8f9e40a",
+        "x": "0x217163a68a5be1786af2f494fd2c196b58ffbda2e8a2158712e01cb572c4ed7d",
+        "y": "0xe94eccd93f4b39fdfc5cfaf709f8c816d66539d98b8cd6449b5a294d7b5b570a",
+        "metadata": {
+            "authenticatorData": "0x49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d97631d00000000",
+            "clientDataJSON": "{\"type\":\"webauthn.get\",\"challenge\":\"Qj9_nyuxaYnUHfjt9y73fDgK_CSzMzcJhvY7H9j55Ao\",\"origin\":\"http://localhost:5173\",\"crossOrigin\":false}",
+            "challengeIndex": 23,
+            "typeIndex": 1,
+            "userVerificationRequired": true
+        },
+        "signature": {
+            "r": "0x7ebdf1a78b3e92278a41f0a6ff499f7674442f51768ee41699ec9ce9bd9b8ff9",
+            "s": "0x1e51bb2934fafe1a4332c352ae4292ee0d3f25cec1964f7f347d398282111c56"
+        }
+    },
+    "eth_batch": {
+        "challenge": "0x7cf401ddf27f7f88ea001f8163c39d61e0f036693718bfb72cee8aae68346df9",
+        "x": "0x217163a68a5be1786af2f494fd2c196b58ffbda2e8a2158712e01cb572c4ed7d",
+        "y": "0xe94eccd93f4b39fdfc5cfaf709f8c816d66539d98b8cd6449b5a294d7b5b570a",
+        "metadata": {
+            "authenticatorData": "0x49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d97631d00000000",
+            "clientDataJSON": "{\"type\":\"webauthn.get\",\"challenge\":\"fPQB3fJ_f4jqAB-BY8OdYeDwNmk3GL-3LO6Krmg0bfk\",\"origin\":\"http://localhost:5173\",\"crossOrigin\":false}",
+            "challengeIndex": 23,
+            "typeIndex": 1,
+            "userVerificationRequired": true
+        },
+        "signature": {
+            "r": "0x2201a066034b8e79513919e9371dcbd597fa338f1c72c86ae4467ca88f48e274",
+            "s": "0x03ee2a54d0d10deb2f183316b396964d6cb0cf1540eecc9d2d18a5860592fca0"
+        }
+    }
 }

@@ -1,0 +1,34 @@
+{
+    "batch": {
+        "challenge": "0x61d7d1b953d3350007a9cca8c4bba96fb75e181067523c598a3c6d893f1d09ae",
+        "x": "0x21c003c4c7184f819cf0334fb173115ae1f8f2d615e299ef12f2fefb2d586526",
+        "y": "0x3130667b1ba15464d123659820e10e6464441db9151ea4b50e378b3d7bf95a9d",
+        "metadata": {
+            "authenticatorData": "0x49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d97631d00000000",
+            "clientDataJSON": "{\"type\":\"webauthn.get\",\"challenge\":\"YdfRuVPTNQAHqcyoxLupb7deGBBnUjxZijxtiT8dCa4\",\"origin\":\"http://localhost:5173\",\"crossOrigin\":false}",
+            "challengeIndex": 23,
+            "typeIndex": 1,
+            "userVerificationRequired": true
+        },
+        "signature": {
+            "r": "0xf0dba9d73bdb681fa309971bdf41e4bc77f943531544d5113e4f44fe76ed5a3c",
+            "s": "0x2a855a91d838f43e929d35d3831fcb8e990ddb58cb149ff5baf448497c66981c"
+        }
+    },
+    "batchofbatches": {
+        "challenge": "0xc55f1fb5dff588d52e0bcef549ec8bbda32120c8a4ca92692026fa8a49da582f",
+        "x": "0x21c003c4c7184f819cf0334fb173115ae1f8f2d615e299ef12f2fefb2d586526",
+        "y": "0x3130667b1ba15464d123659820e10e6464441db9151ea4b50e378b3d7bf95a9d",
+        "metadata": {
+            "authenticatorData": "0x49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d97631d00000000",
+            "clientDataJSON": "{\"type\":\"webauthn.get\",\"challenge\":\"xV8ftd_1iNUuC871SeyLvaMhIMikypJpICb6iknaWC8\",\"origin\":\"http://localhost:5173\",\"crossOrigin\":false,\"other_keys_can_be_added_here\":\"do not compare clientDataJSON against a template. See https://goo.gl/yabPex\"}",
+            "challengeIndex": 23,
+            "typeIndex": 1,
+            "userVerificationRequired": true
+        },
+        "signature": {
+            "r": "0x72a1ae0a5ba2f94a027ed26067c14812ed80169c0728adc50911820e0c5128ea",
+            "s": "0x2ea3b0f9bcfea5eeb1edb95b1c3653899291215bbc85dcfb8de62931ebed78f2"
+        }
+    }
+}
