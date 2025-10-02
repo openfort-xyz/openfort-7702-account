@@ -22,7 +22,7 @@ solady:
 install-forge: openzeppelin account-abstraction solady
 
 test-keys:
-	forge test --mp test/unit/Keys.t.sol -vv --rpc-url $(SEPOLIA_RPC_URL)
+	forge test --mp test/V2/unit/KeysManager.t.sol -vv 
 
 test-upgrade-addresses:
 	forge test --mp test/unit/UpgradeAddresses.t.sol -vv --rpc-url $(SEPOLIA_RPC_URL)

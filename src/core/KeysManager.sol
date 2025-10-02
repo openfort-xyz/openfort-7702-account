@@ -63,18 +63,6 @@ abstract contract KeysManager is BaseOPF7702, IKeysManager, IKey {
         _addKey(_keyData);
     }
 
-    function revokeKey(bytes32 _keyId) public {
-        _requireForExecute();
-        KeyData storage sKey = keys[_keyId];
-        sKey.validateKeyBefore();
-
-        _revoke(sKey);
-        emit KeyRevoked(_keyId);
-
-        clearExecutePermissions(_keyId);
-        clearSpendPermissions(_keyId);
-    }
-
     function setTokenSpend(bytes32 _keyId, address _token, uint256 _limit, SpendPeriod _period)
         public
     {
@@ -130,6 +118,18 @@ abstract contract KeysManager is BaseOPF7702, IKeysManager, IKey {
     }
 
     ////////////// Removers //////////////
+    function revokeKey(bytes32 _keyId) public {
+        _requireForExecute();
+        KeyData storage sKey = keys[_keyId];
+        sKey.validateKeyBefore();
+
+        _revoke(sKey);
+        emit KeyRevoked(_keyId);
+
+        clearExecutePermissions(_keyId);
+        clearSpendPermissions(_keyId);
+    }
+    
     function removeTokenSpend(bytes32 _keyId, address _token) public {
         _requireForExecute();
         KeyData storage sKey = keys[_keyId];

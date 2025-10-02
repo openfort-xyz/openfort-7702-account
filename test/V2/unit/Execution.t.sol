@@ -369,18 +369,7 @@ contract Execution is Deploy {
         bytes32 userOpHash = _getUserOpHash(userOp);
         console.log("userOpHash:", vm.toString(userOpHash));
 
-        bytes memory signature = _encodeWebAuthnSignature(
-            EXE_WEBAUTHN.UVR,
-            EXE_WEBAUTHN.AUTHENTICATOR_DATA,
-            EXE_WEBAUTHN.CLIENT_DATA_JSON,
-            EXE_WEBAUTHN.CHALLENGE_INDEX,
-            EXE_WEBAUTHN.TYPE_INDEX,
-            EXE_WEBAUTHN.R,
-            EXE_WEBAUTHN.S,
-            pK
-        );
-
-        userOp.signature = signature;
+        userOp.signature = _getSignedUserOpByWebAuthn(EXE_WEBAUTHN, pK);
 
         _relayUserOp(userOp);
 
@@ -415,18 +404,7 @@ contract Execution is Deploy {
         bytes32 userOpHash = _getUserOpHash(userOp);
         console.log("userOpHash:", vm.toString(userOpHash));
 
-        bytes memory signature = _encodeWebAuthnSignature(
-            EXE_BATCH_WEBAUTHN.UVR,
-            EXE_BATCH_WEBAUTHN.AUTHENTICATOR_DATA,
-            EXE_BATCH_WEBAUTHN.CLIENT_DATA_JSON,
-            EXE_BATCH_WEBAUTHN.CHALLENGE_INDEX,
-            EXE_BATCH_WEBAUTHN.TYPE_INDEX,
-            EXE_BATCH_WEBAUTHN.R,
-            EXE_BATCH_WEBAUTHN.S,
-            pK
-        );
-
-        userOp.signature = signature;
+        userOp.signature = _getSignedUserOpByWebAuthn(EXE_BATCH_WEBAUTHN, pK);
 
         _relayUserOp(userOp);
 
@@ -461,8 +439,7 @@ contract Execution is Deploy {
         bytes32 userOpHash = _getUserOpHash(userOp);
         console.log("userOpHash:", vm.toString(userOpHash));
 
-        bytes memory signature = _encodeP256Signature(EXE_P256.R, EXE_P256.S, pK_SK, KeyType.P256);
-        userOp.signature = signature;
+        userOp.signature = _encodeP256Signature(EXE_P256.R, EXE_P256.S, pK_SK, KeyType.P256);
 
         _relayUserOp(userOp);
 
@@ -502,9 +479,8 @@ contract Execution is Deploy {
         bytes32 userOpHash = _getUserOpHash(userOp);
         console.log("userOpHash:", vm.toString(userOpHash));
 
-        bytes memory signature =
+        userOp.signature =
             _encodeP256Signature(EXE_BATCH_P256.R, EXE_BATCH_P256.S, pK_SK, KeyType.P256);
-        userOp.signature = signature;
 
         _relayUserOp(userOp);
 
@@ -545,9 +521,8 @@ contract Execution is Deploy {
         bytes32 userOpHash = _getUserOpHash(userOp);
         console.log("userOpHash:", vm.toString(userOpHash));
 
-        bytes memory signature =
+        userOp.signature =
             _encodeP256Signature(EXE_P256_NON.R, EXE_P256_NON.S, pK_SK, KeyType.P256NONKEY);
-        userOp.signature = signature;
 
         _relayUserOp(userOp);
 
@@ -593,10 +568,9 @@ contract Execution is Deploy {
         bytes32 userOpHash = _getUserOpHash(userOp);
         console.log("userOpHash:", vm.toString(userOpHash));
 
-        bytes memory signature = _encodeP256Signature(
+        userOp.signature = _encodeP256Signature(
             EXE_BATCH_P256_NON.R, EXE_BATCH_P256_NON.S, pK_SK, KeyType.P256NONKEY
         );
-        userOp.signature = signature;
 
         _relayUserOp(userOp);
 

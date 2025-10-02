@@ -119,6 +119,10 @@ contract Deploy is BaseData {
         account.initialize(mkReg, skReg, sig, _initialGuardian);
     }
 
+    function _getNonce() internal view returns (uint256) {
+        return entryPoint.getNonce(owner, 1);
+    }
+
     function _populateUserOp(
         PackedUserOperation memory _userOp,
         bytes memory _callData,
@@ -202,5 +206,22 @@ contract Deploy is BaseData {
     {
         bytes memory inner = abi.encode(r, s, pubKey);
         return abi.encode(_keyType, inner);
+    }
+
+    function _getSignedUserOpByWebAuthn(WebAuthn memory _wA, PubKey memory _pK_)
+        internal
+        pure
+        returns (bytes memory signature)
+    {
+        signature = _encodeWebAuthnSignature(
+            _wA.UVR,
+            _wA.AUTHENTICATOR_DATA,
+            _wA.CLIENT_DATA_JSON,
+            _wA.CHALLENGE_INDEX,
+            _wA.TYPE_INDEX,
+            _wA.R,
+            _wA.S,
+            _pK_
+        );
     }
 }

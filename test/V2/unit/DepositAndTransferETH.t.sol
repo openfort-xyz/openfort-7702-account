@@ -242,18 +242,7 @@ contract DepositAndTransferETH is Deploy {
         bytes32 userOpHash = _getUserOpHash(userOp);
         console.log("userOpHash:", vm.toString(userOpHash));
 
-        bytes memory signature = _encodeWebAuthnSignature(
-            ETH_WEBAUTHN.UVR,
-            ETH_WEBAUTHN.AUTHENTICATOR_DATA,
-            ETH_WEBAUTHN.CLIENT_DATA_JSON,
-            ETH_WEBAUTHN.CHALLENGE_INDEX,
-            ETH_WEBAUTHN.TYPE_INDEX,
-            ETH_WEBAUTHN.R,
-            ETH_WEBAUTHN.S,
-            pK
-        );
-
-        userOp.signature = signature;
+        userOp.signature = _getSignedUserOpByWebAuthn(ETH_WEBAUTHN, pK);
 
         _relayUserOp(userOp);
 
@@ -278,18 +267,7 @@ contract DepositAndTransferETH is Deploy {
         bytes32 userOpHash = _getUserOpHash(userOp);
         console.log("userOpHash:", vm.toString(userOpHash));
 
-        bytes memory signature = _encodeWebAuthnSignature(
-            ETH_BATCH_WEBAUTHN.UVR,
-            ETH_BATCH_WEBAUTHN.AUTHENTICATOR_DATA,
-            ETH_BATCH_WEBAUTHN.CLIENT_DATA_JSON,
-            ETH_BATCH_WEBAUTHN.CHALLENGE_INDEX,
-            ETH_BATCH_WEBAUTHN.TYPE_INDEX,
-            ETH_BATCH_WEBAUTHN.R,
-            ETH_BATCH_WEBAUTHN.S,
-            pK
-        );
-
-        userOp.signature = signature;
+        userOp.signature = _getSignedUserOpByWebAuthn(ETH_BATCH_WEBAUTHN, pK);
 
         _relayUserOp(userOp);
 
@@ -378,8 +356,7 @@ contract DepositAndTransferETH is Deploy {
         bytes32 userOpHash = _getUserOpHash(userOp);
         console.log("userOpHash:", vm.toString(userOpHash));
 
-        bytes memory signature = _encodeP256Signature(ETH_P256.R, ETH_P256.S, pK_SK, KeyType.P256);
-        userOp.signature = signature;
+        userOp.signature = _encodeP256Signature(ETH_P256.R, ETH_P256.S, pK_SK, KeyType.P256);
 
         _relayUserOp(userOp);
 
@@ -410,9 +387,8 @@ contract DepositAndTransferETH is Deploy {
         bytes32 userOpHash = _getUserOpHash(userOp);
         console.log("userOpHash:", vm.toString(userOpHash));
 
-        bytes memory signature =
+        userOp.signature =
             _encodeP256Signature(ETH_BATCH_P256.R, ETH_BATCH_P256.S, pK_SK, KeyType.P256);
-        userOp.signature = signature;
 
         _relayUserOp(userOp);
 
@@ -449,9 +425,8 @@ contract DepositAndTransferETH is Deploy {
         bytes32 userOpHash = _getUserOpHash(userOp);
         console.log("userOpHash:", vm.toString(userOpHash));
 
-        bytes memory signature =
+        userOp.signature =
             _encodeP256Signature(ETH_P256_NON.R, ETH_P256_NON.S, pK_SK, KeyType.P256NONKEY);
-        userOp.signature = signature;
 
         _relayUserOp(userOp);
 
@@ -488,10 +463,9 @@ contract DepositAndTransferETH is Deploy {
         bytes32 userOpHash = _getUserOpHash(userOp);
         console.log("userOpHash:", vm.toString(userOpHash));
 
-        bytes memory signature = _encodeP256Signature(
+        userOp.signature = _encodeP256Signature(
             ETH_BATCH_P256_NON.R, ETH_BATCH_P256_NON.S, pK_SK, KeyType.P256NONKEY
         );
-        userOp.signature = signature;
 
         _relayUserOp(userOp);
 
