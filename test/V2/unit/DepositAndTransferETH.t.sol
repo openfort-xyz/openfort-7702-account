@@ -34,7 +34,8 @@ contract DepositAndTransferETH is Deploy {
     }
 
     modifier registerSkP256Self() {
-        pK_SK = PubKey({x: ETH_P256.X, y: ETH_P256.Y});
+        _populateP256("p256_eth.json", ".result");
+        pK_SK = PubKey({x: DEF_P256.X, y: DEF_P256.Y});
         _createCustomFreshKey(
             false,
             KeyType.P256,
@@ -51,7 +52,8 @@ contract DepositAndTransferETH is Deploy {
     }
 
     modifier registerSkP256SelfBatch() {
-        pK_SK = PubKey({x: ETH_BATCH_P256.X, y: ETH_BATCH_P256.Y});
+        _populateP256("p256_eth_batch.json", ".result");
+        pK_SK = PubKey({x: DEF_P256.X, y: DEF_P256.Y});
         _createCustomFreshKey(
             false,
             KeyType.P256,
@@ -68,7 +70,8 @@ contract DepositAndTransferETH is Deploy {
     }
 
     modifier registerSkP256NonSelf() {
-        pK_SK = PubKey({x: ETH_P256_NON.X, y: ETH_P256_NON.Y});
+        _populateP256NON("p256_eth.json", ".result2");
+        pK_SK = PubKey({x: DEF_P256.X, y: DEF_P256.Y});
         _createCustomFreshKey(
             false,
             KeyType.P256NONKEY,
@@ -85,7 +88,8 @@ contract DepositAndTransferETH is Deploy {
     }
 
     modifier registerSkP256NonSelfBatch() {
-        pK_SK = PubKey({x: ETH_BATCH_P256_NON.X, y: ETH_BATCH_P256_NON.Y});
+        _populateP256NON("p256_eth_batch.json", ".result2");
+        pK_SK = PubKey({x: DEF_P256.X, y: DEF_P256.Y});
         _createCustomFreshKey(
             false,
             KeyType.P256NONKEY,
@@ -130,7 +134,10 @@ contract DepositAndTransferETH is Deploy {
     function setUp() public override {
         super.setUp();
         reciver = makeAddr("reciver");
-        pK = PubKey({x: ETH_WEBAUTHN.X, y: ETH_WEBAUTHN.Y});
+
+        _populateWebAuthn("eth.json", ".eth");
+        pK = PubKey({x: DEF_WEBAUTHN.X, y: DEF_WEBAUTHN.Y});
+
         _createCustomFreshKey(
             true, KeyType.WEBAUTHN, type(uint48).max, 0, 0, _getKeyP256(pK), KeyControl.Self
         );
@@ -242,7 +249,10 @@ contract DepositAndTransferETH is Deploy {
         bytes32 userOpHash = _getUserOpHash(userOp);
         console.log("userOpHash:", vm.toString(userOpHash));
 
-        userOp.signature = _getSignedUserOpByWebAuthn(ETH_WEBAUTHN, pK);
+        _populateWebAuthn("eth.json", ".eth");
+        pK = PubKey({x: DEF_WEBAUTHN.X, y: DEF_WEBAUTHN.Y});
+
+        userOp.signature = _getSignedUserOpByWebAuthn(DEF_WEBAUTHN, pK);
 
         _relayUserOp(userOp);
 
@@ -267,7 +277,10 @@ contract DepositAndTransferETH is Deploy {
         bytes32 userOpHash = _getUserOpHash(userOp);
         console.log("userOpHash:", vm.toString(userOpHash));
 
-        userOp.signature = _getSignedUserOpByWebAuthn(ETH_BATCH_WEBAUTHN, pK);
+        _populateWebAuthn("eth.json", ".eth_batch");
+        pK = PubKey({x: DEF_WEBAUTHN.X, y: DEF_WEBAUTHN.Y});
+
+        userOp.signature = _getSignedUserOpByWebAuthn(DEF_WEBAUTHN, pK);
 
         _relayUserOp(userOp);
 
@@ -355,8 +368,8 @@ contract DepositAndTransferETH is Deploy {
 
         bytes32 userOpHash = _getUserOpHash(userOp);
         console.log("userOpHash:", vm.toString(userOpHash));
-
-        userOp.signature = _encodeP256Signature(ETH_P256.R, ETH_P256.S, pK_SK, KeyType.P256);
+        
+        userOp.signature = _encodeP256Signature(DEF_P256.R, DEF_P256.S, pK_SK, KeyType.P256);
 
         _relayUserOp(userOp);
 
@@ -388,7 +401,7 @@ contract DepositAndTransferETH is Deploy {
         console.log("userOpHash:", vm.toString(userOpHash));
 
         userOp.signature =
-            _encodeP256Signature(ETH_BATCH_P256.R, ETH_BATCH_P256.S, pK_SK, KeyType.P256);
+            _encodeP256Signature(DEF_P256.R, DEF_P256.S, pK_SK, KeyType.P256);
 
         _relayUserOp(userOp);
 
@@ -426,7 +439,7 @@ contract DepositAndTransferETH is Deploy {
         console.log("userOpHash:", vm.toString(userOpHash));
 
         userOp.signature =
-            _encodeP256Signature(ETH_P256_NON.R, ETH_P256_NON.S, pK_SK, KeyType.P256NONKEY);
+            _encodeP256Signature(DEF_P256.R, DEF_P256.S, pK_SK, KeyType.P256NONKEY);
 
         _relayUserOp(userOp);
 
@@ -464,7 +477,7 @@ contract DepositAndTransferETH is Deploy {
         console.log("userOpHash:", vm.toString(userOpHash));
 
         userOp.signature = _encodeP256Signature(
-            ETH_BATCH_P256_NON.R, ETH_BATCH_P256_NON.S, pK_SK, KeyType.P256NONKEY
+            DEF_P256.R, DEF_P256.S, pK_SK, KeyType.P256NONKEY
         );
 
         _relayUserOp(userOp);

@@ -36,7 +36,8 @@ contract Execution is Deploy {
     }
 
     modifier registerSkP256Self() {
-        pK_SK = PubKey({x: EXE_P256.X, y: EXE_P256.Y});
+        _populateP256("p256_exe.json", ".result");
+        pK_SK = PubKey({x: DEF_P256.X, y: DEF_P256.Y});
         _createCustomFreshKey(
             false,
             KeyType.P256,
@@ -53,7 +54,8 @@ contract Execution is Deploy {
     }
 
     modifier registerSkP256SelfBatchs() {
-        pK_SK = PubKey({x: EXE_BATCH_P256.X, y: EXE_BATCH_P256.Y});
+        _populateP256("p256_exe_batch.json", ".result");
+        pK_SK = PubKey({x: DEF_P256.X, y: DEF_P256.Y});
         _createCustomFreshKey(
             false,
             KeyType.P256,
@@ -70,7 +72,8 @@ contract Execution is Deploy {
     }
 
     modifier registerSkP256NonSelf() {
-        pK_SK = PubKey({x: EXE_P256_NON.X, y: EXE_P256_NON.Y});
+        _populateP256NON("p256_exe.json", ".result2");
+        pK_SK = PubKey({x: DEF_P256.X, y: DEF_P256.Y});
         _createCustomFreshKey(
             false,
             KeyType.P256NONKEY,
@@ -87,7 +90,8 @@ contract Execution is Deploy {
     }
 
     modifier registerSkP256NonSelfBatchs() {
-        pK_SK = PubKey({x: EXE_BATCH_P256_NON.X, y: EXE_BATCH_P256_NON.Y});
+        _populateP256NON("p256_exe_batch.json", ".result2");
+        pK_SK = PubKey({x: DEF_P256.X, y: DEF_P256.Y});
         _createCustomFreshKey(
             false,
             KeyType.P256NONKEY,
@@ -132,7 +136,8 @@ contract Execution is Deploy {
     function setUp() public override {
         super.setUp();
         reciver = makeAddr("reciver");
-        pK = PubKey({x: EXE_WEBAUTHN.X, y: EXE_WEBAUTHN.Y});
+        _populateWebAuthn("execution.json", ".batch");
+        pK = PubKey({x: DEF_WEBAUTHN.X, y: DEF_WEBAUTHN.Y});
         _createCustomFreshKey(
             true, KeyType.WEBAUTHN, type(uint48).max, 0, 0, _getKeyP256(pK), KeyControl.Self
         );
@@ -369,7 +374,10 @@ contract Execution is Deploy {
         bytes32 userOpHash = _getUserOpHash(userOp);
         console.log("userOpHash:", vm.toString(userOpHash));
 
-        userOp.signature = _getSignedUserOpByWebAuthn(EXE_WEBAUTHN, pK);
+        _populateWebAuthn("execution.json", ".batch");
+        pK = PubKey({x: DEF_WEBAUTHN.X, y: DEF_WEBAUTHN.Y});
+
+        userOp.signature = _getSignedUserOpByWebAuthn(DEF_WEBAUTHN, pK);
 
         _relayUserOp(userOp);
 
@@ -404,8 +412,11 @@ contract Execution is Deploy {
         bytes32 userOpHash = _getUserOpHash(userOp);
         console.log("userOpHash:", vm.toString(userOpHash));
 
-        userOp.signature = _getSignedUserOpByWebAuthn(EXE_BATCH_WEBAUTHN, pK);
+        _populateWebAuthn("execution.json", ".batchofbatches");
+        pK = PubKey({x: DEF_WEBAUTHN.X, y: DEF_WEBAUTHN.Y});
 
+        userOp.signature = _getSignedUserOpByWebAuthn(DEF_WEBAUTHN, pK);
+        
         _relayUserOp(userOp);
 
         _getBalances(false);
@@ -439,7 +450,7 @@ contract Execution is Deploy {
         bytes32 userOpHash = _getUserOpHash(userOp);
         console.log("userOpHash:", vm.toString(userOpHash));
 
-        userOp.signature = _encodeP256Signature(EXE_P256.R, EXE_P256.S, pK_SK, KeyType.P256);
+        userOp.signature = _encodeP256Signature(DEF_P256.R, DEF_P256.S, pK_SK, KeyType.P256);
 
         _relayUserOp(userOp);
 
@@ -480,7 +491,7 @@ contract Execution is Deploy {
         console.log("userOpHash:", vm.toString(userOpHash));
 
         userOp.signature =
-            _encodeP256Signature(EXE_BATCH_P256.R, EXE_BATCH_P256.S, pK_SK, KeyType.P256);
+            _encodeP256Signature(DEF_P256.R, DEF_P256.S, pK_SK, KeyType.P256);
 
         _relayUserOp(userOp);
 
@@ -522,7 +533,7 @@ contract Execution is Deploy {
         console.log("userOpHash:", vm.toString(userOpHash));
 
         userOp.signature =
-            _encodeP256Signature(EXE_P256_NON.R, EXE_P256_NON.S, pK_SK, KeyType.P256NONKEY);
+            _encodeP256Signature(DEF_P256.R, DEF_P256.S, pK_SK, KeyType.P256NONKEY);
 
         _relayUserOp(userOp);
 
@@ -569,7 +580,7 @@ contract Execution is Deploy {
         console.log("userOpHash:", vm.toString(userOpHash));
 
         userOp.signature = _encodeP256Signature(
-            EXE_BATCH_P256_NON.R, EXE_BATCH_P256_NON.S, pK_SK, KeyType.P256NONKEY
+            DEF_P256.R, DEF_P256.S, pK_SK, KeyType.P256NONKEY
         );
 
         _relayUserOp(userOp);

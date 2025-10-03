@@ -129,7 +129,7 @@ abstract contract KeysManager is BaseOPF7702, IKeysManager, IKey {
         clearExecutePermissions(_keyId);
         clearSpendPermissions(_keyId);
     }
-    
+
     function removeTokenSpend(bytes32 _keyId, address _token) public {
         _requireForExecute();
         KeyData storage sKey = keys[_keyId];

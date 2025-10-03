@@ -14,7 +14,7 @@ contract KeysManager is Deploy {
     KeyDataReg[] sKsWebAuthn;
     KeyDataReg[] sKsP256;
     KeyDataReg[] sKsP256NONKEY;
-    
+
     modifier createKeys(uint256 _indx) {
         _createSKEOAs(_indx);
         _createSKWebAuthns(_indx);
@@ -22,9 +22,11 @@ contract KeysManager is Deploy {
         _createSKP256Nons(_indx);
         _;
     }
+
     function setUp() public override {
         super.setUp();
-        pK = PubKey({x: KEY_WEBAUTHN.X, y: KEY_WEBAUTHN.Y});
+        _populateWebAuthn("keysmanager.json", ".keys_register");
+        pK = PubKey({x: DEF_WEBAUTHN.X, y: DEF_WEBAUTHN.Y});
         _createCustomFreshKey(
             true, KeyType.WEBAUTHN, type(uint48).max, 0, 0, _getKeyP256(pK), KeyControl.Self
         );
@@ -33,7 +35,7 @@ contract KeysManager is Deploy {
         _initializeAccount();
     }
 
-    function test_RegisterKeyWithRootKey() createKeys(5) external {
+    function test_RegisterKeyWithRootKey() external createKeys(5) {
         _registerKeys(sKsEOA);
         _registerKeys(sKsWebAuthn);
         _registerKeys(sKsP256);
@@ -47,7 +49,7 @@ contract KeysManager is Deploy {
         _assertRegisteredKKeys(sKsP256NONKEY, 17);
     }
 
-    function test_RevokeKeyWithRootKey() createKeys(5) external {
+    function test_RevokeKeyWithRootKey() external createKeys(5) {
         _registerKeys(sKsEOA);
         _registerKeys(sKsWebAuthn);
         _registerKeys(sKsP256);
@@ -71,7 +73,7 @@ contract KeysManager is Deploy {
         _assertRevokedKKeys(sKsP256NONKEY, 17);
     }
 
-    function test_UpdateKeyWithRootKey() createKeys(5) external {
+    function test_UpdateKeyWithRootKey() external createKeys(5) {
         _registerKeys(sKsEOA);
         _registerKeys(sKsWebAuthn);
         _registerKeys(sKsP256);
@@ -95,7 +97,7 @@ contract KeysManager is Deploy {
         _assertUpdteKeys(sKsP256NONKEY, 17);
     }
 
-    function test_RegisterKeyAAwithRootKey() createKeys(1) external {
+    function test_RegisterKeyAAwithRootKey() external createKeys(1) {
         Call[] memory calls = _createStaticCallsRegister();
 
         PackedUserOperation memory userOp = _getFreshUserOp();
@@ -121,7 +123,7 @@ contract KeysManager is Deploy {
         _assertRegisteredKKeys(sKsP256NONKEY, 5);
     }
 
-    function test_RevokeKeyAAwithRootKey() createKeys(1)  external {
+    function test_RevokeKeyAAwithRootKey() external createKeys(1) {
         Call[] memory calls = _createStaticCallsRegister();
 
         PackedUserOperation memory userOp = _getFreshUserOp();
@@ -161,7 +163,7 @@ contract KeysManager is Deploy {
         _assertRevokedKKeys(sKsP256NONKEY, 5);
     }
 
-    function test_UpdateKeyAAwithRootKey() createKeys(1)  external {
+    function test_UpdateKeyAAwithRootKey() external createKeys(1) {
         Call[] memory calls = _createStaticCallsRegister();
 
         PackedUserOperation memory userOp = _getFreshUserOp();
@@ -218,10 +220,11 @@ contract KeysManager is Deploy {
 
         bytes32 userOpHash = _getUserOpHash(userOp);
         console.log("userOpHash:", vm.toString(userOpHash));
+        
+        _populateWebAuthn("keysmanager.json", ".keys_register");
+        pK = PubKey({x: DEF_WEBAUTHN.X, y: DEF_WEBAUTHN.Y});
 
-        pK = PubKey({x: KEY_WEBAUTHN.X, y: KEY_WEBAUTHN.Y});
-
-        userOp.signature = _getSignedUserOpByWebAuthn(KEY_WEBAUTHN, pK);
+        userOp.signature = _getSignedUserOpByWebAuthn(DEF_WEBAUTHN, pK);
 
         _relayUserOp(userOp);
 
@@ -251,9 +254,10 @@ contract KeysManager is Deploy {
         bytes32 userOpHash = _getUserOpHash(userOp);
         console.log("userOpHash:", vm.toString(userOpHash));
 
-        pK = PubKey({x: KEY_WEBAUTHN.X, y: KEY_WEBAUTHN.Y});
+        _populateWebAuthn("keysmanager.json", ".keys_register");
+        pK = PubKey({x: DEF_WEBAUTHN.X, y: DEF_WEBAUTHN.Y});
 
-        userOp.signature = _getSignedUserOpByWebAuthn(KEY_WEBAUTHN, pK);
+        userOp.signature = _getSignedUserOpByWebAuthn(DEF_WEBAUTHN, pK);
 
         _relayUserOp(userOp);
 
@@ -272,9 +276,10 @@ contract KeysManager is Deploy {
         userOpHash = _getUserOpHash(userOp);
         console.log("userOpHash Revoke:", vm.toString(userOpHash));
 
-        pK = PubKey({x: KEYR_WEBAUTHN.X, y: KEYR_WEBAUTHN.Y});
+        _populateWebAuthn("keysmanager.json", ".keys_revoke");
+        pK = PubKey({x: DEF_WEBAUTHN.X, y: DEF_WEBAUTHN.Y});
 
-        userOp.signature = _getSignedUserOpByWebAuthn(KEYR_WEBAUTHN, pK);
+        userOp.signature = _getSignedUserOpByWebAuthn(DEF_WEBAUTHN, pK);
 
         _relayUserOp(userOp);
 
@@ -302,9 +307,10 @@ contract KeysManager is Deploy {
         bytes32 userOpHash = _getUserOpHash(userOp);
         console.log("userOpHash:", vm.toString(userOpHash));
 
-        pK = PubKey({x: KEY_WEBAUTHN.X, y: KEY_WEBAUTHN.Y});
+        _populateWebAuthn("keysmanager.json", ".keys_register");
+        pK = PubKey({x: DEF_WEBAUTHN.X, y: DEF_WEBAUTHN.Y});
 
-        userOp.signature = _getSignedUserOpByWebAuthn(KEY_WEBAUTHN, pK);
+        userOp.signature = _getSignedUserOpByWebAuthn(DEF_WEBAUTHN, pK);
 
         _relayUserOp(userOp);
 
@@ -323,9 +329,10 @@ contract KeysManager is Deploy {
         userOpHash = _getUserOpHash(userOp);
         console.log("userOpHash Update Key:", vm.toString(userOpHash));
 
-        pK = PubKey({x: KEYUK_WEBAUTHN.X, y: KEYUK_WEBAUTHN.Y});
+        _populateWebAuthn("keysmanager.json", ".keys_update_key");
+        pK = PubKey({x: DEF_WEBAUTHN.X, y: DEF_WEBAUTHN.Y});
 
-        userOp.signature = _getSignedUserOpByWebAuthn(KEYUK_WEBAUTHN, pK);
+        userOp.signature = _getSignedUserOpByWebAuthn(DEF_WEBAUTHN, pK);
 
         _relayUserOp(userOp);
 
@@ -335,7 +342,7 @@ contract KeysManager is Deploy {
         _assertUpdteKeys(sKsP256NONKEY, 5);
     }
 
-    function test_SetTokenSpendWithRootKey() createKeys(1)  external {
+    function test_SetTokenSpendWithRootKey() external createKeys(1) {
         _registerKeys(sKsEOA);
         _registerKeys(sKsWebAuthn);
         _registerKeys(sKsP256);
@@ -354,7 +361,7 @@ contract KeysManager is Deploy {
         _assertTokenSpend(sKsP256NONKEY, 3, 100e18, SpendPeriod.Month);
     }
 
-    function test_SetTokenSpendAAWithRootKey() createKeys(1)  external {
+    function test_SetTokenSpendAAWithRootKey() external createKeys(1) {
         Call[] memory calls = _createStaticCallsRegister();
 
         PackedUserOperation memory userOp = _getFreshUserOp();
@@ -407,9 +414,10 @@ contract KeysManager is Deploy {
         bytes32 userOpHash = _getUserOpHash(userOp);
         console.log("userOpHash:", vm.toString(userOpHash));
 
-        pK = PubKey({x: KEY_WEBAUTHN.X, y: KEY_WEBAUTHN.Y});
+        _populateWebAuthn("keysmanager.json", ".keys_register");
+        pK = PubKey({x: DEF_WEBAUTHN.X, y: DEF_WEBAUTHN.Y});
 
-        userOp.signature = _getSignedUserOpByWebAuthn(KEY_WEBAUTHN, pK);
+        userOp.signature = _getSignedUserOpByWebAuthn(DEF_WEBAUTHN, pK);
 
         _relayUserOp(userOp);
 
@@ -423,9 +431,10 @@ contract KeysManager is Deploy {
         userOpHash = _getUserOpHash(userOp);
         console.log("userOpHash Set Token Spend:", vm.toString(userOpHash));
 
-        pK = PubKey({x: KEYT_WEBAUTHN.X, y: KEYT_WEBAUTHN.Y});
+        _populateWebAuthn("keysmanager.json", ".keys_token");
+        pK = PubKey({x: DEF_WEBAUTHN.X, y: DEF_WEBAUTHN.Y});
 
-        userOp.signature = _getSignedUserOpByWebAuthn(KEYT_WEBAUTHN, pK);
+        userOp.signature = _getSignedUserOpByWebAuthn(DEF_WEBAUTHN, pK);
 
         _relayUserOp(userOp);
 
@@ -435,7 +444,7 @@ contract KeysManager is Deploy {
         _assertTokenSpend(sKsP256NONKEY, 3, 100e18, SpendPeriod.Month);
     }
 
-    function test_UpdateTokenSpendWithRootKey() createKeys(1)  external {
+    function test_UpdateTokenSpendWithRootKey() external createKeys(1) {
         _registerKeys(sKsEOA);
         _registerKeys(sKsWebAuthn);
         _registerKeys(sKsP256);
@@ -453,7 +462,6 @@ contract KeysManager is Deploy {
         _assertTokenSpend(sKsP256, 2, 100e18, SpendPeriod.Month);
         _assertTokenSpend(sKsP256NONKEY, 3, 100e18, SpendPeriod.Month);
 
-
         _updateTokenSpend(sKsEOA, 0);
         _updateTokenSpend(sKsWebAuthn, sKsEOA.length); // 1
         _updateTokenSpend(sKsP256, sKsEOA.length + sKsWebAuthn.length); // 2
@@ -465,7 +473,7 @@ contract KeysManager is Deploy {
         _assertTokenSpend(sKsP256NONKEY, 3, 1000e18, SpendPeriod.Year);
     }
 
-    function test_UpdateTokenSpendAAWithRootKey() createKeys(1)  external {
+    function test_UpdateTokenSpendAAWithRootKey() external createKeys(1) {
         Call[] memory calls = _createStaticCallsRegister();
 
         PackedUserOperation memory userOp = _getFreshUserOp();
@@ -532,9 +540,10 @@ contract KeysManager is Deploy {
         bytes32 userOpHash = _getUserOpHash(userOp);
         console.log("userOpHash:", vm.toString(userOpHash));
 
-        pK = PubKey({x: KEY_WEBAUTHN.X, y: KEY_WEBAUTHN.Y});
+        _populateWebAuthn("keysmanager.json", ".keys_register");
+        pK = PubKey({x: DEF_WEBAUTHN.X, y: DEF_WEBAUTHN.Y});
 
-        userOp.signature = _getSignedUserOpByWebAuthn(KEY_WEBAUTHN, pK);
+        userOp.signature = _getSignedUserOpByWebAuthn(DEF_WEBAUTHN, pK);
 
         _relayUserOp(userOp);
 
@@ -548,9 +557,10 @@ contract KeysManager is Deploy {
         userOpHash = _getUserOpHash(userOp);
         console.log("userOpHash Set Token Spend:", vm.toString(userOpHash));
 
-        pK = PubKey({x: KEYT_WEBAUTHN.X, y: KEYT_WEBAUTHN.Y});
+        _populateWebAuthn("keysmanager.json", ".keys_token");
+        pK = PubKey({x: DEF_WEBAUTHN.X, y: DEF_WEBAUTHN.Y});
 
-        userOp.signature = _getSignedUserOpByWebAuthn(KEYT_WEBAUTHN, pK);
+        userOp.signature = _getSignedUserOpByWebAuthn(DEF_WEBAUTHN, pK);
 
         _relayUserOp(userOp);
 
@@ -567,9 +577,10 @@ contract KeysManager is Deploy {
         userOpHash = _getUserOpHash(userOp);
         console.log("userOpHash Update Token Spend:", vm.toString(userOpHash));
 
-        pK = PubKey({x: KEYU_WEBAUTHN.X, y: KEYU_WEBAUTHN.Y});
+        _populateWebAuthn("keysmanager.json", ".keys_token_update");
+        pK = PubKey({x: DEF_WEBAUTHN.X, y: DEF_WEBAUTHN.Y});
 
-        userOp.signature = _getSignedUserOpByWebAuthn(KEYU_WEBAUTHN, pK);
+        userOp.signature = _getSignedUserOpByWebAuthn(DEF_WEBAUTHN, pK);
 
         _relayUserOp(userOp);
 
@@ -579,7 +590,7 @@ contract KeysManager is Deploy {
         _assertTokenSpend(sKsP256NONKEY, 3, 1000e18, SpendPeriod.Year);
     }
 
-    function test_RemoveTokenSpendWithRootKey() createKeys(1)  external {
+    function test_RemoveTokenSpendWithRootKey() external createKeys(1) {
         _registerKeys(sKsEOA);
         _registerKeys(sKsWebAuthn);
         _registerKeys(sKsP256);
@@ -597,7 +608,6 @@ contract KeysManager is Deploy {
         _assertTokenSpend(sKsP256, 2, 100e18, SpendPeriod.Month);
         _assertTokenSpend(sKsP256NONKEY, 3, 100e18, SpendPeriod.Month);
 
-
         _removeTokenSpend(sKsEOA, 0);
         _removeTokenSpend(sKsWebAuthn, sKsEOA.length); // 1
         _removeTokenSpend(sKsP256, sKsEOA.length + sKsWebAuthn.length); // 2
@@ -609,7 +619,7 @@ contract KeysManager is Deploy {
         _assertTokenSpendAfterRemove(sKsP256NONKEY, 3);
     }
 
-    function test_RemoveTokenSpendAAWithRootKey() createKeys(1)  external {
+    function test_RemoveTokenSpendAAWithRootKey() external createKeys(1) {
         Call[] memory calls = _createStaticCallsRegister();
 
         PackedUserOperation memory userOp = _getFreshUserOp();
@@ -658,7 +668,7 @@ contract KeysManager is Deploy {
         _assertTokenSpendAfterRemove(sKsP256NONKEY, 3);
     }
 
-    function test_SetCanCallWithRootKey() createKeys(1) external {
+    function test_SetCanCallWithRootKey() external createKeys(1) {
         _registerKeys(sKsEOA);
         _registerKeys(sKsWebAuthn);
         _registerKeys(sKsP256);
@@ -681,8 +691,8 @@ contract KeysManager is Deploy {
         _assertCanCall(sKsP256, 2, ANY_FN_SEL);
         _assertCanCall(sKsP256NONKEY, 3, ANY_FN_SEL);
     }
-    
-    function test_SetCanCallAAWithRootKey() createKeys(1)  external {
+
+    function test_SetCanCallAAWithRootKey() external createKeys(1) {
         Call[] memory calls = _createStaticCallsRegister();
 
         PackedUserOperation memory userOp = _getFreshUserOp();
@@ -717,7 +727,7 @@ contract KeysManager is Deploy {
         _assertCanCall(sKsP256NONKEY, 3, ANY_FN_SEL);
     }
 
-    function test_RemoveCanCallWithRootKey() createKeys(1) external {
+    function test_RemoveCanCallWithRootKey() external createKeys(1) {
         _registerKeys(sKsEOA);
         _registerKeys(sKsWebAuthn);
         _registerKeys(sKsP256);
@@ -750,8 +760,8 @@ contract KeysManager is Deploy {
         _assertCanCallAfterRemove(sKsP256, 2, ANY_FN_SEL);
         _assertCanCallAfterRemove(sKsP256NONKEY, 3, ANY_FN_SEL);
     }
-    
-    function test_RemoveCanCallAAWithRootKey() createKeys(1)  external {
+
+    function test_RemoveCanCallAAWithRootKey() external createKeys(1) {
         Call[] memory calls = _createStaticCallsRegister();
 
         PackedUserOperation memory userOp = _getFreshUserOp();
@@ -818,9 +828,10 @@ contract KeysManager is Deploy {
         bytes32 userOpHash = _getUserOpHash(userOp);
         console.log("userOpHash:", vm.toString(userOpHash));
 
-        pK = PubKey({x: KEY_WEBAUTHN.X, y: KEY_WEBAUTHN.Y});
+        _populateWebAuthn("keysmanager.json", ".keys_register");
+        pK = PubKey({x: DEF_WEBAUTHN.X, y: DEF_WEBAUTHN.Y});
 
-        userOp.signature = _getSignedUserOpByWebAuthn(KEY_WEBAUTHN, pK);
+        userOp.signature = _getSignedUserOpByWebAuthn(DEF_WEBAUTHN, pK);
 
         _relayUserOp(userOp);
 
@@ -834,8 +845,10 @@ contract KeysManager is Deploy {
         userOpHash = _getUserOpHash(userOp);
         console.log("userOpHash Set Can Call:", vm.toString(userOpHash));
 
-        pK = PubKey({x: KEYCC_WEBAUTHN.X, y: KEYCC_WEBAUTHN.Y});
-        userOp.signature = _getSignedUserOpByWebAuthn(KEYCC_WEBAUTHN, pK);
+        _populateWebAuthn("keysmanager.json", ".keys_can_call");
+        pK = PubKey({x: DEF_WEBAUTHN.X, y: DEF_WEBAUTHN.Y});
+
+        userOp.signature = _getSignedUserOpByWebAuthn(DEF_WEBAUTHN, pK);
 
         _relayUserOp(userOp);
 
@@ -863,9 +876,10 @@ contract KeysManager is Deploy {
         bytes32 userOpHash = _getUserOpHash(userOp);
         console.log("userOpHash:", vm.toString(userOpHash));
 
-        pK = PubKey({x: KEY_WEBAUTHN.X, y: KEY_WEBAUTHN.Y});
+        _populateWebAuthn("keysmanager.json", ".keys_register");
+        pK = PubKey({x: DEF_WEBAUTHN.X, y: DEF_WEBAUTHN.Y});
 
-        userOp.signature = _getSignedUserOpByWebAuthn(KEY_WEBAUTHN, pK);
+        userOp.signature = _getSignedUserOpByWebAuthn(DEF_WEBAUTHN, pK);
 
         _relayUserOp(userOp);
 
@@ -879,8 +893,10 @@ contract KeysManager is Deploy {
         userOpHash = _getUserOpHash(userOp);
         console.log("userOpHash Set Can Call:", vm.toString(userOpHash));
 
-        pK = PubKey({x: KEYCC_WEBAUTHN.X, y: KEYCC_WEBAUTHN.Y});
-        userOp.signature = _getSignedUserOpByWebAuthn(KEYCC_WEBAUTHN, pK);
+        _populateWebAuthn("keysmanager.json", ".keys_can_call");
+        pK = PubKey({x: DEF_WEBAUTHN.X, y: DEF_WEBAUTHN.Y});
+
+        userOp.signature = _getSignedUserOpByWebAuthn(DEF_WEBAUTHN, pK);
 
         _relayUserOp(userOp);
 
@@ -891,15 +907,16 @@ contract KeysManager is Deploy {
 
         calls = _createStaticCallsSetOrRemoveCanCall(false);
 
-
         userOp.nonce = _getNonce();
         userOp.callData = _packCallData(mode_1, calls);
 
         userOpHash = _getUserOpHash(userOp);
         console.log("userOpHash Remove Can Call:", vm.toString(userOpHash));
 
-        pK = PubKey({x: KEYCCR_WEBAUTHN.X, y: KEYCCR_WEBAUTHN.Y});
-        userOp.signature = _getSignedUserOpByWebAuthn(KEYCCR_WEBAUTHN, pK);
+        _populateWebAuthn("keysmanager.json", ".keys_can_call_remove");
+        pK = PubKey({x: DEF_WEBAUTHN.X, y: DEF_WEBAUTHN.Y});
+
+        userOp.signature = _getSignedUserOpByWebAuthn(DEF_WEBAUTHN, pK);
 
         _relayUserOp(userOp);
 
@@ -975,7 +992,12 @@ contract KeysManager is Deploy {
         }
     }
 
-    function _assertTokenSpend(KeyDataReg[] memory _keys, uint256 start, uint256 _limits, SpendPeriod _sP) internal view {
+    function _assertTokenSpend(
+        KeyDataReg[] memory _keys,
+        uint256 start,
+        uint256 _limits,
+        SpendPeriod _sP
+    ) internal view {
         for (uint256 i; i < _keys.length;) {
             bytes32 kid = _computeKeyId(_keys[i]);
             address tok = tokens[start + i];
@@ -1013,7 +1035,10 @@ contract KeysManager is Deploy {
         }
     }
 
-    function _assertCanCall(KeyDataReg[] memory _keys, uint256 start, bytes4 _funSel) internal view {
+    function _assertCanCall(KeyDataReg[] memory _keys, uint256 start, bytes4 _funSel)
+        internal
+        view
+    {
         for (uint256 i; i < _keys.length;) {
             bytes32 kid = _computeKeyId(_keys[i]);
             address tok = tokens[start + i];
@@ -1029,7 +1054,10 @@ contract KeysManager is Deploy {
         }
     }
 
-    function _assertCanCallAfterRemove(KeyDataReg[] memory _keys, uint256 start, bytes4 _funSel) internal view {
+    function _assertCanCallAfterRemove(KeyDataReg[] memory _keys, uint256 start, bytes4 _funSel)
+        internal
+        view
+    {
         for (uint256 i; i < _keys.length;) {
             bytes32 kid = _computeKeyId(_keys[i]);
             address tok = tokens[start + i];
@@ -1104,9 +1132,7 @@ contract KeysManager is Deploy {
         for (uint256 i; i < _keys.length;) {
             _etch();
             vm.prank(owner);
-            account.removeTokenSpend(
-                _computeKeyId(_keys[i]), tokens[start + i]
-            );
+            account.removeTokenSpend(_computeKeyId(_keys[i]), tokens[start + i]);
             unchecked {
                 ++i;
             }
@@ -1117,9 +1143,7 @@ contract KeysManager is Deploy {
         for (uint256 i; i < _keys.length;) {
             _etch();
             vm.prank(owner);
-            account.setCanCall(
-                _computeKeyId(_keys[i]), tokens[start + i], ANY_FN_SEL, _can
-            );
+            account.setCanCall(_computeKeyId(_keys[i]), tokens[start + i], ANY_FN_SEL, _can);
             unchecked {
                 ++i;
             }
@@ -1303,22 +1327,36 @@ contract KeysManager is Deploy {
         calls[0] = _createCall(
             address(account),
             0,
-            abi.encodeWithSelector(account.updateKeyData.selector, _computeKeyId(sKsEOA[0]), uint48(1790949874), 20)
+            abi.encodeWithSelector(
+                account.updateKeyData.selector, _computeKeyId(sKsEOA[0]), uint48(1790949874), 20
+            )
         );
         calls[1] = _createCall(
             address(account),
             0,
-            abi.encodeWithSelector(account.updateKeyData.selector, _computeKeyId(sKsWebAuthn[0]), uint48(1790949874), 20)
+            abi.encodeWithSelector(
+                account.updateKeyData.selector,
+                _computeKeyId(sKsWebAuthn[0]),
+                uint48(1790949874),
+                20
+            )
         );
         calls[2] = _createCall(
             address(account),
             0,
-            abi.encodeWithSelector(account.updateKeyData.selector, _computeKeyId(sKsP256[0]), uint48(1790949874), 20)
+            abi.encodeWithSelector(
+                account.updateKeyData.selector, _computeKeyId(sKsP256[0]), uint48(1790949874), 20
+            )
         );
         calls[3] = _createCall(
             address(account),
             0,
-            abi.encodeWithSelector(account.updateKeyData.selector, _computeKeyId(sKsP256NONKEY[0]), uint48(1790949874), 20)
+            abi.encodeWithSelector(
+                account.updateKeyData.selector,
+                _computeKeyId(sKsP256NONKEY[0]),
+                uint48(1790949874),
+                20
+            )
         );
     }
 
@@ -1424,51 +1462,43 @@ contract KeysManager is Deploy {
             address(account),
             0,
             abi.encodeWithSelector(
-                account.removeTokenSpend.selector,
-                _computeKeyId(sKsEOA[0]),
-                tokens[0]
+                account.removeTokenSpend.selector, _computeKeyId(sKsEOA[0]), tokens[0]
             )
         );
         calls[1] = _createCall(
             address(account),
             0,
             abi.encodeWithSelector(
-                account.removeTokenSpend.selector,
-                _computeKeyId(sKsWebAuthn[0]),
-                tokens[1]
+                account.removeTokenSpend.selector, _computeKeyId(sKsWebAuthn[0]), tokens[1]
             )
         );
         calls[2] = _createCall(
             address(account),
             0,
             abi.encodeWithSelector(
-                account.removeTokenSpend.selector,
-                _computeKeyId(sKsP256[0]),
-                tokens[2]
+                account.removeTokenSpend.selector, _computeKeyId(sKsP256[0]), tokens[2]
             )
         );
         calls[3] = _createCall(
             address(account),
             0,
             abi.encodeWithSelector(
-                account.removeTokenSpend.selector,
-                _computeKeyId(sKsP256NONKEY[0]),
-                tokens[3]
+                account.removeTokenSpend.selector, _computeKeyId(sKsP256NONKEY[0]), tokens[3]
             )
         );
     }
 
-    function _createStaticCallsSetOrRemoveCanCall(bool _can) internal view returns (Call[] memory calls) {
+    function _createStaticCallsSetOrRemoveCanCall(bool _can)
+        internal
+        view
+        returns (Call[] memory calls)
+    {
         calls = new Call[](4);
         calls[0] = _createCall(
             address(account),
             0,
             abi.encodeWithSelector(
-                account.setCanCall.selector,
-                _computeKeyId(sKsEOA[0]),
-                tokens[0],
-                ANY_FN_SEL,
-                _can
+                account.setCanCall.selector, _computeKeyId(sKsEOA[0]), tokens[0], ANY_FN_SEL, _can
             )
         );
         calls[1] = _createCall(
@@ -1486,11 +1516,7 @@ contract KeysManager is Deploy {
             address(account),
             0,
             abi.encodeWithSelector(
-                account.setCanCall.selector,
-                _computeKeyId(sKsP256[0]),
-                tokens[2],
-                ANY_FN_SEL,
-                _can
+                account.setCanCall.selector, _computeKeyId(sKsP256[0]), tokens[2], ANY_FN_SEL, _can
             )
         );
         calls[3] = _createCall(
