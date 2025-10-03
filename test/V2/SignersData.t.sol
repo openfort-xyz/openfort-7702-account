@@ -24,10 +24,10 @@ contract SignersData is Test {
         bytes32 X;
         bytes32 Y;
     }
-    
+
     WebAuthn internal DEF_WEBAUTHN;
     P256 internal DEF_P256;
-    
+
     function _getPath(string memory _path) internal pure returns (string memory path) {
         string memory defPath = "test/data/";
         path = string.concat(defPath, _path);
@@ -38,7 +38,7 @@ contract SignersData is Test {
         string memory json = vm.readFile(path);
 
         string memory meta = string.concat(_key, ".metadata");
-        string memory sig  = string.concat(_key, ".signature");
+        string memory sig = string.concat(_key, ".signature");
 
         DEF_WEBAUTHN = WebAuthn({
             UVR: stdJson.readBool(json, string.concat(meta, ".userVerificationRequired")),

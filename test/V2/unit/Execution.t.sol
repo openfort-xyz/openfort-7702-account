@@ -416,7 +416,7 @@ contract Execution is Deploy {
         pK = PubKey({x: DEF_WEBAUTHN.X, y: DEF_WEBAUTHN.Y});
 
         userOp.signature = _getSignedUserOpByWebAuthn(DEF_WEBAUTHN, pK);
-        
+
         _relayUserOp(userOp);
 
         _getBalances(false);
@@ -490,8 +490,7 @@ contract Execution is Deploy {
         bytes32 userOpHash = _getUserOpHash(userOp);
         console.log("userOpHash:", vm.toString(userOpHash));
 
-        userOp.signature =
-            _encodeP256Signature(DEF_P256.R, DEF_P256.S, pK_SK, KeyType.P256);
+        userOp.signature = _encodeP256Signature(DEF_P256.R, DEF_P256.S, pK_SK, KeyType.P256);
 
         _relayUserOp(userOp);
 
@@ -532,8 +531,7 @@ contract Execution is Deploy {
         bytes32 userOpHash = _getUserOpHash(userOp);
         console.log("userOpHash:", vm.toString(userOpHash));
 
-        userOp.signature =
-            _encodeP256Signature(DEF_P256.R, DEF_P256.S, pK_SK, KeyType.P256NONKEY);
+        userOp.signature = _encodeP256Signature(DEF_P256.R, DEF_P256.S, pK_SK, KeyType.P256NONKEY);
 
         _relayUserOp(userOp);
 
@@ -579,9 +577,7 @@ contract Execution is Deploy {
         bytes32 userOpHash = _getUserOpHash(userOp);
         console.log("userOpHash:", vm.toString(userOpHash));
 
-        userOp.signature = _encodeP256Signature(
-            DEF_P256.R, DEF_P256.S, pK_SK, KeyType.P256NONKEY
-        );
+        userOp.signature = _encodeP256Signature(DEF_P256.R, DEF_P256.S, pK_SK, KeyType.P256NONKEY);
 
         _relayUserOp(userOp);
 

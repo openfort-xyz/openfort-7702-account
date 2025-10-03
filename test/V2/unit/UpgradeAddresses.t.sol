@@ -41,7 +41,7 @@ contract UpgradeAddresses is Deploy {
         assertEq(address(123456), addrToCompare[1]);
     }
 
-    function test_UpgradeWebAuthVerifieWithRootKey() external{
+    function test_UpgradeWebAuthVerifieWithRootKey() external {
         _getCurrectAddr(Addr.VERIFIER);
         assertEq(WEBAUTHN_VERIFIER, addrToCompare[0]);
 
@@ -53,7 +53,7 @@ contract UpgradeAddresses is Deploy {
         assertEq(address(123456), addrToCompare[1]);
     }
 
-    function test_UpgradeGasPolicyWithRootKey() external{
+    function test_UpgradeGasPolicyWithRootKey() external {
         _getCurrectAddr(Addr.GAS);
         assertEq(address(gasPolicy), addrToCompare[0]);
 
@@ -90,11 +90,12 @@ contract UpgradeAddresses is Deploy {
         assertEq(address(123456), addrToCompare[1]);
     }
 
-    function test_UpgradeWebAuthVerifieAAWithRootKey() external{
+    function test_UpgradeWebAuthVerifieAAWithRootKey() external {
         _getCurrectAddr(Addr.VERIFIER);
         assertEq(WEBAUTHN_VERIFIER, addrToCompare[0]);
 
-        bytes memory data = abi.encodeWithSelector(account.setWebAuthnVerifier.selector, address(123456));
+        bytes memory data =
+            abi.encodeWithSelector(account.setWebAuthnVerifier.selector, address(123456));
         Call[] memory calls = _getCalls(1, owner, 0, data);
         PackedUserOperation memory userOp = _getFreshUserOp();
         userOp = _populateUserOp(
@@ -115,7 +116,7 @@ contract UpgradeAddresses is Deploy {
         assertEq(address(123456), addrToCompare[1]);
     }
 
-    function test_UpgradeGasPolicyAAWithRootKey() external{
+    function test_UpgradeGasPolicyAAWithRootKey() external {
         _getCurrectAddr(Addr.GAS);
         assertEq(address(gasPolicy), addrToCompare[0]);
 
@@ -170,11 +171,12 @@ contract UpgradeAddresses is Deploy {
         assertEq(address(123456), addrToCompare[1]);
     }
 
-    function test_UpgradeWebAuthVerifieAAWithMK() external{
+    function test_UpgradeWebAuthVerifieAAWithMK() external {
         _getCurrectAddr(Addr.VERIFIER);
         assertEq(WEBAUTHN_VERIFIER, addrToCompare[0]);
 
-        bytes memory data = abi.encodeWithSelector(account.setWebAuthnVerifier.selector, address(123456));
+        bytes memory data =
+            abi.encodeWithSelector(account.setWebAuthnVerifier.selector, address(123456));
         Call[] memory calls = _getCalls(1, owner, 0, data);
         PackedUserOperation memory userOp = _getFreshUserOp();
         userOp = _populateUserOp(
@@ -200,7 +202,7 @@ contract UpgradeAddresses is Deploy {
         assertEq(address(123456), addrToCompare[1]);
     }
 
-    function test_UpgradeGasPolicyAAWithRootMK() external{
+    function test_UpgradeGasPolicyAAWithRootMK() external {
         _getCurrectAddr(Addr.GAS);
         assertEq(address(gasPolicy), addrToCompare[0]);
 
@@ -238,13 +240,13 @@ contract UpgradeAddresses is Deploy {
         vm.prank(sender);
         entryPoint.handleOps(ops, payable(sender));
     }
-    
+
     function _getCurrectAddr(Addr _addr) internal {
         if (_addr == Addr.EP) {
             addrToCompare.push(address(account.entryPoint()));
         } else if (_addr == Addr.VERIFIER) {
             addrToCompare.push((account.webAuthnVerifier()));
-        } else if(_addr == Addr.GAS) {
+        } else if (_addr == Addr.GAS) {
             addrToCompare.push(account.gasPolicy());
         }
     }

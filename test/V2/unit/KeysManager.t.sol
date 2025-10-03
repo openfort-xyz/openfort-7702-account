@@ -220,7 +220,7 @@ contract KeysManager is Deploy {
 
         bytes32 userOpHash = _getUserOpHash(userOp);
         console.log("userOpHash:", vm.toString(userOpHash));
-        
+
         _populateWebAuthn("keysmanager.json", ".keys_register");
         pK = PubKey({x: DEF_WEBAUTHN.X, y: DEF_WEBAUTHN.Y});
 
