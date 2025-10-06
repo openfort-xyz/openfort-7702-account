@@ -358,9 +358,7 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
         _requireRecovery(false);
         if (isLocked()) revert IOPF7702Recoverable.OPF7702Recoverable__AccountLocked();
 
-        if (_recoveryKey.key.checkKey()) {
-            revert IOPF7702Recoverable.OPF7702Recoverable__AddressCantBeZero();
-        }
+        _recoveryKey.keyCantBeZero();
 
         bytes32 keyId = _recoveryKey.computeKeyId();
 
@@ -434,7 +432,29 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
     function _setNewMasterKey(KeyDataReg memory recoveryOwner) private {
         _masterKeyValidation(recoveryOwner);
         emit IOPF7702Recoverable.RecoveryCompleted();
-        _addKey(recoveryOwner);
+
+        bytes32 keyId = recoveryOwner.computeKeyId();
+
+        emit KeyRegistered(
+            keyId, recoveryOwner.keyControl, recoveryOwner.keyType, true, 0, type(uint48).max, 0
+        );
+
+        KeyData storage sKey = keys[keyId];
+        if (sKey.isActive) revert KeyManager__KeyRegistered();
+
+        idKeys[0] = keyId;
+        _addMasterKey(sKey, recoveryOwner);
+    }
+
+    function _addMasterKey(KeyData storage _sKey, KeyDataReg memory _recoveryOwner) private {
+        _sKey.keyType = _recoveryOwner.keyType;
+        _sKey.key = _recoveryOwner.key;
+        _sKey.validUntil = type(uint48).max;
+        _sKey.validAfter = 0;
+        _sKey.limits = 0;
+        _sKey.masterKey = true;
+        _sKey.isActive = true;
+        _sKey.isDelegatedControl = false;
     }
 
     /// @dev Validates guardian signatures for recovery completion.
