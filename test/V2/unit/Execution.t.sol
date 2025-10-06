@@ -10,6 +10,8 @@ import {PackedUserOperation} from
 import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 
 contract Execution is Deploy {
+    error OpenfortBaseAccount7702V1__TooManyCalls(uint256 total, uint256 max);
+    error OpenfortBaseAccount7702V1__InvalidTransactionLength();
     address reciver;
     PubKey internal pK;
     PubKey internal pK_SK;
@@ -18,6 +20,9 @@ contract Execution is Deploy {
     uint256 balanceAccounAfter;
     uint256 balanceReciverBefore;
     uint256 balanceReciverAfter;
+
+    bytes32[2] internal modes = [mode_1, mode_3];
+
 
     modifier registerSkEOASelf() {
         _createCustomFreshKey(
@@ -174,6 +179,21 @@ contract Execution is Deploy {
         _assertBalances(int256(10e18 * 3), false);
     }
 
+    function test_ExecuteBatchDirectWithRootKeyRevertInvalidTransactionLength() external {
+        _getBalances(true);
+        bytes memory data = abi.encodeWithSelector(MockERC20.mint.selector, owner, 10e18);
+        Call[] memory calls = _getCalls(10, address(erc20), 0, data);
+        bytes memory executionData = abi.encode(calls);
+
+        _etch();
+        vm.expectRevert(
+            abi.encodeWithSelector(OpenfortBaseAccount7702V1__InvalidTransactionLength.selector)
+        );
+        vm.prank(owner);
+        account.execute(mode_1, executionData);
+    }
+
+
     function test_ExecuteAAWithRootKey() external {
         _getBalances(true);
         bytes memory data = abi.encodeWithSelector(MockERC20.mint.selector, owner, 10e18);
@@ -218,6 +238,42 @@ contract Execution is Deploy {
 
         _getBalances(false);
         _assertBalances(int256(10e18 * 3), false);
+    }
+
+    function test_executeMode3RevertTooManyCalls() public {
+        Call[] memory calls_1 = new Call[](6);
+        Call[] memory calls_2 = new Call[](6);
+        Call[] memory calls_3 = new Call[](6);
+
+        bytes memory dataHex = abi.encodeWithSelector(MockERC20.mint.selector, owner, 10e18);
+
+        for (uint256 i = 0; i < calls_1.length;) {
+            calls_1[i] = Call({target: address(erc20), value: 0, data: dataHex});
+            calls_2[i] = Call({target: address(erc20), value: 0, data: dataHex});
+            calls_3[i] = Call({target: address(erc20), value: 0, data: dataHex});
+            unchecked {
+                i++;
+            }
+        }
+
+        bytes memory batch1Data = abi.encode(calls_1);
+        bytes memory batch2Data = abi.encode(calls_2);
+        bytes memory batch3Data = abi.encode(calls_3);
+
+        bytes[] memory batches = new bytes[](3);
+        batches[0] = batch1Data;
+        batches[1] = batch2Data;
+        batches[2] = batch3Data;
+
+        bytes memory executionData = abi.encode(batches);
+
+        _etch();
+
+        vm.expectRevert(
+            abi.encodeWithSelector(OpenfortBaseAccount7702V1__TooManyCalls.selector, 10, 9)
+        );
+        vm.prank(owner);
+        account.execute(mode_3, executionData);
     }
 
     function test_ExecuteBatchAAWithRootKeyAndTrasfer() external {
@@ -583,6 +639,17 @@ contract Execution is Deploy {
 
         _getBalances(false);
         _assertBalances(int256(10e18 * 3), true);
+    }
+
+    function test_supportsExecutionMode() public view {
+        for (uint256 i = 0; i < modes.length;) {
+            bool res = account.supportsExecutionMode(modes[i]);
+            assertTrue(res);
+
+            unchecked {
+                i++;
+            }
+        }
     }
 
     function _getBalances(bool isBefore) internal {

@@ -6,6 +6,7 @@ import {Deploy} from "./../Deploy.t.sol";
 import {console2 as console} from "lib/forge-std/src/Test.sol";
 import {PackedUserOperation} from
     "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
+import {IOPF7702Recoverable} from "src/interfaces/IOPF7702Recoverable.sol";
 import {Math} from "lib/openzeppelin-contracts/contracts/utils/math/Math.sol";
 import {SafeCast} from "lib/openzeppelin-contracts/contracts/utils/math/SafeCast.sol";
 
@@ -72,6 +73,23 @@ contract Recoverable is Deploy {
         _executeGuardianAction(GuardianAction.PROPOSE, 3);
         _assertGuardianCount(1);
         _assertPendingGuardians(3, true);
+    }
+
+    function test_RevertOPF7702Recoverable__AddressCantBeZeroAndGuardianCannotBeAddressThis() external {
+        _etch();
+        vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__AddressCantBeZero.selector);
+        vm.prank(owner);
+        account.proposeGuardian(bytes32(0));
+
+        _etch();
+        vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__GuardianCannotBeAddressThis.selector);
+        vm.prank(owner);
+        account.proposeGuardian(keccak256(abi.encodePacked(owner)));
+
+        _etch();
+        vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__GuardianCannotBeCurrentMasterKey.selector);
+        vm.prank(owner);
+        account.proposeGuardian(_computeKeyId(KeyType.WEBAUTHN, _getKeyP256(pK)));
     }
 
     function test_proposeGuardianAAWithRootKey() external createGuardians(3) {
