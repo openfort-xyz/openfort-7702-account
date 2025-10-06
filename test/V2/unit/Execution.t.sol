@@ -12,6 +12,7 @@ import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.so
 contract Execution is Deploy {
     error OpenfortBaseAccount7702V1__TooManyCalls(uint256 total, uint256 max);
     error OpenfortBaseAccount7702V1__InvalidTransactionLength();
+
     address reciver;
     PubKey internal pK;
     PubKey internal pK_SK;
@@ -22,7 +23,6 @@ contract Execution is Deploy {
     uint256 balanceReciverAfter;
 
     bytes32[2] internal modes = [mode_1, mode_3];
-
 
     modifier registerSkEOASelf() {
         _createCustomFreshKey(
@@ -192,7 +192,6 @@ contract Execution is Deploy {
         vm.prank(owner);
         account.execute(mode_1, executionData);
     }
-
 
     function test_ExecuteAAWithRootKey() external {
         _getBalances(true);

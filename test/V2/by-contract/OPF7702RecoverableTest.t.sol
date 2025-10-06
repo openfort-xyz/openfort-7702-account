@@ -19,7 +19,9 @@ contract OPF7702RecoverableTest is Deploy {
 
     PubKey internal pK;
 
-    function test_RevretOPF7702Recoverable_InsecurePeriodAndGasPolicy__InitializationIncorrect() external {
+    function test_RevretOPF7702Recoverable_InsecurePeriodAndGasPolicy__InitializationIncorrect()
+        external
+    {
         vm.startPrank(sender);
 
         entryPoint = IEntryPoint(payable(ENTRYPOINT_V8));
@@ -105,10 +107,9 @@ contract OPF7702RecoverableTest is Deploy {
 
         _etch();
         vm.expectRevert(OpenfortBaseAccount7702V1__InvalidSignature.selector);
-        vm.prank(owner);    
+        vm.prank(owner);
         account.initialize(mkReg, skReg, sig, _initialGuardian);
     }
-
 
     function test_RevertOPF7702Recoverable__AddressCantBeZero() external {
         vm.startPrank(sender);
@@ -163,8 +164,7 @@ contract OPF7702RecoverableTest is Deploy {
             skReg.keyControl
         );
 
-        bytes32 structHash =
-            keccak256(abi.encode(INIT_TYPEHASH, mkDataEnc, skDataEnc, bytes32(0)));
+        bytes32 structHash = keccak256(abi.encode(INIT_TYPEHASH, mkDataEnc, skDataEnc, bytes32(0)));
 
         string memory name = "OPF7702Recoverable";
         string memory version = "1";
@@ -181,7 +181,7 @@ contract OPF7702RecoverableTest is Deploy {
 
         _etch();
         vm.expectRevert(OPF7702Recoverable__AddressCantBeZero.selector);
-        vm.prank(owner);    
+        vm.prank(owner);
         account.initialize(mkReg, skReg, sig, bytes32(0));
     }
 }

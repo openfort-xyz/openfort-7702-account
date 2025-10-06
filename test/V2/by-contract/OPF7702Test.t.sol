@@ -12,7 +12,7 @@ import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.so
 contract BaseOPF7702Test is Deploy {
     PubKey internal pK;
     PubKey internal pK_SK;
-    
+
     function setUp() public virtual override {
         super.setUp();
         _populateWebAuthn("execution.json", ".batch");
@@ -37,15 +37,14 @@ contract BaseOPF7702Test is Deploy {
             _packGasFees(80 gwei, 15 gwei),
             hex""
         );
-        
+
         bytes memory signature = _signUserOp(userOp);
         userOp.signature = abi.encodePacked(_encodeEOASignature(signature), keccak256("more-bytes"));
-        
+
         bytes32 userOpHash = _getUserOpHash(userOp);
 
         vm.expectRevert(KeyManager__InvalidSignatureLength.selector);
         _sendUserOp(userOp, userOpHash);
-
     }
 
     function test_RevertKeyManager__InvalidSignatureLengthP256() external {
@@ -60,10 +59,12 @@ contract BaseOPF7702Test is Deploy {
             _packGasFees(80 gwei, 15 gwei),
             hex""
         );
-        
-        userOp.signature = abi.encodePacked(_encodeP256Signature(DEF_P256.R, DEF_P256.S, pK_SK, KeyType.P256), keccak256("more-bytes"));
 
-        
+        userOp.signature = abi.encodePacked(
+            _encodeP256Signature(DEF_P256.R, DEF_P256.S, pK_SK, KeyType.P256),
+            keccak256("more-bytes")
+        );
+
         bytes32 userOpHash = _getUserOpHash(userOp);
 
         vm.expectRevert(KeyManager__InvalidSignatureLength.selector);
@@ -115,7 +116,7 @@ contract BaseOPF7702Test is Deploy {
         res = account.isValidSignature(userOpHash, signature);
         assertEq(res, this.isValidSignature.selector);
 
-        res = account.isValidSignature(userOpHash, abi.encode(KeyType.EOA ,signature));
+        res = account.isValidSignature(userOpHash, abi.encode(KeyType.EOA, signature));
         assertEq(res, bytes4(0xffffffff));
 
         res = account.isValidSignature((keccak256("a")), signature);

@@ -75,19 +75,25 @@ contract Recoverable is Deploy {
         _assertPendingGuardians(3, true);
     }
 
-    function test_RevertOPF7702Recoverable__AddressCantBeZeroAndGuardianCannotBeAddressThis() external {
+    function test_RevertOPF7702Recoverable__AddressCantBeZeroAndGuardianCannotBeAddressThis()
+        external
+    {
         _etch();
         vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__AddressCantBeZero.selector);
         vm.prank(owner);
         account.proposeGuardian(bytes32(0));
 
         _etch();
-        vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__GuardianCannotBeAddressThis.selector);
+        vm.expectRevert(
+            IOPF7702Recoverable.OPF7702Recoverable__GuardianCannotBeAddressThis.selector
+        );
         vm.prank(owner);
         account.proposeGuardian(keccak256(abi.encodePacked(owner)));
 
         _etch();
-        vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__GuardianCannotBeCurrentMasterKey.selector);
+        vm.expectRevert(
+            IOPF7702Recoverable.OPF7702Recoverable__GuardianCannotBeCurrentMasterKey.selector
+        );
         vm.prank(owner);
         account.proposeGuardian(_computeKeyId(KeyType.WEBAUTHN, _getKeyP256(pK)));
     }
