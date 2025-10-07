@@ -256,7 +256,7 @@ contract RecoverableReverts is Deploy {
             validUntil: type(uint48).max,
             validAfter: 0,
             limits: 0,
-            key: _getKeyEOA(guardians[0]), 
+            key: _getKeyEOA(guardians[0]),
             keyControl: KeyControl.Self
         });
 
@@ -378,34 +378,37 @@ contract RecoverableReverts is Deploy {
         account.completeRecovery(_signatures);
     }
 
-function test_requireRecovery_OngoingRecovery_confirmGuardianProposal() external createGuardians(1) {
-    _etch();
-    vm.prank(owner);
-    account.proposeGuardian(guardiansID[0]);
+    function test_requireRecovery_OngoingRecovery_confirmGuardianProposal()
+        external
+        createGuardians(1)
+    {
+        _etch();
+        vm.prank(owner);
+        account.proposeGuardian(guardiansID[0]);
 
-    vm.warp(block.timestamp + SECURITY_PERIOD + 1);
-    _etch();
-    vm.prank(owner);
-    account.confirmGuardianProposal(guardiansID[0]);
+        vm.warp(block.timestamp + SECURITY_PERIOD + 1);
+        _etch();
+        vm.prank(owner);
+        account.confirmGuardianProposal(guardiansID[0]);
 
-    KeyDataReg memory rk = KeyDataReg({
-        keyType: KeyType.EOA,
-        validUntil: type(uint48).max,
-        validAfter: 0,
-        limits: 0,
-        key: _getKeyEOA(makeAddr("newOwner")),
-        keyControl: KeyControl.Self
-    });
+        KeyDataReg memory rk = KeyDataReg({
+            keyType: KeyType.EOA,
+            validUntil: type(uint48).max,
+            validAfter: 0,
+            limits: 0,
+            key: _getKeyEOA(makeAddr("newOwner")),
+            keyControl: KeyControl.Self
+        });
 
-    _etch();
-    vm.prank(guardians[0]);
-    account.startRecovery(rk);
+        _etch();
+        vm.prank(guardians[0]);
+        account.startRecovery(rk);
 
-    vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__OngoingRecovery.selector);
-    _etch();
-    vm.prank(owner);
-    account.confirmGuardianProposal(guardiansID[0]);
-}
+        vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__OngoingRecovery.selector);
+        _etch();
+        vm.prank(owner);
+        account.confirmGuardianProposal(guardiansID[0]);
+    }
 
     function _createGuardians(uint256 _index) internal {
         for (uint256 i = 0; i < _index; i++) {
