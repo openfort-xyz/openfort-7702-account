@@ -128,6 +128,9 @@ contract Recoverable is Deploy {
         _executeGuardianAction(GuardianAction.CONFIRM_PROPOSAL, 3);
         _assertConfirmGuardians(3);
         _assertGuardianCount(4);
+
+        bytes32[] memory guardian = account.getGuardians();
+        assert(guardian.length == 4);
     }
 
     function test_confirmGuardianProposalAAWithRootKey() external createGuardians(3) {

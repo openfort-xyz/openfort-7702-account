@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2025-10-06 18:13:37</td>
+            <td class="headerValue">2025-10-07 16:08:50</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">91.7&nbsp;%</td>
@@ -195,15 +195,15 @@
 <span id="L133"><span class="lineNum">     133</span>              :      * zero.</span>
 <span id="L134"><span class="lineNum">     134</span>              :      *      Useful when proxy patterns or re-deployment require resetting specific storage.</span>
 <span id="L135"><span class="lineNum">     135</span>              :      */</span>
-<span id="L136"><span class="lineNum">     136</span> <span class="tlaGNC">         136 :     function _clearStorage() internal {</span></span>
-<span id="L137"><span class="lineNum">     137</span> <span class="tlaGNC">         136 :         bytes32 baseSlot = keccak256(</span></span>
+<span id="L136"><span class="lineNum">     136</span> <span class="tlaGNC">         166 :     function _clearStorage() internal {</span></span>
+<span id="L137"><span class="lineNum">     137</span> <span class="tlaGNC">         166 :         bytes32 baseSlot = keccak256(</span></span>
 <span id="L138"><span class="lineNum">     138</span>              :             abi.encode(uint256(keccak256(&quot;openfort.baseAccount.7702.v1&quot;)) - 1)</span>
-<span id="L139"><span class="lineNum">     139</span> <span class="tlaGNC">         136 :         ) &amp; ~bytes32(uint256(0xff));</span></span>
+<span id="L139"><span class="lineNum">     139</span> <span class="tlaGNC">         166 :         ) &amp; ~bytes32(uint256(0xff));</span></span>
 <span id="L140"><span class="lineNum">     140</span>              : </span>
 <span id="L141"><span class="lineNum">     141</span>              :         // clear slot 0, _EP_SLOT &amp; _VERIFIER_SLOT &amp; _GAS_SLOT</span>
-<span id="L142"><span class="lineNum">     142</span> <span class="tlaGNC">         136 :         bytes32 epSlot = UpgradeAddress._EP_SLOT;</span></span>
-<span id="L143"><span class="lineNum">     143</span> <span class="tlaGNC">         136 :         bytes32 verifierSlot = UpgradeAddress._VERIFIER_SLOT;</span></span>
-<span id="L144"><span class="lineNum">     144</span> <span class="tlaGNC">         136 :         bytes32 gasPolicySlot = UpgradeAddress._GAS_POLICY_SLOT;</span></span>
+<span id="L142"><span class="lineNum">     142</span> <span class="tlaGNC">         166 :         bytes32 epSlot = UpgradeAddress._EP_SLOT;</span></span>
+<span id="L143"><span class="lineNum">     143</span> <span class="tlaGNC">         166 :         bytes32 verifierSlot = UpgradeAddress._VERIFIER_SLOT;</span></span>
+<span id="L144"><span class="lineNum">     144</span> <span class="tlaGNC">         166 :         bytes32 gasPolicySlot = UpgradeAddress._GAS_POLICY_SLOT;</span></span>
 <span id="L145"><span class="lineNum">     145</span>              :         assembly {</span>
 <span id="L146"><span class="lineNum">     146</span> <span class="tlaUNC">           0 :             sstore(baseSlot, 0)</span></span>
 <span id="L147"><span class="lineNum">     147</span> <span class="tlaUNC">           0 :             sstore(epSlot, 0)</span></span>
@@ -220,8 +220,8 @@
 <span id="L158"><span class="lineNum">     158</span>              :         // recoveryData: starts at base+8, size 4 slots  -&gt; [8,9,10,11]</span>
 <span id="L159"><span class="lineNum">     159</span>              :         // guardiansData: starts at base+12, size 3 slots -&gt; [12,13,14]</span>
 <span id="L160"><span class="lineNum">     160</span>              :         unchecked {</span>
-<span id="L161"><span class="lineNum">     161</span> <span class="tlaGNC">         136 :             for (uint256 i = 6; i &lt;= 14; ++i) {</span></span>
-<span id="L162"><span class="lineNum">     162</span> <span class="tlaGNC">        1224 :                 bytes32 slot = bytes32(uint256(baseSlot) + i);</span></span>
+<span id="L161"><span class="lineNum">     161</span> <span class="tlaGNC">         166 :             for (uint256 i = 6; i &lt;= 14; ++i) {</span></span>
+<span id="L162"><span class="lineNum">     162</span> <span class="tlaGNC">        1494 :                 bytes32 slot = bytes32(uint256(baseSlot) + i);</span></span>
 <span id="L163"><span class="lineNum">     163</span>              :                 assembly {</span>
 <span id="L164"><span class="lineNum">     164</span> <span class="tlaUNC">           0 :                     sstore(slot, 0)</span></span>
 <span id="L165"><span class="lineNum">     165</span>              :                 }</span>
@@ -262,15 +262,15 @@
 <span id="L200"><span class="lineNum">     200</span>              :      * `entryPoint()` can execute.</span>
 <span id="L201"><span class="lineNum">     201</span>              :      *      Reverts with a generic require message if the caller is unauthorized.</span>
 <span id="L202"><span class="lineNum">     202</span>              :      */</span>
-<span id="L203"><span class="lineNum">     203</span> <span class="tlaGNC">         955 :     function _requireForExecute() internal view virtual override {</span></span>
-<span id="L204"><span class="lineNum">     204</span> <span class="tlaGNC">         955 :         require(</span></span>
+<span id="L203"><span class="lineNum">     203</span> <span class="tlaGNC">        1083 :     function _requireForExecute() internal view virtual override {</span></span>
+<span id="L204"><span class="lineNum">     204</span> <span class="tlaGNC">        1083 :         require(</span></span>
 <span id="L205"><span class="lineNum">     205</span>              :             msg.sender == address(this) || msg.sender == address(entryPoint()),</span>
 <span id="L206"><span class="lineNum">     206</span>              :             IBaseOPF7702.OpenfortBaseAccount7702V1_UnauthorizedCaller()</span>
 <span id="L207"><span class="lineNum">     207</span>              :         );</span>
 <span id="L208"><span class="lineNum">     208</span>              :     }</span>
 <span id="L209"><span class="lineNum">     209</span>              : </span>
-<span id="L210"><span class="lineNum">     210</span> <span class="tlaGNC">          79 :     function _requireFromEntryPoint() internal view virtual override {</span></span>
-<span id="L211"><span class="lineNum">     211</span> <span class="tlaGNC">          79 :         require(msg.sender == address(entryPoint()), NotFromEntryPoint());</span></span>
+<span id="L210"><span class="lineNum">     210</span> <span class="tlaGNC">          90 :     function _requireFromEntryPoint() internal view virtual override {</span></span>
+<span id="L211"><span class="lineNum">     211</span> <span class="tlaGNC">          90 :         require(msg.sender == address(entryPoint()), NotFromEntryPoint());</span></span>
 <span id="L212"><span class="lineNum">     212</span>              :     }</span>
 <span id="L213"><span class="lineNum">     213</span>              :     // =============================================================</span>
 <span id="L214"><span class="lineNum">     214</span>              :     //                    GETTERS PUBLIC FUNCTIONS</span>
@@ -281,24 +281,24 @@
 <span id="L219"><span class="lineNum">     219</span>              :      * @return The `IEntryPoint` implementation address.</span>
 <span id="L220"><span class="lineNum">     220</span>              :      * @dev Required by `IAccount` interface to route UserOperations.</span>
 <span id="L221"><span class="lineNum">     221</span>              :      */</span>
-<span id="L222"><span class="lineNum">     222</span> <span class="tlaGNC">         190 :     function entryPoint() public view override returns (IEntryPoint) {</span></span>
-<span id="L223"><span class="lineNum">     223</span> <span class="tlaGNC">         190 :         return IEntryPoint(UpgradeAddress.entryPoint(ENTRY_POINT));</span></span>
+<span id="L222"><span class="lineNum">     222</span> <span class="tlaGNC">         207 :     function entryPoint() public view override returns (IEntryPoint) {</span></span>
+<span id="L223"><span class="lineNum">     223</span> <span class="tlaGNC">         207 :         return IEntryPoint(UpgradeAddress.entryPoint(ENTRY_POINT));</span></span>
 <span id="L224"><span class="lineNum">     224</span>              :     }</span>
 <span id="L225"><span class="lineNum">     225</span>              : </span>
 <span id="L226"><span class="lineNum">     226</span>              :     /**</span>
 <span id="L227"><span class="lineNum">     227</span>              :      * @notice Returns the webAuthn verifier contract used by this account.</span>
 <span id="L228"><span class="lineNum">     228</span>              :      * @return The `address` of implementation.</span>
 <span id="L229"><span class="lineNum">     229</span>              :      */</span>
-<span id="L230"><span class="lineNum">     230</span> <span class="tlaGNC">          55 :     function webAuthnVerifier() public view returns (address) {</span></span>
-<span id="L231"><span class="lineNum">     231</span> <span class="tlaGNC">          55 :         return UpgradeAddress.webAuthnVerifier(WEBAUTHN_VERIFIER);</span></span>
+<span id="L230"><span class="lineNum">     230</span> <span class="tlaGNC">          63 :     function webAuthnVerifier() public view returns (address) {</span></span>
+<span id="L231"><span class="lineNum">     231</span> <span class="tlaGNC">          63 :         return UpgradeAddress.webAuthnVerifier(WEBAUTHN_VERIFIER);</span></span>
 <span id="L232"><span class="lineNum">     232</span>              :     }</span>
 <span id="L233"><span class="lineNum">     233</span>              : </span>
 <span id="L234"><span class="lineNum">     234</span>              :     /**</span>
 <span id="L235"><span class="lineNum">     235</span>              :      * @notice Returns the Gas Policy contract used by this account.</span>
 <span id="L236"><span class="lineNum">     236</span>              :      * @return The `address` of implementation.</span>
 <span id="L237"><span class="lineNum">     237</span>              :      */</span>
-<span id="L238"><span class="lineNum">     238</span> <span class="tlaGNC">          23 :     function gasPolicy() public view returns (address) {</span></span>
-<span id="L239"><span class="lineNum">     239</span> <span class="tlaGNC">          23 :         return UpgradeAddress.gasPolicy(GAS_POLICY);</span></span>
+<span id="L238"><span class="lineNum">     238</span> <span class="tlaGNC">          26 :     function gasPolicy() public view returns (address) {</span></span>
+<span id="L239"><span class="lineNum">     239</span> <span class="tlaGNC">          26 :         return UpgradeAddress.gasPolicy(GAS_POLICY);</span></span>
 <span id="L240"><span class="lineNum">     240</span>              :     }</span>
 <span id="L241"><span class="lineNum">     241</span>              : </span>
 <span id="L242"><span class="lineNum">     242</span>              :     /// @notice Checks if the contract implements a given interface.</span>

@@ -121,6 +121,39 @@ contract BaseOPF7702Test is Deploy {
 
         res = account.isValidSignature((keccak256("a")), signature);
         assertEq(res, bytes4(0xffffffff));
+
+        signature = abi.encode(
+            DEF_WEBAUTHN.UVR,
+            DEF_WEBAUTHN.AUTHENTICATOR_DATA,
+            DEF_WEBAUTHN.CLIENT_DATA_JSON,
+            DEF_WEBAUTHN.CHALLENGE_INDEX,
+            DEF_WEBAUTHN.TYPE_INDEX,
+            keccak256("R"),
+            DEF_WEBAUTHN.S,
+            pK
+        );
+
+        res = account.isValidSignature(userOpHash, signature);
+        assertEq(res, bytes4(0xffffffff));
+
+        signature = abi.encode(
+            true,
+            hex"49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d97631d00000000",
+            "{\"type\":\"webauthn.get\",\"challenge\":\"3lqq6PdMJiHsocGXGhfGdrpFz9mM7bbh7oA4SN7zyfM\",\"origin\":\"http://localhost:5173\",\"crossOrigin\":false}",
+            23,
+            1,
+            hex"587932e2148151a1ec7629aaba061dc3f385bdda0dec658ebb37c23440d5cad1",
+            hex"467ce186dab65a09882b67533d06a48924542bd38559574060015afba4b16d68",
+            PubKey({
+                x: 0x654f68e6d3f5d3e048e4e0b0b49153ce184a5d4c60523595269f5f7c84c97450,
+                y: 0x19e487175223fb66f60d8283b34a3b5c7d600c30dd34e5e9d441acbcab03751f
+            })
+        );
+
+        userOpHash = 0xde5aaae8f74c2621eca1c1971a17c676ba45cfd98cedb6e1ee803848def3c9f3;
+
+        res = account.isValidSignature(userOpHash, signature);
+        assertEq(res, bytes4(0xffffffff));
     }
 
     function _sendUserOp(PackedUserOperation memory _userOp, bytes32 _userOpHash) internal {

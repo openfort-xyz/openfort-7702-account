@@ -160,6 +160,17 @@ contract Deploy is BaseData {
         signature = abi.encodePacked(r, s, v);
     }
 
+    function _signUserOp(PackedUserOperation memory _userOp, uint256 _pK)
+        internal
+        view
+        returns (bytes memory signature)
+    {
+        bytes32 userOpHash = _getUserOpHash(_userOp);
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(_pK, userOpHash);
+        signature = abi.encodePacked(r, s, v);
+    }
+
     function _signUserOpWithSK(PackedUserOperation memory _userOp)
         internal
         view
