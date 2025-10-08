@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2025-10-07 16:08:50</td>
+            <td class="headerValue">2025-10-08 17:36:56</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryLo">28.6&nbsp;%</td>
@@ -172,30 +172,30 @@
 <span id="L110"><span class="lineNum">     110</span>              :      *</span>
 <span id="L111"><span class="lineNum">     111</span>              :      * Emits an {Initialized} event.</span>
 <span id="L112"><span class="lineNum">     112</span>              :      */</span>
-<span id="L113"><span class="lineNum">     113</span> <span class="tlaGNC">         166 :     modifier initializer() {</span></span>
+<span id="L113"><span class="lineNum">     113</span> <span class="tlaGNC">         203 :     modifier initializer() {</span></span>
 <span id="L114"><span class="lineNum">     114</span>              :         // Cache values to avoid duplicated sloads</span>
-<span id="L115"><span class="lineNum">     115</span> <span class="tlaGNC">         166 :         bool isTopLevelCall = !_initializing;</span></span>
-<span id="L116"><span class="lineNum">     116</span> <span class="tlaGNC">         166 :         uint64 initialized = _initialized;</span></span>
+<span id="L115"><span class="lineNum">     115</span> <span class="tlaGNC">         203 :         bool isTopLevelCall = !_initializing;</span></span>
+<span id="L116"><span class="lineNum">     116</span> <span class="tlaGNC">         203 :         uint64 initialized = _initialized;</span></span>
 <span id="L117"><span class="lineNum">     117</span>              : </span>
 <span id="L118"><span class="lineNum">     118</span>              :         // Allowed calls:</span>
 <span id="L119"><span class="lineNum">     119</span>              :         // - initialSetup: the contract is not in the initializing state and no previous version was</span>
 <span id="L120"><span class="lineNum">     120</span>              :         //                 initialized</span>
 <span id="L121"><span class="lineNum">     121</span>              :         // - construction: the contract is initialized at version 1 (no reinitialization) and the</span>
 <span id="L122"><span class="lineNum">     122</span>              :         //                 current contract is just being deployed</span>
-<span id="L123"><span class="lineNum">     123</span> <span class="tlaGNC">         166 :         bool initialSetup = initialized == 0 &amp;&amp; isTopLevelCall;</span></span>
-<span id="L124"><span class="lineNum">     124</span> <span class="tlaGNC">         166 :         bool construction = initialized == 1 &amp;&amp; address(this).code.length == 0;</span></span>
+<span id="L123"><span class="lineNum">     123</span> <span class="tlaGNC">         203 :         bool initialSetup = initialized == 0 &amp;&amp; isTopLevelCall;</span></span>
+<span id="L124"><span class="lineNum">     124</span> <span class="tlaGNC">         203 :         bool construction = initialized == 1 &amp;&amp; address(this).code.length == 0;</span></span>
 <span id="L125"><span class="lineNum">     125</span>              : </span>
-<span id="L126"><span class="lineNum">     126</span> <span class="tlaGNC">         166 :         if (!initialSetup &amp;&amp; !construction) {</span></span>
+<span id="L126"><span class="lineNum">     126</span> <span class="tlaGNC">         203 :         if (!initialSetup &amp;&amp; !construction) {</span></span>
 <span id="L127"><span class="lineNum">     127</span> <span class="tlaUNC">           0 :             revert InvalidInitialization();</span></span>
 <span id="L128"><span class="lineNum">     128</span>              :         }</span>
-<span id="L129"><span class="lineNum">     129</span> <span class="tlaGNC">         166 :         _initialized = 1;</span></span>
-<span id="L130"><span class="lineNum">     130</span> <span class="tlaGNC">         166 :         if (isTopLevelCall) {</span></span>
-<span id="L131"><span class="lineNum">     131</span> <span class="tlaGNC">         166 :             _initializing = true;</span></span>
+<span id="L129"><span class="lineNum">     129</span> <span class="tlaGNC">         203 :         _initialized = 1;</span></span>
+<span id="L130"><span class="lineNum">     130</span> <span class="tlaGNC">         203 :         if (isTopLevelCall) {</span></span>
+<span id="L131"><span class="lineNum">     131</span> <span class="tlaGNC">         203 :             _initializing = true;</span></span>
 <span id="L132"><span class="lineNum">     132</span>              :         }</span>
 <span id="L133"><span class="lineNum">     133</span>              :         _;</span>
-<span id="L134"><span class="lineNum">     134</span> <span class="tlaGNC">         157 :         if (isTopLevelCall) {</span></span>
-<span id="L135"><span class="lineNum">     135</span> <span class="tlaGNC">         157 :             _initializing = false;</span></span>
-<span id="L136"><span class="lineNum">     136</span> <span class="tlaGNC">         157 :             emit Initialized(1);</span></span>
+<span id="L134"><span class="lineNum">     134</span> <span class="tlaGNC">         194 :         if (isTopLevelCall) {</span></span>
+<span id="L135"><span class="lineNum">     135</span> <span class="tlaGNC">         194 :             _initializing = false;</span></span>
+<span id="L136"><span class="lineNum">     136</span> <span class="tlaGNC">         194 :             emit Initialized(1);</span></span>
 <span id="L137"><span class="lineNum">     137</span>              :         }</span>
 <span id="L138"><span class="lineNum">     138</span>              :     }</span>
 <span id="L139"><span class="lineNum">     139</span>              : </span>
@@ -254,13 +254,13 @@
 <span id="L192"><span class="lineNum">     192</span>              :      *</span>
 <span id="L193"><span class="lineNum">     193</span>              :      * Emits an {Initialized} event the first time it is successfully executed.</span>
 <span id="L194"><span class="lineNum">     194</span>              :      */</span>
-<span id="L195"><span class="lineNum">     195</span> <span class="tlaGNC">         174 :     function _disableInitializers() internal virtual {</span></span>
+<span id="L195"><span class="lineNum">     195</span> <span class="tlaGNC">         211 :     function _disableInitializers() internal virtual {</span></span>
 <span id="L196"><span class="lineNum">     196</span> <span class="tlaUNC">           0 :         if (_initializing) {</span></span>
 <span id="L197"><span class="lineNum">     197</span> <span class="tlaUNC">           0 :             revert InvalidInitialization();</span></span>
 <span id="L198"><span class="lineNum">     198</span>              :         }</span>
-<span id="L199"><span class="lineNum">     199</span> <span class="tlaGNC">         174 :         if (_initialized != type(uint64).max) {</span></span>
-<span id="L200"><span class="lineNum">     200</span> <span class="tlaGNC">         174 :             _initialized = type(uint64).max;</span></span>
-<span id="L201"><span class="lineNum">     201</span> <span class="tlaGNC">         174 :             emit Initialized(type(uint64).max);</span></span>
+<span id="L199"><span class="lineNum">     199</span> <span class="tlaGNC">         211 :         if (_initialized != type(uint64).max) {</span></span>
+<span id="L200"><span class="lineNum">     200</span> <span class="tlaGNC">         211 :             _initialized = type(uint64).max;</span></span>
+<span id="L201"><span class="lineNum">     201</span> <span class="tlaGNC">         211 :             emit Initialized(type(uint64).max);</span></span>
 <span id="L202"><span class="lineNum">     202</span>              :         }</span>
 <span id="L203"><span class="lineNum">     203</span>              :     }</span>
 <span id="L204"><span class="lineNum">     204</span>              : </span>

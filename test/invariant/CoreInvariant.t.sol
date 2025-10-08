@@ -13,7 +13,8 @@ import {EntryPoint} from "lib/account-abstraction/contracts/core/EntryPoint.sol"
 import {SafeCast} from "lib/openzeppelin-contracts/contracts/utils/math/SafeCast.sol";
 import {WebAuthnVerifierV2} from "src/utils/WebAuthnVerifierV2.sol";
 import {GasPolicy} from "src/utils/GasPolicy.sol";
-import {MessageHashUtils} from "lib/openzeppelin-contracts/contracts/utils/cryptography/MessageHashUtils.sol";
+import {MessageHashUtils} from
+    "lib/openzeppelin-contracts/contracts/utils/cryptography/MessageHashUtils.sol";
 import {IEntryPoint} from "lib/account-abstraction/contracts/interfaces/IEntryPoint.sol";
 import {Math} from "lib/openzeppelin-contracts/contracts/utils/math/Math.sol";
 import {MockERC20} from "src/mocks/MockERC20.sol";
@@ -38,10 +39,7 @@ contract DeployInvariantHelper is BaseData {
         _createInitialGuradian();
 
         implementation = new OPF7702(
-            address(entryPoint),
-            address(webAuthn),
-            address(gasPolicy),
-            address(recoveryManager)
+            address(entryPoint), address(webAuthn), address(gasPolicy), address(recoveryManager)
         );
 
         erc20 = new MockERC20();
@@ -52,13 +50,7 @@ contract DeployInvariantHelper is BaseData {
         _deal();
 
         _createCustomFreshKey(
-            true,
-            KeyType.EOA,
-            type(uint48).max,
-            0,
-            0,
-            _getKeyEOA(owner),
-            KeyControl.Self
+            true, KeyType.EOA, type(uint48).max, 0, 0, _getKeyEOA(owner), KeyControl.Self
         );
 
         _createCustomFreshKey(
@@ -123,13 +115,16 @@ contract DeployInvariantHelper is BaseData {
             skReg.keyControl
         );
 
-        bytes32 structHash = keccak256(abi.encode(INIT_TYPEHASH, mkDataEnc, skDataEnc, _initialGuardian));
+        bytes32 structHash =
+            keccak256(abi.encode(INIT_TYPEHASH, mkDataEnc, skDataEnc, _initialGuardian));
 
         string memory name = "OPF7702Recoverable";
         string memory version = "1";
 
         bytes32 domainSeparator = keccak256(
-            abi.encode(TYPE_HASH, keccak256(bytes(name)), keccak256(bytes(version)), block.chainid, owner)
+            abi.encode(
+                TYPE_HASH, keccak256(bytes(name)), keccak256(bytes(version)), block.chainid, owner
+            )
         );
 
         bytes32 digest = MessageHashUtils.toTypedDataHash(domainSeparator, structHash);
@@ -141,7 +136,9 @@ contract DeployInvariantHelper is BaseData {
     }
 }
 
-error InvariantGuardianQuorumMismatch(uint32 stored, uint256 expected, uint256 guardianCount, bool locked);
+error InvariantGuardianQuorumMismatch(
+    uint32 stored, uint256 expected, uint256 guardianCount, bool locked
+);
 
 contract InvariantHandler is Test {
     using KeysManagerLib for IKey.KeyDataReg;
@@ -353,7 +350,13 @@ contract InvariantHandler is Test {
         bytes memory encoded = abi.encode(keyOwner);
         IKey.KeyDataReg memory keyData = IKey.KeyDataReg({
             keyType: IKey.KeyType.EOA,
-            validUntil: uint48(bound(block.timestamp + 1 days + (seed % 30 days), block.timestamp + 1, type(uint48).max - 1)),
+            validUntil: uint48(
+                bound(
+                    block.timestamp + 1 days + (seed % 30 days),
+                    block.timestamp + 1,
+                    type(uint48).max - 1
+                )
+            ),
             validAfter: 0,
             limits: uint48(bound(seed + 1, 1, type(uint48).max - 1)),
             key: encoded,
@@ -573,7 +576,8 @@ contract CoreInvariantTest is StdInvariant {
         selectors[7] = handler.updateKey.selector;
         selectors[8] = handler.warp.selector;
 
-        FuzzSelector memory selectorData = FuzzSelector({addr: address(handler), selectors: selectors});
+        FuzzSelector memory selectorData =
+            FuzzSelector({addr: address(handler), selectors: selectors});
         targetSelector(selectorData);
     }
 
@@ -650,22 +654,19 @@ contract CoreInvariantTest is StdInvariant {
             address(implementation.entryPoint()) == address(configuredEntryPoint),
             "implementation entrypoint mismatch"
         );
-        require(
-            account.webAuthnVerifier() == configuredWebAuthn, "account webauthn mutated"
-        );
+        require(account.webAuthnVerifier() == configuredWebAuthn, "account webauthn mutated");
         require(
             implementation.webAuthnVerifier() == configuredWebAuthn,
             "implementation webauthn mismatch"
         );
         require(account.gasPolicy() == configuredGasPolicy, "account gas policy mutated");
         require(
-            implementation.gasPolicy() == configuredGasPolicy,
-            "implementation gas policy mismatch"
+            implementation.gasPolicy() == configuredGasPolicy, "implementation gas policy mismatch"
         );
     }
 
     function invariant_GuardianQuorumMatchesCountExact() public view {
-        (, , uint32 guardiansRequired) = recoveryManager.recoveryData(address(account));
+        (,, uint32 guardiansRequired) = recoveryManager.recoveryData(address(account));
         if (guardiansRequired == 0) return;
 
         if (!recoveryManager.isLocked(address(account))) {
@@ -678,12 +679,14 @@ contract CoreInvariantTest is StdInvariant {
         uint32 expected = SafeCast.toUint32(Math.ceilDiv(guardianCount, 2));
         if (guardiansRequired != expected) {
             bool locked = recoveryManager.isLocked(address(account));
-            revert InvariantGuardianQuorumMismatch(guardiansRequired, expected, guardianCount, locked);
+            revert InvariantGuardianQuorumMismatch(
+                guardiansRequired, expected, guardianCount, locked
+            );
         }
     }
 
     function invariant_GuardianQuorumMaintained() public view {
-        (, , uint32 guardiansRequired) = recoveryManager.recoveryData(address(account));
+        (,, uint32 guardiansRequired) = recoveryManager.recoveryData(address(account));
         if (guardiansRequired == 0) return;
 
         uint256 guardianCount = recoveryManager.guardianCount(address(account));

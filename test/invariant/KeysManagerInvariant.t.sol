@@ -12,9 +12,12 @@ import {KeysManagerLib} from "src/libs/KeysManagerLib.sol";
 import {SocialRecoveryManager} from "src/utils/SocialRecover.sol";
 import {IERC165} from "lib/openzeppelin-contracts/contracts/interfaces/IERC165.sol";
 import {IERC1271} from "lib/openzeppelin-contracts/contracts/interfaces/IERC1271.sol";
-import {IERC1155Receiver} from "lib/openzeppelin-contracts/contracts/token/ERC1155/IERC1155Receiver.sol";
-import {IERC721Receiver} from "lib/openzeppelin-contracts/contracts/token/ERC721/IERC721Receiver.sol";
-import {IERC777Recipient} from "lib/openzeppelin-contracts/contracts/interfaces/IERC777Recipient.sol";
+import {IERC1155Receiver} from
+    "lib/openzeppelin-contracts/contracts/token/ERC1155/IERC1155Receiver.sol";
+import {IERC721Receiver} from
+    "lib/openzeppelin-contracts/contracts/token/ERC721/IERC721Receiver.sol";
+import {IERC777Recipient} from
+    "lib/openzeppelin-contracts/contracts/interfaces/IERC777Recipient.sol";
 import {IAccount} from "lib/account-abstraction/contracts/interfaces/IAccount.sol";
 import {IERC7821} from "src/interfaces/IERC7821.sol";
 import {IEntryPoint} from "lib/account-abstraction/contracts/interfaces/IEntryPoint.sol";
@@ -193,12 +196,7 @@ contract KeysManagerHandler is Test {
         account.clearSpendPermissions(keyId);
     }
 
-    function setCanCall(
-        uint256 keySeed,
-        uint8 targetSeed,
-        uint8 selectorSeed,
-        bool can
-    ) external {
+    function setCanCall(uint256 keySeed, uint8 targetSeed, uint8 selectorSeed, bool can) external {
         bytes32[] memory keys = _activeNonMasterKeys();
         if (keys.length == 0) return;
 
@@ -267,9 +265,7 @@ contract KeysManagerHandler is Test {
 
         for (uint256 i; i < total; ++i) {
             (bytes32 keyId, IKey.KeyData memory data) = account.keyAt(i);
-            if (
-                keyId != bytes32(0) && !data.masterKey && !data.isActive && data.key.length != 0
-            ) {
+            if (keyId != bytes32(0) && !data.masterKey && !data.isActive && data.key.length != 0) {
                 temp[count++] = keyId;
             }
         }
@@ -408,7 +404,8 @@ contract KeysManagerInvariantTest is StdInvariant {
         selectors[9] = handler.setCanCall.selector;
         selectors[10] = handler.clearExecutePermissions.selector;
 
-        FuzzSelector memory selectorData = FuzzSelector({addr: address(handler), selectors: selectors});
+        FuzzSelector memory selectorData =
+            FuzzSelector({addr: address(handler), selectors: selectors});
         targetSelector(selectorData);
     }
 

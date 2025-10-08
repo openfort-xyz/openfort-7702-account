@@ -31,13 +31,13 @@
             <td class="headerValue">lcov.info</td>
             <td></td>
             <td class="headerItem">Lines:</td>
-            <td class="headerCovTableEntryLo">73.5&nbsp;%</td>
+            <td class="headerCovTableEntryMed">75.0&nbsp;%</td>
             <td class="headerCovTableEntry">68</td>
-            <td class="headerCovTableEntry">50</td>
+            <td class="headerCovTableEntry">51</td>
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2025-10-07 16:08:50</td>
+            <td class="headerValue">2025-10-08 17:36:56</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryLo">66.7&nbsp;%</td>
@@ -60,299 +60,308 @@
               <td>
 <pre class="sourceHeading">            Line data    Source code</pre>
 <pre class="source">
-<span id="L1"><span class="lineNum">       1</span>              : // SPDX-License-Identifier: MIT</span>
-<span id="L2"><span class="lineNum">       2</span>              : pragma solidity ^0.8.29;</span>
-<span id="L3"><span class="lineNum">       3</span>              : </span>
-<span id="L4"><span class="lineNum">       4</span>              : import &quot;src/interfaces/IPolicy.sol&quot;;</span>
-<span id="L5"><span class="lineNum">       5</span>              : import &quot;lib/account-abstraction/contracts/core/UserOperationLib.sol&quot;;</span>
-<span id="L6"><span class="lineNum">       6</span>              : </span>
-<span id="L7"><span class="lineNum">       7</span>              : /**</span>
-<span id="L8"><span class="lineNum">       8</span>              :  * @title   7702/SCA Gas Policy Validator</span>
-<span id="L9"><span class="lineNum">       9</span>              :  * @author  Openfort — @0xkoiner</span>
-<span id="L10"><span class="lineNum">      10</span>              :  * @notice  Enforces per-session gas/cost/tx budgets for EIP-7702 accounts and ERC-4337</span>
-<span id="L11"><span class="lineNum">      11</span>              :  *          Smart Contract Accounts (SCAs). Validates a UserOperation’s gas envelope and</span>
-<span id="L12"><span class="lineNum">      12</span>              :  *          worst-case wei cost before allowing it to proceed, and atomically accounts</span>
-<span id="L13"><span class="lineNum">      13</span>              :  *          usage against the caller’s configured limits.</span>
-<span id="L14"><span class="lineNum">      14</span>              :  *</span>
-<span id="L15"><span class="lineNum">      15</span>              :  * @dev</span>
-<span id="L16"><span class="lineNum">      16</span>              :  * - Storage keying: budgets are stored per (configId, account). The `checkUserOpPolicy`</span>
-<span id="L17"><span class="lineNum">      17</span>              :  *   call requires `msg.sender == userOp.sender` so that only the account whose budgets</span>
-<span id="L18"><span class="lineNum">      18</span>              :  *   are mutated can invoke it (prevents third-party griefing).</span>
-<span id="L19"><span class="lineNum">      19</span>              :  *</span>
-<span id="L20"><span class="lineNum">      20</span>              :  */</span>
-<span id="L21"><span class="lineNum">      21</span>              : contract GasPolicy is IUserOpPolicy {</span>
-<span id="L22"><span class="lineNum">      22</span>              :     using UserOperationLib for PackedUserOperation;</span>
-<span id="L23"><span class="lineNum">      23</span>              : </span>
-<span id="L24"><span class="lineNum">      24</span>              :     // ---------------------- Validation return codes ----------------------</span>
-<span id="L25"><span class="lineNum">      25</span>              :     /// @notice Standardized status codes expected by the policy caller.</span>
-<span id="L26"><span class="lineNum">      26</span>              :     uint256 private constant VALIDATION_FAILED = 1;</span>
-<span id="L27"><span class="lineNum">      27</span>              :     uint256 private constant VALIDATION_SUCCESS = 0;</span>
-<span id="L28"><span class="lineNum">      28</span>              : </span>
-<span id="L29"><span class="lineNum">      29</span>              :     // ---------------------- % and BPS helpers ----------------------</span>
-<span id="L30"><span class="lineNum">      30</span>              :     // Basis-points arithmetic (x * bps / 10_000), often with ceil</span>
-<span id="L31"><span class="lineNum">      31</span>              :     /// @dev Denominator for basis points arithmetic.</span>
-<span id="L32"><span class="lineNum">      32</span>              :     uint256 private constant BPS_DENOMINATOR = 10_000;</span>
-<span id="L33"><span class="lineNum">      33</span>              :     /// @dev Addend to achieve ceil division for positive integers in BPS math.</span>
-<span id="L34"><span class="lineNum">      34</span>              :     uint256 private constant BPS_CEIL_ROUNDING = 9999;</span>
-<span id="L35"><span class="lineNum">      35</span>              : </span>
-<span id="L36"><span class="lineNum">      36</span>              :     // -------- Defaults for auto-initialization --------</span>
-<span id="L37"><span class="lineNum">      37</span>              :     uint256 private immutable DEFAULT_PVG; // packaging/bytes for P-256/WebAuthn signatures</span>
-<span id="L38"><span class="lineNum">      38</span>              :     uint256 private immutable DEFAULT_VGL; // validation (session key checks, EIP-1271/P-256 parsing)</span>
-<span id="L39"><span class="lineNum">      39</span>              :     uint256 private immutable DEFAULT_CGL; // ERC20 transfer/batch execution</span>
-<span id="L40"><span class="lineNum">      40</span>              :     uint256 private immutable DEFAULT_PMV; // paymaster validate</span>
-<span id="L41"><span class="lineNum">      41</span>              :     uint256 private immutable DEFAULT_PO; // postOp (token charge/refund)</span>
-<span id="L42"><span class="lineNum">      42</span>              : </span>
-<span id="L43"><span class="lineNum">      43</span>              :     // Safety margins</span>
-<span id="L44"><span class="lineNum">      44</span>              :     /// @dev Safety multiplier on total per-op envelope, expressed in BPS (e.g., 12000 = +20%).</span>
-<span id="L45"><span class="lineNum">      45</span>              :     uint256 private constant SAFETY_BPS = 12_000; // +20% on gas envelope</span>
-<span id="L46"><span class="lineNum">      46</span>              : </span>
-<span id="L47"><span class="lineNum">      47</span>              :     /// @notice Per-(configId, account) gas/cost/tx budget configuration and live counters.</span>
-<span id="L48"><span class="lineNum">      48</span>              :     mapping(bytes32 id =&gt; mapping(address account =&gt; GasLimitConfig)) gasLimitConfigs;</span>
-<span id="L49"><span class="lineNum">      49</span>              : </span>
-<span id="L50"><span class="lineNum">      50</span>              :     /**</span>
-<span id="L51"><span class="lineNum">      51</span>              :      * @notice Construct the policy with default per-leg gas estimates.</span>
-<span id="L52"><span class="lineNum">      52</span>              :      * @param _defaultPVG Default preVerificationGas leg.</span>
-<span id="L53"><span class="lineNum">      53</span>              :      * @param _defaultVGL Default verificationGasLimit leg.</span>
-<span id="L54"><span class="lineNum">      54</span>              :      * @param _defaultCGL Default callGasLimit leg.</span>
-<span id="L55"><span class="lineNum">      55</span>              :      * @param _defaultPMV Default paymaster verification gas leg.</span>
-<span id="L56"><span class="lineNum">      56</span>              :      * @param _defaultPO  Default postOp gas leg.</span>
-<span id="L57"><span class="lineNum">      57</span>              :      * @dev Reverts if any default leg is zero to avoid nonsensical auto-init computations.</span>
-<span id="L58"><span class="lineNum">      58</span>              :      */</span>
-<span id="L59"><span class="lineNum">      59</span> <span class="tlaGNC">         192 :     constructor(</span></span>
-<span id="L60"><span class="lineNum">      60</span>              :         uint256 _defaultPVG,</span>
-<span id="L61"><span class="lineNum">      61</span>              :         uint256 _defaultVGL,</span>
-<span id="L62"><span class="lineNum">      62</span>              :         uint256 _defaultCGL,</span>
-<span id="L63"><span class="lineNum">      63</span>              :         uint256 _defaultPMV,</span>
-<span id="L64"><span class="lineNum">      64</span>              :         uint256 _defaultPO</span>
-<span id="L65"><span class="lineNum">      65</span>              :     ) {</span>
-<span id="L66"><span class="lineNum">      66</span>              :         if (</span>
-<span id="L67"><span class="lineNum">      67</span> <span class="tlaGNC">         192 :             _defaultPVG == 0 || _defaultVGL == 0 || _defaultCGL == 0 || _defaultPMV == 0</span></span>
-<span id="L68"><span class="lineNum">      68</span> <span class="tlaGNC">         191 :                 || _defaultPO == 0</span></span>
-<span id="L69"><span class="lineNum">      69</span> <span class="tlaGNC">           1 :         ) {</span></span>
-<span id="L70"><span class="lineNum">      70</span> <span class="tlaGNC">           1 :             revert GasPolicy__InitializationIncorrect();</span></span>
-<span id="L71"><span class="lineNum">      71</span>              :         }</span>
-<span id="L72"><span class="lineNum">      72</span> <span class="tlaGNC">         191 :         DEFAULT_PVG = _defaultPVG;</span></span>
-<span id="L73"><span class="lineNum">      73</span> <span class="tlaGNC">         191 :         DEFAULT_VGL = _defaultVGL;</span></span>
-<span id="L74"><span class="lineNum">      74</span> <span class="tlaGNC">         191 :         DEFAULT_CGL = _defaultCGL;</span></span>
-<span id="L75"><span class="lineNum">      75</span> <span class="tlaGNC">         191 :         DEFAULT_PMV = _defaultPMV;</span></span>
-<span id="L76"><span class="lineNum">      76</span> <span class="tlaGNC">         191 :         DEFAULT_PO = _defaultPO;</span></span>
-<span id="L77"><span class="lineNum">      77</span>              :     }</span>
-<span id="L78"><span class="lineNum">      78</span>              : </span>
-<span id="L79"><span class="lineNum">      79</span>              :     // ---------------------- POLICY CHECK ----------------------</span>
-<span id="L80"><span class="lineNum">      80</span>              :     /**</span>
-<span id="L81"><span class="lineNum">      81</span>              :      * @notice Validate a `PackedUserOperation` against configured gas budgets and account usage.</span>
-<span id="L82"><span class="lineNum">      82</span>              :      * @param id     Session/policy identifier (e.g., keccak256 over session public key).</span>
-<span id="L83"><span class="lineNum">      83</span>              :      * @param userOp The packed user operation being validated and accounted.</span>
-<span id="L84"><span class="lineNum">      84</span>              :      * @return validationCode `0` on success, `1` on failure (ERC-4337 policy semantics).</span>
-<span id="L85"><span class="lineNum">      85</span>              :      * @dev</span>
-<span id="L86"><span class="lineNum">      86</span>              :      * - Access: Only the account (`userOp.sender`) may call; prevents 3rd-party budget griefing.</span>
-<span id="L87"><span class="lineNum">      87</span>              :      * - Behavior: Computes the gas envelope (PVG+VGL+[PMV]+CGL+[PO]), checks cumulative gas and tx caps,</span>
-<span id="L88"><span class="lineNum">      88</span>              :      *   and increments usage counters optimistically.</span>
-<span id="L89"><span class="lineNum">      89</span>              :      * - Paymaster note: Only considered when `paymasterAndData.length &gt;= PAYMASTER_DATA_OFFSET`.</span>
-<span id="L90"><span class="lineNum">      90</span>              :      */</span>
-<span id="L91"><span class="lineNum">      91</span> <span class="tlaGNC">         924 :     function checkUserOpPolicy(bytes32 id, PackedUserOperation calldata userOp)</span></span>
-<span id="L92"><span class="lineNum">      92</span>              :         external</span>
-<span id="L93"><span class="lineNum">      93</span>              :         returns (uint256)</span>
-<span id="L94"><span class="lineNum">      94</span>              :     {</span>
-<span id="L95"><span class="lineNum">      95</span>              :         /// @dev Only the account itself may mutate its budgets</span>
-<span id="L96"><span class="lineNum">      96</span> <span class="tlaGNC">         924 :         if (msg.sender != userOp.sender) return VALIDATION_FAILED;</span></span>
-<span id="L97"><span class="lineNum">      97</span> <span class="tlaGNC">         923 :         GasLimitConfig storage cfg = gasLimitConfigs[id][userOp.sender];</span></span>
-<span id="L98"><span class="lineNum">      98</span> <span class="tlaGNC">         923 :         if (!cfg.initialized) return VALIDATION_FAILED;</span></span>
-<span id="L99"><span class="lineNum">      99</span>              : </span>
-<span id="L100"><span class="lineNum">     100</span>              :         /// @dev Unpack gas envelope</span>
-<span id="L101"><span class="lineNum">     101</span> <span class="tlaGNC">         922 :         uint256 envelopeUnits = 0;</span></span>
-<span id="L102"><span class="lineNum">     102</span>              : </span>
-<span id="L103"><span class="lineNum">     103</span> <span class="tlaGNC">         922 :         envelopeUnits += userOp.preVerificationGas;</span></span>
-<span id="L104"><span class="lineNum">     104</span> <span class="tlaGNC">         922 :         envelopeUnits += UserOperationLib.unpackVerificationGasLimit(userOp);</span></span>
-<span id="L105"><span class="lineNum">     105</span> <span class="tlaGNC">         922 :         uint256 cgl = UserOperationLib.unpackCallGasLimit(userOp);</span></span>
-<span id="L106"><span class="lineNum">     106</span>              : </span>
-<span id="L107"><span class="lineNum">     107</span> <span class="tlaGNC">         922 :         uint256 postOp = 0;</span></span>
-<span id="L108"><span class="lineNum">     108</span> <span class="tlaGNC">         922 :         if (userOp.paymasterAndData.length &gt;= UserOperationLib.PAYMASTER_DATA_OFFSET) {</span></span>
-<span id="L109"><span class="lineNum">     109</span> <span class="tlaGNC">           4 :             envelopeUnits += UserOperationLib.unpackPaymasterVerificationGasLimit(userOp);</span></span>
-<span id="L110"><span class="lineNum">     110</span> <span class="tlaGNC">           4 :             postOp = UserOperationLib.unpackPostOpGasLimit(userOp);</span></span>
-<span id="L111"><span class="lineNum">     111</span>              :         }</span>
-<span id="L112"><span class="lineNum">     112</span>              : </span>
-<span id="L113"><span class="lineNum">     113</span> <span class="tlaGNC">         922 :         envelopeUnits += cgl + postOp;</span></span>
-<span id="L114"><span class="lineNum">     114</span>              : </span>
-<span id="L115"><span class="lineNum">     115</span> <span class="tlaGNC">         922 :         if (cfg.gasLimit &gt; 0 &amp;&amp; cfg.gasUsed + envelopeUnits &gt; cfg.gasLimit) {</span></span>
-<span id="L116"><span class="lineNum">     116</span> <span class="tlaGNC">         159 :             return VALIDATION_FAILED;</span></span>
-<span id="L117"><span class="lineNum">     117</span>              :         }</span>
-<span id="L118"><span class="lineNum">     118</span>              : </span>
-<span id="L119"><span class="lineNum">     119</span> <span class="tlaGNC">         763 :         if (envelopeUnits &gt; type(uint128).max) {</span></span>
-<span id="L120"><span class="lineNum">     120</span> <span class="tlaUNC">           0 :             return VALIDATION_FAILED;</span></span>
-<span id="L121"><span class="lineNum">     121</span>              :         }</span>
-<span id="L122"><span class="lineNum">     122</span>              : </span>
-<span id="L123"><span class="lineNum">     123</span>              :         unchecked {</span>
-<span id="L124"><span class="lineNum">     124</span> <span class="tlaGNC">         763 :             cfg.gasUsed += uint128(envelopeUnits);</span></span>
-<span id="L125"><span class="lineNum">     125</span>              :         }</span>
-<span id="L126"><span class="lineNum">     126</span>              : </span>
-<span id="L127"><span class="lineNum">     127</span> <span class="tlaGNC">         763 :         emit GasPolicyAccounted(id, userOp.sender, envelopeUnits, cfg.gasUsed);</span></span>
-<span id="L128"><span class="lineNum">     128</span>              : </span>
-<span id="L129"><span class="lineNum">     129</span> <span class="tlaGNC">         763 :         return VALIDATION_SUCCESS;</span></span>
-<span id="L130"><span class="lineNum">     130</span>              :     }</span>
+<span id="L1"><span class="lineNum">       1</span>              : /*</span>
+<span id="L2"><span class="lineNum">       2</span>              : ░░      ░░░░      ░░░░      ░░░░░░░░░       ░░░░      ░░░  ░░░░░░░░        ░░░      ░░░  ░░░░  ░</span>
+<span id="L3"><span class="lineNum">       3</span>              : ▒  ▒▒▒▒▒▒▒▒  ▒▒▒▒  ▒▒  ▒▒▒▒▒▒▒▒▒▒▒▒▒▒  ▒▒▒▒  ▒▒  ▒▒▒▒  ▒▒  ▒▒▒▒▒▒▒▒▒▒▒  ▒▒▒▒▒  ▒▒▒▒  ▒▒▒  ▒▒  ▒▒</span>
+<span id="L4"><span class="lineNum">       4</span>              : ▓  ▓▓▓   ▓▓  ▓▓▓▓  ▓▓▓      ▓▓▓▓▓▓▓▓▓       ▓▓▓  ▓▓▓▓  ▓▓  ▓▓▓▓▓▓▓▓▓▓▓  ▓▓▓▓▓  ▓▓▓▓▓▓▓▓▓▓    ▓▓▓</span>
+<span id="L5"><span class="lineNum">       5</span>              : █  ████  ██        ████████  ████████  ████████  ████  ██  ███████████  █████  ████  █████  ████</span>
+<span id="L6"><span class="lineNum">       6</span>              : ██      ███  ████  ███      █████████  █████████      ███        ██        ███      ██████  ████                                        </span>
+<span id="L7"><span class="lineNum">       7</span>              :  */</span>
+<span id="L8"><span class="lineNum">       8</span>              : </span>
+<span id="L9"><span class="lineNum">       9</span>              : // SPDX-License-Identifier: MIT</span>
+<span id="L10"><span class="lineNum">      10</span>              : </span>
+<span id="L11"><span class="lineNum">      11</span>              : pragma solidity ^0.8.29;</span>
+<span id="L12"><span class="lineNum">      12</span>              : </span>
+<span id="L13"><span class="lineNum">      13</span>              : import &quot;src/interfaces/IPolicy.sol&quot;;</span>
+<span id="L14"><span class="lineNum">      14</span>              : import &quot;lib/account-abstraction/contracts/core/UserOperationLib.sol&quot;;</span>
+<span id="L15"><span class="lineNum">      15</span>              : </span>
+<span id="L16"><span class="lineNum">      16</span>              : /**</span>
+<span id="L17"><span class="lineNum">      17</span>              :  * @title   7702/SCA Gas Policy Validator</span>
+<span id="L18"><span class="lineNum">      18</span>              :  * @author  Openfort — @0xkoiner</span>
+<span id="L19"><span class="lineNum">      19</span>              :  * @notice  Enforces per-session gas/cost/tx budgets for EIP-7702 accounts and ERC-4337</span>
+<span id="L20"><span class="lineNum">      20</span>              :  *          Smart Contract Accounts (SCAs). Validates a UserOperation’s gas envelope and</span>
+<span id="L21"><span class="lineNum">      21</span>              :  *          worst-case wei cost before allowing it to proceed, and atomically accounts</span>
+<span id="L22"><span class="lineNum">      22</span>              :  *          usage against the caller’s configured limits.</span>
+<span id="L23"><span class="lineNum">      23</span>              :  *</span>
+<span id="L24"><span class="lineNum">      24</span>              :  * @dev</span>
+<span id="L25"><span class="lineNum">      25</span>              :  * - Storage keying: budgets are stored per (configId, account). The `checkUserOpPolicy`</span>
+<span id="L26"><span class="lineNum">      26</span>              :  *   call requires `msg.sender == userOp.sender` so that only the account whose budgets</span>
+<span id="L27"><span class="lineNum">      27</span>              :  *   are mutated can invoke it (prevents third-party griefing).</span>
+<span id="L28"><span class="lineNum">      28</span>              :  *</span>
+<span id="L29"><span class="lineNum">      29</span>              :  */</span>
+<span id="L30"><span class="lineNum">      30</span>              : contract GasPolicy is IUserOpPolicy {</span>
+<span id="L31"><span class="lineNum">      31</span>              :     using UserOperationLib for PackedUserOperation;</span>
+<span id="L32"><span class="lineNum">      32</span>              : </span>
+<span id="L33"><span class="lineNum">      33</span>              :     // ---------------------- Validation return codes ----------------------</span>
+<span id="L34"><span class="lineNum">      34</span>              :     /// @notice Standardized status codes expected by the policy caller.</span>
+<span id="L35"><span class="lineNum">      35</span>              :     uint256 private constant VALIDATION_FAILED = 1;</span>
+<span id="L36"><span class="lineNum">      36</span>              :     uint256 private constant VALIDATION_SUCCESS = 0;</span>
+<span id="L37"><span class="lineNum">      37</span>              : </span>
+<span id="L38"><span class="lineNum">      38</span>              :     // ---------------------- % and BPS helpers ----------------------</span>
+<span id="L39"><span class="lineNum">      39</span>              :     // Basis-points arithmetic (x * bps / 10_000), often with ceil</span>
+<span id="L40"><span class="lineNum">      40</span>              :     /// @dev Denominator for basis points arithmetic.</span>
+<span id="L41"><span class="lineNum">      41</span>              :     uint256 private constant BPS_DENOMINATOR = 10_000;</span>
+<span id="L42"><span class="lineNum">      42</span>              :     /// @dev Addend to achieve ceil division for positive integers in BPS math.</span>
+<span id="L43"><span class="lineNum">      43</span>              :     uint256 private constant BPS_CEIL_ROUNDING = 9999;</span>
+<span id="L44"><span class="lineNum">      44</span>              : </span>
+<span id="L45"><span class="lineNum">      45</span>              :     // -------- Defaults for auto-initialization --------</span>
+<span id="L46"><span class="lineNum">      46</span>              :     uint256 private immutable DEFAULT_PVG; // packaging/bytes for P-256/WebAuthn signatures</span>
+<span id="L47"><span class="lineNum">      47</span>              :     uint256 private immutable DEFAULT_VGL; // validation (session key checks, EIP-1271/P-256 parsing)</span>
+<span id="L48"><span class="lineNum">      48</span>              :     uint256 private immutable DEFAULT_CGL; // ERC20 transfer/batch execution</span>
+<span id="L49"><span class="lineNum">      49</span>              :     uint256 private immutable DEFAULT_PMV; // paymaster validate</span>
+<span id="L50"><span class="lineNum">      50</span>              :     uint256 private immutable DEFAULT_PO; // postOp (token charge/refund)</span>
+<span id="L51"><span class="lineNum">      51</span>              : </span>
+<span id="L52"><span class="lineNum">      52</span>              :     // Safety margins</span>
+<span id="L53"><span class="lineNum">      53</span>              :     /// @dev Safety multiplier on total per-op envelope, expressed in BPS (e.g., 12000 = +20%).</span>
+<span id="L54"><span class="lineNum">      54</span>              :     uint256 private constant SAFETY_BPS = 12_000; // +20% on gas envelope</span>
+<span id="L55"><span class="lineNum">      55</span>              : </span>
+<span id="L56"><span class="lineNum">      56</span>              :     /// @notice Per-(configId, account) gas/cost/tx budget configuration and live counters.</span>
+<span id="L57"><span class="lineNum">      57</span>              :     mapping(bytes32 id =&gt; mapping(address account =&gt; GasLimitConfig)) gasLimitConfigs;</span>
+<span id="L58"><span class="lineNum">      58</span>              : </span>
+<span id="L59"><span class="lineNum">      59</span>              :     /**</span>
+<span id="L60"><span class="lineNum">      60</span>              :      * @notice Construct the policy with default per-leg gas estimates.</span>
+<span id="L61"><span class="lineNum">      61</span>              :      * @param _defaultPVG Default preVerificationGas leg.</span>
+<span id="L62"><span class="lineNum">      62</span>              :      * @param _defaultVGL Default verificationGasLimit leg.</span>
+<span id="L63"><span class="lineNum">      63</span>              :      * @param _defaultCGL Default callGasLimit leg.</span>
+<span id="L64"><span class="lineNum">      64</span>              :      * @param _defaultPMV Default paymaster verification gas leg.</span>
+<span id="L65"><span class="lineNum">      65</span>              :      * @param _defaultPO  Default postOp gas leg.</span>
+<span id="L66"><span class="lineNum">      66</span>              :      * @dev Reverts if any default leg is zero to avoid nonsensical auto-init computations.</span>
+<span id="L67"><span class="lineNum">      67</span>              :      */</span>
+<span id="L68"><span class="lineNum">      68</span> <span class="tlaGNC">         229 :     constructor(</span></span>
+<span id="L69"><span class="lineNum">      69</span>              :         uint256 _defaultPVG,</span>
+<span id="L70"><span class="lineNum">      70</span>              :         uint256 _defaultVGL,</span>
+<span id="L71"><span class="lineNum">      71</span>              :         uint256 _defaultCGL,</span>
+<span id="L72"><span class="lineNum">      72</span>              :         uint256 _defaultPMV,</span>
+<span id="L73"><span class="lineNum">      73</span>              :         uint256 _defaultPO</span>
+<span id="L74"><span class="lineNum">      74</span>              :     ) {</span>
+<span id="L75"><span class="lineNum">      75</span>              :         if (</span>
+<span id="L76"><span class="lineNum">      76</span> <span class="tlaGNC">         229 :             _defaultPVG == 0 || _defaultVGL == 0 || _defaultCGL == 0 || _defaultPMV == 0</span></span>
+<span id="L77"><span class="lineNum">      77</span> <span class="tlaGNC">         228 :                 || _defaultPO == 0</span></span>
+<span id="L78"><span class="lineNum">      78</span> <span class="tlaGNC">           1 :         ) {</span></span>
+<span id="L79"><span class="lineNum">      79</span> <span class="tlaGNC">           1 :             revert GasPolicy__InitializationIncorrect();</span></span>
+<span id="L80"><span class="lineNum">      80</span>              :         }</span>
+<span id="L81"><span class="lineNum">      81</span> <span class="tlaGNC">         228 :         DEFAULT_PVG = _defaultPVG;</span></span>
+<span id="L82"><span class="lineNum">      82</span> <span class="tlaGNC">         228 :         DEFAULT_VGL = _defaultVGL;</span></span>
+<span id="L83"><span class="lineNum">      83</span> <span class="tlaGNC">         228 :         DEFAULT_CGL = _defaultCGL;</span></span>
+<span id="L84"><span class="lineNum">      84</span> <span class="tlaGNC">         228 :         DEFAULT_PMV = _defaultPMV;</span></span>
+<span id="L85"><span class="lineNum">      85</span> <span class="tlaGNC">         228 :         DEFAULT_PO = _defaultPO;</span></span>
+<span id="L86"><span class="lineNum">      86</span>              :     }</span>
+<span id="L87"><span class="lineNum">      87</span>              : </span>
+<span id="L88"><span class="lineNum">      88</span>              :     // ---------------------- POLICY CHECK ----------------------</span>
+<span id="L89"><span class="lineNum">      89</span>              :     /**</span>
+<span id="L90"><span class="lineNum">      90</span>              :      * @notice Validate a `PackedUserOperation` against configured gas budgets and account usage.</span>
+<span id="L91"><span class="lineNum">      91</span>              :      * @param id     Session/policy identifier (e.g., keccak256 over session public key).</span>
+<span id="L92"><span class="lineNum">      92</span>              :      * @param userOp The packed user operation being validated and accounted.</span>
+<span id="L93"><span class="lineNum">      93</span>              :      * @return validationCode `0` on success, `1` on failure (ERC-4337 policy semantics).</span>
+<span id="L94"><span class="lineNum">      94</span>              :      * @dev</span>
+<span id="L95"><span class="lineNum">      95</span>              :      * - Access: Only the account (`userOp.sender`) may call; prevents 3rd-party budget griefing.</span>
+<span id="L96"><span class="lineNum">      96</span>              :      * - Behavior: Computes the gas envelope (PVG+VGL+[PMV]+CGL+[PO]), checks cumulative gas and tx caps,</span>
+<span id="L97"><span class="lineNum">      97</span>              :      *   and increments usage counters optimistically.</span>
+<span id="L98"><span class="lineNum">      98</span>              :      * - Paymaster note: Only considered when `paymasterAndData.length &gt;= PAYMASTER_DATA_OFFSET`.</span>
+<span id="L99"><span class="lineNum">      99</span>              :      */</span>
+<span id="L100"><span class="lineNum">     100</span> <span class="tlaGNC">         936 :     function checkUserOpPolicy(bytes32 id, PackedUserOperation calldata userOp)</span></span>
+<span id="L101"><span class="lineNum">     101</span>              :         external</span>
+<span id="L102"><span class="lineNum">     102</span>              :         returns (uint256)</span>
+<span id="L103"><span class="lineNum">     103</span>              :     {</span>
+<span id="L104"><span class="lineNum">     104</span>              :         /// @dev Only the account itself may mutate its budgets</span>
+<span id="L105"><span class="lineNum">     105</span> <span class="tlaGNC">         936 :         if (msg.sender != userOp.sender) return VALIDATION_FAILED;</span></span>
+<span id="L106"><span class="lineNum">     106</span> <span class="tlaGNC">         935 :         GasLimitConfig storage cfg = gasLimitConfigs[id][userOp.sender];</span></span>
+<span id="L107"><span class="lineNum">     107</span> <span class="tlaGNC">         935 :         if (!cfg.initialized) return VALIDATION_FAILED;</span></span>
+<span id="L108"><span class="lineNum">     108</span>              : </span>
+<span id="L109"><span class="lineNum">     109</span>              :         /// @dev Unpack gas envelope</span>
+<span id="L110"><span class="lineNum">     110</span> <span class="tlaGNC">         934 :         uint256 envelopeUnits = 0;</span></span>
+<span id="L111"><span class="lineNum">     111</span>              : </span>
+<span id="L112"><span class="lineNum">     112</span> <span class="tlaGNC">         934 :         envelopeUnits += userOp.preVerificationGas;</span></span>
+<span id="L113"><span class="lineNum">     113</span> <span class="tlaGNC">         934 :         envelopeUnits += UserOperationLib.unpackVerificationGasLimit(userOp);</span></span>
+<span id="L114"><span class="lineNum">     114</span> <span class="tlaGNC">         934 :         uint256 cgl = UserOperationLib.unpackCallGasLimit(userOp);</span></span>
+<span id="L115"><span class="lineNum">     115</span>              : </span>
+<span id="L116"><span class="lineNum">     116</span> <span class="tlaGNC">         934 :         uint256 postOp = 0;</span></span>
+<span id="L117"><span class="lineNum">     117</span> <span class="tlaGNC">         934 :         if (userOp.paymasterAndData.length &gt;= UserOperationLib.PAYMASTER_DATA_OFFSET) {</span></span>
+<span id="L118"><span class="lineNum">     118</span> <span class="tlaGNC">           4 :             envelopeUnits += UserOperationLib.unpackPaymasterVerificationGasLimit(userOp);</span></span>
+<span id="L119"><span class="lineNum">     119</span> <span class="tlaGNC">           4 :             postOp = UserOperationLib.unpackPostOpGasLimit(userOp);</span></span>
+<span id="L120"><span class="lineNum">     120</span>              :         }</span>
+<span id="L121"><span class="lineNum">     121</span>              : </span>
+<span id="L122"><span class="lineNum">     122</span> <span class="tlaGNC">         934 :         envelopeUnits += cgl + postOp;</span></span>
+<span id="L123"><span class="lineNum">     123</span>              : </span>
+<span id="L124"><span class="lineNum">     124</span> <span class="tlaGNC">         934 :         if (cfg.gasLimit &gt; 0 &amp;&amp; cfg.gasUsed + envelopeUnits &gt; cfg.gasLimit) {</span></span>
+<span id="L125"><span class="lineNum">     125</span> <span class="tlaGNC">         156 :             return VALIDATION_FAILED;</span></span>
+<span id="L126"><span class="lineNum">     126</span>              :         }</span>
+<span id="L127"><span class="lineNum">     127</span>              : </span>
+<span id="L128"><span class="lineNum">     128</span> <span class="tlaGNC">         778 :         if (envelopeUnits &gt; type(uint128).max) {</span></span>
+<span id="L129"><span class="lineNum">     129</span> <span class="tlaUNC">           0 :             return VALIDATION_FAILED;</span></span>
+<span id="L130"><span class="lineNum">     130</span>              :         }</span>
 <span id="L131"><span class="lineNum">     131</span>              : </span>
-<span id="L132"><span class="lineNum">     132</span>              :     // ---------------------- INITIALIZATION (MANUAL) ----------------------</span>
-<span id="L133"><span class="lineNum">     133</span>              :     /**</span>
-<span id="L134"><span class="lineNum">     134</span>              :      * @notice Initialize budgets manually for a given (configId, account).</span>
-<span id="L135"><span class="lineNum">     135</span>              :      * @param account  The 7702 account or SCA whose budgets are being set. Must be the caller.</span>
-<span id="L136"><span class="lineNum">     136</span>              :      * @param configId Session key / policy identifier.</span>
-<span id="L137"><span class="lineNum">     137</span>              :      * @param gasLimitBE Gas budget values.</span>
-<span id="L138"><span class="lineNum">     138</span>              :      * @dev Reverts if already initialized, or if `gasLimit` are zero.</span>
-<span id="L139"><span class="lineNum">     139</span>              :      */</span>
-<span id="L140"><span class="lineNum">     140</span> <span class="tlaUNC">           0 :     function initializeGasPolicy(address account, bytes32 configId, bytes16 gasLimitBE) external {</span></span>
-<span id="L141"><span class="lineNum">     141</span> <span class="tlaUNC">           0 :         require(account == msg.sender, GasPolicy__AccountMustBeSender());</span></span>
-<span id="L142"><span class="lineNum">     142</span> <span class="tlaUNC">           0 :         GasLimitConfig storage cfg = gasLimitConfigs[configId][account];</span></span>
-<span id="L143"><span class="lineNum">     143</span> <span class="tlaUNC">           0 :         if (cfg.initialized) revert GasPolicy__IdExistAlready();</span></span>
-<span id="L144"><span class="lineNum">     144</span>              : </span>
-<span id="L145"><span class="lineNum">     145</span> <span class="tlaUNC">           0 :         uint128 gasLimit = uint128(gasLimitBE);</span></span>
-<span id="L146"><span class="lineNum">     146</span> <span class="tlaUNC">           0 :         if (gasLimit == 0) revert GasPolicy__ZeroBudgets();</span></span>
-<span id="L147"><span class="lineNum">     147</span>              : </span>
-<span id="L148"><span class="lineNum">     148</span> <span class="tlaUNC">           0 :         _applyManualConfig(cfg, gasLimit);</span></span>
-<span id="L149"><span class="lineNum">     149</span>              : </span>
-<span id="L150"><span class="lineNum">     150</span> <span class="tlaUNC">           0 :         emit GasPolicyInitialized(configId, account, cfg.gasLimit, false);</span></span>
-<span id="L151"><span class="lineNum">     151</span>              :     }</span>
-<span id="L152"><span class="lineNum">     152</span>              : </span>
-<span id="L153"><span class="lineNum">     153</span>              :     // ---------------------- INITIALIZATION (AUTO / DEFAULTS) ----------------------</span>
-<span id="L154"><span class="lineNum">     154</span>              :     /**</span>
-<span id="L155"><span class="lineNum">     155</span>              :      * @notice Initialize budgets using conservative defaults scaled by a tx `limit` (gas-only).</span>
-<span id="L156"><span class="lineNum">     156</span>              :      * @param account  The 7702 account or SCA whose budgets are being set. Must be the caller.</span>
-<span id="L157"><span class="lineNum">     157</span>              :      * @param configId Session key / policy identifier.</span>
-<span id="L158"><span class="lineNum">     158</span>              :      * @param limit    Number of UserOperations allowed in this session (0 &lt; limit ≤ 2^32-1).</span>
-<span id="L159"><span class="lineNum">     159</span>              :      * @dev</span>
-<span id="L160"><span class="lineNum">     160</span>              :      *  - Derives per-op envelope by summing DEFAULT_* legs and applying `SAFETY_BPS`.</span>
-<span id="L161"><span class="lineNum">     161</span>              :      *  - No price/wei math; only gas-unit limits are configured.</span>
-<span id="L162"><span class="lineNum">     162</span>              :      */</span>
-<span id="L163"><span class="lineNum">     163</span> <span class="tlaGNC">         541 :     function initializeGasPolicy(address account, bytes32 configId, uint256 limit) external {</span></span>
-<span id="L164"><span class="lineNum">     164</span> <span class="tlaGNC">         541 :         require(account == msg.sender, GasPolicy__AccountMustBeSender());</span></span>
-<span id="L165"><span class="lineNum">     165</span> <span class="tlaGNC">         541 :         GasLimitConfig storage cfg = gasLimitConfigs[configId][account];</span></span>
-<span id="L166"><span class="lineNum">     166</span> <span class="tlaUNC">           0 :         if (cfg.initialized) revert GasPolicy__IdExistAlready();</span></span>
-<span id="L167"><span class="lineNum">     167</span> <span class="tlaGNC">         541 :         require(limit &gt; 0 &amp;&amp; limit &lt;= type(uint32).max, GasPolicy__BadLimit());</span></span>
-<span id="L168"><span class="lineNum">     168</span>              : </span>
-<span id="L169"><span class="lineNum">     169</span>              :         // Envelope units per op with safety (includes PM legs so it also covers sponsored ops)</span>
-<span id="L170"><span class="lineNum">     170</span> <span class="tlaGNC">         541 :         uint256 rawEnvelope = DEFAULT_PVG + DEFAULT_VGL + DEFAULT_CGL + DEFAULT_PMV + DEFAULT_PO;</span></span>
-<span id="L171"><span class="lineNum">     171</span> <span class="tlaGNC">         541 :         uint256 perOpEnvelopeUnits =</span></span>
-<span id="L172"><span class="lineNum">     172</span> <span class="tlaGNC">         541 :             (rawEnvelope * SAFETY_BPS + BPS_CEIL_ROUNDING) / BPS_DENOMINATOR;</span></span>
-<span id="L173"><span class="lineNum">     173</span>              : </span>
-<span id="L174"><span class="lineNum">     174</span>              :         unchecked {</span>
-<span id="L175"><span class="lineNum">     175</span>              :             // Guard the multiplication before casting</span>
-<span id="L176"><span class="lineNum">     176</span> <span class="tlaGNC">         541 :             if (perOpEnvelopeUnits &gt; type(uint256).max / limit) revert GasPolicy_GasLimitHigh();</span></span>
+<span id="L132"><span class="lineNum">     132</span>              :         unchecked {</span>
+<span id="L133"><span class="lineNum">     133</span> <span class="tlaGNC">         778 :             cfg.gasUsed += uint128(envelopeUnits);</span></span>
+<span id="L134"><span class="lineNum">     134</span>              :         }</span>
+<span id="L135"><span class="lineNum">     135</span>              : </span>
+<span id="L136"><span class="lineNum">     136</span> <span class="tlaGNC">         778 :         emit GasPolicyAccounted(id, userOp.sender, envelopeUnits, cfg.gasUsed);</span></span>
+<span id="L137"><span class="lineNum">     137</span>              : </span>
+<span id="L138"><span class="lineNum">     138</span> <span class="tlaGNC">         778 :         return VALIDATION_SUCCESS;</span></span>
+<span id="L139"><span class="lineNum">     139</span>              :     }</span>
+<span id="L140"><span class="lineNum">     140</span>              : </span>
+<span id="L141"><span class="lineNum">     141</span>              :     // ---------------------- INITIALIZATION (MANUAL) ----------------------</span>
+<span id="L142"><span class="lineNum">     142</span>              :     /**</span>
+<span id="L143"><span class="lineNum">     143</span>              :      * @notice Initialize budgets manually for a given (configId, account).</span>
+<span id="L144"><span class="lineNum">     144</span>              :      * @param account  The 7702 account or SCA whose budgets are being set. Must be the caller.</span>
+<span id="L145"><span class="lineNum">     145</span>              :      * @param configId Session key / policy identifier.</span>
+<span id="L146"><span class="lineNum">     146</span>              :      * @param gasLimitBE Gas budget values.</span>
+<span id="L147"><span class="lineNum">     147</span>              :      * @dev Reverts if already initialized, or if `gasLimit` are zero.</span>
+<span id="L148"><span class="lineNum">     148</span>              :      */</span>
+<span id="L149"><span class="lineNum">     149</span> <span class="tlaUNC">           0 :     function initializeGasPolicy(address account, bytes32 configId, bytes16 gasLimitBE) external {</span></span>
+<span id="L150"><span class="lineNum">     150</span> <span class="tlaUNC">           0 :         require(account == msg.sender, GasPolicy__AccountMustBeSender());</span></span>
+<span id="L151"><span class="lineNum">     151</span> <span class="tlaUNC">           0 :         GasLimitConfig storage cfg = gasLimitConfigs[configId][account];</span></span>
+<span id="L152"><span class="lineNum">     152</span> <span class="tlaUNC">           0 :         if (cfg.initialized) revert GasPolicy__IdExistAlready();</span></span>
+<span id="L153"><span class="lineNum">     153</span>              : </span>
+<span id="L154"><span class="lineNum">     154</span> <span class="tlaUNC">           0 :         uint128 gasLimit = uint128(gasLimitBE);</span></span>
+<span id="L155"><span class="lineNum">     155</span> <span class="tlaUNC">           0 :         if (gasLimit == 0) revert GasPolicy__ZeroBudgets();</span></span>
+<span id="L156"><span class="lineNum">     156</span>              : </span>
+<span id="L157"><span class="lineNum">     157</span> <span class="tlaUNC">           0 :         _applyManualConfig(cfg, gasLimit);</span></span>
+<span id="L158"><span class="lineNum">     158</span>              : </span>
+<span id="L159"><span class="lineNum">     159</span> <span class="tlaUNC">           0 :         emit GasPolicyInitialized(configId, account, cfg.gasLimit, false);</span></span>
+<span id="L160"><span class="lineNum">     160</span>              :     }</span>
+<span id="L161"><span class="lineNum">     161</span>              : </span>
+<span id="L162"><span class="lineNum">     162</span>              :     // ---------------------- INITIALIZATION (AUTO / DEFAULTS) ----------------------</span>
+<span id="L163"><span class="lineNum">     163</span>              :     /**</span>
+<span id="L164"><span class="lineNum">     164</span>              :      * @notice Initialize budgets using conservative defaults scaled by a tx `limit` (gas-only).</span>
+<span id="L165"><span class="lineNum">     165</span>              :      * @param account  The 7702 account or SCA whose budgets are being set. Must be the caller.</span>
+<span id="L166"><span class="lineNum">     166</span>              :      * @param configId Session key / policy identifier.</span>
+<span id="L167"><span class="lineNum">     167</span>              :      * @param limit    Number of UserOperations allowed in this session (0 &lt; limit ≤ 2^32-1).</span>
+<span id="L168"><span class="lineNum">     168</span>              :      * @dev</span>
+<span id="L169"><span class="lineNum">     169</span>              :      *  - Derives per-op envelope by summing DEFAULT_* legs and applying `SAFETY_BPS`.</span>
+<span id="L170"><span class="lineNum">     170</span>              :      *  - No price/wei math; only gas-unit limits are configured.</span>
+<span id="L171"><span class="lineNum">     171</span>              :      */</span>
+<span id="L172"><span class="lineNum">     172</span> <span class="tlaGNC">       30429 :     function initializeGasPolicy(address account, bytes32 configId, uint256 limit) external {</span></span>
+<span id="L173"><span class="lineNum">     173</span> <span class="tlaGNC">       30429 :         require(account == msg.sender, GasPolicy__AccountMustBeSender());</span></span>
+<span id="L174"><span class="lineNum">     174</span> <span class="tlaGNC">       30429 :         GasLimitConfig storage cfg = gasLimitConfigs[configId][account];</span></span>
+<span id="L175"><span class="lineNum">     175</span> <span class="tlaGNC">         190 :         if (cfg.initialized) revert GasPolicy__IdExistAlready();</span></span>
+<span id="L176"><span class="lineNum">     176</span> <span class="tlaGNC">       30239 :         require(limit &gt; 0 &amp;&amp; limit &lt;= type(uint32).max, GasPolicy__BadLimit());</span></span>
 <span id="L177"><span class="lineNum">     177</span>              : </span>
-<span id="L178"><span class="lineNum">     178</span> <span class="tlaGNC">         541 :             uint256 gasLimit256 = perOpEnvelopeUnits * limit;</span></span>
-<span id="L179"><span class="lineNum">     179</span>              : </span>
-<span id="L180"><span class="lineNum">     180</span> <span class="tlaGNC">         541 :             if (gasLimit256 &gt; type(uint128).max) revert GasPolicy_GasLimitHigh();</span></span>
-<span id="L181"><span class="lineNum">     181</span>              : </span>
-<span id="L182"><span class="lineNum">     182</span> <span class="tlaGNC">         541 :             _applyAutoConfig(cfg, uint128(gasLimit256));</span></span>
-<span id="L183"><span class="lineNum">     183</span>              : </span>
-<span id="L184"><span class="lineNum">     184</span> <span class="tlaGNC">         541 :             emit GasPolicyInitialized(configId, account, cfg.gasLimit, false);</span></span>
-<span id="L185"><span class="lineNum">     185</span>              :         }</span>
-<span id="L186"><span class="lineNum">     186</span>              :     }</span>
-<span id="L187"><span class="lineNum">     187</span>              : </span>
-<span id="L188"><span class="lineNum">     188</span>              :     /**</span>
-<span id="L189"><span class="lineNum">     189</span>              :      * @notice Apply manual configuration to a `GasLimitConfig` and mark initialized.</span>
-<span id="L190"><span class="lineNum">     190</span>              :      * @param cfg Storage pointer to the target config.</span>
-<span id="L191"><span class="lineNum">     191</span>              :      * @param gasLimit Explicit budgetssettings.</span>
-<span id="L192"><span class="lineNum">     192</span>              :      */</span>
-<span id="L193"><span class="lineNum">     193</span> <span class="tlaUNC">           0 :     function _applyManualConfig(GasLimitConfig storage cfg, uint128 gasLimit) private {</span></span>
-<span id="L194"><span class="lineNum">     194</span>              :         // Required budgets already checked by caller</span>
-<span id="L195"><span class="lineNum">     195</span> <span class="tlaUNC">           0 :         cfg.gasLimit = gasLimit;</span></span>
-<span id="L196"><span class="lineNum">     196</span> <span class="tlaUNC">           0 :         _resetCountersAndMarkInitialized(cfg);</span></span>
-<span id="L197"><span class="lineNum">     197</span>              :     }</span>
-<span id="L198"><span class="lineNum">     198</span>              : </span>
-<span id="L199"><span class="lineNum">     199</span>              :     /**</span>
-<span id="L200"><span class="lineNum">     200</span>              :      * @notice Apply auto-derived configuration and mark initialized (gas-only).</span>
-<span id="L201"><span class="lineNum">     201</span>              :      * @param cfg       Storage pointer to the target config.</span>
-<span id="L202"><span class="lineNum">     202</span>              :      * @param gasLimit  Total cumulative gas units allowed for the session.</span>
-<span id="L203"><span class="lineNum">     203</span>              :      */</span>
-<span id="L204"><span class="lineNum">     204</span> <span class="tlaGNC">         541 :     function _applyAutoConfig(GasLimitConfig storage cfg, uint128 gasLimit) private {</span></span>
-<span id="L205"><span class="lineNum">     205</span> <span class="tlaGNC">         541 :         cfg.gasLimit = gasLimit;</span></span>
-<span id="L206"><span class="lineNum">     206</span> <span class="tlaGNC">         541 :         _resetCountersAndMarkInitialized(cfg);</span></span>
-<span id="L207"><span class="lineNum">     207</span>              :     }</span>
-<span id="L208"><span class="lineNum">     208</span>              : </span>
-<span id="L209"><span class="lineNum">     209</span>              :     /**</span>
-<span id="L210"><span class="lineNum">     210</span>              :      * @notice Zero out usage counters and set `initialized = true`.</span>
-<span id="L211"><span class="lineNum">     211</span>              :      * @param cfg Storage pointer to the target config.</span>
+<span id="L178"><span class="lineNum">     178</span>              :         // Envelope units per op with safety (includes PM legs so it also covers sponsored ops)</span>
+<span id="L179"><span class="lineNum">     179</span> <span class="tlaGNC">       15525 :         uint256 rawEnvelope = DEFAULT_PVG + DEFAULT_VGL + DEFAULT_CGL + DEFAULT_PMV + DEFAULT_PO;</span></span>
+<span id="L180"><span class="lineNum">     180</span> <span class="tlaGNC">       15525 :         uint256 perOpEnvelopeUnits =</span></span>
+<span id="L181"><span class="lineNum">     181</span> <span class="tlaGNC">       15525 :             (rawEnvelope * SAFETY_BPS + BPS_CEIL_ROUNDING) / BPS_DENOMINATOR;</span></span>
+<span id="L182"><span class="lineNum">     182</span>              : </span>
+<span id="L183"><span class="lineNum">     183</span>              :         unchecked {</span>
+<span id="L184"><span class="lineNum">     184</span>              :             // Guard the multiplication before casting</span>
+<span id="L185"><span class="lineNum">     185</span> <span class="tlaGNC">       15525 :             if (perOpEnvelopeUnits &gt; type(uint256).max / limit) revert GasPolicy_GasLimitHigh();</span></span>
+<span id="L186"><span class="lineNum">     186</span>              : </span>
+<span id="L187"><span class="lineNum">     187</span> <span class="tlaGNC">       15525 :             uint256 gasLimit256 = perOpEnvelopeUnits * limit;</span></span>
+<span id="L188"><span class="lineNum">     188</span>              : </span>
+<span id="L189"><span class="lineNum">     189</span> <span class="tlaGNC">       15525 :             if (gasLimit256 &gt; type(uint128).max) revert GasPolicy_GasLimitHigh();</span></span>
+<span id="L190"><span class="lineNum">     190</span>              : </span>
+<span id="L191"><span class="lineNum">     191</span> <span class="tlaGNC">       15525 :             _applyAutoConfig(cfg, uint128(gasLimit256));</span></span>
+<span id="L192"><span class="lineNum">     192</span>              : </span>
+<span id="L193"><span class="lineNum">     193</span> <span class="tlaGNC">       15525 :             emit GasPolicyInitialized(configId, account, cfg.gasLimit, false);</span></span>
+<span id="L194"><span class="lineNum">     194</span>              :         }</span>
+<span id="L195"><span class="lineNum">     195</span>              :     }</span>
+<span id="L196"><span class="lineNum">     196</span>              : </span>
+<span id="L197"><span class="lineNum">     197</span>              :     /**</span>
+<span id="L198"><span class="lineNum">     198</span>              :      * @notice Apply manual configuration to a `GasLimitConfig` and mark initialized.</span>
+<span id="L199"><span class="lineNum">     199</span>              :      * @param cfg Storage pointer to the target config.</span>
+<span id="L200"><span class="lineNum">     200</span>              :      * @param gasLimit Explicit budgetssettings.</span>
+<span id="L201"><span class="lineNum">     201</span>              :      */</span>
+<span id="L202"><span class="lineNum">     202</span> <span class="tlaUNC">           0 :     function _applyManualConfig(GasLimitConfig storage cfg, uint128 gasLimit) private {</span></span>
+<span id="L203"><span class="lineNum">     203</span>              :         // Required budgets already checked by caller</span>
+<span id="L204"><span class="lineNum">     204</span> <span class="tlaUNC">           0 :         cfg.gasLimit = gasLimit;</span></span>
+<span id="L205"><span class="lineNum">     205</span> <span class="tlaUNC">           0 :         _resetCountersAndMarkInitialized(cfg);</span></span>
+<span id="L206"><span class="lineNum">     206</span>              :     }</span>
+<span id="L207"><span class="lineNum">     207</span>              : </span>
+<span id="L208"><span class="lineNum">     208</span>              :     /**</span>
+<span id="L209"><span class="lineNum">     209</span>              :      * @notice Apply auto-derived configuration and mark initialized (gas-only).</span>
+<span id="L210"><span class="lineNum">     210</span>              :      * @param cfg       Storage pointer to the target config.</span>
+<span id="L211"><span class="lineNum">     211</span>              :      * @param gasLimit  Total cumulative gas units allowed for the session.</span>
 <span id="L212"><span class="lineNum">     212</span>              :      */</span>
-<span id="L213"><span class="lineNum">     213</span> <span class="tlaGNC">         541 :     function _resetCountersAndMarkInitialized(GasLimitConfig storage cfg) private {</span></span>
-<span id="L214"><span class="lineNum">     214</span> <span class="tlaGNC">         541 :         cfg.gasUsed = 0;</span></span>
-<span id="L215"><span class="lineNum">     215</span> <span class="tlaGNC">         541 :         cfg.initialized = true;</span></span>
+<span id="L213"><span class="lineNum">     213</span> <span class="tlaGNC">       15525 :     function _applyAutoConfig(GasLimitConfig storage cfg, uint128 gasLimit) private {</span></span>
+<span id="L214"><span class="lineNum">     214</span> <span class="tlaGNC">       15525 :         cfg.gasLimit = gasLimit;</span></span>
+<span id="L215"><span class="lineNum">     215</span> <span class="tlaGNC">       15525 :         _resetCountersAndMarkInitialized(cfg);</span></span>
 <span id="L216"><span class="lineNum">     216</span>              :     }</span>
 <span id="L217"><span class="lineNum">     217</span>              : </span>
-<span id="L218"><span class="lineNum">     218</span>              :     // ---------------------- VIEWS ----------------------</span>
-<span id="L219"><span class="lineNum">     219</span>              :     /// ---------------------- VIEWS ----------------------</span>
-<span id="L220"><span class="lineNum">     220</span>              :     /// @notice Read a compact view of gas budgets and usage for (configId, account).</span>
-<span id="L221"><span class="lineNum">     221</span>              :     /// @param configId      Session/policy identifier.</span>
-<span id="L222"><span class="lineNum">     222</span>              :     /// @param userOpSender  The account whose config is queried.</span>
-<span id="L223"><span class="lineNum">     223</span>              :     /// @return gasLimit  Cumulative gas units allowed.</span>
-<span id="L224"><span class="lineNum">     224</span>              :     /// @return gasUsed   Gas units consumed so far.</span>
-<span id="L225"><span class="lineNum">     225</span> <span class="tlaGNC">         264 :     function getGasConfig(bytes32 configId, address userOpSender)</span></span>
-<span id="L226"><span class="lineNum">     226</span>              :         external</span>
-<span id="L227"><span class="lineNum">     227</span>              :         view</span>
-<span id="L228"><span class="lineNum">     228</span>              :         returns (uint128 gasLimit, uint128 gasUsed)</span>
-<span id="L229"><span class="lineNum">     229</span>              :     {</span>
-<span id="L230"><span class="lineNum">     230</span> <span class="tlaGNC">         264 :         GasLimitConfig storage c = gasLimitConfigs[configId][userOpSender];</span></span>
-<span id="L231"><span class="lineNum">     231</span> <span class="tlaGNC">         264 :         return (c.gasLimit, c.gasUsed);</span></span>
-<span id="L232"><span class="lineNum">     232</span>              :     }</span>
-<span id="L233"><span class="lineNum">     233</span>              : </span>
-<span id="L234"><span class="lineNum">     234</span>              :     /**</span>
-<span id="L235"><span class="lineNum">     235</span>              :      * @notice Read the full `GasLimitConfig` struct for (configId, account).</span>
-<span id="L236"><span class="lineNum">     236</span>              :      * @param configId  Session/policy identifier.</span>
-<span id="L237"><span class="lineNum">     237</span>              :      * @param userOpSender The account address whose config is queried.</span>
-<span id="L238"><span class="lineNum">     238</span>              :      * @return The full GasLimitConfig stored at (configId, userOpSender).</span>
-<span id="L239"><span class="lineNum">     239</span>              :      */</span>
-<span id="L240"><span class="lineNum">     240</span> <span class="tlaUNC">           0 :     function getGasConfigEx(bytes32 configId, address userOpSender)</span></span>
-<span id="L241"><span class="lineNum">     241</span>              :         external</span>
-<span id="L242"><span class="lineNum">     242</span>              :         view</span>
-<span id="L243"><span class="lineNum">     243</span>              :         returns (GasLimitConfig memory)</span>
-<span id="L244"><span class="lineNum">     244</span>              :     {</span>
-<span id="L245"><span class="lineNum">     245</span> <span class="tlaUNC">           0 :         return gasLimitConfigs[configId][userOpSender];</span></span>
-<span id="L246"><span class="lineNum">     246</span>              :     }</span>
-<span id="L247"><span class="lineNum">     247</span>              : </span>
-<span id="L248"><span class="lineNum">     248</span>              :     // ---------------------- Supported Interfaces ----------------------</span>
-<span id="L249"><span class="lineNum">     249</span> <span class="tlaUNC">           0 :     function supportsInterface(bytes4 interfaceID) external pure override returns (bool) {</span></span>
-<span id="L250"><span class="lineNum">     250</span> <span class="tlaUNC">           0 :         return interfaceID == type(IERC165).interfaceId || interfaceID == type(IPolicy).interfaceId</span></span>
-<span id="L251"><span class="lineNum">     251</span> <span class="tlaUNC">           0 :             || interfaceID == type(IUserOpPolicy).interfaceId;</span></span>
-<span id="L252"><span class="lineNum">     252</span>              :     }</span>
-<span id="L253"><span class="lineNum">     253</span>              : }</span>
-<span id="L254"><span class="lineNum">     254</span>              : </span>
-<span id="L255"><span class="lineNum">     255</span>              : /**</span>
-<span id="L256"><span class="lineNum">     256</span>              :  * - Gas envelope accounted per op:</span>
-<span id="L257"><span class="lineNum">     257</span>              :  *     PVG (preVerificationGas)</span>
-<span id="L258"><span class="lineNum">     258</span>              :  *   + VGL (verificationGasLimit)</span>
-<span id="L259"><span class="lineNum">     259</span>              :  *   + PMV (paymasterVerificationGasLimit, if present)</span>
-<span id="L260"><span class="lineNum">     260</span>              :  *   + CGL (callGasLimit)</span>
-<span id="L261"><span class="lineNum">     261</span>              :  *   + PO  (postOpGasLimit, if present)</span>
-<span id="L262"><span class="lineNum">     262</span>              :  *</span>
-<span id="L263"><span class="lineNum">     263</span>              :  * - Pricing: computes worst-case wei using `userOp.gasPrice()` (min(maxFeePerGas,</span>
-<span id="L264"><span class="lineNum">     264</span>              :  *   basefee + maxPriorityFee))</span>
-<span id="L265"><span class="lineNum">     265</span>              :  *   a threshold. Ceil division is used for BPS math.</span>
-<span id="L266"><span class="lineNum">     266</span>              :  *</span>
-<span id="L267"><span class="lineNum">     267</span>              :  * - Limits:</span>
-<span id="L268"><span class="lineNum">     268</span>              :  *   * `gasLimit`— cumulative ceilings across the session.</span>
-<span id="L269"><span class="lineNum">     269</span>              :  *</span>
-<span id="L270"><span class="lineNum">     270</span>              :  * - Initialization:</span>
-<span id="L271"><span class="lineNum">     271</span>              :  *   * Manual: supply exact budgets.</span>
-<span id="L272"><span class="lineNum">     272</span>              :  *   * Auto: derives conservative defaults from provided DEFAULT_* limit, a safety BPS.</span>
-<span id="L273"><span class="lineNum">     273</span>              :  *</span>
-<span id="L274"><span class="lineNum">     274</span>              :  * - Arithmetic safety:</span>
-<span id="L275"><span class="lineNum">     275</span>              :  *   * `checkUserOpPolicy` guards all mul/add overflows, including the final gas sum.</span>
-<span id="L276"><span class="lineNum">     276</span>              :  *   * Auto-init keeps an `unchecked` block but pre-checks every addition/multiplication</span>
-<span id="L277"><span class="lineNum">     277</span>              :  *     to prevent wraparound before casting to `uint128`.</span>
+<span id="L218"><span class="lineNum">     218</span>              :     /**</span>
+<span id="L219"><span class="lineNum">     219</span>              :      * @notice Zero out usage counters and set `initialized = true`.</span>
+<span id="L220"><span class="lineNum">     220</span>              :      * @param cfg Storage pointer to the target config.</span>
+<span id="L221"><span class="lineNum">     221</span>              :      */</span>
+<span id="L222"><span class="lineNum">     222</span> <span class="tlaGNC">       15525 :     function _resetCountersAndMarkInitialized(GasLimitConfig storage cfg) private {</span></span>
+<span id="L223"><span class="lineNum">     223</span> <span class="tlaGNC">       15525 :         cfg.gasUsed = 0;</span></span>
+<span id="L224"><span class="lineNum">     224</span> <span class="tlaGNC">       15525 :         cfg.initialized = true;</span></span>
+<span id="L225"><span class="lineNum">     225</span>              :     }</span>
+<span id="L226"><span class="lineNum">     226</span>              : </span>
+<span id="L227"><span class="lineNum">     227</span>              :     // ---------------------- VIEWS ----------------------</span>
+<span id="L228"><span class="lineNum">     228</span>              :     /// ---------------------- VIEWS ----------------------</span>
+<span id="L229"><span class="lineNum">     229</span>              :     /// @notice Read a compact view of gas budgets and usage for (configId, account).</span>
+<span id="L230"><span class="lineNum">     230</span>              :     /// @param configId      Session/policy identifier.</span>
+<span id="L231"><span class="lineNum">     231</span>              :     /// @param userOpSender  The account whose config is queried.</span>
+<span id="L232"><span class="lineNum">     232</span>              :     /// @return gasLimit  Cumulative gas units allowed.</span>
+<span id="L233"><span class="lineNum">     233</span>              :     /// @return gasUsed   Gas units consumed so far.</span>
+<span id="L234"><span class="lineNum">     234</span> <span class="tlaGNC">         263 :     function getGasConfig(bytes32 configId, address userOpSender)</span></span>
+<span id="L235"><span class="lineNum">     235</span>              :         external</span>
+<span id="L236"><span class="lineNum">     236</span>              :         view</span>
+<span id="L237"><span class="lineNum">     237</span>              :         returns (uint128 gasLimit, uint128 gasUsed)</span>
+<span id="L238"><span class="lineNum">     238</span>              :     {</span>
+<span id="L239"><span class="lineNum">     239</span> <span class="tlaGNC">         263 :         GasLimitConfig storage c = gasLimitConfigs[configId][userOpSender];</span></span>
+<span id="L240"><span class="lineNum">     240</span> <span class="tlaGNC">         263 :         return (c.gasLimit, c.gasUsed);</span></span>
+<span id="L241"><span class="lineNum">     241</span>              :     }</span>
+<span id="L242"><span class="lineNum">     242</span>              : </span>
+<span id="L243"><span class="lineNum">     243</span>              :     /**</span>
+<span id="L244"><span class="lineNum">     244</span>              :      * @notice Read the full `GasLimitConfig` struct for (configId, account).</span>
+<span id="L245"><span class="lineNum">     245</span>              :      * @param configId  Session/policy identifier.</span>
+<span id="L246"><span class="lineNum">     246</span>              :      * @param userOpSender The account address whose config is queried.</span>
+<span id="L247"><span class="lineNum">     247</span>              :      * @return The full GasLimitConfig stored at (configId, userOpSender).</span>
+<span id="L248"><span class="lineNum">     248</span>              :      */</span>
+<span id="L249"><span class="lineNum">     249</span> <span class="tlaUNC">           0 :     function getGasConfigEx(bytes32 configId, address userOpSender)</span></span>
+<span id="L250"><span class="lineNum">     250</span>              :         external</span>
+<span id="L251"><span class="lineNum">     251</span>              :         view</span>
+<span id="L252"><span class="lineNum">     252</span>              :         returns (GasLimitConfig memory)</span>
+<span id="L253"><span class="lineNum">     253</span>              :     {</span>
+<span id="L254"><span class="lineNum">     254</span> <span class="tlaUNC">           0 :         return gasLimitConfigs[configId][userOpSender];</span></span>
+<span id="L255"><span class="lineNum">     255</span>              :     }</span>
+<span id="L256"><span class="lineNum">     256</span>              : </span>
+<span id="L257"><span class="lineNum">     257</span>              :     // ---------------------- Supported Interfaces ----------------------</span>
+<span id="L258"><span class="lineNum">     258</span> <span class="tlaUNC">           0 :     function supportsInterface(bytes4 interfaceID) external pure override returns (bool) {</span></span>
+<span id="L259"><span class="lineNum">     259</span> <span class="tlaUNC">           0 :         return interfaceID == type(IERC165).interfaceId || interfaceID == type(IPolicy).interfaceId</span></span>
+<span id="L260"><span class="lineNum">     260</span> <span class="tlaUNC">           0 :             || interfaceID == type(IUserOpPolicy).interfaceId;</span></span>
+<span id="L261"><span class="lineNum">     261</span>              :     }</span>
+<span id="L262"><span class="lineNum">     262</span>              : }</span>
+<span id="L263"><span class="lineNum">     263</span>              : </span>
+<span id="L264"><span class="lineNum">     264</span>              : /**</span>
+<span id="L265"><span class="lineNum">     265</span>              :  * - Gas envelope accounted per op:</span>
+<span id="L266"><span class="lineNum">     266</span>              :  *     PVG (preVerificationGas)</span>
+<span id="L267"><span class="lineNum">     267</span>              :  *   + VGL (verificationGasLimit)</span>
+<span id="L268"><span class="lineNum">     268</span>              :  *   + PMV (paymasterVerificationGasLimit, if present)</span>
+<span id="L269"><span class="lineNum">     269</span>              :  *   + CGL (callGasLimit)</span>
+<span id="L270"><span class="lineNum">     270</span>              :  *   + PO  (postOpGasLimit, if present)</span>
+<span id="L271"><span class="lineNum">     271</span>              :  *</span>
+<span id="L272"><span class="lineNum">     272</span>              :  * - Pricing: computes worst-case wei using `userOp.gasPrice()` (min(maxFeePerGas,</span>
+<span id="L273"><span class="lineNum">     273</span>              :  *   basefee + maxPriorityFee))</span>
+<span id="L274"><span class="lineNum">     274</span>              :  *   a threshold. Ceil division is used for BPS math.</span>
+<span id="L275"><span class="lineNum">     275</span>              :  *</span>
+<span id="L276"><span class="lineNum">     276</span>              :  * - Limits:</span>
+<span id="L277"><span class="lineNum">     277</span>              :  *   * `gasLimit`— cumulative ceilings across the session.</span>
 <span id="L278"><span class="lineNum">     278</span>              :  *</span>
-<span id="L279"><span class="lineNum">     279</span>              :  * - Input validation:</span>
-<span id="L280"><span class="lineNum">     280</span>              :  *   * Rejects malformed `paymasterAndData` where 0 &lt; length &lt; PAYMASTER_DATA_OFFSET.</span>
-<span id="L281"><span class="lineNum">     281</span>              :  *   * Fails fast if config is not initialized.</span>
+<span id="L279"><span class="lineNum">     279</span>              :  * - Initialization:</span>
+<span id="L280"><span class="lineNum">     280</span>              :  *   * Manual: supply exact budgets.</span>
+<span id="L281"><span class="lineNum">     281</span>              :  *   * Auto: derives conservative defaults from provided DEFAULT_* limit, a safety BPS.</span>
 <span id="L282"><span class="lineNum">     282</span>              :  *</span>
-<span id="L283"><span class="lineNum">     283</span>              :  * - Interfaces: supports IERC165, IPolicy, and IUserOpPolicy.</span>
-<span id="L284"><span class="lineNum">     284</span>              :  *</span>
-<span id="L285"><span class="lineNum">     285</span>              :  * @custom:terms</span>
-<span id="L286"><span class="lineNum">     286</span>              :  * - account: The 7702 account or SCA whose `userOp.sender` matches `msg.sender` during</span>
-<span id="L287"><span class="lineNum">     287</span>              :  *   `checkUserOpPolicy`.</span>
-<span id="L288"><span class="lineNum">     288</span>              :  * - configId: Session key / policy identifier (e.g., keccak256(pubkey parts)).</span>
-<span id="L289"><span class="lineNum">     289</span>              :  *</span>
-<span id="L290"><span class="lineNum">     290</span>              :  * @custom:security</span>
-<span id="L291"><span class="lineNum">     291</span>              :  * - No external calls in `checkUserOpPolicy`; only storage writes to the caller’s slot.</span>
-<span id="L292"><span class="lineNum">     292</span>              :  * - Consider emitting events on init and accounting if off-chain reconciliation is needed.</span>
-<span id="L293"><span class="lineNum">     293</span>              :  */</span>
+<span id="L283"><span class="lineNum">     283</span>              :  * - Arithmetic safety:</span>
+<span id="L284"><span class="lineNum">     284</span>              :  *   * `checkUserOpPolicy` guards all mul/add overflows, including the final gas sum.</span>
+<span id="L285"><span class="lineNum">     285</span>              :  *   * Auto-init keeps an `unchecked` block but pre-checks every addition/multiplication</span>
+<span id="L286"><span class="lineNum">     286</span>              :  *     to prevent wraparound before casting to `uint128`.</span>
+<span id="L287"><span class="lineNum">     287</span>              :  *</span>
+<span id="L288"><span class="lineNum">     288</span>              :  * - Input validation:</span>
+<span id="L289"><span class="lineNum">     289</span>              :  *   * Rejects malformed `paymasterAndData` where 0 &lt; length &lt; PAYMASTER_DATA_OFFSET.</span>
+<span id="L290"><span class="lineNum">     290</span>              :  *   * Fails fast if config is not initialized.</span>
+<span id="L291"><span class="lineNum">     291</span>              :  *</span>
+<span id="L292"><span class="lineNum">     292</span>              :  * - Interfaces: supports IERC165, IPolicy, and IUserOpPolicy.</span>
+<span id="L293"><span class="lineNum">     293</span>              :  *</span>
+<span id="L294"><span class="lineNum">     294</span>              :  * @custom:terms</span>
+<span id="L295"><span class="lineNum">     295</span>              :  * - account: The 7702 account or SCA whose `userOp.sender` matches `msg.sender` during</span>
+<span id="L296"><span class="lineNum">     296</span>              :  *   `checkUserOpPolicy`.</span>
+<span id="L297"><span class="lineNum">     297</span>              :  * - configId: Session key / policy identifier (e.g., keccak256(pubkey parts)).</span>
+<span id="L298"><span class="lineNum">     298</span>              :  *</span>
+<span id="L299"><span class="lineNum">     299</span>              :  * @custom:security</span>
+<span id="L300"><span class="lineNum">     300</span>              :  * - No external calls in `checkUserOpPolicy`; only storage writes to the caller’s slot.</span>
+<span id="L301"><span class="lineNum">     301</span>              :  * - Consider emitting events on init and accounting if off-chain reconciliation is needed.</span>
+<span id="L302"><span class="lineNum">     302</span>              :  */</span>
         </pre>
               </td>
             </tr>

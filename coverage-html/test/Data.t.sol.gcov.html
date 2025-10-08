@@ -1,0 +1,132 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<html lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>LCOV - lcov.info - test/Data.t.sol</title>
+  <link rel="stylesheet" type="text/css" href="../gcov.css">
+</head>
+
+<body>
+
+          <table width="100%" border=0 cellspacing=0 cellpadding=0>
+            <tr><td class="title">LCOV - code coverage report</td></tr>
+            <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+
+            <tr>
+              <td width="100%">
+                <table cellpadding=1 border=0 width="100%">
+          <tr>
+            <td width="10%" class="headerItem">Current view:</td>
+            <td width="10%" class="headerValue"><a href="../index.html" title="Click to go to top-level">top level</a> - <a href="index.html" title="Click to go to directory test">test</a> - Data.t.sol<span style="font-size: 80%;"> (source / <a href="Data.t.sol.func-c.html" title="Click to go to function table">functions</a>)</span></td>
+            <td width="5%"></td>
+            <td width="5%"></td>
+            <td width="5%" class="headerCovTableHead">Coverage</td>
+            <td width="5%" class="headerCovTableHead" title="Covered + Uncovered code">Total</td>
+            <td width="5%" class="headerCovTableHead" title="Exercised code only">Hit</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Test:</td>
+            <td class="headerValue">lcov.info</td>
+            <td></td>
+            <td class="headerItem">Lines:</td>
+            <td class="headerCovTableEntryLo">0.0&nbsp;%</td>
+            <td class="headerCovTableEntry">2</td>
+            <td class="headerCovTableEntry">0</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Test Date:</td>
+            <td class="headerValue">2025-10-08 17:36:56</td>
+            <td></td>
+            <td class="headerItem">Functions:</td>
+            <td class="headerCovTableEntryLo">0.0&nbsp;%</td>
+            <td class="headerCovTableEntry">2</td>
+            <td class="headerCovTableEntry">0</td>
+          </tr>
+                  <tr><td><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+                </table>
+              </td>
+            </tr>
+
+            <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+          </table>
+
+          <table cellpadding=0 cellspacing=0 border=0>
+            <tr>
+              <td><br></td>
+            </tr>
+            <tr>
+              <td>
+<pre class="sourceHeading">            Line data    Source code</pre>
+<pre class="source">
+<span id="L1"><span class="lineNum">       1</span>              : // SPDX-License-Identifier: MIT</span>
+<span id="L2"><span class="lineNum">       2</span>              : </span>
+<span id="L3"><span class="lineNum">       3</span>              : pragma solidity 0.8.29;</span>
+<span id="L4"><span class="lineNum">       4</span>              : </span>
+<span id="L5"><span class="lineNum">       5</span>              : import {IKey} from &quot;src/interfaces/IKey.sol&quot;;</span>
+<span id="L6"><span class="lineNum">       6</span>              : import {SignersData} from &quot;././SignersData.t.sol&quot;;</span>
+<span id="L7"><span class="lineNum">       7</span>              : import {IKeysManager} from &quot;src/interfaces/IKeysManager.sol&quot;;</span>
+<span id="L8"><span class="lineNum">       8</span>              : </span>
+<span id="L9"><span class="lineNum">       9</span>              : abstract contract Data is IKey, IKeysManager, SignersData {</span>
+<span id="L10"><span class="lineNum">      10</span>              :     /* ──────────────────────────────────────────────────────────────── structs ──── */</span>
+<span id="L11"><span class="lineNum">      11</span>              :     struct Call {</span>
+<span id="L12"><span class="lineNum">      12</span>              :         address target;</span>
+<span id="L13"><span class="lineNum">      13</span>              :         uint256 value;</span>
+<span id="L14"><span class="lineNum">      14</span>              :         bytes data;</span>
+<span id="L15"><span class="lineNum">      15</span>              :     }</span>
+<span id="L16"><span class="lineNum">      16</span>              : </span>
+<span id="L17"><span class="lineNum">      17</span>              :     /* ──────────────────────────────────────────────────────────────── set data ──── */</span>
+<span id="L18"><span class="lineNum">      18</span>              :     address internal constant ANY_TARGET = 0x3232323232323232323232323232323232323232;</span>
+<span id="L19"><span class="lineNum">      19</span>              :     bytes4 internal constant ANY_FN_SEL = 0x32323232;</span>
+<span id="L20"><span class="lineNum">      20</span>              :     bytes4 internal constant EMPTY_CALLDATA_FN_SEL = 0xe0e0e0e0;</span>
+<span id="L21"><span class="lineNum">      21</span>              :     address internal constant NATIVE_ADDRESS = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;</span>
+<span id="L22"><span class="lineNum">      22</span>              : </span>
+<span id="L23"><span class="lineNum">      23</span>              :     /* ──────────────────────────────────────────────────────────────── hashes ──── */</span>
+<span id="L24"><span class="lineNum">      24</span>              :     bytes32 constant TYPE_HASH = keccak256(</span>
+<span id="L25"><span class="lineNum">      25</span>              :         &quot;EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)&quot;</span>
+<span id="L26"><span class="lineNum">      26</span>              :     );</span>
+<span id="L27"><span class="lineNum">      27</span>              : </span>
+<span id="L28"><span class="lineNum">      28</span>              :     bytes32 constant RECOVER_TYPEHASH =</span>
+<span id="L29"><span class="lineNum">      29</span>              :         0x9f7aca777caf11405930359f601a4db01fad1b2d79ef3f2f9e93c835e9feffa5;</span>
+<span id="L30"><span class="lineNum">      30</span>              :     bytes32 constant INIT_TYPEHASH =</span>
+<span id="L31"><span class="lineNum">      31</span>              :         0x82dc6262fca76342c646d126714aa4005dfcd866448478747905b2e7b9837183;</span>
+<span id="L32"><span class="lineNum">      32</span>              : </span>
+<span id="L33"><span class="lineNum">      33</span>              :     /* ──────────────────────────────────────────────────────────────── addresses ──── */</span>
+<span id="L34"><span class="lineNum">      34</span>              :     address constant ENTRYPOINT_V8 = 0x4337084D9E255Ff0702461CF8895CE9E3b5Ff108;</span>
+<span id="L35"><span class="lineNum">      35</span>              :     address constant WEBAUTHN_VERIFIER = 0x83b7acb5A6aa8A34A97bdA13182aEA787AC3f10d;</span>
+<span id="L36"><span class="lineNum">      36</span>              : </span>
+<span id="L37"><span class="lineNum">      37</span>              :     /* ──────────────────────────────────────────────────────────────── recovery data ──── */</span>
+<span id="L38"><span class="lineNum">      38</span>              :     uint256 constant RECOVERY_PERIOD = 2 days;</span>
+<span id="L39"><span class="lineNum">      39</span>              :     uint256 constant LOCK_PERIOD = 5 days;</span>
+<span id="L40"><span class="lineNum">      40</span>              :     uint256 constant SECURITY_PERIOD = 1.5 days;</span>
+<span id="L41"><span class="lineNum">      41</span>              :     uint256 constant SECURITY_WINDOW = 0.5 days;</span>
+<span id="L42"><span class="lineNum">      42</span>              : </span>
+<span id="L43"><span class="lineNum">      43</span>              :     /* ──────────────────────────────────────────────────────────────── gas policy data ──── */</span>
+<span id="L44"><span class="lineNum">      44</span>              :     uint256 constant DEFAULT_PVG = 110_000; // packaging/bytes for P-256/WebAuthn-ish signatures</span>
+<span id="L45"><span class="lineNum">      45</span>              :     uint256 constant DEFAULT_VGL = 360_000; // validation (session key checks, EIP-1271/P-256 parsing)</span>
+<span id="L46"><span class="lineNum">      46</span>              :     uint256 constant DEFAULT_CGL = 240_000; // ERC20 transfer/batch-ish execution</span>
+<span id="L47"><span class="lineNum">      47</span>              :     uint256 constant DEFAULT_PMV = 60_000; // paymaster validate (if used)</span>
+<span id="L48"><span class="lineNum">      48</span>              :     uint256 constant DEFAULT_PO = 60_000; // postOp (token charge/refund)</span>
+<span id="L49"><span class="lineNum">      49</span>              : </span>
+<span id="L50"><span class="lineNum">      50</span>              :     /* ──────────────────────────────────────────────────────────────── execution mode erc7821 ──── */</span>
+<span id="L51"><span class="lineNum">      51</span>              :     bytes32 internal constant mode_1 = bytes32(uint256(0x01000000000000000000) &lt;&lt; (22 * 8));</span>
+<span id="L52"><span class="lineNum">      52</span>              :     bytes32 internal constant mode_3 = bytes32(uint256(0x01000000000078210002) &lt;&lt; (22 * 8));</span>
+<span id="L53"><span class="lineNum">      53</span>              : </span>
+<span id="L54"><span class="lineNum">      54</span> <span class="tlaUNC">           0 :     function isKeyActive(bytes32 _keyId) external view returns (bool) {}</span></span>
+<span id="L55"><span class="lineNum">      55</span> <span class="tlaUNC">           0 :     function keyAt(uint256 i) external view returns (bytes32 keyId, IKey.KeyData memory data) {}</span></span>
+<span id="L56"><span class="lineNum">      56</span>              : }</span>
+        </pre>
+              </td>
+            </tr>
+          </table>
+          <br>
+
+          <table width="100%" border=0 cellspacing=0 cellpadding=0>
+            <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+            <tr><td class="versionInfo">Generated by: <a href="https://github.com//linux-test-project/lcov" target="_parent">LCOV version 2.3.2-1</a></td></tr>
+          </table>
+          <br>
+
+</body>
+</html>

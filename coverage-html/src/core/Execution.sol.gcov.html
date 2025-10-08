@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2025-10-07 16:08:50</td>
+            <td class="headerValue">2025-10-08 17:36:56</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -106,7 +106,7 @@
 <span id="L44"><span class="lineNum">      44</span>              :     /// @param  mode Execution‑mode word (see ERC‑7821 draft).</span>
 <span id="L45"><span class="lineNum">      45</span>              :     /// @param  executionData ABI‑encoded payload whose shape depends on</span>
 <span id="L46"><span class="lineNum">      46</span>              :     ///         `mode`.</span>
-<span id="L47"><span class="lineNum">      47</span> <span class="tlaGNC">          85 :     function execute(bytes32 mode, bytes memory executionData)</span></span>
+<span id="L47"><span class="lineNum">      47</span> <span class="tlaGNC">        4368 :     function execute(bytes32 mode, bytes memory executionData)</span></span>
 <span id="L48"><span class="lineNum">      48</span>              :         public</span>
 <span id="L49"><span class="lineNum">      49</span>              :         payable</span>
 <span id="L50"><span class="lineNum">      50</span>              :         virtual</span>
@@ -116,7 +116,7 @@
 <span id="L54"><span class="lineNum">      54</span> <span class="tlaUNC">           0 :         _requireForExecute();</span></span>
 <span id="L55"><span class="lineNum">      55</span>              : </span>
 <span id="L56"><span class="lineNum">      56</span>              :         // Run the worker; revert if overall call‑count &gt; MAX_TX.</span>
-<span id="L57"><span class="lineNum">      57</span> <span class="tlaGNC">          85 :         _run(mode, executionData, 0);</span></span>
+<span id="L57"><span class="lineNum">      57</span> <span class="tlaGNC">        4368 :         _run(mode, executionData, 0);</span></span>
 <span id="L58"><span class="lineNum">      58</span>              :     }</span>
 <span id="L59"><span class="lineNum">      59</span>              : </span>
 <span id="L60"><span class="lineNum">      60</span>              :     /* ────────────────────────────────────────────────────────────── */</span>
@@ -138,10 +138,10 @@
 <span id="L76"><span class="lineNum">      76</span>              :     /// @param data     ABI‑encoded batch or batch‑of‑batches.</span>
 <span id="L77"><span class="lineNum">      77</span>              :     /// @param counter  Running total of low‑level calls executed so far.</span>
 <span id="L78"><span class="lineNum">      78</span>              :     /// @return counter Updated running total.</span>
-<span id="L79"><span class="lineNum">      79</span> <span class="tlaGNC">         102 :     function _run(bytes32 mode, bytes memory data, uint256 counter) internal returns (uint256) {</span></span>
-<span id="L80"><span class="lineNum">      80</span> <span class="tlaGNC">         102 :         uint256 id = _executionModeId(mode);</span></span>
+<span id="L79"><span class="lineNum">      79</span> <span class="tlaGNC">        4385 :     function _run(bytes32 mode, bytes memory data, uint256 counter) internal returns (uint256) {</span></span>
+<span id="L80"><span class="lineNum">      80</span> <span class="tlaGNC">        4385 :         uint256 id = _executionModeId(mode);</span></span>
 <span id="L81"><span class="lineNum">      81</span>              :         /* -------- mode 3 : batch‑of‑batches ----------------------- */</span>
-<span id="L82"><span class="lineNum">      82</span> <span class="tlaGNC">         102 :         if (id == 3) {</span></span>
+<span id="L82"><span class="lineNum">      82</span> <span class="tlaGNC">        4385 :         if (id == 3) {</span></span>
 <span id="L83"><span class="lineNum">      83</span>              :             // Clear the top‑level mode‑3 flag so inner batches can be</span>
 <span id="L84"><span class="lineNum">      84</span>              :             // parsed as mode 1</span>
 <span id="L85"><span class="lineNum">      85</span> <span class="tlaGNC">           6 :             mode = mode_1;</span></span>
@@ -155,22 +155,22 @@
 <span id="L93"><span class="lineNum">      93</span> <span class="tlaGNC">           5 :             return counter;</span></span>
 <span id="L94"><span class="lineNum">      94</span>              :         }</span>
 <span id="L95"><span class="lineNum">      95</span>              : </span>
-<span id="L96"><span class="lineNum">      96</span> <span class="tlaGNC">          96 :         if (id == 0) revert IExecution.OpenfortBaseAccount7702V1__UnsupportedExecutionMode();</span></span>
+<span id="L96"><span class="lineNum">      96</span> <span class="tlaGNC">        4379 :         if (id == 0) revert IExecution.OpenfortBaseAccount7702V1__UnsupportedExecutionMode();</span></span>
 <span id="L97"><span class="lineNum">      97</span>              : </span>
 <span id="L98"><span class="lineNum">      98</span>              :         /* -------- flat batch (mode 1) ------------------------ */</span>
-<span id="L99"><span class="lineNum">      99</span> <span class="tlaGNC">          96 :         Call[] memory calls;</span></span>
+<span id="L99"><span class="lineNum">      99</span> <span class="tlaGNC">        4123 :         Call[] memory calls;</span></span>
 <span id="L100"><span class="lineNum">     100</span>              : </span>
-<span id="L101"><span class="lineNum">     101</span> <span class="tlaGNC">          96 :         calls = abi.decode(data, (Call[]));</span></span>
+<span id="L101"><span class="lineNum">     101</span> <span class="tlaGNC">        4123 :         calls = abi.decode(data, (Call[]));</span></span>
 <span id="L102"><span class="lineNum">     102</span>              : </span>
-<span id="L103"><span class="lineNum">     103</span> <span class="tlaGNC">          96 :         _checkLength(calls.length); // per‑batch structural cap</span></span>
+<span id="L103"><span class="lineNum">     103</span> <span class="tlaGNC">        4123 :         _checkLength(calls.length); // per‑batch structural cap</span></span>
 <span id="L104"><span class="lineNum">     104</span>              : </span>
-<span id="L105"><span class="lineNum">     105</span> <span class="tlaGNC">          95 :         for (uint256 i; i &lt; calls.length; ++i) {</span></span>
-<span id="L106"><span class="lineNum">     106</span> <span class="tlaGNC">         272 :             Call memory c = calls[i];</span></span>
-<span id="L107"><span class="lineNum">     107</span> <span class="tlaGNC">         272 :             address to = c.target == address(0) ? address(this) : c.target;</span></span>
-<span id="L108"><span class="lineNum">     108</span> <span class="tlaGNC">         272 :             _execute(to, c.value, c.data);</span></span>
+<span id="L105"><span class="lineNum">     105</span> <span class="tlaGNC">        3865 :         for (uint256 i; i &lt; calls.length; ++i) {</span></span>
+<span id="L106"><span class="lineNum">     106</span> <span class="tlaGNC">        5528 :             Call memory c = calls[i];</span></span>
+<span id="L107"><span class="lineNum">     107</span> <span class="tlaGNC">        5528 :             address to = c.target == address(0) ? address(this) : c.target;</span></span>
+<span id="L108"><span class="lineNum">     108</span> <span class="tlaGNC">        5528 :             _execute(to, c.value, c.data);</span></span>
 <span id="L109"><span class="lineNum">     109</span>              : </span>
 <span id="L110"><span class="lineNum">     110</span>              :             // ---- global counter enforcement -------------------- //</span>
-<span id="L111"><span class="lineNum">     111</span> <span class="tlaGNC">         272 :             if (++counter &gt; MAX_TX) {</span></span>
+<span id="L111"><span class="lineNum">     111</span> <span class="tlaGNC">        5528 :             if (++counter &gt; MAX_TX) {</span></span>
 <span id="L112"><span class="lineNum">     112</span> <span class="tlaGNC">           1 :                 revert IExecution.OpenfortBaseAccount7702V1__TooManyCalls(counter, MAX_TX);</span></span>
 <span id="L113"><span class="lineNum">     113</span>              :             }</span>
 <span id="L114"><span class="lineNum">     114</span>              :         }</span>
@@ -182,8 +182,8 @@
 <span id="L120"><span class="lineNum">     120</span>              :     /* ────────────────────────────────────────────────────────────── */</span>
 <span id="L121"><span class="lineNum">     121</span>              : </span>
 <span id="L122"><span class="lineNum">     122</span>              :     /// @dev Perform the actual call; bubble up any revert reason.</span>
-<span id="L123"><span class="lineNum">     123</span> <span class="tlaGNC">         272 :     function _execute(address to, uint256 value, bytes memory data) internal virtual {</span></span>
-<span id="L124"><span class="lineNum">     124</span> <span class="tlaGNC">         272 :         (bool success, bytes memory result) = to.call{value: value}(data);</span></span>
+<span id="L123"><span class="lineNum">     123</span> <span class="tlaGNC">        5528 :     function _execute(address to, uint256 value, bytes memory data) internal virtual {</span></span>
+<span id="L124"><span class="lineNum">     124</span> <span class="tlaGNC">        5528 :         (bool success, bytes memory result) = to.call{value: value}(data);</span></span>
 <span id="L125"><span class="lineNum">     125</span>              :         if (success) return;</span>
 <span id="L126"><span class="lineNum">     126</span>              :         /// @solidity memory-safe-assembly</span>
 <span id="L127"><span class="lineNum">     127</span>              :         assembly {</span>
@@ -198,16 +198,16 @@
 <span id="L136"><span class="lineNum">     136</span>              :     /// @dev Derive a small integer ID from the 10‑byte execution mode.</span>
 <span id="L137"><span class="lineNum">     137</span>              :     ///      0: unsupported, 1: flat batch, 2: unsupported,</span>
 <span id="L138"><span class="lineNum">     138</span>              :     ///      3: batch‑of‑batches.</span>
-<span id="L139"><span class="lineNum">     139</span> <span class="tlaGNC">         104 :     function _executionModeId(bytes32 mode) internal pure returns (uint256 id) {</span></span>
-<span id="L140"><span class="lineNum">     140</span> <span class="tlaGNC">         104 :         uint256 m = (uint256(mode) &gt;&gt; (22 * 8)) &amp; 0xffff00000000ffffffff;</span></span>
-<span id="L141"><span class="lineNum">     141</span> <span class="tlaGNC">         104 :         if (m == 0x01000000000078210002) id = 3;</span></span>
-<span id="L142"><span class="lineNum">     142</span> <span class="tlaGNC">         104 :         if (m == 0x01000000000000000000) id = 1;</span></span>
+<span id="L139"><span class="lineNum">     139</span> <span class="tlaGNC">        4387 :     function _executionModeId(bytes32 mode) internal pure returns (uint256 id) {</span></span>
+<span id="L140"><span class="lineNum">     140</span> <span class="tlaGNC">        4387 :         uint256 m = (uint256(mode) &gt;&gt; (22 * 8)) &amp; 0xffff00000000ffffffff;</span></span>
+<span id="L141"><span class="lineNum">     141</span> <span class="tlaGNC">        4387 :         if (m == 0x01000000000078210002) id = 3;</span></span>
+<span id="L142"><span class="lineNum">     142</span> <span class="tlaGNC">        4387 :         if (m == 0x01000000000000000000) id = 1;</span></span>
 <span id="L143"><span class="lineNum">     143</span>              :     }</span>
 <span id="L144"><span class="lineNum">     144</span>              : </span>
 <span id="L145"><span class="lineNum">     145</span>              :     /// @dev Enforces `0 &lt; txCount ≤ MAX_TX`.</span>
-<span id="L146"><span class="lineNum">     146</span> <span class="tlaGNC">         102 :     function _checkLength(uint256 txCount) internal pure {</span></span>
-<span id="L147"><span class="lineNum">     147</span> <span class="tlaGNC">         102 :         if (txCount == 0 || txCount &gt; MAX_TX) {</span></span>
-<span id="L148"><span class="lineNum">     148</span> <span class="tlaGNC">           1 :             revert IExecution.OpenfortBaseAccount7702V1__InvalidTransactionLength();</span></span>
+<span id="L146"><span class="lineNum">     146</span> <span class="tlaGNC">        4129 :     function _checkLength(uint256 txCount) internal pure {</span></span>
+<span id="L147"><span class="lineNum">     147</span> <span class="tlaGNC">        4129 :         if (txCount == 0 || txCount &gt; MAX_TX) {</span></span>
+<span id="L148"><span class="lineNum">     148</span> <span class="tlaGNC">         258 :             revert IExecution.OpenfortBaseAccount7702V1__InvalidTransactionLength();</span></span>
 <span id="L149"><span class="lineNum">     149</span>              :         }</span>
 <span id="L150"><span class="lineNum">     150</span>              :     }</span>
 <span id="L151"><span class="lineNum">     151</span>              : }</span>

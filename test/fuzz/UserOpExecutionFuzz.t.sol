@@ -117,12 +117,7 @@ contract UserOpExecutionFuzz is Deploy {
 
         _etch();
         vm.prank(owner);
-        account.setTokenSpend(
-            sessionKeyId,
-            address(erc20),
-            amount * callCount,
-            SpendPeriod.Day
-        );
+        account.setTokenSpend(sessionKeyId, address(erc20), amount * callCount, SpendPeriod.Day);
     }
 
     function _freshUserOp() internal view returns (PackedUserOperation memory userOp) {

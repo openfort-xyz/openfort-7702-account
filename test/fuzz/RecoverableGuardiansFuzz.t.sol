@@ -62,8 +62,7 @@ contract RecoverableGuardiansFuzz is Deploy {
         bytes32 guardianId = _prepareGuardian(candidate);
 
         _proposeGuardian(guardianId);
-        uint256 addPending =
-            recoveryManager.getPendingStatusGuardians(address(account), guardianId);
+        uint256 addPending = recoveryManager.getPendingStatusGuardians(address(account), guardianId);
 
         vm.warp(addPending + 1);
         _confirmGuardian(guardianId);
