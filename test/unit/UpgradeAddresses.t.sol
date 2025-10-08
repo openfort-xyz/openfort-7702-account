@@ -1,647 +1,253 @@
-// // SPDX-License-Identifier: MIT
-
-// pragma solidity ^0.8.29;
-
-// import {Base} from "test/Base.sol";
-// import {GasPolicy} from "src/utils/GasPolicy.sol";
-// import {Test, console2 as console} from "lib/forge-std/src/Test.sol";
-// import {EfficientHashLib} from "lib/solady/src/utils/EfficientHashLib.sol";
-// import {EntryPoint} from "lib/account-abstraction/contracts/core/EntryPoint.sol";
-// import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
-// import {IEntryPoint} from "lib/account-abstraction/contracts/interfaces/IEntryPoint.sol";
-
-// import {OPFMain as OPF7702} from "src/core/OPFMain.sol";
-// import {BaseOPF7702} from "src/core/BaseOPF7702.sol";
-// import {MockERC20} from "src/mocks/MockERC20.sol";
-// import {IKey} from "src/interfaces/IKey.sol";
-// import {ISpendLimit} from "src/interfaces/ISpendLimit.sol";
-// import {WebAuthnVerifier} from "src/utils/WebAuthnVerifier.sol";
-// import {PackedUserOperation} from
-//     "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
-// import {MessageHashUtils} from
-//     "lib/openzeppelin-contracts/contracts/utils/cryptography/MessageHashUtils.sol";
-
-// contract UpgradeAddresses is Base {
-//     error NotFromEntryPoint();
-
-//     /* ───────────────────────────────────────────────────────────── contracts ── */
-//     IEntryPoint public entryPoint;
-//     WebAuthnVerifier public webAuthn;
-//     OPF7702 public implementation;
-//     OPF7702 public account; // clone deployed at `owner`
-//     GasPolicy public gasPolicy;
-
-//     /* ──────────────────────────────────────────────────────── key structures ── */
-//     Key internal keyMK;
-//     PubKey internal pubKeyMK;
-//     Key internal keySK;
-//     PubKey internal pubKeySK;
-
-//     KeyReg internal keyData;
-//     /* ─────────────────────────────────────────────────────────────── setup ──── */
-
-//     function setUp() public {
-//         vm.startPrank(sender);
-//         (owner, ownerPk) = makeAddrAndKey("owner");
-//         (sender, senderPk) = makeAddrAndKey("sender");
-//         (sessionKey, sessionKeyPk) = makeAddrAndKey("sessionKey");
-//         (GUARDIAN_EOA_ADDRESS, GUARDIAN_EOA_PRIVATE_KEY) = makeAddrAndKey("GUARDIAN_EOA_ADDRESS");
-//         // forkId = vm.createFork(SEPOLIA_RPC_URL);
-//         // vm.selectFork(forkId);
-
-//         /* live contracts on fork */
-//         entryPoint = IEntryPoint(payable(SEPOLIA_ENTRYPOINT));
-//         webAuthn = WebAuthnVerifier(payable(SEPOLIA_WEBAUTHN));
-//         gasPolicy = new GasPolicy(DEFAULT_PVG, DEFAULT_VGL, DEFAULT_CGL, DEFAULT_PMV, DEFAULT_PO);
-
-//         _createInitialGuradian();
-//         /* deploy implementation & bake it into `owner` address */
-//         implementation = new OPF7702(
-//             address(entryPoint),
-//             WEBAUTHN_VERIFIER,
-//             RECOVERY_PERIOD,
-//             LOCK_PERIOD,
-//             SECURITY_PERIOD,
-//             SECURITY_WINDOW,
-//             address(gasPolicy)
-//         );
-//         vm.etch(owner, abi.encodePacked(bytes3(0xef0100), address(implementation)));
-//         account = OPF7702(payable(owner));
-
-//         vm.stopPrank();
-
-//         _deal();
-//         _initializeAccount();
-//         _register_KeyEOA();
-//         _register_KeyP256();
-//         _register_KeyP256NonKey();
-
-//         vm.prank(sender);
-//         entryPoint.depositTo{value: 0.09e18}(owner);
-//     }
-
-//     function test_Addresses() external view {
-//         console.log("/* --------------------------------- test_Addresses -------- */");
-//         address ePoint = address(account.entryPoint());
-//         address webAuthnVerifier = account.webAuthnVerifier();
-
-//         console.log("entryPoint", ePoint);
-//         console.log("webAuthnVerifier", webAuthnVerifier);
-
-//         assertEq(ePoint, address(entryPoint));
-//         assertEq(webAuthnVerifier, address(SEPOLIA_WEBAUTHN));
-//         console.log("/* --------------------------------- test_Addresses -------- */");
-//     }
-
-//     function test_UpgradeEntryPointWithRootKey() public {
-//         console.log(
-//             "/* -------------------------------- test_UpgradeEntryPointWithRootKey -------- */"
-//         );
-//         bytes memory callData =
-//             abi.encodeWithSelector(BaseOPF7702.setEntryPoint.selector, address(789_012));
-
-//         uint256 nonce = entryPoint.getNonce(owner, 1);
-
-//         address ePoint_Before = address(account.entryPoint());
-
-//         PackedUserOperation memory userOp = PackedUserOperation({
-//             sender: owner,
-//             nonce: nonce,
-//             initCode: hex"7702",
-//             callData: callData,
-//             accountGasLimits: _packAccountGasLimits(600_000, 400_000),
-//             preVerificationGas: 800_000,
-//             gasFees: _packGasFees(80 gwei, 15 gwei),
-//             paymasterAndData: hex"",
-//             signature: hex""
-//         });
-
-//         bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
-
-//         (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPk, userOpHash);
-//         bytes memory signature = abi.encodePacked(r, s, v);
-
-//         bytes memory _signature = account.encodeEOASignature(signature);
-
-//         bytes4 magicValue = account.isValidSignature(userOpHash, signature);
-//         console.logBytes4(magicValue);
-
-//         userOp.signature = _signature;
-
-//         PackedUserOperation[] memory ops = new PackedUserOperation[](1);
-//         ops[0] = userOp;
-
-//         bytes memory code = abi.encodePacked(bytes3(0xef0100), address(implementation));
-//         vm.etch(owner, code);
-
-//         vm.prank(sender);
-//         entryPoint.handleOps(ops, payable(sender));
-
-//         address ePoint_After = address(account.entryPoint());
-//         assertEq(ePoint_Before, address(entryPoint));
-//         assertEq(ePoint_After, address(789_012));
-//         assertNotEq(ePoint_After, ePoint_Before);
-//         console.log(
-//             "/* -------------------------------- test_UpgradeEntryPointWithRootKey -------- */"
-//         );
-//     }
-
-//     function test_UpgradeWebAuthnVerifiertWithRootKey() public {
-//         console.log(
-//             "/* -------------------------------- test_UpgradeWebAuthnVerifiertWithRootKey -------- */"
-//         );
-//         bytes memory callData =
-//             abi.encodeWithSelector(BaseOPF7702.setWebAuthnVerifier.selector, address(123_456));
-
-//         uint256 nonce = entryPoint.getNonce(owner, 1);
-
-//         address webAuthnVerifier_Before = account.webAuthnVerifier();
-
-//         PackedUserOperation memory userOp = PackedUserOperation({
-//             sender: owner,
-//             nonce: nonce,
-//             initCode: hex"7702",
-//             callData: callData,
-//             accountGasLimits: _packAccountGasLimits(600_000, 400_000),
-//             preVerificationGas: 800_000,
-//             gasFees: _packGasFees(80 gwei, 15 gwei),
-//             paymasterAndData: hex"",
-//             signature: hex""
-//         });
-
-//         bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
-
-//         (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPk, userOpHash);
-//         bytes memory signature = abi.encodePacked(r, s, v);
-
-//         bytes memory _signature = account.encodeEOASignature(signature);
-
-//         bytes4 magicValue = account.isValidSignature(userOpHash, signature);
-//         console.logBytes4(magicValue);
-
-//         userOp.signature = _signature;
-
-//         PackedUserOperation[] memory ops = new PackedUserOperation[](1);
-//         ops[0] = userOp;
-
-//         bytes memory code = abi.encodePacked(bytes3(0xef0100), address(implementation));
-//         vm.etch(owner, code);
-
-//         vm.prank(sender);
-//         entryPoint.handleOps(ops, payable(sender));
-
-//         address webAuthnVerifier_After = account.webAuthnVerifier();
-//         assertEq(webAuthnVerifier_Before, WEBAUTHN_VERIFIER);
-//         assertEq(webAuthnVerifier_After, address(123_456));
-//         assertNotEq(webAuthnVerifier_After, webAuthnVerifier_Before);
-//         console.log(
-//             "/* -------------------------------- test_UpgradeWebAuthnVerifiertWithRootKey -------- */"
-//         );
-//     }
-
-//     function test_UpgradeEntryPointWithMasterKey() public {
-//         console.log(
-//             "/* -------------------------------- test_test_UpgradeEntryPointWithMasterKey -------- */"
-//         );
-//         bytes memory callData =
-//             abi.encodeWithSelector(BaseOPF7702.setEntryPoint.selector, address(789_012));
-
-//         uint256 nonce = entryPoint.getNonce(owner, 1);
-
-//         address ePoint_Before = address(account.entryPoint());
-
-//         PackedUserOperation memory userOp = PackedUserOperation({
-//             sender: owner,
-//             nonce: nonce,
-//             initCode: hex"7702",
-//             callData: callData,
-//             accountGasLimits: _packAccountGasLimits(600_000, 400_000),
-//             preVerificationGas: 800_000,
-//             gasFees: _packGasFees(80 gwei, 15 gwei),
-//             paymasterAndData: hex"",
-//             signature: hex""
-//         });
-
-//         bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
-//         console.logBytes32(userOpHash);
-
-//         IKey.PubKey memory pubKeyExecuteBatch =
-//             IKey.PubKey({x: CHANGE_PUBLIC_KEY_X, y: CHANGE_PUBLIC_KEY_Y});
-
-//         bytes memory _signature = account.encodeWebAuthnSignature(
-//             true,
-//             CHANGE_AUTHENTICATOR_DATA,
-//             CHANGE_CLIENT_DATA_JSON,
-//             CHALLENGE_INDEX,
-//             TYPE_INDEX,
-//             CHANGE_SIGNATURE_R,
-//             CHANGE_SIGNATURE_S,
-//             pubKeyExecuteBatch
-//         );
-
-//         (, bytes memory sigData) = abi.decode(_signature, (KeyType, bytes));
-
-//         bytes4 magicValue = account.isValidSignature(userOpHash, sigData);
-//         bool usedChallenge = account.usedChallenges(userOpHash);
-//         console.log("usedChallenge", usedChallenge);
-//         console.logBytes4(magicValue);
-
-//         bool isValid = webAuthn.verifySignature(
-//             userOpHash,
-//             true,
-//             CHANGE_AUTHENTICATOR_DATA,
-//             CHANGE_CLIENT_DATA_JSON,
-//             CHALLENGE_INDEX,
-//             TYPE_INDEX,
-//             CHANGE_SIGNATURE_R,
-//             CHANGE_SIGNATURE_S,
-//             CHANGE_PUBLIC_KEY_X,
-//             CHANGE_PUBLIC_KEY_Y
-//         );
-//         console.log("isValid", isValid);
-
-//         userOp.signature = _signature;
-
-//         PackedUserOperation[] memory ops = new PackedUserOperation[](1);
-//         ops[0] = userOp;
-
-//         bytes memory code = abi.encodePacked(
-//             bytes3(0xef0100),
-//             address(implementation) // or your logic contract
-//         );
-//         vm.etch(owner, code);
-
-//         vm.prank(sender);
-//         entryPoint.handleOps(ops, payable(sender));
-
-//         address ePoint_After = address(account.entryPoint());
-//         assertEq(ePoint_Before, address(entryPoint));
-//         assertEq(ePoint_After, address(789_012));
-//         assertNotEq(ePoint_After, ePoint_Before);
-
-//         console.log(
-//             "/* -------------------------------- test_test_UpgradeEntryPointWithMasterKey -------- */"
-//         );
-//     }
-
-//     function test_UpgradeEntryPointAndSendTXWithMasterKey() public {
-//         console.log(
-//             "/* -------------------------------- test_UpgradeEntryPointAndSendTXWithMasterKey -------- */"
-//         );
-//         address ePoint_Before = address(account.entryPoint());
-
-//         _upgradeEPoint();
-
-//         address ePoint_After = address(account.entryPoint());
-//         assertEq(ePoint_Before, address(entryPoint));
-//         assertEq(ePoint_After, address(789_012));
-//         assertNotEq(ePoint_After, ePoint_Before);
-
-//         uint256 value = 1e18;
-//         Call[] memory calls = new Call[](1);
-
-//         bytes memory dataHex = hex"";
-
-//         calls[0] = Call({target: sessionKey, value: value, data: dataHex});
-
-//         // ERC-7821 mode for single execution (mode ID = 1)
-//         // The mode value should have the pattern at position 22*8 bits
-//         bytes32 mode = bytes32(uint256(0x01000000000000000000) << (22 * 8));
-
-//         // Encode the execution data as Call[] array
-//         bytes memory executionData = abi.encode(calls);
-
-//         bytes memory callData =
-//             abi.encodeWithSelector(bytes4(keccak256("execute(bytes32,bytes)")), mode, executionData);
-
-//         uint256 nonce = entryPoint.getNonce(owner, 1);
-
-//         PackedUserOperation memory userOp = PackedUserOperation({
-//             sender: owner,
-//             nonce: nonce,
-//             initCode: hex"7702",
-//             callData: callData,
-//             accountGasLimits: _packAccountGasLimits(600_000, 400_000),
-//             preVerificationGas: 800_000,
-//             gasFees: _packGasFees(80 gwei, 15 gwei),
-//             paymasterAndData: hex"",
-//             signature: hex""
-//         });
-
-//         bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
-//         console.logBytes32(userOpHash);
-
-//         IKey.PubKey memory pubKeyExecuteBatch =
-//             IKey.PubKey({x: ETH_PUBLIC_KEY_X, y: ETH_PUBLIC_KEY_Y});
-
-//         bytes memory _signature = account.encodeWebAuthnSignature(
-//             true,
-//             ETH_AUTHENTICATOR_DATA,
-//             ETH_CLIENT_DATA_JSON,
-//             CHALLENGE_INDEX,
-//             TYPE_INDEX,
-//             ETH_SIGNATURE_R,
-//             ETH_SIGNATURE_S,
-//             pubKeyExecuteBatch
-//         );
-
-//         (, bytes memory sigData) = abi.decode(_signature, (KeyType, bytes));
-
-//         bytes4 magicValue = account.isValidSignature(userOpHash, sigData);
-//         bool usedChallenge = account.usedChallenges(userOpHash);
-//         console.log("usedChallenge", usedChallenge);
-//         console.logBytes4(magicValue);
-
-//         bool isValid = webAuthn.verifySignature(
-//             userOpHash,
-//             true,
-//             AUTHENTICATOR_DATA,
-//             ETH_CLIENT_DATA_JSON,
-//             CHALLENGE_INDEX,
-//             TYPE_INDEX,
-//             ETH_SIGNATURE_R,
-//             ETH_SIGNATURE_S,
-//             ETH_PUBLIC_KEY_X,
-//             ETH_PUBLIC_KEY_Y
-//         );
-//         console.log("isValid", isValid);
-
-//         userOp.signature = _signature;
-
-//         PackedUserOperation[] memory ops = new PackedUserOperation[](1);
-//         ops[0] = userOp;
-
-//         bytes memory code = abi.encodePacked(
-//             bytes3(0xef0100),
-//             address(implementation) // or your logic contract
-//         );
-//         vm.etch(owner, code);
-
-//         vm.expectRevert();
-//         vm.prank(sender);
-//         entryPoint.handleOps(ops, payable(sender));
-
-//         console.log(
-//             "/* -------------------------------- test_UpgradeEntryPointAndSendTXWithMasterKey -------- */"
-//         );
-//     }
-
-//     function _upgradeEPoint() internal {
-//         bytes memory callData =
-//             abi.encodeWithSelector(BaseOPF7702.setEntryPoint.selector, address(789_012));
-
-//         uint256 nonce = entryPoint.getNonce(owner, 1);
-
-//         PackedUserOperation memory userOp = PackedUserOperation({
-//             sender: owner,
-//             nonce: nonce,
-//             initCode: hex"7702",
-//             callData: callData,
-//             accountGasLimits: _packAccountGasLimits(600_000, 400_000),
-//             preVerificationGas: 800_000,
-//             gasFees: _packGasFees(80 gwei, 15 gwei),
-//             paymasterAndData: hex"",
-//             signature: hex""
-//         });
-
-//         bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
-//         console.logBytes32(userOpHash);
-
-//         IKey.PubKey memory pubKeyExecuteBatch =
-//             IKey.PubKey({x: CHANGE_PUBLIC_KEY_X, y: CHANGE_PUBLIC_KEY_Y});
-
-//         bytes memory _signature = account.encodeWebAuthnSignature(
-//             true,
-//             CHANGE_AUTHENTICATOR_DATA,
-//             CHANGE_CLIENT_DATA_JSON,
-//             CHALLENGE_INDEX,
-//             TYPE_INDEX,
-//             CHANGE_SIGNATURE_R,
-//             CHANGE_SIGNATURE_S,
-//             pubKeyExecuteBatch
-//         );
-
-//         (, bytes memory sigData) = abi.decode(_signature, (KeyType, bytes));
-
-//         bytes4 magicValue = account.isValidSignature(userOpHash, sigData);
-//         bool usedChallenge = account.usedChallenges(userOpHash);
-//         console.log("usedChallenge", usedChallenge);
-//         console.logBytes4(magicValue);
-
-//         bool isValid = webAuthn.verifySignature(
-//             userOpHash,
-//             true,
-//             CHANGE_AUTHENTICATOR_DATA,
-//             CHANGE_CLIENT_DATA_JSON,
-//             CHALLENGE_INDEX,
-//             TYPE_INDEX,
-//             CHANGE_SIGNATURE_R,
-//             CHANGE_SIGNATURE_S,
-//             CHANGE_PUBLIC_KEY_X,
-//             CHANGE_PUBLIC_KEY_Y
-//         );
-//         console.log("isValid", isValid);
-
-//         userOp.signature = _signature;
-
-//         PackedUserOperation[] memory ops = new PackedUserOperation[](1);
-//         ops[0] = userOp;
-
-//         bytes memory code = abi.encodePacked(
-//             bytes3(0xef0100),
-//             address(implementation) // or your logic contract
-//         );
-//         vm.etch(owner, code);
-
-//         vm.prank(sender);
-//         entryPoint.handleOps(ops, payable(sender));
-//     }
-
-//     function _register_KeyEOA() internal {
-//         uint48 validUntil = uint48(block.timestamp + 1 days);
-//         uint48 limit = uint48(3);
-//         pubKeySK = PubKey({
-//             x: 0x0000000000000000000000000000000000000000000000000000000000000000,
-//             y: 0x0000000000000000000000000000000000000000000000000000000000000000
-//         });
-
-//         keySK = Key({pubKey: pubKeySK, eoaAddress: sessionKey, keyType: KeyType.EOA});
-
-//         ISpendLimit.SpendTokenInfo memory spendInfo =
-//             ISpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000e18});
-
-//         keyData = KeyReg({
-//             validUntil: validUntil,
-//             validAfter: 0,
-//             limit: limit,
-//             whitelisting: true,
-//             contractAddress: ETH_RECIVE,
-//             spendTokenInfo: spendInfo,
-//             allowedSelectors: _allowedSelectors(),
-//             ethLimit: ETH_LIMIT
-//         });
-
-//         bytes memory code = abi.encodePacked(
-//             bytes3(0xef0100),
-//             address(implementation) // or your logic contract
-//         );
-//         vm.etch(owner, code);
-
-//         vm.prank(address(entryPoint));
-//         account.registerKey(keySK, keyData);
-//     }
-
-//     function _register_KeyP256() internal {
-//         uint48 validUntil = uint48(block.timestamp + 1 days);
-//         uint48 limit = uint48(3);
-//         pubKeySK = PubKey({x: ETH_P256_PUBLIC_KEY_X, y: ETH_P256_PUBLIC_KEY_Y});
-
-//         keySK = Key({pubKey: pubKeySK, eoaAddress: address(0), keyType: KeyType.P256});
-
-//         ISpendLimit.SpendTokenInfo memory spendInfo =
-//             ISpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000e18});
-
-//         keyData = KeyReg({
-//             validUntil: validUntil,
-//             validAfter: 0,
-//             limit: limit,
-//             whitelisting: true,
-//             contractAddress: ETH_RECIVE,
-//             spendTokenInfo: spendInfo,
-//             allowedSelectors: _allowedSelectors(),
-//             ethLimit: ETH_LIMIT
-//         });
-
-//         bytes memory code = abi.encodePacked(
-//             bytes3(0xef0100),
-//             address(implementation) // or your logic contract
-//         );
-//         vm.etch(owner, code);
-
-//         vm.prank(address(entryPoint));
-//         account.registerKey(keySK, keyData);
-//     }
-
-//     function _register_KeyP256NonKey() internal {
-//         uint48 validUntil = uint48(block.timestamp + 1 days);
-//         uint48 limit = uint48(3);
-//         pubKeySK = PubKey({x: ETH_P256NOKEY_PUBLIC_KEY_X, y: ETH_P256NOKEY_PUBLIC_KEY_Y});
-
-//         keySK = Key({pubKey: pubKeySK, eoaAddress: address(0), keyType: KeyType.P256NONKEY});
-
-//         ISpendLimit.SpendTokenInfo memory spendInfo =
-//             ISpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000e18});
-
-//         keyData = KeyReg({
-//             validUntil: validUntil,
-//             validAfter: 0,
-//             limit: limit,
-//             whitelisting: true,
-//             contractAddress: ETH_RECIVE,
-//             spendTokenInfo: spendInfo,
-//             allowedSelectors: _allowedSelectors(),
-//             ethLimit: ETH_LIMIT
-//         });
-
-//         bytes memory code = abi.encodePacked(
-//             bytes3(0xef0100),
-//             address(implementation) // or your logic contract
-//         );
-//         vm.etch(owner, code);
-
-//         vm.prank(address(entryPoint));
-//         account.registerKey(keySK, keyData);
-//     }
-
-//     /* ─────────────────────────────────────────────────────────── helpers ──── */
-//     function _initializeAccount() internal {
-//         /* sample WebAuthn public key – replace with a real one if needed */
-//         pubKeyMK = PubKey({x: CHANGE_PUBLIC_KEY_X, y: CHANGE_PUBLIC_KEY_Y});
-
-//         keyMK = Key({pubKey: pubKeyMK, eoaAddress: address(0), keyType: KeyType.WEBAUTHN});
-
-//         ISpendLimit.SpendTokenInfo memory spendInfo =
-//             ISpendLimit.SpendTokenInfo({token: TOKEN, limit: 0});
-
-//         keyData = KeyReg({
-//             validUntil: type(uint48).max,
-//             validAfter: 0,
-//             limit: 0,
-//             whitelisting: false,
-//             contractAddress: address(0),
-//             spendTokenInfo: spendInfo,
-//             allowedSelectors: _allowedSelectors(),
-//             ethLimit: 0
-//         });
-
-//         pubKeyMK = PubKey({x: bytes32(0), y: bytes32(0)});
-//         keySK = Key({pubKey: pubKeyMK, eoaAddress: address(0), keyType: KeyType.WEBAUTHN});
-
-//         bytes32 initialGuardian = keccak256(abi.encodePacked(sender));
-
-//         bytes memory keyEnc =
-//             abi.encode(keyMK.pubKey.x, keyMK.pubKey.y, keyMK.eoaAddress, keyMK.keyType);
-
-//         bytes memory keyDataEnc = abi.encode(
-//             keyData.validUntil,
-//             keyData.validAfter,
-//             keyData.limit,
-//             keyData.whitelisting,
-//             keyData.contractAddress,
-//             keyData.spendTokenInfo.token,
-//             keyData.spendTokenInfo.limit,
-//             keyData.allowedSelectors,
-//             keyData.ethLimit
-//         );
-
-//         bytes memory skEnc =
-//             abi.encode(keySK.pubKey.x, keySK.pubKey.y, keySK.eoaAddress, keySK.keyType);
-
-//         bytes memory skDataEnc = abi.encode(
-//             keyData.validUntil,
-//             keyData.validAfter,
-//             keyData.limit,
-//             keyData.whitelisting,
-//             keyData.contractAddress,
-//             keyData.spendTokenInfo.token,
-//             keyData.spendTokenInfo.limit,
-//             keyData.allowedSelectors
-//         );
-
-//         bytes32 structHash = keccak256(
-//             abi.encode(INIT_TYPEHASH, keyEnc, keyDataEnc, skEnc, skDataEnc, initialGuardian)
-//         );
-
-//         string memory name = "OPF7702Recoverable";
-//         string memory version = "1";
-
-//         bytes32 domainSeparator = keccak256(
-//             abi.encode(
-//                 TYPE_HASH, keccak256(bytes(name)), keccak256(bytes(version)), block.chainid, owner
-//             )
-//         );
-//         bytes32 digest = MessageHashUtils.toTypedDataHash(domainSeparator, structHash);
-
-//         (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPk, digest);
-//         bytes memory sig = abi.encodePacked(r, s, v);
-
-//         vm.etch(owner, abi.encodePacked(bytes3(0xef0100), address(implementation)));
-//         account = OPF7702(payable(owner));
-
-//         vm.prank(address(entryPoint));
-//         account.initialize(keyMK, keyData, keySK, keyData, sig, initialGuardian);
-//     }
-
-//     function test_UpdateGasPolicy() public {
-//         address newAddr = address(111101);
-//         address oldAddr = account.gasPolicy();
-//         vm.etch(owner, abi.encodePacked(bytes3(0xef0100), address(implementation)));
-//         account = OPF7702(payable(owner));
-
-//         vm.prank(owner);
-//         account.setGasPolicy(newAddr);
-
-//         assertEq(newAddr, account.gasPolicy());
-//         assertNotEq(oldAddr, account.gasPolicy());
-//     }
-// }
+// SPDX-Lincese-Identifier: MIT
+
+pragma solidity 0.8.29;
+
+import {Deploy} from "./../Deploy.t.sol";
+import {console2 as console} from "lib/forge-std/src/Test.sol";
+import {PackedUserOperation} from
+    "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
+
+contract UpgradeAddresses is Deploy {
+    enum Addr {
+        EP,
+        VERIFIER,
+        GAS
+    }
+
+    address[] addrToCompare;
+    PubKey internal pK;
+
+    function setUp() public override {
+        super.setUp();
+        _populateWebAuthn("upgrade.json", ".ep");
+        pK = PubKey({x: DEF_WEBAUTHN.X, y: DEF_WEBAUTHN.Y});
+        _createCustomFreshKey(
+            true, KeyType.WEBAUTHN, type(uint48).max, 0, 0, _getKeyP256(pK), KeyControl.Self
+        );
+        _createQuickFreshKey(false);
+
+        _initializeAccount();
+    }
+
+    function test_UpgradeEPWithRootKey() external {
+        _getCurrectAddr(Addr.EP);
+        assertEq(address(entryPoint), addrToCompare[0]);
+
+        _etch();
+        vm.prank(owner);
+        account.setEntryPoint(address(123456));
+
+        _getCurrectAddr(Addr.EP);
+        assertEq(address(123456), addrToCompare[1]);
+    }
+
+    function test_UpgradeWebAuthVerifieWithRootKey() external {
+        _getCurrectAddr(Addr.VERIFIER);
+        assertEq(WEBAUTHN_VERIFIER, addrToCompare[0]);
+
+        _etch();
+        vm.prank(owner);
+        account.setWebAuthnVerifier(address(123456));
+
+        _getCurrectAddr(Addr.VERIFIER);
+        assertEq(address(123456), addrToCompare[1]);
+    }
+
+    function test_UpgradeGasPolicyWithRootKey() external {
+        _getCurrectAddr(Addr.GAS);
+        assertEq(address(gasPolicy), addrToCompare[0]);
+
+        _etch();
+        vm.prank(owner);
+        account.setGasPolicy(address(123456));
+
+        _getCurrectAddr(Addr.GAS);
+        assertEq(address(123456), addrToCompare[1]);
+    }
+
+    function test_UpgradeEPAAWithRootKey() external {
+        _getCurrectAddr(Addr.EP);
+        assertEq(address(entryPoint), addrToCompare[0]);
+
+        bytes memory data = abi.encodeWithSelector(account.setEntryPoint.selector, address(123456));
+        Call[] memory calls = _getCalls(1, owner, 0, data);
+        PackedUserOperation memory userOp = _getFreshUserOp();
+        userOp = _populateUserOp(
+            userOp,
+            _packCallData(mode_1, calls),
+            _packAccountGasLimits(600_000, 400_000),
+            800_000,
+            _packGasFees(80 gwei, 15 gwei),
+            hex""
+        );
+
+        bytes memory signature = _signUserOp(userOp);
+        userOp.signature = _encodeEOASignature(signature);
+
+        _relayUserOp(userOp);
+
+        _getCurrectAddr(Addr.EP);
+        assertEq(address(123456), addrToCompare[1]);
+    }
+
+    function test_UpgradeWebAuthVerifieAAWithRootKey() external {
+        _getCurrectAddr(Addr.VERIFIER);
+        assertEq(WEBAUTHN_VERIFIER, addrToCompare[0]);
+
+        bytes memory data =
+            abi.encodeWithSelector(account.setWebAuthnVerifier.selector, address(123456));
+        Call[] memory calls = _getCalls(1, owner, 0, data);
+        PackedUserOperation memory userOp = _getFreshUserOp();
+        userOp = _populateUserOp(
+            userOp,
+            _packCallData(mode_1, calls),
+            _packAccountGasLimits(600_000, 400_000),
+            800_000,
+            _packGasFees(80 gwei, 15 gwei),
+            hex""
+        );
+
+        bytes memory signature = _signUserOp(userOp);
+        userOp.signature = _encodeEOASignature(signature);
+
+        _relayUserOp(userOp);
+
+        _getCurrectAddr(Addr.VERIFIER);
+        assertEq(address(123456), addrToCompare[1]);
+    }
+
+    function test_UpgradeGasPolicyAAWithRootKey() external {
+        _getCurrectAddr(Addr.GAS);
+        assertEq(address(gasPolicy), addrToCompare[0]);
+
+        bytes memory data = abi.encodeWithSelector(account.setGasPolicy.selector, address(123456));
+        Call[] memory calls = _getCalls(1, owner, 0, data);
+        PackedUserOperation memory userOp = _getFreshUserOp();
+        userOp = _populateUserOp(
+            userOp,
+            _packCallData(mode_1, calls),
+            _packAccountGasLimits(600_000, 400_000),
+            800_000,
+            _packGasFees(80 gwei, 15 gwei),
+            hex""
+        );
+
+        bytes memory signature = _signUserOp(userOp);
+        userOp.signature = _encodeEOASignature(signature);
+
+        _relayUserOp(userOp);
+
+        _getCurrectAddr(Addr.GAS);
+        assertEq(address(123456), addrToCompare[1]);
+    }
+
+    function test_UpgradeEPAAWithMK() external {
+        _getCurrectAddr(Addr.EP);
+        assertEq(address(entryPoint), addrToCompare[0]);
+
+        bytes memory data = abi.encodeWithSelector(account.setEntryPoint.selector, address(123456));
+        Call[] memory calls = _getCalls(1, owner, 0, data);
+        PackedUserOperation memory userOp = _getFreshUserOp();
+        userOp = _populateUserOp(
+            userOp,
+            _packCallData(mode_1, calls),
+            _packAccountGasLimits(600_000, 400_000),
+            800_000,
+            _packGasFees(80 gwei, 15 gwei),
+            hex""
+        );
+
+        bytes32 userOpHash = _getUserOpHash(userOp);
+        console.log("userOpHash Upgrade EP:", vm.toString(userOpHash));
+
+        _populateWebAuthn("upgrade.json", ".ep");
+        pK = PubKey({x: DEF_WEBAUTHN.X, y: DEF_WEBAUTHN.Y});
+
+        userOp.signature = _getSignedUserOpByWebAuthn(DEF_WEBAUTHN, pK);
+
+        _relayUserOp(userOp);
+
+        _getCurrectAddr(Addr.EP);
+        assertEq(address(123456), addrToCompare[1]);
+    }
+
+    function test_UpgradeWebAuthVerifieAAWithMK() external {
+        _getCurrectAddr(Addr.VERIFIER);
+        assertEq(WEBAUTHN_VERIFIER, addrToCompare[0]);
+
+        bytes memory data =
+            abi.encodeWithSelector(account.setWebAuthnVerifier.selector, address(123456));
+        Call[] memory calls = _getCalls(1, owner, 0, data);
+        PackedUserOperation memory userOp = _getFreshUserOp();
+        userOp = _populateUserOp(
+            userOp,
+            _packCallData(mode_1, calls),
+            _packAccountGasLimits(600_000, 400_000),
+            800_000,
+            _packGasFees(80 gwei, 15 gwei),
+            hex""
+        );
+
+        bytes32 userOpHash = _getUserOpHash(userOp);
+        console.log("userOpHash Upgrade WAV:", vm.toString(userOpHash));
+
+        _populateWebAuthn("upgrade.json", ".wav");
+        pK = PubKey({x: DEF_WEBAUTHN.X, y: DEF_WEBAUTHN.Y});
+
+        userOp.signature = _getSignedUserOpByWebAuthn(DEF_WEBAUTHN, pK);
+
+        _relayUserOp(userOp);
+
+        _getCurrectAddr(Addr.VERIFIER);
+        assertEq(address(123456), addrToCompare[1]);
+    }
+
+    function test_UpgradeGasPolicyAAWithRootMK() external {
+        _getCurrectAddr(Addr.GAS);
+        assertEq(address(gasPolicy), addrToCompare[0]);
+
+        bytes memory data = abi.encodeWithSelector(account.setGasPolicy.selector, address(123456));
+        Call[] memory calls = _getCalls(1, owner, 0, data);
+        PackedUserOperation memory userOp = _getFreshUserOp();
+        userOp = _populateUserOp(
+            userOp,
+            _packCallData(mode_1, calls),
+            _packAccountGasLimits(600_000, 400_000),
+            800_000,
+            _packGasFees(80 gwei, 15 gwei),
+            hex""
+        );
+
+        bytes32 userOpHash = _getUserOpHash(userOp);
+        console.log("userOpHash Upgrade GAS:", vm.toString(userOpHash));
+
+        _populateWebAuthn("upgrade.json", ".gas");
+        pK = PubKey({x: DEF_WEBAUTHN.X, y: DEF_WEBAUTHN.Y});
+
+        userOp.signature = _getSignedUserOpByWebAuthn(DEF_WEBAUTHN, pK);
+
+        _relayUserOp(userOp);
+
+        _getCurrectAddr(Addr.GAS);
+        assertEq(address(123456), addrToCompare[1]);
+    }
+
+    function _relayUserOp(PackedUserOperation memory _userOp) internal {
+        PackedUserOperation[] memory ops = new PackedUserOperation[](1);
+        ops[0] = _userOp;
+
+        _etch();
+        vm.prank(sender);
+        entryPoint.handleOps(ops, payable(sender));
+    }
+
+    function _getCurrectAddr(Addr _addr) internal {
+        if (_addr == Addr.EP) {
+            addrToCompare.push(address(account.entryPoint()));
+        } else if (_addr == Addr.VERIFIER) {
+            addrToCompare.push((account.webAuthnVerifier()));
+        } else if (_addr == Addr.GAS) {
+            addrToCompare.push(account.gasPolicy());
+        }
+    }
+}

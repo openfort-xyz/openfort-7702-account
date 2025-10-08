@@ -92,6 +92,8 @@ interface IOPF7702Recoverable is IOPF7702 {
     /// @dev Thrown when guardian equals the current master key.
     error OPF7702Recoverable__GuardianCannotBeCurrentMasterKey();
 
+    error OPF7702Recoverable__Unauthorized();
+
     // ──────────────────────────────────────────────────────────────────────────────
     //                                 Events
     // ──────────────────────────────────────────────────────────────────────────────

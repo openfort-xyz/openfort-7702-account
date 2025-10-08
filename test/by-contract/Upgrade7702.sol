@@ -4,6 +4,7 @@ pragma solidity 0.8.29;
 import {BaseData} from "./../BaseData.t.sol";
 import {GasPolicy} from "src/utils/GasPolicy.sol";
 import {OPFMain as OPF7702} from "src/core/OPFMain.sol";
+import {SocialRecoveryManager} from "src/utils/SocialRecover.sol";
 import {LibEIP7702} from "lib/solady/src/accounts/LibEIP7702.sol";
 import {WebAuthnVerifierV2} from "src/utils/WebAuthnVerifierV2.sol";
 import {IEntryPoint} from "lib/account-abstraction/contracts/interfaces/IEntryPoint.sol";
@@ -18,15 +19,15 @@ contract Upgrade7702 is BaseData {
         entryPoint = IEntryPoint(payable(ENTRYPOINT_V8));
         webAuthn = WebAuthnVerifierV2(payable(WEBAUTHN_VERIFIER));
         gasPolicy = new GasPolicy(DEFAULT_PVG, DEFAULT_VGL, DEFAULT_CGL, DEFAULT_PMV, DEFAULT_PO);
+        recoveryManager = new SocialRecoveryManager(
+            RECOVERY_PERIOD, LOCK_PERIOD, SECURITY_PERIOD, SECURITY_WINDOW
+        );
 
         implementation = new OPF7702(
             address(entryPoint),
             WEBAUTHN_VERIFIER,
-            RECOVERY_PERIOD,
-            LOCK_PERIOD,
-            SECURITY_PERIOD,
-            SECURITY_WINDOW,
-            address(gasPolicy)
+            address(gasPolicy),
+            address(recoveryManager)
         );
 
         proxy = LibEIP7702.deployProxy(address(implementation), address(0));
@@ -53,11 +54,8 @@ contract Upgrade7702 is BaseData {
             new OPF7702(
                 address(entryPoint),
                 WEBAUTHN_VERIFIER,
-                RECOVERY_PERIOD,
-                LOCK_PERIOD,
-                SECURITY_PERIOD,
-                SECURITY_WINDOW,
-                address(gasPolicy)
+                address(gasPolicy),
+                address(recoveryManager)
             )
         );
         address oldImpl = account._OPENFORT_CONTRACT_ADDRESS();

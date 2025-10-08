@@ -6,6 +6,7 @@ import {BaseData} from "././BaseData.t.sol";
 import {MockERC20} from "src/mocks/MockERC20.sol";
 import {GasPolicy} from "src/utils/GasPolicy.sol";
 import {OPFMain as OPF7702} from "src/core/OPFMain.sol";
+import {SocialRecoveryManager} from "src/utils/SocialRecover.sol";
 import {WebAuthnVerifierV2} from "src/utils/WebAuthnVerifierV2.sol";
 import {IEntryPoint} from "lib/account-abstraction/contracts/interfaces/IEntryPoint.sol";
 import {MessageHashUtils} from
@@ -31,17 +32,17 @@ contract Deploy is BaseData {
         entryPoint = IEntryPoint(payable(ENTRYPOINT_V8));
         webAuthn = WebAuthnVerifierV2(payable(WEBAUTHN_VERIFIER));
         gasPolicy = new GasPolicy(DEFAULT_PVG, DEFAULT_VGL, DEFAULT_CGL, DEFAULT_PMV, DEFAULT_PO);
+        recoveryManager = new SocialRecoveryManager(
+            RECOVERY_PERIOD, LOCK_PERIOD, SECURITY_PERIOD, SECURITY_WINDOW
+        );
 
         _createInitialGuradian();
 
         implementation = new OPF7702(
             address(entryPoint),
             WEBAUTHN_VERIFIER,
-            RECOVERY_PERIOD,
-            LOCK_PERIOD,
-            SECURITY_PERIOD,
-            SECURITY_WINDOW,
-            address(gasPolicy)
+            address(gasPolicy),
+            address(recoveryManager)
         );
 
         erc20 = new MockERC20();
@@ -234,5 +235,62 @@ contract Deploy is BaseData {
             _wA.S,
             _pK_
         );
+    }
+
+    function _callRecoveryManager(bytes memory data) internal {
+        Call[] memory calls = new Call[](1);
+        calls[0] = _createCall(address(recoveryManager), 0, data);
+
+        _etch();
+        vm.prank(owner);
+        account.execute(mode_1, abi.encode(calls));
+    }
+
+    function _proposeGuardian(bytes32 guardian) internal {
+        bytes memory data = abi.encodeWithSelector(
+            SocialRecoveryManager.proposeGuardian.selector, address(account), guardian
+        );
+        _callRecoveryManager(data);
+    }
+
+    function _confirmGuardian(bytes32 guardian) internal {
+        bytes memory data = abi.encodeWithSelector(
+            SocialRecoveryManager.confirmGuardianProposal.selector, address(account), guardian
+        );
+        _callRecoveryManager(data);
+    }
+
+    function _cancelGuardianProposal(bytes32 guardian) internal {
+        bytes memory data = abi.encodeWithSelector(
+            SocialRecoveryManager.cancelGuardianProposal.selector, address(account), guardian
+        );
+        _callRecoveryManager(data);
+    }
+
+    function _revokeGuardian(bytes32 guardian) internal {
+        bytes memory data = abi.encodeWithSelector(
+            SocialRecoveryManager.revokeGuardian.selector, address(account), guardian
+        );
+        _callRecoveryManager(data);
+    }
+
+    function _confirmGuardianRevocation(bytes32 guardian) internal {
+        bytes memory data = abi.encodeWithSelector(
+            SocialRecoveryManager.confirmGuardianRevocation.selector, address(account), guardian
+        );
+        _callRecoveryManager(data);
+    }
+
+    function _cancelGuardianRevocation(bytes32 guardian) internal {
+        bytes memory data = abi.encodeWithSelector(
+            SocialRecoveryManager.cancelGuardianRevocation.selector, address(account), guardian
+        );
+        _callRecoveryManager(data);
+    }
+
+    function _cancelRecovery() internal {
+        bytes memory data =
+            abi.encodeWithSelector(SocialRecoveryManager.cancelRecovery.selector, address(account));
+        _callRecoveryManager(data);
     }
 }

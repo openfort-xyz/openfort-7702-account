@@ -5,6 +5,7 @@ pragma solidity 0.8.29;
 import {Data} from "././Data.t.sol";
 import {MockERC20} from "src/mocks/MockERC20.sol";
 import {GasPolicy} from "src/utils/GasPolicy.sol";
+import {SocialRecoveryManager} from "src/utils/SocialRecover.sol";
 import {OPFMain as OPF7702} from "src/core/OPFMain.sol";
 import {WebAuthnVerifierV2} from "src/utils/WebAuthnVerifierV2.sol";
 import {EntryPoint} from "lib/account-abstraction/contracts/core/EntryPoint.sol";
@@ -34,6 +35,7 @@ contract BaseData is Data {
     GasPolicy public gasPolicy;
     IEntryPoint public entryPoint;
     WebAuthnVerifierV2 public webAuthn;
+    SocialRecoveryManager public recoveryManager;
 
     OPF7702 public implementation;
     OPF7702 public account;

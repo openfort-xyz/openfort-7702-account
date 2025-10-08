@@ -36,27 +36,18 @@ import {OPF7702Recoverable} from "src/core/OPF7702Recoverable.sol";
 contract OPFMain is OPF7702Recoverable layout at 107588995614188179791452663824698570634674667931787294340862201729294267929600 {
     /// @param _entryPoint      ERC-4337 EntryPoint address.
     /// @param _webAuthnVerifier WebAuthn verifier contract.
-    /// @param _recoveryPeriod  Delay before guardians can execute recovery.
-    /// @param _lockPeriod      How long the wallet stays locked after recovery.
-    /// @param _securityPeriod  Timelock for guardian add/remove.
-    /// @param _securityWindow  Window during which that action must be executed.
+    /// @param _recoveryManager  Window during which that action must be executed.
     constructor(
         address _entryPoint,
         address _webAuthnVerifier,
-        uint256 _recoveryPeriod,
-        uint256 _lockPeriod,
-        uint256 _securityPeriod,
-        uint256 _securityWindow,
-        address _gasPolicy
+        address _gasPolicy,
+        address _recoveryManager
     )
         OPF7702Recoverable(
             _entryPoint,
             _webAuthnVerifier,
-            _recoveryPeriod,
-            _lockPeriod,
-            _securityPeriod,
-            _securityWindow,
-            _gasPolicy
+            _gasPolicy,
+            _recoveryManager
         )
     {}
 

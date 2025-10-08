@@ -39,156 +39,100 @@ contract RecoverableReverts is Deploy {
     }
 
     function test_proposeGuardianRevertDuplicatedProposal() external createGuardians(3) {
-        _etch();
-        vm.prank(owner);
-        account.proposeGuardian(guardiansID[0]);
+        _proposeGuardian(guardiansID[0]);
 
         vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__DuplicatedProposal.selector);
-        _etch();
-        vm.prank(owner);
-        account.proposeGuardian(guardiansID[0]);
+        _proposeGuardian(guardiansID[0]);
     }
 
     function test_proposeGuardianRevertDuplicatedGuardian() external createGuardians(3) {
-        _etch();
-        vm.prank(owner);
-        account.proposeGuardian(guardiansID[0]);
+        _proposeGuardian(guardiansID[0]);
 
         vm.warp(block.timestamp + SECURITY_PERIOD + 1);
-        _etch();
-        vm.prank(owner);
-        account.confirmGuardianProposal(guardiansID[0]);
+        _confirmGuardian(guardiansID[0]);
 
         vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__DuplicatedGuardian.selector);
-        _etch();
-        vm.prank(owner);
-        account.proposeGuardian(guardiansID[0]);
+        _proposeGuardian(guardiansID[0]);
     }
 
     function test_confirmGuardianRevertDuplicatedGuardian() external createGuardians(3) {
-        _etch();
-        vm.prank(owner);
-        account.proposeGuardian(guardiansID[0]);
+        _proposeGuardian(guardiansID[0]);
 
         vm.warp(block.timestamp + SECURITY_PERIOD + 1);
-        _etch();
-        vm.prank(owner);
-        account.confirmGuardianProposal(guardiansID[0]);
+        _confirmGuardian(guardiansID[0]);
 
-        _etch();
-        vm.prank(owner);
-        account.revokeGuardian(guardiansID[0]);
+        _revokeGuardian(guardiansID[0]);
 
         vm.warp(block.timestamp + SECURITY_PERIOD + 1);
         vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__DuplicatedGuardian.selector);
-        _etch();
-        vm.prank(owner);
-        account.confirmGuardianProposal(guardiansID[0]);
+        _confirmGuardian(guardiansID[0]);
     }
 
     function test_confirmGuardianRevertPendingProposalNotOver() external createGuardians(3) {
-        _etch();
-        vm.prank(owner);
-        account.proposeGuardian(guardiansID[0]);
+        _proposeGuardian(guardiansID[0]);
 
         vm.warp(block.timestamp + 1 days);
-        _etch();
         vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__PendingProposalNotOver.selector);
-        vm.prank(owner);
-        account.confirmGuardianProposal(guardiansID[0]);
+        _confirmGuardian(guardiansID[0]);
     }
 
     function test_confirmGuardianRevertPendingProposalExpiredr() external createGuardians(3) {
-        _etch();
-        vm.prank(owner);
-        account.proposeGuardian(guardiansID[0]);
+        _proposeGuardian(guardiansID[0]);
 
         vm.warp(block.timestamp + 100 days);
-        _etch();
         vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__PendingProposalExpired.selector);
-        vm.prank(owner);
-        account.confirmGuardianProposal(guardiansID[0]);
+        _confirmGuardian(guardiansID[0]);
     }
 
     function test_confirmGuardianRevertAddressCantBeZero() external createGuardians(3) {
-        _etch();
-        vm.prank(owner);
-        account.proposeGuardian(guardiansID[0]);
+        _proposeGuardian(guardiansID[0]);
 
         vm.warp(block.timestamp + SECURITY_PERIOD + 1);
-        _etch();
         vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__AddressCantBeZero.selector);
-        vm.prank(owner);
-        account.confirmGuardianProposal(bytes32(0));
+        _confirmGuardian(bytes32(0));
     }
 
     function test_cancelGuardianRevertDuplicatedGuardian() external createGuardians(3) {
-        _etch();
-        vm.prank(owner);
-        account.proposeGuardian(guardiansID[0]);
+        _proposeGuardian(guardiansID[0]);
 
         vm.warp(block.timestamp + SECURITY_PERIOD + 1);
-        _etch();
-        vm.prank(owner);
-        account.confirmGuardianProposal(guardiansID[0]);
+        _confirmGuardian(guardiansID[0]);
 
-        _etch();
-        vm.prank(owner);
-        account.revokeGuardian(guardiansID[0]);
+        _revokeGuardian(guardiansID[0]);
 
-        _etch();
         vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__DuplicatedGuardian.selector);
-        vm.prank(owner);
-        account.cancelGuardianProposal(guardiansID[0]);
+        _cancelGuardianProposal(guardiansID[0]);
     }
 
     function test_revokeGuardianRevertDuplicatedRevoke() external createGuardians(3) {
-        _etch();
-        vm.prank(owner);
-        account.proposeGuardian(guardiansID[0]);
+        _proposeGuardian(guardiansID[0]);
 
         vm.warp(block.timestamp + SECURITY_PERIOD + 1);
-        _etch();
-        vm.prank(owner);
-        account.confirmGuardianProposal(guardiansID[0]);
+        _confirmGuardian(guardiansID[0]);
 
-        _etch();
-        vm.prank(owner);
-        account.revokeGuardian(guardiansID[0]);
+        _revokeGuardian(guardiansID[0]);
 
-        _etch();
         vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__DuplicatedRevoke.selector);
-        vm.prank(owner);
-        account.revokeGuardian(guardiansID[0]);
+        _revokeGuardian(guardiansID[0]);
     }
 
     function test_confirmGuardianRevocationRevertPendingRevokeNotOverAndPendingRevokeExpired()
         external
         createGuardians(3)
     {
-        _etch();
-        vm.prank(owner);
-        account.proposeGuardian(guardiansID[0]);
+        _proposeGuardian(guardiansID[0]);
 
         vm.warp(block.timestamp + SECURITY_PERIOD + 1);
-        _etch();
-        vm.prank(owner);
-        account.confirmGuardianProposal(guardiansID[0]);
+        _confirmGuardian(guardiansID[0]);
 
-        _etch();
-        vm.prank(owner);
-        account.revokeGuardian(guardiansID[0]);
+        _revokeGuardian(guardiansID[0]);
 
-        _etch();
         vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__PendingRevokeNotOver.selector);
-        vm.prank(owner);
-        account.confirmGuardianRevocation(guardiansID[0]);
+        _confirmGuardianRevocation(guardiansID[0]);
 
         vm.warp(block.timestamp + SECURITY_PERIOD + 100 days);
-        _etch();
         vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__PendingRevokeExpired.selector);
-        vm.prank(owner);
-        account.confirmGuardianRevocation(guardiansID[0]);
+        _confirmGuardianRevocation(guardiansID[0]);
     }
 
     function test_startRecoveryRevertMustBeGuardianAndUnsupportedKeyTypeAndRecoverCannotBeActiveKey(
@@ -206,24 +150,18 @@ contract RecoverableReverts is Deploy {
             keyControl: KeyControl.Self
         });
 
-        _etch();
-        vm.prank(owner);
-        account.proposeGuardian(guardiansID[0]);
+        _proposeGuardian(guardiansID[0]);
 
         vm.warp(block.timestamp + SECURITY_PERIOD + 1);
-        _etch();
-        vm.prank(owner);
-        account.confirmGuardianProposal(guardiansID[0]);
+        _confirmGuardian(guardiansID[0]);
 
         vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__MustBeGuardian.selector);
-        _etch();
         vm.prank(owner);
-        account.startRecovery(recoveryKey);
+        recoveryManager.startRecovery(address(account), recoveryKey);
 
         vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__UnsupportedKeyType.selector);
-        _etch();
         vm.prank(guardians[0]);
-        account.startRecovery(recoveryKey);
+        recoveryManager.startRecovery(address(account), recoveryKey);
 
         pKR = PubKey({x: DEF_WEBAUTHN.X, y: DEF_WEBAUTHN.Y});
         _key = _getKeyP256(pKR);
@@ -238,18 +176,13 @@ contract RecoverableReverts is Deploy {
         });
 
         vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__RecoverCannotBeActiveKey.selector);
-        _etch();
         vm.prank(guardians[0]);
-        account.startRecovery(recoveryKey);
+        recoveryManager.startRecovery(address(account), recoveryKey);
 
-        _etch();
-        vm.prank(owner);
-        account.proposeGuardian(guardiansID[1]);
+        _proposeGuardian(guardiansID[1]);
 
         vm.warp(block.timestamp + SECURITY_PERIOD + 1);
-        _etch();
-        vm.prank(owner);
-        account.confirmGuardianProposal(guardiansID[1]);
+        _confirmGuardian(guardiansID[1]);
 
         recoveryKey = KeyDataReg({
             keyType: KeyType.EOA,
@@ -261,9 +194,8 @@ contract RecoverableReverts is Deploy {
         });
 
         vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__GuardianCannotBeOwner.selector);
-        _etch();
         vm.prank(guardians[0]);
-        account.startRecovery(recoveryKey);
+        recoveryManager.startRecovery(address(account), recoveryKey);
     }
 
     function test_completeRecoveryReverts() external createGuardians(3) {
@@ -280,26 +212,15 @@ contract RecoverableReverts is Deploy {
             keyControl: KeyControl.Self
         });
 
-        _etch();
-        vm.prank(owner);
-        account.proposeGuardian(guardiansID[0]);
-
-        _etch();
-        vm.prank(owner);
-        account.proposeGuardian(guardiansID[1]);
+        _proposeGuardian(guardiansID[0]);
+        _proposeGuardian(guardiansID[1]);
 
         vm.warp(block.timestamp + SECURITY_PERIOD + 1);
-        _etch();
-        vm.prank(owner);
-        account.confirmGuardianProposal(guardiansID[0]);
+        _confirmGuardian(guardiansID[0]);
+        _confirmGuardian(guardiansID[1]);
 
-        _etch();
-        vm.prank(owner);
-        account.confirmGuardianProposal(guardiansID[1]);
-
-        _etch();
         vm.prank(guardians[0]);
-        account.startRecovery(recoveryKey);
+        recoveryManager.startRecovery(address(account), recoveryKey);
 
         _signGuardians(1);
 
@@ -329,18 +250,13 @@ contract RecoverableReverts is Deploy {
             keyControl: KeyControl.Self
         });
 
-        _etch();
-        vm.prank(owner);
-        account.proposeGuardian(guardiansID[0]);
+        _proposeGuardian(guardiansID[0]);
 
         vm.warp(block.timestamp + SECURITY_PERIOD + 1);
-        _etch();
-        vm.prank(owner);
-        account.confirmGuardianProposal(guardiansID[0]);
+        _confirmGuardian(guardiansID[0]);
 
-        _etch();
         vm.prank(guardians[0]);
-        account.startRecovery(recoveryKey);
+        recoveryManager.startRecovery(address(account), recoveryKey);
 
         vm.warp(block.timestamp + RECOVERY_PERIOD + 1);
 
@@ -352,24 +268,18 @@ contract RecoverableReverts is Deploy {
     }
 
     function test_requireRecovery_NoOngoingRecovery_cancelRecovery() external {
-        _etch();
         vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__NoOngoingRecovery.selector);
-        vm.prank(owner);
-        account.cancelRecovery();
+        _cancelRecovery();
     }
 
     function test_requireRecovery_NoOngoingRecovery_completeRecovery()
         external
         createGuardians(1)
     {
-        _etch();
-        vm.prank(owner);
-        account.proposeGuardian(guardiansID[0]);
+        _proposeGuardian(guardiansID[0]);
 
         vm.warp(block.timestamp + SECURITY_PERIOD + 1);
-        _etch();
-        vm.prank(owner);
-        account.confirmGuardianProposal(guardiansID[0]);
+        _confirmGuardian(guardiansID[0]);
 
         _signBadGuardians(1);
 
@@ -382,14 +292,10 @@ contract RecoverableReverts is Deploy {
         external
         createGuardians(1)
     {
-        _etch();
-        vm.prank(owner);
-        account.proposeGuardian(guardiansID[0]);
+        _proposeGuardian(guardiansID[0]);
 
         vm.warp(block.timestamp + SECURITY_PERIOD + 1);
-        _etch();
-        vm.prank(owner);
-        account.confirmGuardianProposal(guardiansID[0]);
+        _confirmGuardian(guardiansID[0]);
 
         KeyDataReg memory rk = KeyDataReg({
             keyType: KeyType.EOA,
@@ -400,14 +306,11 @@ contract RecoverableReverts is Deploy {
             keyControl: KeyControl.Self
         });
 
-        _etch();
         vm.prank(guardians[0]);
-        account.startRecovery(rk);
+        recoveryManager.startRecovery(address(account), rk);
 
         vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__OngoingRecovery.selector);
-        _etch();
-        vm.prank(owner);
-        account.confirmGuardianProposal(guardiansID[0]);
+        _confirmGuardian(guardiansID[0]);
     }
 
     function _createGuardians(uint256 _index) internal {
@@ -422,13 +325,31 @@ contract RecoverableReverts is Deploy {
     }
 
     function _signGuardians(uint32 _quorom) internal {
-        bytes32 digest = account.getDigestToSign();
+        bytes32 digest = recoveryManager.getDigestToSign(address(account));
+        bytes32[] memory hashes = new bytes32[](_quorom);
+        uint256[] memory pks = new uint256[](_quorom);
 
-        for (uint256 i = 0; i < _quorom;) {
-            (uint8 v, bytes32 r, bytes32 s) = vm.sign(guardiansPK[i], digest);
+        for (uint256 i; i < _quorom;) {
+            hashes[i] = keccak256(abi.encodePacked(guardians[i]));
+            pks[i] = guardiansPK[i];
+            unchecked {
+                ++i;
+            }
+        }
+
+        for (uint256 i; i < hashes.length; ++i) {
+            for (uint256 j = i + 1; j < hashes.length; ++j) {
+                if (hashes[j] < hashes[i]) {
+                    (hashes[i], hashes[j]) = (hashes[j], hashes[i]);
+                    (pks[i], pks[j]) = (pks[j], pks[i]);
+                }
+            }
+        }
+
+        for (uint256 i; i < _quorom;) {
+            (uint8 v, bytes32 r, bytes32 s) = vm.sign(pks[i], digest);
             bytes memory sig = abi.encodePacked(r, s, v);
             _signatures.push(sig);
-
             unchecked {
                 ++i;
             }

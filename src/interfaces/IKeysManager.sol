@@ -85,4 +85,7 @@ interface IKeysManager {
     );
     event TokenSpendRemoved(bytes32 indexed keyId, address indexed token);
     event SpendPermissionsCleared(bytes32 indexed keyId);
+
+    function keyAt(uint256 i) external view returns (bytes32 keyId, IKey.KeyData memory data);
+    function isKeyActive(bytes32 _keyId) external view returns (bool);
 }

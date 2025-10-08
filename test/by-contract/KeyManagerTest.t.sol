@@ -21,9 +21,9 @@ contract KeyManagerTest is Deploy {
 
     function test_AfterInitialize() external view {
         uint256 id = account.id();
-        uint256 guardianCount = account.guardianCount();
-        bool isGuardian = account.isGuardian(_initialGuardian);
-        bytes32[] memory getGuardians = account.getGuardians();
+        uint256 guardianCount = recoveryManager.guardianCount(owner);
+        bool isGuardian = recoveryManager.isGuardian(owner, _initialGuardian);
+        bytes32[] memory getGuardians = recoveryManager.getGuardians(owner);
         (bytes32 keyId_0, KeyData memory data_0) = account.keyAt(0);
         (bytes32 keyId_1, KeyData memory data_1) = account.keyAt(1);
 

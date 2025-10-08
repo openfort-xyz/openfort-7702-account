@@ -6,7 +6,7 @@ import {IKey} from "src/interfaces/IKey.sol";
 import {SignersData} from "././SignersData.t.sol";
 import {IKeysManager} from "src/interfaces/IKeysManager.sol";
 
-contract Data is IKey, IKeysManager, SignersData {
+abstract contract Data is IKey, IKeysManager, SignersData {
     /* ──────────────────────────────────────────────────────────────── structs ──── */
     struct Call {
         address target;
@@ -50,4 +50,7 @@ contract Data is IKey, IKeysManager, SignersData {
     /* ──────────────────────────────────────────────────────────────── execution mode erc7821 ──── */
     bytes32 internal constant mode_1 = bytes32(uint256(0x01000000000000000000) << (22 * 8));
     bytes32 internal constant mode_3 = bytes32(uint256(0x01000000000078210002) << (22 * 8));
+
+    function isKeyActive(bytes32 _keyId) external view returns (bool) {}
+    function keyAt(uint256 i) external view returns (bytes32 keyId, IKey.KeyData memory data) {}
 }
