@@ -21,8 +21,6 @@ import {KeysManagerLib} from "src/libs/KeysManagerLib.sol";
 import {IBaseOPF7702} from "src/interfaces/IBaseOPF7702.sol";
 import {IKeysManager} from "src/interfaces/IKeysManager.sol";
 import {IOPF7702Recoverable} from "src/interfaces/IOPF7702Recoverable.sol";
-import {Math} from "lib/openzeppelin-contracts/contracts/utils/math/Math.sol";
-import {SafeCast} from "lib/openzeppelin-contracts/contracts/utils/math/SafeCast.sol";
 import {ECDSA} from "lib/openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
 import {EIP712} from "lib/openzeppelin-contracts/contracts/utils/cryptography/EIP712.sol";
 
@@ -52,18 +50,9 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
     // ──────────────────────────────────────────────────────────────────────────────
     //                               Constants
     // ──────────────────────────────────────────────────────────────────────────────
-
-    /// @dev EIP‑712 type hash for the Recovery struct.
-    bytes32 private constant RECOVER_TYPEHASH =
-        0x9f7aca777caf11405930359f601a4db01fad1b2d79ef3f2f9e93c835e9feffa5;
     /// @dev EIP‑712 type hash for the Initialize struct.
     bytes32 private constant INIT_TYPEHASH =
         0x82dc6262fca76342c646d126714aa4005dfcd866448478747905b2e7b9837183;
-    // ──────────────────────────────────────────────────────────────────────────────
-    //                              Immutable vars
-    // ──────────────────────────────────────────────────────────────────────────────
-
-    address immutable RECOVERY_MANAGER;
 
     // ──────────────────────────────────────────────────────────────────────────────
     //                              Constructor
@@ -146,9 +135,6 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
     function completeRecovery(bytes[] calldata _signatures) external virtual {
         KeyDataReg memory recoveryOwner =
             ISocialRecoveryManager(RECOVERY_MANAGER).completeRecovery(address(this), _signatures);
-
-        _deleteOldKeys();
-        _setNewMasterKey(recoveryOwner);
 
         _deleteOldKeys();
         _setNewMasterKey(recoveryOwner);

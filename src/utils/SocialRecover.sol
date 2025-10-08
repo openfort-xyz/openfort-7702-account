@@ -74,7 +74,9 @@ contract SocialRecoveryManager is EIP712 {
         if (_account.computeHash() == _guardian) {
             revert IOPF7702Recoverable.OPF7702Recoverable__GuardianCannotBeAddressThis();
         }
+
         (bytes32 keyId,) = IKeysManager(_account).keyAt(0);
+
         if (keyId == _guardian) {
             revert IOPF7702Recoverable.OPF7702Recoverable__GuardianCannotBeCurrentMasterKey();
         }
