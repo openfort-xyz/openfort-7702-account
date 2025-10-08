@@ -24,13 +24,6 @@ library KeyDataValidationLib {
         return sKey.validUntil != 0;
     }
 
-    /// @return true when the key is flagged active *and* still inside its [after, until] window.
-    function isLive(IKey.KeyData storage sKey) internal view returns (bool) {
-        //             ─────── registered ───────      ─ current window ─
-        return sKey.isActive && block.timestamp >= sKey.validAfter
-            && block.timestamp <= sKey.validUntil;
-    }
-
     /// @dev Master‑keys have unlimited tx budget; sub‑keys consume one unit per tx.
     /// @return true if the caller *may* execute one more tx right now.
     function hasQuota(IKey.KeyData storage sKey) internal view returns (bool) {
@@ -44,17 +37,5 @@ library KeyDataValidationLib {
                 sKey.limits -= 1;
             }
         }
-    }
-
-    /*════════════════════════════ BUNDLE HELPERS ═══════════════════════════*/
-
-    /// @return true when ALL baseline conditions to even inspect a signature are met.
-    function passesBaseChecks(IKey.KeyData storage sKey) internal view returns (bool) {
-        return isRegistered(sKey) && isLive(sKey);
-    }
-
-    /// @return ok True when the key survives *every* guard used by `_validateCall`.
-    function passesCallGuards(IKey.KeyData storage sKey) internal view returns (bool ok) {
-        ok = hasQuota(sKey);
     }
 }

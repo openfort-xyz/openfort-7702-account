@@ -1,4 +1,13 @@
+/*
+░░      ░░░░      ░░░░      ░░░        ░░░      ░░░  ░░░░░░░░░░░░░░       ░░░        ░░░      ░░░░      ░░░  ░░░░  ░░        ░░       ░░░  ░░░░  ░░░░░░░░  ░░░░  ░░░      ░░░   ░░░  ░░░      ░░░░      ░░░        ░░       ░░
+▒  ▒▒▒▒▒▒▒▒  ▒▒▒▒  ▒▒  ▒▒▒▒  ▒▒▒▒▒  ▒▒▒▒▒  ▒▒▒▒  ▒▒  ▒▒▒▒▒▒▒▒▒▒▒▒▒▒  ▒▒▒▒  ▒▒  ▒▒▒▒▒▒▒▒  ▒▒▒▒  ▒▒  ▒▒▒▒  ▒▒  ▒▒▒▒  ▒▒  ▒▒▒▒▒▒▒▒  ▒▒▒▒  ▒▒▒  ▒▒  ▒▒▒▒▒▒▒▒▒   ▒▒   ▒▒  ▒▒▒▒  ▒▒    ▒▒  ▒▒  ▒▒▒▒  ▒▒  ▒▒▒▒▒▒▒▒  ▒▒▒▒▒▒▒▒  ▒▒▒▒  ▒
+▓▓      ▓▓▓  ▓▓▓▓  ▓▓  ▓▓▓▓▓▓▓▓▓▓▓  ▓▓▓▓▓  ▓▓▓▓  ▓▓  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓       ▓▓▓      ▓▓▓▓  ▓▓▓▓▓▓▓▓  ▓▓▓▓  ▓▓▓  ▓▓  ▓▓▓      ▓▓▓▓       ▓▓▓▓▓    ▓▓▓▓▓▓▓▓▓▓        ▓▓  ▓▓▓▓  ▓▓  ▓  ▓  ▓▓  ▓▓▓▓  ▓▓  ▓▓▓   ▓▓      ▓▓▓▓       ▓▓
+███████  ██  ████  ██  ████  █████  █████        ██  ██████████████  ███  ███  ████████  ████  ██  ████  ████    ████  ████████  ███  ██████  ███████████  █  █  ██        ██  ██    ██        ██  ████  ██  ████████  ███  ██
+██      ████      ████      ███        ██  ████  ██        ████████  ████  ██        ███      ████      ██████  █████        ██  ████  █████  ███████████  ████  ██  ████  ██  ███   ██  ████  ███      ███        ██  ████  █
+*/
+
 // SPDX-License-Identifier: MIT
+
 pragma solidity 0.8.29;
 
 import {IKey} from "src/interfaces/IKey.sol";
@@ -16,11 +25,6 @@ contract SocialRecoveryManager is EIP712 {
 
     bytes32 private constant RECOVER_TYPEHASH =
         0x9f7aca777caf11405930359f601a4db01fad1b2d79ef3f2f9e93c835e9feffa5;
-    bytes32 private constant EIP712_DOMAIN_TYPEHASH = keccak256(
-        "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
-    );
-    bytes32 private constant NAME_HASH = keccak256("OPF7702Recoverable");
-    bytes32 private constant VERSION_HASH = keccak256("1");
 
     uint256 internal immutable recoveryPeriod;
     uint256 internal immutable lockPeriod;

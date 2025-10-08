@@ -108,7 +108,7 @@ contract RecoveryFuzz is Deploy {
         assertEq(newMaster.key, recoveryKey.key);
     }
 
-    function _collectGuardianSignatures(uint32 required) internal returns (bytes[] memory sigs) {
+    function _collectGuardianSignatures(uint32 required) internal view returns (bytes[] memory sigs) {
         bytes32[] memory hashes = recoveryManager.getGuardians(address(account));
         require(required <= hashes.length, "insufficient guardians");
 
@@ -166,7 +166,7 @@ contract RecoveryFuzz is Deploy {
         guardianKeys[keccak256(abi.encode(newGuardian))] = pk;
     }
 
-    function _buildEOARecoveryKey(address newOwner) internal view returns (IKey.KeyDataReg memory) {
+    function _buildEOARecoveryKey(address newOwner) internal pure returns (IKey.KeyDataReg memory) {
         return IKey.KeyDataReg({
             keyType: IKey.KeyType.EOA,
             validUntil: type(uint48).max,
