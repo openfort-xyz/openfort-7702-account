@@ -39,10 +39,7 @@ contract Deploy is BaseData {
         _createInitialGuradian();
 
         implementation = new OPF7702(
-            address(entryPoint),
-            WEBAUTHN_VERIFIER,
-            address(gasPolicy),
-            address(recoveryManager)
+            address(entryPoint), WEBAUTHN_VERIFIER, address(gasPolicy), address(recoveryManager)
         );
 
         erc20 = new MockERC20();

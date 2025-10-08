@@ -42,14 +42,7 @@ contract OPFMain is OPF7702Recoverable layout at 1075889956141881797914526638246
         address _webAuthnVerifier,
         address _gasPolicy,
         address _recoveryManager
-    )
-        OPF7702Recoverable(
-            _entryPoint,
-            _webAuthnVerifier,
-            _gasPolicy,
-            _recoveryManager
-        )
-    {}
+    ) OPF7702Recoverable(_entryPoint, _webAuthnVerifier, _gasPolicy, _recoveryManager) {}
 
     /// @dev Upgrades the proxy delegation.
     /// If this delegation is delegated directly without usage of EIP7702Proxy,
