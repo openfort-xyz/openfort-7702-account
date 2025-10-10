@@ -53,7 +53,7 @@ test-all: test-keys test-upgrade-addresses test-eth test-execution test-recovery
 test-all-fuzz: test-keys test-upgrade-addresses test-eth test-execution test-recovery test-gas test-by-contract test-fuzz
 
 test-all-fuzz-invariant: 
-	forge clean && forge build --quiet && forge test -vv
+	forge clean && forge build --quiet && forge test
 
 coverage:
 	forge coverage --ir-minimum --rpc-url $(SEPOLIA_RPC_URL) >> coverage.txt
