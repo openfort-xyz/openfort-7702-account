@@ -52,7 +52,7 @@ contract SocialRecoveryManager is EIP712 {
 
     /// @notice Recovery flow state variables.
     mapping(address => IOPF7702Recoverable.RecoveryData) public recoveryData;
-    /// @notice Encapsulates guardian related state.    
+    /// @notice Encapsulates guardian related state.
     mapping(address => IOPF7702Recoverable.GuardiansData) internal guardiansData;
 
     /**
@@ -77,11 +77,11 @@ contract SocialRecoveryManager is EIP712 {
     }
 
     /**
-    * @notice Configure the first guardian during `initialize`.
-    * @param _initialGuardian Guardian hash to register (must be non-zero).
-    * @dev Sets `isActive = true`, `index = 0`, clears `pending`, and emits `GuardianAdded`.
-    *      Reverts `AddressCantBeZero` if `_initialGuardian == 0x0`.
-    */
+     * @notice Configure the first guardian during `initialize`.
+     * @param _initialGuardian Guardian hash to register (must be non-zero).
+     * @dev Sets `isActive = true`, `index = 0`, clears `pending`, and emits `GuardianAdded`.
+     *      Reverts `AddressCantBeZero` if `_initialGuardian == 0x0`.
+     */
     function initializeGuardians(address _account, bytes32 _initialGuardian) external {
         if (msg.sender != _account) revert IOPF7702Recoverable.OPF7702Recoverable__Unauthorized();
         if (_initialGuardian == bytes32(0)) {
@@ -449,7 +449,7 @@ contract SocialRecoveryManager is EIP712 {
 
         digest = _hashTypedDataV4(structHash);
     }
-    
+
     /// @dev Validates guardian signatures for recovery completion.
     /// @param _signatures Encoded signatures supplied by guardians.
     /// @return True if all signatures are valid and unique.
