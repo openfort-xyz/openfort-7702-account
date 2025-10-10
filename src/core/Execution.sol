@@ -61,8 +61,11 @@ abstract contract Execution is KeysManager, ReentrancyGuard {
     /*  ERC‑165 helper                                                */
     /* ────────────────────────────────────────────────────────────── */
 
-    /// @dev Convenience helper for wallets / bundlers to pre‑check
-    ///      whether a specific `mode` is understood.
+    /**
+     * @notice Reports whether a specific ERC‑7821 execution `mode` is supported.
+     * @param mode Execution-mode word to check.
+     * @return True if `mode` resolves to a known execution handler; false otherwise.
+     */
     function supportsExecutionMode(bytes32 mode) public view virtual returns (bool) {
         return _executionModeId(mode) != 0;
     }

@@ -13,7 +13,10 @@ contract ERC7201 is IERC7201 {
     bytes32 public constant CUSTOM_STORAGE_ROOT =
         0xeddd36aac8c71936fe1d5edb073ff947aa7c1b6174e87c15677c96ab9ad95400;
 
-    /// @notice Returns the namespace and version of the contract
+    /**
+     * @notice Exposes the storage namespace and semantic version encoded for ERC-7201.
+     * @return Namespace string of the form `openfort.baseAccount.7702.v1`.
+     */
     function namespaceAndVersion() external pure returns (string memory) {
         return "openfort.baseAccount.7702.v1";
     }

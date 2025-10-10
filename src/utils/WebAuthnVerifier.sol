@@ -115,6 +115,11 @@ contract WebAuthnVerifier {
         return P256.verifySignature(hash, r, s, x, y);
     }
 
+    /**
+     * @dev Converts a `bytes32` challenge into a dynamic byte array for library calls.
+     * @param data 32-byte challenge to convert.
+     * @return result ABI-encoded bytes representation.
+     */
     function toBytes(bytes32 data) private pure returns (bytes memory result) {
         result = new bytes(32);
         assembly {

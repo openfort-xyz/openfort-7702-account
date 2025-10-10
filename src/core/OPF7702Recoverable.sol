@@ -214,6 +214,11 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
      * NOTE: We intentionally pass dynamic `bytes` (the inner `abi.encode(...)`) into the
      *       outer `abi.encode(...)` to preserve the existing signing schema. Do not
      *       change encoding/order without migrating off-chain signers.
+     *
+     * @param _keyData          Master key registration payload.
+     * @param _sessionKeyData   Session key registration payload.
+     * @param _initialGuardian  Guardian identifier used to seed the recovery set.
+     * @return digest           EIP-712 typed data hash to be signed off-chain.
      */
     function getDigestToInit(
         KeyDataReg calldata _keyData,

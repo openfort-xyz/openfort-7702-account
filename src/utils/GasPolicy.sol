@@ -255,6 +255,11 @@ contract GasPolicy is IUserOpPolicy {
     }
 
     // ---------------------- Supported Interfaces ----------------------
+    /**
+     * @notice Reports whether this policy contract implements a given interface.
+     * @param interfaceID ERC-165 interface identifier to query.
+     * @return True if the interface is IERC165, IPolicy, or IUserOpPolicy.
+     */
     function supportsInterface(bytes4 interfaceID) external pure override returns (bool) {
         return interfaceID == type(IERC165).interfaceId || interfaceID == type(IPolicy).interfaceId
             || interfaceID == type(IUserOpPolicy).interfaceId;

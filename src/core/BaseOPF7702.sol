@@ -248,7 +248,15 @@ abstract contract BaseOPF7702 is
             || _interfaceId == type(IERC777Recipient).interfaceId;
     }
 
-    /// @notice Called by an ERC777 token contract whenever tokens are being moved or created into this account
+    /**
+     * @notice ERC-777 hook invoked when tokens are sent to this account.
+     * @param operator Address performing the token transfer or mint.
+     * @param from     Address the tokens are transferred from (zero for mints).
+     * @param to       Recipient address; expected to be `address(this)`.
+     * @param amount   Number of tokens being moved.
+     * @param userData Additional data provided by the token holder.
+     * @param operatorData Additional data provided by the operator.
+     */
     function tokensReceived(
         address operator,
         address from,

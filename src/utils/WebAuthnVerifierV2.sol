@@ -14,10 +14,10 @@ import {P256} from "src/libs/P256.sol";
 import {WebAuthn} from "lib/webauthn-sol/src/WebAuthn.sol";
 
 /**
- * @title WebAuthnVerifier
+ * @title WebAuthnVerifierV2
  * @author openfort@0xkoiner
- * @notice A simple contract to verify WebAuthn signatures
- * @dev Uses Solady's WebAuthn and P256 libraries for verification
+ * @notice Alternative WebAuthn verifier that accepts uint256-friendly coordinates.
+ * @dev Uses Solady's WebAuthn and P256 libraries for verification.
  */
 contract WebAuthnVerifierV2 {
     /**
@@ -83,7 +83,11 @@ contract WebAuthnVerifierV2 {
         return P256.verifySignature(hash, r, s, x, y);
     }
 
-    // @audit-question: Fuzz test? Converting as well?
+    /**
+     * @dev Converts a fixed-size challenge to dynamic bytes for the verifier.
+     * @param data 32-byte challenge to convert.
+     * @return result ABI-encoded bytes representation.
+     */
     function toBytes(bytes32 data) internal pure returns (bytes memory result) {
         result = new bytes(32);
         assembly {

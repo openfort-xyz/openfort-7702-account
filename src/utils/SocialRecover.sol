@@ -78,6 +78,7 @@ contract SocialRecoveryManager is EIP712 {
 
     /**
      * @notice Configure the first guardian during `initialize`.
+     * @param _account         Account whose guardian set is being bootstrapped.
      * @param _initialGuardian Guardian hash to register (must be non-zero).
      * @dev Sets `isActive = true`, `index = 0`, clears `pending`, and emits `GuardianAdded`.
      *      Reverts `AddressCantBeZero` if `_initialGuardian == 0x0`.
@@ -100,7 +101,8 @@ contract SocialRecoveryManager is EIP712 {
 
     /**
      * @notice Proposes adding a new guardian. Must be confirmed after the security period.
-     * @param _guardian Guardian address to add.
+     * @param _account  Account managing its guardian set.
+     * @param _guardian Guardian hash to add.
      */
     function proposeGuardian(address _account, bytes32 _guardian) external {
         if (msg.sender != _account) revert IOPF7702Recoverable.OPF7702Recoverable__Unauthorized();
@@ -135,7 +137,8 @@ contract SocialRecoveryManager is EIP712 {
 
     /**
      * @notice Finalizes a previously proposed guardian after the timelock.
-     * @param _guardian Guardian address to activate.
+     * @param _account  Account whose guardian proposal is being confirmed.
+     * @param _guardian Guardian hash to activate.
      */
     function confirmGuardianProposal(address _account, bytes32 _guardian) external {
         if (msg.sender != _account) revert IOPF7702Recoverable.OPF7702Recoverable__Unauthorized();
@@ -167,7 +170,8 @@ contract SocialRecoveryManager is EIP712 {
 
     /**
      * @notice Cancels a guardian addition proposal before it is confirmed.
-     * @param _guardian Guardian address whose proposal should be cancelled.
+     * @param _account  Account revoking the pending guardian addition.
+     * @param _guardian Guardian hash whose proposal should be cancelled.
      */
     function cancelGuardianProposal(address _account, bytes32 _guardian) external {
         if (msg.sender != _account) revert IOPF7702Recoverable.OPF7702Recoverable__Unauthorized();
@@ -187,7 +191,8 @@ contract SocialRecoveryManager is EIP712 {
 
     /**
      * @notice Initiates guardian removal. Must be confirmed after the security period.
-     * @param _guardian Guardian address to revoke.
+     * @param _account  Account scheduling the guardian revocation.
+     * @param _guardian Guardian hash to revoke.
      */
     function revokeGuardian(address _account, bytes32 _guardian) external {
         if (msg.sender != _account) revert IOPF7702Recoverable.OPF7702Recoverable__Unauthorized();
@@ -208,7 +213,8 @@ contract SocialRecoveryManager is EIP712 {
 
     /**
      * @notice Confirms guardian removal after the timelock.
-     * @param _guardian Guardian address to remove permanently.
+     * @param _account  Account finalizing the guardian removal.
+     * @param _guardian Guardian hash to remove permanently.
      */
     function confirmGuardianRevocation(address _account, bytes32 _guardian) external {
         if (msg.sender != _account) revert IOPF7702Recoverable.OPF7702Recoverable__Unauthorized();
@@ -243,7 +249,8 @@ contract SocialRecoveryManager is EIP712 {
 
     /**
      * @notice Cancels a pending guardian removal.
-     * @param _guardian Guardian address whose removal should be cancelled.
+     * @param _account  Account revoking the pending guardian removal.
+     * @param _guardian Guardian hash whose removal should be cancelled.
      */
     function cancelGuardianRevocation(address _account, bytes32 _guardian) external {
         if (msg.sender != _account) revert IOPF7702Recoverable.OPF7702Recoverable__Unauthorized();
@@ -266,6 +273,7 @@ contract SocialRecoveryManager is EIP712 {
     /**
      * @notice Guardians initiate account recovery by proposing a new master key.
      * @dev The caller must be an active guardian. Wallet enters locked state immediately.
+     * @param _account     Account undergoing recovery.
      * @param _recoveryKey New master key to set once recovery succeeds.
      */
     function startRecovery(address _account, IKey.KeyDataReg calldata _recoveryKey) external {
@@ -312,7 +320,9 @@ contract SocialRecoveryManager is EIP712 {
 
     /**
      * @notice Completes recovery after the timelock by providing the required guardian signatures.
+     * @param _account    Account whose recovery is being finalized.
      * @param _signatures Encoded guardian signatures approving the recovery.
+     * @return recoveryOwner Key data that becomes the new master key.
      */
     function completeRecovery(address _account, bytes[] calldata _signatures)
         external
@@ -350,6 +360,7 @@ contract SocialRecoveryManager is EIP712 {
 
     /**
      * @notice Cancels an ongoing recovery and unlocks the wallet.
+     * @param _account Account cancelling its recovery flow.
      */
     function cancelRecovery(address _account) external {
         if (msg.sender != _account) revert IOPF7702Recoverable.OPF7702Recoverable__Unauthorized();
@@ -360,6 +371,7 @@ contract SocialRecoveryManager is EIP712 {
     }
 
     /// @dev Ensures recovery state matches the expectation.
+    /// @param _account    Account whose recovery status is checked.
     /// @param _isRecovery True if function requires an ongoing recovery.
     function _requireRecovery(address _account, bool _isRecovery) internal view {
         if (_isRecovery && recoveryData[_account].executeAfter == 0) {
@@ -371,6 +383,7 @@ contract SocialRecoveryManager is EIP712 {
     }
 
     /// @dev Sets the global lock timestamp.
+    /// @param _account      Account whose wallet lock is updated.
     /// @param _releaseAfter Timestamp when the lock should be lifted (0 = unlock).
     function _setLock(address _account, uint256 _releaseAfter) internal {
         emit IOPF7702Recoverable.WalletLocked(_releaseAfter != 0);
@@ -379,6 +392,7 @@ contract SocialRecoveryManager is EIP712 {
 
     /**
      * @notice Returns all guardian hashes currently active.
+     * @param _account Account whose guardian set is queried.
      * @return Array of guardian hashes.
      */
     function getGuardians(address _account) external view returns (bytes32[] memory) {
@@ -395,7 +409,8 @@ contract SocialRecoveryManager is EIP712 {
 
     /**
      * @notice Returns the pending timestamp (if any) for guardian proposal/revoke.
-     * @param _guardian Guardian address to query.
+     * @param _account  Account whose guardian workflow is queried.
+     * @param _guardian Guardian hash to query.
      * @return Timestamp until which the action is pending (0 if none).
      */
     function getPendingStatusGuardians(address _account, bytes32 _guardian)
@@ -408,6 +423,7 @@ contract SocialRecoveryManager is EIP712 {
 
     /**
      * @notice Checks whether the wallet is currently locked due to recovery flow.
+     * @param _account Account to check for lock status.
      * @return True if locked, false otherwise.
      */
     function isLocked(address _account) public view returns (bool) {
@@ -415,8 +431,9 @@ contract SocialRecoveryManager is EIP712 {
     }
 
     /**
-     * @notice Checks if a address is an active guardian.
-     * @param _guardian Guardian address to query.
+     * @notice Checks if an address is an active guardian.
+     * @param _account  Account whose guardian set is queried.
+     * @param _guardian Guardian hash to query.
      * @return True if active guardian.
      */
     function isGuardian(address _account, bytes32 _guardian) public view returns (bool) {
@@ -425,6 +442,7 @@ contract SocialRecoveryManager is EIP712 {
 
     /**
      * @notice Returns the number of active guardians.
+     * @param _account Account whose guardian count is requested.
      */
     function guardianCount(address _account) public view returns (uint256) {
         return guardiansData[_account].guardians.length;
@@ -436,6 +454,8 @@ contract SocialRecoveryManager is EIP712 {
 
     /**
      * @notice Returns the EIP‑712 digest guardians must sign to approve recovery.
+     * @param _account Account undergoing recovery.
+     * @return digest  Typed data hash for guardians to sign.
      */
     function getDigestToSign(address _account) public view returns (bytes32 digest) {
         bytes32 structHash = keccak256(
@@ -451,6 +471,7 @@ contract SocialRecoveryManager is EIP712 {
     }
 
     /// @dev Validates guardian signatures for recovery completion.
+    /// @param _account    Account whose guardian signatures are verified.
     /// @param _signatures Encoded signatures supplied by guardians.
     /// @return True if all signatures are valid and unique.
     function _validateSignatures(address _account, bytes[] calldata _signatures)

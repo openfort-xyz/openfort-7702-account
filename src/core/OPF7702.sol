@@ -58,6 +58,12 @@ contract OPF7702 is Execution, Initializable {
     /// @notice Address of this implementation contract
     address public immutable _OPENFORT_CONTRACT_ADDRESS;
 
+    /**
+     * @notice Deploys the base account implementation with its immutable dependencies.
+     * @param _entryPoint       ERC-4337 EntryPoint address used for UserOperation validation.
+     * @param _webAuthnVerifier External verifier contract for WebAuthn/P-256 signatures.
+     * @param _gasPolicy        Policy contract invoked for custodial key gas validation.
+     */
     constructor(address _entryPoint, address _webAuthnVerifier, address _gasPolicy) {
         ENTRY_POINT = _entryPoint;
         WEBAUTHN_VERIFIER = _webAuthnVerifier;
@@ -104,8 +110,11 @@ contract OPF7702 is Execution, Initializable {
         revert IKeysManager.KeyManager__InvalidKeyType();
     }
 
-    /// @dev validate and enforces per-key-type length bounds, uses to avoid
-    ///      copying attacker-supplied padding before the check.
+    /**
+     * @dev Enforces per-key-type signature length limits before decoding payloads.
+     * @param sigType   Key type prefix extracted from the signature envelope.
+     * @param sigLength Total length of the signature blob (type + payload).
+     */
     function _checkValidSignatureLength(KeyType sigType, uint256 sigLength) private pure {
         if (sigType == KeyType.EOA) {
             if (sigLength > 192) {
@@ -168,9 +177,9 @@ contract OPF7702 is Execution, Initializable {
      *  • If master Key, immediate success.
      *  • Otherwise, call `isValidKey(...)`.
      *
-     * @param userOpHash  The userOp hash (served as challenge).
-     * @param signature   ABI-encoded payload: (KeyType, bool requireUV, bytes authData, string clientDataJSON, uint256
+     * @param signature   ABI-encoded payload: (bool requireUV, bytes authData, string clientDataJSON, uint256
      * challengeIdx, uint256 typeIdx, bytes32 r, bytes32 s, PubKey pubKey).
+     * @param userOpHash  The userOp hash (served as challenge).
      * @param userOp      The packed user operation coming from EntryPoint.
      * @return Packed validation output, or SIG_VALIDATION_FAILED.
      */
@@ -292,10 +301,13 @@ contract OPF7702 is Execution, Initializable {
         return true;
     }
 
-    /// @dev Authorizes `_callData` for `sKey`.
-    ///      Supports only `execute(bytes32,bytes)` (selector 0xe9ae5c53) and
-    ///      defers granular checks to `_validateExecuteCall(...)`.
-    ///      Unknown selectors return false. May consume per-key quotas/limits downstream.
+    /**
+     * @dev Authorizes `_callData` for `sKey`. Supports only `execute(bytes32,bytes)` (selector 0xe9ae5c53).
+     *      Unknown selectors return false. May consume per-key quotas/limits downstream.
+     * @param _callData Encoded calldata passed to the account.
+     * @param sKey      Storage reference to the key executing the call.
+     * @return True if the selector is recognized and validated; false otherwise.
+     */
     function isValidKey(bytes calldata _callData, KeyData storage sKey)
         internal
         virtual
@@ -662,7 +674,18 @@ contract OPF7702 is Execution, Initializable {
         return bytes4(0xffffffff);
     }
 
-    /// @dev helper ONLY for 1271 decoding so we can try/catch
+    /**
+     * @dev Helper used solely for ERC-1271 decoding via try/catch.
+     * @param sig ABI-encoded WebAuthn signature payload.
+     * @return requireUV Whether user verification was required.
+     * @return authenticatorData Authenticator data blob.
+     * @return clientDataJSON Client data JSON string.
+     * @return challengeIndex Index of the challenge in the client data.
+     * @return typeIndex Index of the type field in the client data.
+     * @return r ECDSA `r` coordinate.
+     * @return s ECDSA `s` coordinate.
+     * @return pubKey Reconstructed public key used for verification.
+     */
     function _decodeWebAuthn1271(bytes memory sig)
         external
         pure
@@ -690,7 +713,12 @@ contract OPF7702 is Execution, Initializable {
         return ECDSA.recover(hash, signature) == address(this);
     }
 
-    // @dev Rounds the unix timestamp down to the period.
+    /**
+     * @notice Rounds a Unix timestamp down to the beginning of the requested spend period.
+     * @param unixTimestamp Timestamp to round.
+     * @param period        Spend period granularity.
+     * @return Rounded timestamp aligned with the start of `period`.
+     */
     function startOfSpendPeriod(uint256 unixTimestamp, SpendPeriod period)
         public
         pure
