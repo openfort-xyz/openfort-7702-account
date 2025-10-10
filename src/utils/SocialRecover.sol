@@ -14,6 +14,7 @@ import {IKey} from "src/interfaces/IKey.sol";
 import {KeysManagerLib} from "src/libs/KeysManagerLib.sol";
 import {IKeysManager} from "src/interfaces/IKeysManager.sol";
 import {IOPF7702Recoverable} from "src/interfaces/IOPF7702Recoverable.sol";
+import {ISocialRecoveryManager} from "src/interfaces/ISocialRecoveryManager.sol";
 import {Math} from "lib/openzeppelin-contracts/contracts/utils/math/Math.sol";
 import {SafeCast} from "lib/openzeppelin-contracts/contracts/utils/math/SafeCast.sol";
 import {ECDSA} from "lib/openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
@@ -33,7 +34,7 @@ import {EIP712} from "lib/openzeppelin-contracts/contracts/utils/cryptography/EI
 ///  - Guardian signatures must be strictly ordered (by guardian hash) to prevent duplicates.
 ///  - Zero guardian IDs are rejected; the account itself or its current master key cannot be a guardian.
 ///  - Recovery cannot complete before `recoveryPeriod` elapses and requires the exact quorum.
-contract SocialRecoveryManager is EIP712 {
+contract SocialRecoveryManager is EIP712, ISocialRecoveryManager {
     using ECDSA for bytes32;
     using KeysManagerLib for *;
 
@@ -83,7 +84,7 @@ contract SocialRecoveryManager is EIP712 {
      * @dev Sets `isActive = true`, `index = 0`, clears `pending`, and emits `GuardianAdded`.
      *      Reverts `AddressCantBeZero` if `_initialGuardian == 0x0`.
      */
-    function initializeGuardians(address _account, bytes32 _initialGuardian) external {
+    function initializeGuardians(address _account, bytes32 _initialGuardian) external override {
         if (msg.sender != _account) revert IOPF7702Recoverable.OPF7702Recoverable__Unauthorized();
         if (_initialGuardian == bytes32(0)) {
             revert IOPF7702Recoverable.OPF7702Recoverable__AddressCantBeZero();
@@ -104,7 +105,7 @@ contract SocialRecoveryManager is EIP712 {
      * @param _account  Account managing its guardian set.
      * @param _guardian Guardian hash to add.
      */
-    function proposeGuardian(address _account, bytes32 _guardian) external {
+    function proposeGuardian(address _account, bytes32 _guardian) external override {
         if (msg.sender != _account) revert IOPF7702Recoverable.OPF7702Recoverable__Unauthorized();
         if (isLocked(_account)) revert IOPF7702Recoverable.OPF7702Recoverable__AccountLocked();
 
@@ -140,7 +141,7 @@ contract SocialRecoveryManager is EIP712 {
      * @param _account  Account whose guardian proposal is being confirmed.
      * @param _guardian Guardian hash to activate.
      */
-    function confirmGuardianProposal(address _account, bytes32 _guardian) external {
+    function confirmGuardianProposal(address _account, bytes32 _guardian) external override {
         if (msg.sender != _account) revert IOPF7702Recoverable.OPF7702Recoverable__Unauthorized();
         _requireRecovery(_account, false);
         if (_guardian == bytes32(0)) {
@@ -173,7 +174,7 @@ contract SocialRecoveryManager is EIP712 {
      * @param _account  Account revoking the pending guardian addition.
      * @param _guardian Guardian hash whose proposal should be cancelled.
      */
-    function cancelGuardianProposal(address _account, bytes32 _guardian) external {
+    function cancelGuardianProposal(address _account, bytes32 _guardian) external override {
         if (msg.sender != _account) revert IOPF7702Recoverable.OPF7702Recoverable__Unauthorized();
         _requireRecovery(_account, false);
         if (isLocked(_account)) revert IOPF7702Recoverable.OPF7702Recoverable__AccountLocked();
@@ -194,7 +195,7 @@ contract SocialRecoveryManager is EIP712 {
      * @param _account  Account scheduling the guardian revocation.
      * @param _guardian Guardian hash to revoke.
      */
-    function revokeGuardian(address _account, bytes32 _guardian) external {
+    function revokeGuardian(address _account, bytes32 _guardian) external override {
         if (msg.sender != _account) revert IOPF7702Recoverable.OPF7702Recoverable__Unauthorized();
         if (isLocked(_account)) revert IOPF7702Recoverable.OPF7702Recoverable__AccountLocked();
 
@@ -216,7 +217,7 @@ contract SocialRecoveryManager is EIP712 {
      * @param _account  Account finalizing the guardian removal.
      * @param _guardian Guardian hash to remove permanently.
      */
-    function confirmGuardianRevocation(address _account, bytes32 _guardian) external {
+    function confirmGuardianRevocation(address _account, bytes32 _guardian) external override {
         if (msg.sender != _account) revert IOPF7702Recoverable.OPF7702Recoverable__Unauthorized();
         if (isLocked(_account)) revert IOPF7702Recoverable.OPF7702Recoverable__AccountLocked();
 
@@ -252,7 +253,7 @@ contract SocialRecoveryManager is EIP712 {
      * @param _account  Account revoking the pending guardian removal.
      * @param _guardian Guardian hash whose removal should be cancelled.
      */
-    function cancelGuardianRevocation(address _account, bytes32 _guardian) external {
+    function cancelGuardianRevocation(address _account, bytes32 _guardian) external override {
         if (msg.sender != _account) revert IOPF7702Recoverable.OPF7702Recoverable__Unauthorized();
         if (isLocked(_account)) revert IOPF7702Recoverable.OPF7702Recoverable__AccountLocked();
 
@@ -276,7 +277,10 @@ contract SocialRecoveryManager is EIP712 {
      * @param _account     Account undergoing recovery.
      * @param _recoveryKey New master key to set once recovery succeeds.
      */
-    function startRecovery(address _account, IKey.KeyDataReg calldata _recoveryKey) external {
+    function startRecovery(address _account, IKey.KeyDataReg calldata _recoveryKey)
+        external
+        override
+    {
         if (!isGuardian(_account, msg.sender.computeHash())) {
             revert IOPF7702Recoverable.OPF7702Recoverable__MustBeGuardian();
         }
@@ -326,6 +330,7 @@ contract SocialRecoveryManager is EIP712 {
      */
     function completeRecovery(address _account, bytes[] calldata _signatures)
         external
+        override
         returns (IKey.KeyDataReg memory recoveryOwner)
     {
         _requireRecovery(_account, true);
@@ -362,7 +367,7 @@ contract SocialRecoveryManager is EIP712 {
      * @notice Cancels an ongoing recovery and unlocks the wallet.
      * @param _account Account cancelling its recovery flow.
      */
-    function cancelRecovery(address _account) external {
+    function cancelRecovery(address _account) external override {
         if (msg.sender != _account) revert IOPF7702Recoverable.OPF7702Recoverable__Unauthorized();
         _requireRecovery(_account, true);
         emit IOPF7702Recoverable.RecoveryCancelled();
@@ -395,7 +400,7 @@ contract SocialRecoveryManager is EIP712 {
      * @param _account Account whose guardian set is queried.
      * @return Array of guardian hashes.
      */
-    function getGuardians(address _account) external view returns (bytes32[] memory) {
+    function getGuardians(address _account) external view override returns (bytes32[] memory) {
         bytes32[] memory guardians = new bytes32[](guardiansData[_account].guardians.length);
         uint256 i;
         for (i; i < guardiansData[_account].guardians.length;) {
@@ -416,6 +421,7 @@ contract SocialRecoveryManager is EIP712 {
     function getPendingStatusGuardians(address _account, bytes32 _guardian)
         external
         view
+        override
         returns (uint256)
     {
         return guardiansData[_account].data[_guardian].pending;
@@ -426,7 +432,7 @@ contract SocialRecoveryManager is EIP712 {
      * @param _account Account to check for lock status.
      * @return True if locked, false otherwise.
      */
-    function isLocked(address _account) public view returns (bool) {
+    function isLocked(address _account) public view override returns (bool) {
         return guardiansData[_account].lock > block.timestamp;
     }
 
@@ -436,7 +442,7 @@ contract SocialRecoveryManager is EIP712 {
      * @param _guardian Guardian hash to query.
      * @return True if active guardian.
      */
-    function isGuardian(address _account, bytes32 _guardian) public view returns (bool) {
+    function isGuardian(address _account, bytes32 _guardian) public view override returns (bool) {
         return guardiansData[_account].data[_guardian].isActive;
     }
 
@@ -444,7 +450,7 @@ contract SocialRecoveryManager is EIP712 {
      * @notice Returns the number of active guardians.
      * @param _account Account whose guardian count is requested.
      */
-    function guardianCount(address _account) public view returns (uint256) {
+    function guardianCount(address _account) public view override returns (uint256) {
         return guardiansData[_account].guardians.length;
     }
 
@@ -457,7 +463,7 @@ contract SocialRecoveryManager is EIP712 {
      * @param _account Account undergoing recovery.
      * @return digest  Typed data hash for guardians to sign.
      */
-    function getDigestToSign(address _account) public view returns (bytes32 digest) {
+    function getDigestToSign(address _account) public view override returns (bytes32 digest) {
         bytes32 structHash = keccak256(
             abi.encode(
                 RECOVER_TYPEHASH,

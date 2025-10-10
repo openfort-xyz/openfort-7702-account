@@ -3,19 +3,18 @@ pragma solidity ^0.8.29;
 
 import {IKey} from "src/interfaces/IKey.sol";
 import {IExecution} from "src/interfaces/IExecution.sol";
+import {IBaseOPF7702} from "src/interfaces/IBaseOPF7702.sol";
 import {IKeysManager} from "src/interfaces/IKeysManager.sol";
-import {IERC1271} from "lib/openzeppelin-contracts/contracts/interfaces/IERC1271.sol";
-import {IERC165} from "lib/openzeppelin-contracts/contracts/utils/introspection/IERC165.sol";
 
 /// @title IOPF7702
 /// @notice Interface for the `OPF7702` contract, combining execution, key‐management, and ERC-1271 logic.
-/// @dev Extends `IExecution`, `IKeysManager`, `IERC1271`, and `IERC165`. Declares all externally‐callable members.
-interface IOPF7702 is IExecution, IKeysManager, IERC1271, IERC165, IKey {
+/// @dev Extends `IBaseOPF7702`, `IExecution`, `IKeysManager`, and exposes additional helpers.
+interface IOPF7702 is IBaseOPF7702, IExecution, IKeysManager, IKey {
     // =============================================================
     //                             EVENTS
     // =============================================================
 
-    /// @notice Emitted when the account is initialized with a masterKey
+    /// @notice Emitted when the account is initialized with a master key.
     event Initialized(IKey.KeyDataReg indexed masterKey);
 
     // =============================================================
@@ -36,4 +35,20 @@ interface IOPF7702 is IExecution, IKeysManager, IERC1271, IERC165, IKey {
         external
         view
         returns (bytes4);
+
+    /**
+     * @notice Rounds a timestamp down to the start of the specified spend period.
+     * @param unixTimestamp Timestamp to round.
+     * @param period        Period granularity defined in {IKeysManager.SpendPeriod}.
+     * @return Rounded timestamp aligned to the requested bucket.
+     */
+    function startOfSpendPeriod(uint256 unixTimestamp, SpendPeriod period)
+        external
+        pure
+        returns (uint256);
+
+    /**
+     * @notice Address of the implementation contract (immutable at deployment).
+     */
+    function _OPENFORT_CONTRACT_ADDRESS() external view returns (address);
 }

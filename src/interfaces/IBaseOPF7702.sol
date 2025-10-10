@@ -3,80 +3,113 @@ pragma solidity ^0.8.29;
 
 import {IAccount} from "lib/account-abstraction/contracts/interfaces/IAccount.sol";
 import {IEntryPoint} from "lib/account-abstraction/contracts/interfaces/IEntryPoint.sol";
-import "lib/openzeppelin-contracts/contracts/interfaces/IERC1271.sol";
-import "lib/openzeppelin-contracts/contracts/utils/introspection/IERC165.sol";
-import "lib/openzeppelin-contracts/contracts/token/ERC721/utils/ERC721Holder.sol";
-import "lib/openzeppelin-contracts/contracts/token/ERC1155/utils/ERC1155Holder.sol";
+import {IERC165} from "lib/openzeppelin-contracts/contracts/utils/introspection/IERC165.sol";
+import {IERC1271} from "lib/openzeppelin-contracts/contracts/interfaces/IERC1271.sol";
+import {IERC721Receiver} from
+    "lib/openzeppelin-contracts/contracts/token/ERC721/IERC721Receiver.sol";
+import {IERC1155Receiver} from
+    "lib/openzeppelin-contracts/contracts/token/ERC1155/IERC1155Receiver.sol";
+import {IERC777Recipient} from
+    "lib/openzeppelin-contracts/contracts/interfaces/IERC777Recipient.sol";
 
 /// @title IBaseOPF7702
-/// @notice Interface for BaseOPF7702 (ERC-4337 / Account Abstraction account)
-/// @dev Declares all externally-visible state, functions, and events.
-interface IBaseOPF7702 is IAccount, IERC1271, IERC165, IERC721Receiver, IERC1155Receiver {
+/// @notice Canonical surface for the shared Openfort 7702 account logic.
+/// @dev Mirrors the public/external API exposed via `BaseOPF7702`.
+interface IBaseOPF7702 is
+    IAccount,
+    IERC165,
+    IERC1271,
+    IERC721Receiver,
+    IERC1155Receiver,
+    IERC777Recipient
+{
     // =============================================================
     //                            ERRORS
     // =============================================================
 
-    /// @notice Thrown when ECDSA signature recovery fails or signature is not from expected ephemeral key
+    /// @notice Thrown when signature validation fails for a user operation.
     error OpenfortBaseAccount7702V1__InvalidSignature();
-    /// @notice msg.sender not from address(this) and nit from Entry Point
+    /// @notice Thrown when a privileged function is invoked by an unauthorized caller.
     error OpenfortBaseAccount7702V1_UnauthorizedCaller();
+    /// @notice Thrown when attempting to update an address with the same value already stored.
+    error BaseOPF7702__NoChangeUpdateContractAddress();
 
     // =============================================================
     //                             EVENTS
     // =============================================================
 
-    /// @notice Emitted when ETH is deposited into this account for covering gas fees.
-    /// @param source The address that sent the ETH deposit.
-    /// @param amount The amount of ETH deposited.
+    /// @notice Emitted whenever ETH is deposited for this account.
+    /// @param source Address that supplied the deposit.
+    /// @param amount Amount of ETH credited.
     event DepositAdded(address indexed source, uint256 amount);
 
-    /// @notice Emitted when the EntryPoint contract address is updated
-    /// @dev This event is fired when the account's EntryPoint reference is changed,
-    ///      which affects how UserOperations are processed and validated
-    /// @param newEntryPoint The address of the new EntryPoint contract
+    /// @notice Emitted when the EntryPoint contract address is updated.
+    /// @param newEntryPoint Address of the new EntryPoint singleton.
     event EntryPointUpdated(address indexed newEntryPoint);
 
-    /// @notice Emitted when the WebAuthn verifier contract address is updated
-    /// @dev This event is triggered when the account updates its WebAuthn signature
-    ///      verification contract, affecting how WebAuthn signatures are validated
-    /// @param newVerifier The address of the new WebAuthn verifier contract
+    /// @notice Emitted when the WebAuthn verifier contract address is updated.
+    /// @param newVerifier Address of the new verifier.
     event WebAuthnVerifierUpdated(address indexed newVerifier);
 
     // =============================================================
     //                        EXTERNAL FUNCTIONS
     // =============================================================
 
-    /// @notice Updates the EntryPoint contract address used by this account
-    /// @param _entryPoint The new EntryPoint contract address to set
-    /// @dev Only callable by authorized parties (self or current EntryPoint).
-    ///      Uses UpgradeAddress library to handle the update logic
+    /**
+     * @notice Update the EntryPoint singleton used for ERC-4337 validation.
+     * @param _entryPoint New EntryPoint contract address.
+     */
     function setEntryPoint(address _entryPoint) external;
 
-    /// @notice Updates the WebAuthn verifier contract address used by this account
-    /// @param _webAuthnVerifier The new WebAuthn verifier contract address to set
-    /// @dev Only callable by authorized parties (self or current EntryPoint).
-    ///      Uses UpgradeAddress library to handle the update logic
+    /**
+     * @notice Update the WebAuthn verifier singleton.
+     * @param _webAuthnVerifier New verifier contract address.
+     */
     function setWebAuthnVerifier(address _webAuthnVerifier) external;
 
-    /// @notice Returns the entry point contract used by this account.
-    /// @return The `IEntryPoint` implementation address.
-    /// @dev Required by `IAccount` interface to route UserOperations.
+    /**
+     * @notice Update the Gas Policy contract used for custodial session keys.
+     * @param _gasPolicy New gas-policy contract address.
+     */
+    function setGasPolicy(address _gasPolicy) external;
+
+    /**
+     * @notice Return the active EntryPoint contract.
+     */
     function entryPoint() external view returns (IEntryPoint);
 
     /**
-     * @notice Returns the webAuthn verifier contract used by this account.
-     * @return The `address` of implementation.
+     * @notice Return the active WebAuthn verifier contract.
      */
     function webAuthnVerifier() external view returns (address);
 
-    /// @notice Checks if the contract implements a given interface.
-    /// @param interfaceId The interface identifier, as specified in ERC-165.
-    /// @return `true` if this contract supports `interfaceId`, `false` otherwise.
-    /// @dev Combines ERC-165, IAccount, IERC1271, ERC721Receiver, and ERC1155Receiver.
+    /**
+     * @notice Return the active Gas Policy contract.
+     */
+    function gasPolicy() external view returns (address);
+
+    /**
+     * @notice ERC-165 detector.
+     * @param interfaceId Interface identifier to query.
+     * @return True if the interface is supported.
+     */
     function supportsInterface(bytes4 interfaceId) external view returns (bool);
 
-    /// @notice Called by an ERC777 token contract whenever tokens are being moved or created into this account
-    function tokensReceived(address, address, address, uint256, bytes calldata, bytes calldata)
-        external
-        pure;
+    /**
+     * @notice ERC-777 callback invoked when tokens are sent or minted to this account.
+     * @param operator Address initiating the transfer/mint.
+     * @param from     Source address (zero for mints).
+     * @param to       Recipient address (`address(this)`).
+     * @param amount   Amount of tokens transferred.
+     * @param userData User-provided metadata.
+     * @param operatorData Operator-provided metadata.
+     */
+    function tokensReceived(
+        address operator,
+        address from,
+        address to,
+        uint256 amount,
+        bytes calldata userData,
+        bytes calldata operatorData
+    ) external pure;
 }

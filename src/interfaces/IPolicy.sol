@@ -6,6 +6,8 @@ import "lib/openzeppelin-contracts/contracts/utils/introspection/IERC165.sol";
 import {PackedUserOperation} from
     "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
 
+/// @title IPolicy
+/// @notice Marker interface for policy contracts that expose ERC-165 discovery.
 interface IPolicy is IERC165 {}
 
 /// @title IUserOpPolicy

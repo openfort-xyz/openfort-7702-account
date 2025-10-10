@@ -2,7 +2,8 @@
 
 pragma solidity ^0.8.29;
 
-/// @dev Interface for minimal batch executor.
+/// @title IERC7821
+/// @notice Interface describing minimal batch execution capabilities.
 interface IERC7821 {
     /// @dev Executes the calls in `executionData`.
     /// Reverts and bubbles up error if any call fails.

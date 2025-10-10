@@ -2,7 +2,7 @@
 
 pragma solidity 0.8.29;
 
-import {IKey} from "././IKey.sol";
+import {IKey} from "./IKey.sol";
 import {EnumerableSetLib} from "lib/solady/src/utils/EnumerableSetLib.sol";
 
 /// @title IKeysManager
