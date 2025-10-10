@@ -364,21 +364,21 @@ contract OPF7702 is Execution, Initializable {
     }
 
     /**
-    * @notice Validates a single call against the key’s permissions, spend policy, and quota.
-    * @dev Fast-fails on:
-    *      - `call.target == address(this)` (self-calls are forbidden).
-    *      - `!sKey.hasQuota()` (no remaining tx quota per key).
-    *      Derives `keyId` from `(sKey.keyType, sKey.key)` and checks:
-    *       - Can-call permission via `_isCanCall(keyId, call.target, call.data)`.
-    *       - Token spend policy if applicable:
-    *          • Treats native transfers (`call.value > 0`) as spending `NATIVE_ADDRESS`.
-    *          • Otherwise uses `call.target` as the token address.
-    *          • If a spend rule exists, enforces it via `_isTokenSpend(...)`.
-    *      On success, decrements the key’s quota via `sKey.consumeQuota()`.
-    * @param sKey  Storage reference to the key data executing the call.
-    * @param call  The call to validate (target, value, data).
-    * @return True if the call is permitted and quota was consumed; false otherwise.
-    */
+     * @notice Validates a single call against the key’s permissions, spend policy, and quota.
+     * @dev Fast-fails on:
+     *      - `call.target == address(this)` (self-calls are forbidden).
+     *      - `!sKey.hasQuota()` (no remaining tx quota per key).
+     *      Derives `keyId` from `(sKey.keyType, sKey.key)` and checks:
+     *       - Can-call permission via `_isCanCall(keyId, call.target, call.data)`.
+     *       - Token spend policy if applicable:
+     *          • Treats native transfers (`call.value > 0`) as spending `NATIVE_ADDRESS`.
+     *          • Otherwise uses `call.target` as the token address.
+     *          • If a spend rule exists, enforces it via `_isTokenSpend(...)`.
+     *      On success, decrements the key’s quota via `sKey.consumeQuota()`.
+     * @param sKey  Storage reference to the key data executing the call.
+     * @param call  The call to validate (target, value, data).
+     * @return True if the call is permitted and quota was consumed; false otherwise.
+     */
     function _validateCall(KeyData storage sKey, Call memory call) private returns (bool) {
         if (call.target == address(this)) return false;
         if (!sKey.hasQuota()) return false;
@@ -402,20 +402,20 @@ contract OPF7702 is Execution, Initializable {
     }
 
     /**
-    * @notice Checks whether a key is allowed to call `(target, selector)`.
-    * @dev Extracts `fnSel` from calldata (first 4 bytes). Special cases:
-    *      - Empty calldata → `fnSel = EMPTY_CALLDATA_FN_SEL` (plain ETH transfer).
-    *      Uses the per-key `canExecute` set and supports wildcard matches:
-    *      - Exact:        `(target, fnSel)`
-    *      - Any fn on t:  `(target, ANY_FN_SEL)`
-    *      - Any t for fn: `(ANY_TARGET, fnSel)`
-    *      - Full wildcard `(ANY_TARGET, ANY_FN_SEL)`
-    *      Returns false if the permission set is empty or no match found.
-    * @param _keyId  Identifier of the key.
-    * @param _target Target contract/EOA address.
-    * @param _data   Calldata used to derive the function selector.
-    * @return True if a matching permission is present; false otherwise.
-    */
+     * @notice Checks whether a key is allowed to call `(target, selector)`.
+     * @dev Extracts `fnSel` from calldata (first 4 bytes). Special cases:
+     *      - Empty calldata → `fnSel = EMPTY_CALLDATA_FN_SEL` (plain ETH transfer).
+     *      Uses the per-key `canExecute` set and supports wildcard matches:
+     *      - Exact:        `(target, fnSel)`
+     *      - Any fn on t:  `(target, ANY_FN_SEL)`
+     *      - Any t for fn: `(ANY_TARGET, fnSel)`
+     *      - Full wildcard `(ANY_TARGET, ANY_FN_SEL)`
+     *      Returns false if the permission set is empty or no match found.
+     * @param _keyId  Identifier of the key.
+     * @param _target Target contract/EOA address.
+     * @param _data   Calldata used to derive the function selector.
+     * @return True if a matching permission is present; false otherwise.
+     */
     function _isCanCall(bytes32 _keyId, address _target, bytes memory _data)
         internal
         view
@@ -448,22 +448,22 @@ contract OPF7702 is Execution, Initializable {
     }
 
     /**
-    * @notice Enforces per-token spend policy for a call, extracting the intended token amount.
-    * @dev Determines the selector from `_data`, with special handling:
-    *      - Empty calldata → native transfer: `fnSel = EMPTY_CALLDATA_FN_SEL`, `_target = NATIVE_ADDRESS`,
-    *        and `tokenAmout = _value`.
-    *      - ERC-20 methods recognized (reads the amount via `LibBytes.load`):
-    *          • `transfer(address,uint256)`      → selector `0xa9059cbb`, amount at offset `0x24`.
-    *          • `transferFrom(address,address,uint256)` → selector `0x23b872dd`, amount at offset `0x44`.
-    *          • `approve(address,uint256)`       → selector `0x095ea7b3`, amount at offset `0x24`.
-    *      Calls `_manageTokenSpend(_keyId, tokenAddress, tokenAmout)` to apply/reset period counters and
-    *      check limit overflow.
-    * @param _keyId   Identifier of the key.
-    * @param _target  Original call target (token address for ERC-20; replaced with `NATIVE_ADDRESS` for native transfers).
-    * @param _value   ETH value sent with the call (used for native transfers).
-    * @param _data    Calldata used to determine selector and amount.
-    * @return True if the spend fits within the configured limit; false otherwise.
-    */
+     * @notice Enforces per-token spend policy for a call, extracting the intended token amount.
+     * @dev Determines the selector from `_data`, with special handling:
+     *      - Empty calldata → native transfer: `fnSel = EMPTY_CALLDATA_FN_SEL`, `_target = NATIVE_ADDRESS`,
+     *        and `tokenAmout = _value`.
+     *      - ERC-20 methods recognized (reads the amount via `LibBytes.load`):
+     *          • `transfer(address,uint256)`      → selector `0xa9059cbb`, amount at offset `0x24`.
+     *          • `transferFrom(address,address,uint256)` → selector `0x23b872dd`, amount at offset `0x44`.
+     *          • `approve(address,uint256)`       → selector `0x095ea7b3`, amount at offset `0x24`.
+     *      Calls `_manageTokenSpend(_keyId, tokenAddress, tokenAmout)` to apply/reset period counters and
+     *      check limit overflow.
+     * @param _keyId   Identifier of the key.
+     * @param _target  Original call target (token address for ERC-20; replaced with `NATIVE_ADDRESS` for native transfers).
+     * @param _value   ETH value sent with the call (used for native transfers).
+     * @param _data    Calldata used to determine selector and amount.
+     * @return True if the spend fits within the configured limit; false otherwise.
+     */
     function _isTokenSpend(bytes32 _keyId, address _target, uint256 _value, bytes memory _data)
         internal
         returns (bool)
@@ -500,16 +500,16 @@ contract OPF7702 is Execution, Initializable {
     }
 
     /**
-    * @notice Updates per-token spend accounting and enforces the per-period limit.
-    * @dev Looks up `spendStore[_keyId].tokenData[_target]`. If no rule (`period == 0` or `limit == 0`), returns false.
-    *      Computes the start of the current period with `startOfSpendPeriod(block.timestamp, period)`.
-    *      If we’ve crossed into a new period, resets `spent` to 0 and sets `lastUpdated = current`.
-    *      Checks `(spent + _tokenAmout) <= limit`; on success, increments `spent`.
-    * @param _keyId       Identifier of the key.
-    * @param _target      Token address (or `NATIVE_ADDRESS` for ETH).
-    * @param _tokenAmout  Amount intended to spend in this call.
-    * @return True if the rule exists and the amount is within limit; false if no rule or it would exceed the limit.
-    */
+     * @notice Updates per-token spend accounting and enforces the per-period limit.
+     * @dev Looks up `spendStore[_keyId].tokenData[_target]`. If no rule (`period == 0` or `limit == 0`), returns false.
+     *      Computes the start of the current period with `startOfSpendPeriod(block.timestamp, period)`.
+     *      If we’ve crossed into a new period, resets `spent` to 0 and sets `lastUpdated = current`.
+     *      Checks `(spent + _tokenAmout) <= limit`; on success, increments `spent`.
+     * @param _keyId       Identifier of the key.
+     * @param _target      Token address (or `NATIVE_ADDRESS` for ETH).
+     * @param _tokenAmout  Amount intended to spend in this call.
+     * @return True if the rule exists and the amount is within limit; false if no rule or it would exceed the limit.
+     */
     function _manageTokenSpend(bytes32 _keyId, address _target, uint256 _tokenAmout)
         private
         returns (bool)

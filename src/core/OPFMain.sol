@@ -35,11 +35,11 @@ import {OPF7702Recoverable} from "src/core/OPF7702Recoverable.sol";
  */
 contract OPFMain is OPF7702Recoverable layout at 107588995614188179791452663824698570634674667931787294340862201729294267929600 {
     /**
-    * @param _entryPoint       ERC-4337 EntryPoint address.
-    * @param _webAuthnVerifier WebAuthn verifier contract for P-256/WebAuthn signature checks.
-    * @param _gasPolicy        Gas/UserOp policy contract (used for custodial key policy init).
-    * @param _recoveryManager  Social Recovery Manager contract that manages guardians & recovery flow.
-    */
+     * @param _entryPoint       ERC-4337 EntryPoint address.
+     * @param _webAuthnVerifier WebAuthn verifier contract for P-256/WebAuthn signature checks.
+     * @param _gasPolicy        Gas/UserOp policy contract (used for custodial key policy init).
+     * @param _recoveryManager  Social Recovery Manager contract that manages guardians & recovery flow.
+     */
     constructor(
         address _entryPoint,
         address _webAuthnVerifier,
