@@ -84,7 +84,7 @@ interface IOPF7702Recoverable is IOPF7702 {
     error OPF7702Recoverable__GuardianCannotBeAddressThis();
     /// @dev Thrown when guardian equals the current master key.
     error OPF7702Recoverable__GuardianCannotBeCurrentMasterKey();
-    
+
     // =============================================================
     //                             EVENTS
     // =============================================================
