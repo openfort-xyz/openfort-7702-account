@@ -105,7 +105,7 @@ contract DepositAndTransferETH is Deploy {
         _;
     }
 
-    modifier setTokenSpend(
+    modifier setTokenSpendM(
         KeyType _keyType,
         bytes memory _key,
         address _token,
@@ -118,7 +118,7 @@ contract DepositAndTransferETH is Deploy {
         _;
     }
 
-    modifier setCanCall(
+    modifier setCanCallM(
         KeyType _keyType,
         bytes memory _key,
         address _target,
@@ -291,9 +291,15 @@ contract DepositAndTransferETH is Deploy {
     function test_ExecuteAAWithSKEOASelf()
         external
         registerSkEOASelf
-        setTokenSpend(KeyType.EOA, _getKeyEOA(sessionKey), NATIVE_ADDRESS, 0.1 ether, SpendPeriod.Month)
-        setCanCall(KeyType.EOA, _getKeyEOA(sessionKey), NATIVE_ADDRESS, EMPTY_CALLDATA_FN_SEL, true)
-        setCanCall(KeyType.EOA, _getKeyEOA(sessionKey), reciver, EMPTY_CALLDATA_FN_SEL, true)
+        setTokenSpendM(
+            KeyType.EOA,
+            _getKeyEOA(sessionKey),
+            NATIVE_ADDRESS,
+            0.1 ether,
+            SpendPeriod.Month
+        )
+        setCanCallM(KeyType.EOA, _getKeyEOA(sessionKey), NATIVE_ADDRESS, EMPTY_CALLDATA_FN_SEL, true)
+        setCanCallM(KeyType.EOA, _getKeyEOA(sessionKey), reciver, EMPTY_CALLDATA_FN_SEL, true)
     {
         _getBalances(true);
         Call[] memory calls = _getCalls(1, reciver, 0.1 ether, hex"");
@@ -320,9 +326,15 @@ contract DepositAndTransferETH is Deploy {
     function test_ExecuteBatchAAWithSKEOASelf()
         external
         registerSkEOASelf
-        setTokenSpend(KeyType.EOA, _getKeyEOA(sessionKey), NATIVE_ADDRESS, 0.3 ether, SpendPeriod.Month)
-        setCanCall(KeyType.EOA, _getKeyEOA(sessionKey), NATIVE_ADDRESS, EMPTY_CALLDATA_FN_SEL, true)
-        setCanCall(KeyType.EOA, _getKeyEOA(sessionKey), reciver, EMPTY_CALLDATA_FN_SEL, true)
+        setTokenSpendM(
+            KeyType.EOA,
+            _getKeyEOA(sessionKey),
+            NATIVE_ADDRESS,
+            0.3 ether,
+            SpendPeriod.Month
+        )
+        setCanCallM(KeyType.EOA, _getKeyEOA(sessionKey), NATIVE_ADDRESS, EMPTY_CALLDATA_FN_SEL, true)
+        setCanCallM(KeyType.EOA, _getKeyEOA(sessionKey), reciver, EMPTY_CALLDATA_FN_SEL, true)
     {
         _getBalances(true);
         Call[] memory calls = _getCalls(3, reciver, 0.1 ether, hex"");
@@ -349,9 +361,9 @@ contract DepositAndTransferETH is Deploy {
     function test_ExecuteAAWithSKP256Self()
         external
         registerSkP256Self
-        setTokenSpend(KeyType.P256, _getKeyP256(pK_SK), NATIVE_ADDRESS, 0.1 ether, SpendPeriod.Month)
-        setCanCall(KeyType.P256, _getKeyP256(pK_SK), NATIVE_ADDRESS, EMPTY_CALLDATA_FN_SEL, true)
-        setCanCall(KeyType.P256, _getKeyP256(pK_SK), reciver, EMPTY_CALLDATA_FN_SEL, true)
+        setTokenSpendM(KeyType.P256, _getKeyP256(pK_SK), NATIVE_ADDRESS, 0.1 ether, SpendPeriod.Month)
+        setCanCallM(KeyType.P256, _getKeyP256(pK_SK), NATIVE_ADDRESS, EMPTY_CALLDATA_FN_SEL, true)
+        setCanCallM(KeyType.P256, _getKeyP256(pK_SK), reciver, EMPTY_CALLDATA_FN_SEL, true)
     {
         _getBalances(true);
         Call[] memory calls = _getCalls(1, reciver, 0.1 ether, hex"");
@@ -380,9 +392,9 @@ contract DepositAndTransferETH is Deploy {
     function test_ExecuteAABatchWithSKP256Self()
         external
         registerSkP256SelfBatch
-        setTokenSpend(KeyType.P256, _getKeyP256(pK_SK), NATIVE_ADDRESS, 0.3 ether, SpendPeriod.Month)
-        setCanCall(KeyType.P256, _getKeyP256(pK_SK), NATIVE_ADDRESS, EMPTY_CALLDATA_FN_SEL, true)
-        setCanCall(KeyType.P256, _getKeyP256(pK_SK), reciver, EMPTY_CALLDATA_FN_SEL, true)
+        setTokenSpendM(KeyType.P256, _getKeyP256(pK_SK), NATIVE_ADDRESS, 0.3 ether, SpendPeriod.Month)
+        setCanCallM(KeyType.P256, _getKeyP256(pK_SK), NATIVE_ADDRESS, EMPTY_CALLDATA_FN_SEL, true)
+        setCanCallM(KeyType.P256, _getKeyP256(pK_SK), reciver, EMPTY_CALLDATA_FN_SEL, true)
     {
         _getBalances(true);
         Call[] memory calls = _getCalls(3, reciver, 0.1 ether, hex"");
@@ -411,15 +423,15 @@ contract DepositAndTransferETH is Deploy {
     function test_ExecuteAAWithSKP256NonSelf()
         external
         registerSkP256NonSelf
-        setTokenSpend(
+        setTokenSpendM(
             KeyType.P256NONKEY,
             _getKeyP256(pK_SK),
             NATIVE_ADDRESS,
             0.1 ether,
             SpendPeriod.Month
         )
-        setCanCall(KeyType.P256NONKEY, _getKeyP256(pK_SK), NATIVE_ADDRESS, EMPTY_CALLDATA_FN_SEL, true)
-        setCanCall(KeyType.P256NONKEY, _getKeyP256(pK_SK), reciver, EMPTY_CALLDATA_FN_SEL, true)
+        setCanCallM(KeyType.P256NONKEY, _getKeyP256(pK_SK), NATIVE_ADDRESS, EMPTY_CALLDATA_FN_SEL, true)
+        setCanCallM(KeyType.P256NONKEY, _getKeyP256(pK_SK), reciver, EMPTY_CALLDATA_FN_SEL, true)
     {
         _getBalances(true);
         Call[] memory calls = _getCalls(1, reciver, 0.1 ether, hex"");
@@ -448,15 +460,15 @@ contract DepositAndTransferETH is Deploy {
     function test_ExecuteAABatchWithSKP256NonSelf()
         external
         registerSkP256NonSelfBatch
-        setTokenSpend(
+        setTokenSpendM(
             KeyType.P256NONKEY,
             _getKeyP256(pK_SK),
             NATIVE_ADDRESS,
             0.3 ether,
             SpendPeriod.Month
         )
-        setCanCall(KeyType.P256NONKEY, _getKeyP256(pK_SK), NATIVE_ADDRESS, EMPTY_CALLDATA_FN_SEL, true)
-        setCanCall(KeyType.P256NONKEY, _getKeyP256(pK_SK), reciver, EMPTY_CALLDATA_FN_SEL, true)
+        setCanCallM(KeyType.P256NONKEY, _getKeyP256(pK_SK), NATIVE_ADDRESS, EMPTY_CALLDATA_FN_SEL, true)
+        setCanCallM(KeyType.P256NONKEY, _getKeyP256(pK_SK), reciver, EMPTY_CALLDATA_FN_SEL, true)
     {
         _getBalances(true);
         Call[] memory calls = _getCalls(3, reciver, 0.1 ether, hex"");

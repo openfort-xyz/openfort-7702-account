@@ -112,7 +112,7 @@ contract Execution is Deploy {
         _;
     }
 
-    modifier setTokenSpend(
+    modifier setTokenSpendM(
         KeyType _keyType,
         bytes memory _key,
         address _token,
@@ -125,7 +125,7 @@ contract Execution is Deploy {
         _;
     }
 
-    modifier setCanCall(
+    modifier setCanCallM(
         KeyType _keyType,
         bytes memory _key,
         address _target,
@@ -339,8 +339,8 @@ contract Execution is Deploy {
     function test_ExecuteBatchAAWithSKEOASelfAndTrasfer()
         external
         registerSkEOASelf
-        setTokenSpend(KeyType.EOA, _getKeyEOA(sessionKey), address(erc20), 10 ether, SpendPeriod.Month)
-        setCanCall(KeyType.EOA, _getKeyEOA(sessionKey), address(erc20), ANY_FN_SEL, true)
+        setTokenSpendM(KeyType.EOA, _getKeyEOA(sessionKey), address(erc20), 10 ether, SpendPeriod.Month)
+        setCanCallM(KeyType.EOA, _getKeyEOA(sessionKey), address(erc20), ANY_FN_SEL, true)
     {
         _getBalances(true);
         bytes memory data_mint = abi.encodeWithSelector(MockERC20.mint.selector, owner, 10e18);
@@ -372,8 +372,8 @@ contract Execution is Deploy {
     function test_ExecuteBatchofBatchesAAWithSKEOASelfAndTrasfer()
         external
         registerSkEOASelf
-        setTokenSpend(KeyType.EOA, _getKeyEOA(sessionKey), address(erc20), 30 ether, SpendPeriod.Month)
-        setCanCall(KeyType.EOA, _getKeyEOA(sessionKey), address(erc20), ANY_FN_SEL, true)
+        setTokenSpendM(KeyType.EOA, _getKeyEOA(sessionKey), address(erc20), 30 ether, SpendPeriod.Month)
+        setCanCallM(KeyType.EOA, _getKeyEOA(sessionKey), address(erc20), ANY_FN_SEL, true)
     {
         _getBalances(true);
 
@@ -481,8 +481,8 @@ contract Execution is Deploy {
     function test_ExecuteBatchAAWithSKP256SelfAndTrasfer()
         external
         registerSkP256Self
-        setTokenSpend(KeyType.P256, _getKeyP256(pK_SK), address(erc20), 10 ether, SpendPeriod.Month)
-        setCanCall(KeyType.P256, _getKeyP256(pK_SK), address(erc20), ANY_FN_SEL, true)
+        setTokenSpendM(KeyType.P256, _getKeyP256(pK_SK), address(erc20), 10 ether, SpendPeriod.Month)
+        setCanCallM(KeyType.P256, _getKeyP256(pK_SK), address(erc20), ANY_FN_SEL, true)
     {
         _getBalances(true);
         bytes memory data_mint = abi.encodeWithSelector(MockERC20.mint.selector, owner, 10e18);
@@ -516,8 +516,8 @@ contract Execution is Deploy {
     function test_ExecuteBatchofBatchesAAWithSKP256SelfAndTrasfer()
         external
         registerSkP256SelfBatchs
-        setTokenSpend(KeyType.P256, _getKeyP256(pK_SK), address(erc20), 30 ether, SpendPeriod.Month)
-        setCanCall(KeyType.P256, _getKeyP256(pK_SK), address(erc20), ANY_FN_SEL, true)
+        setTokenSpendM(KeyType.P256, _getKeyP256(pK_SK), address(erc20), 30 ether, SpendPeriod.Month)
+        setCanCallM(KeyType.P256, _getKeyP256(pK_SK), address(erc20), ANY_FN_SEL, true)
     {
         _getBalances(true);
 
@@ -556,14 +556,14 @@ contract Execution is Deploy {
     function test_ExecuteBatchAAWithSKP256NonSelfAndTrasfer()
         external
         registerSkP256NonSelf
-        setTokenSpend(
+        setTokenSpendM(
             KeyType.P256NONKEY,
             _getKeyP256(pK_SK),
             address(erc20),
             10 ether,
             SpendPeriod.Month
         )
-        setCanCall(KeyType.P256NONKEY, _getKeyP256(pK_SK), address(erc20), ANY_FN_SEL, true)
+        setCanCallM(KeyType.P256NONKEY, _getKeyP256(pK_SK), address(erc20), ANY_FN_SEL, true)
     {
         _getBalances(true);
         bytes memory data_mint = abi.encodeWithSelector(MockERC20.mint.selector, owner, 10e18);
@@ -597,14 +597,14 @@ contract Execution is Deploy {
     function test_ExecuteBatchofBatchesAAWithSKP256NonSelfAndTrasfer()
         external
         registerSkP256NonSelfBatchs
-        setTokenSpend(
+        setTokenSpendM(
             KeyType.P256NONKEY,
             _getKeyP256(pK_SK),
             address(erc20),
             30 ether,
             SpendPeriod.Month
         )
-        setCanCall(KeyType.P256NONKEY, _getKeyP256(pK_SK), address(erc20), ANY_FN_SEL, true)
+        setCanCallM(KeyType.P256NONKEY, _getKeyP256(pK_SK), address(erc20), ANY_FN_SEL, true)
     {
         _getBalances(true);
 

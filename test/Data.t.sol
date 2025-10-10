@@ -51,6 +51,43 @@ abstract contract Data is IKey, IKeysManager, SignersData {
     bytes32 internal constant mode_1 = bytes32(uint256(0x01000000000000000000) << (22 * 8));
     bytes32 internal constant mode_3 = bytes32(uint256(0x01000000000078210002) << (22 * 8));
 
-    function isKeyActive(bytes32 _keyId) external view returns (bool) {}
+    function registerKey(IKey.KeyDataReg calldata _keyData) external {}
+    function setTokenSpend(bytes32 _keyId, address _token, uint256 _limit, SpendPeriod _period)
+        external
+    {}
+    function setCanCall(bytes32 _keyId, address _target, bytes4 _funSel, bool can) external {}
+    function updateKeyData(bytes32 _keyId, uint48 _validUntil, uint48 _limits) external {}
+    function updateTokenSpend(bytes32 _keyId, address _token, uint256 _limit, SpendPeriod _period)
+        external
+    {}
+    function revokeKey(bytes32 _keyId) external {}
+    function removeTokenSpend(bytes32 _keyId, address _token) external {}
+    function keyCount() external view returns (uint256) {}
     function keyAt(uint256 i) external view returns (bytes32 keyId, IKey.KeyData memory data) {}
+    function getKey(bytes32 _keyId) external view returns (IKey.KeyData memory) {}
+    function isRegistered(bytes32 _keyId) external view returns (bool) {}
+    function isKeyActive(bytes32 _keyId) external view returns (bool) {}
+    function canExecutePackedInfos(bytes32 _keyId) external view returns (bytes32[] memory) {}
+    function canExecuteLength(bytes32 _keyId) external view returns (uint256) {}
+    function canExecuteAt(bytes32 _keyId, uint256 i)
+        external
+        view
+        returns (address target, bytes4 fnSel)
+    {}
+    function hasCanCall(bytes32 _keyId, address _target, bytes4 _funSel)
+        external
+        view
+        returns (bool)
+    {}
+    function spendTokens(bytes32 _keyId) external view returns (address[] memory) {}
+    function hasTokenSpend(bytes32 _keyId, address _token) external view returns (bool) {}
+    function tokenSpend(bytes32 _keyId, address _token)
+        external
+        view
+        returns (SpendPeriod period, uint256 limit, uint256 spent, uint256 lastUpdated)
+    {}
+    function pauseKey(bytes32 _keyId) external {}
+    function unpauseKey(bytes32 _keyId) external {}
+    function clearSpendPermissions(bytes32 _keyId) external {}
+    function clearExecutePermissions(bytes32 _keyId) external {}
 }

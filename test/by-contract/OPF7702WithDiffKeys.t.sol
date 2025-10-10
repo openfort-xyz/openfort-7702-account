@@ -74,7 +74,7 @@ contract OPF7702WithDiffKeys is Deploy {
         _;
     }
 
-    modifier setTokenSpend(
+    modifier setTokenSpendM(
         KeyType _keyType,
         bytes memory _key,
         address _token,
@@ -87,7 +87,7 @@ contract OPF7702WithDiffKeys is Deploy {
         _;
     }
 
-    modifier setCanCall(
+    modifier setCanCallM(
         KeyType _keyType,
         bytes memory _key,
         address _target,
@@ -137,8 +137,8 @@ contract OPF7702WithDiffKeys is Deploy {
     function test_sentUserOpWithSKEOA()
         external
         registerSkEOACustodial
-        setTokenSpend(KeyType.EOA, _getKeyEOA(sk), address(erc20), 10 ether, SpendPeriod.Month)
-        setCanCall(KeyType.EOA, _getKeyEOA(sk), address(erc20), ANY_FN_SEL, true)
+        setTokenSpendM(KeyType.EOA, _getKeyEOA(sk), address(erc20), 10 ether, SpendPeriod.Month)
+        setCanCallM(KeyType.EOA, _getKeyEOA(sk), address(erc20), ANY_FN_SEL, true)
     {
         _getBalances(true, false);
         bytes memory data_mint = abi.encodeWithSelector(MockERC20.mint.selector, owner, 10e18);
@@ -170,8 +170,8 @@ contract OPF7702WithDiffKeys is Deploy {
     function test_sentUserOpWithSKEOAFailedAllValidations()
         external
         registerSkEOACustodial
-        setTokenSpend(KeyType.EOA, _getKeyEOA(sk), address(erc20), 10 ether, SpendPeriod.Month)
-        setCanCall(KeyType.EOA, _getKeyEOA(sk), address(erc20), ANY_FN_SEL, true)
+        setTokenSpendM(KeyType.EOA, _getKeyEOA(sk), address(erc20), 10 ether, SpendPeriod.Month)
+        setCanCallM(KeyType.EOA, _getKeyEOA(sk), address(erc20), ANY_FN_SEL, true)
     {
         Call[] memory calls = new Call[](1);
         calls[0] = _createCall(address(123456), 1 ether, hex"");
@@ -198,8 +198,14 @@ contract OPF7702WithDiffKeys is Deploy {
     function test_sentUserOpWithSKWebAuthnFailedAllValidations()
         external
         registerSkWebAuthnCustodial
-        setTokenSpend(KeyType.WEBAUTHN, _getKeyP256(pK_SK), address(erc20), 10 ether, SpendPeriod.Month)
-        setCanCall(KeyType.WEBAUTHN, _getKeyP256(pK_SK), address(erc20), ANY_FN_SEL, true)
+        setTokenSpendM(
+            KeyType.WEBAUTHN,
+            _getKeyP256(pK_SK),
+            address(erc20),
+            10 ether,
+            SpendPeriod.Month
+        )
+        setCanCallM(KeyType.WEBAUTHN, _getKeyP256(pK_SK), address(erc20), ANY_FN_SEL, true)
     {
         Call[] memory calls = _getCalls(1, reciver, 0.1 ether, hex"");
 
@@ -228,8 +234,14 @@ contract OPF7702WithDiffKeys is Deploy {
     function test_sentUserOpWithSKWebAuthn()
         external
         registerSkWebAuthnCustodial
-        setTokenSpend(KeyType.WEBAUTHN, _getKeyP256(pK_SK), NATIVE_ADDRESS, 10 ether, SpendPeriod.Month)
-        setCanCall(KeyType.WEBAUTHN, _getKeyP256(pK_SK), reciver, ANY_FN_SEL, true)
+        setTokenSpendM(
+            KeyType.WEBAUTHN,
+            _getKeyP256(pK_SK),
+            NATIVE_ADDRESS,
+            10 ether,
+            SpendPeriod.Month
+        )
+        setCanCallM(KeyType.WEBAUTHN, _getKeyP256(pK_SK), reciver, ANY_FN_SEL, true)
     {
         _getBalances(true, true);
         Call[] memory calls = _getCalls(1, reciver, 0.1 ether, hex"");
@@ -261,9 +273,9 @@ contract OPF7702WithDiffKeys is Deploy {
     function test_ExecuteAAWithSKP256SelfFailedAllValidations()
         external
         registerSkP256Custodial
-        setTokenSpend(KeyType.P256, _getKeyP256(pK_SK), NATIVE_ADDRESS, 0.1 ether, SpendPeriod.Month)
-        setCanCall(KeyType.P256, _getKeyP256(pK_SK), NATIVE_ADDRESS, EMPTY_CALLDATA_FN_SEL, true)
-        setCanCall(KeyType.P256, _getKeyP256(pK_SK), reciver, EMPTY_CALLDATA_FN_SEL, true)
+        setTokenSpendM(KeyType.P256, _getKeyP256(pK_SK), NATIVE_ADDRESS, 0.1 ether, SpendPeriod.Month)
+        setCanCallM(KeyType.P256, _getKeyP256(pK_SK), NATIVE_ADDRESS, EMPTY_CALLDATA_FN_SEL, true)
+        setCanCallM(KeyType.P256, _getKeyP256(pK_SK), reciver, EMPTY_CALLDATA_FN_SEL, true)
     {
         Call[] memory calls = _getCalls(1, reciver, 30 ether, hex"");
 
@@ -289,8 +301,8 @@ contract OPF7702WithDiffKeys is Deploy {
     function test_sentUserOpWithSKEOAFailedKeyValidation()
         external
         registerSkEOACustodial
-        setTokenSpend(KeyType.EOA, _getKeyEOA(sk), address(erc20), 10 ether, SpendPeriod.Month)
-        setCanCall(KeyType.EOA, _getKeyEOA(sk), address(erc20), ANY_FN_SEL, true)
+        setTokenSpendM(KeyType.EOA, _getKeyEOA(sk), address(erc20), 10 ether, SpendPeriod.Month)
+        setCanCallM(KeyType.EOA, _getKeyEOA(sk), address(erc20), ANY_FN_SEL, true)
     {
         _etch();
         vm.prank(owner);
@@ -321,8 +333,8 @@ contract OPF7702WithDiffKeys is Deploy {
     function test_sentUserOpWithSKEOAFailedIsValidKey()
         external
         registerSkEOACustodial
-        setTokenSpend(KeyType.EOA, _getKeyEOA(sk), address(erc20), 10 ether, SpendPeriod.Month)
-        setCanCall(KeyType.EOA, _getKeyEOA(sk), address(erc20), ANY_FN_SEL, true)
+        setTokenSpendM(KeyType.EOA, _getKeyEOA(sk), address(erc20), 10 ether, SpendPeriod.Month)
+        setCanCallM(KeyType.EOA, _getKeyEOA(sk), address(erc20), ANY_FN_SEL, true)
     {
         Call[] memory calls = new Call[](1);
         calls[0] = _createCall(address(erc20), 0, hex"");
@@ -351,8 +363,8 @@ contract OPF7702WithDiffKeys is Deploy {
     function test_sentBatchUserOpWithSKEOAFailedKeyValidation()
         external
         registerSkEOACustodial
-        setTokenSpend(KeyType.EOA, _getKeyEOA(sk), address(erc20), 10 ether, SpendPeriod.Month)
-        setCanCall(KeyType.EOA, _getKeyEOA(sk), address(erc20), ANY_FN_SEL, true)
+        setTokenSpendM(KeyType.EOA, _getKeyEOA(sk), address(erc20), 10 ether, SpendPeriod.Month)
+        setCanCallM(KeyType.EOA, _getKeyEOA(sk), address(erc20), ANY_FN_SEL, true)
     {
         address[] memory targets = new address[](3);
         targets[0] = address(erc20);
@@ -387,8 +399,8 @@ contract OPF7702WithDiffKeys is Deploy {
     function test_sentUserOpWithSKEOAFailedBadMode()
         external
         registerSkEOACustodial
-        setTokenSpend(KeyType.EOA, _getKeyEOA(sk), address(erc20), 10 ether, SpendPeriod.Month)
-        setCanCall(KeyType.EOA, _getKeyEOA(sk), address(erc20), ANY_FN_SEL, true)
+        setTokenSpendM(KeyType.EOA, _getKeyEOA(sk), address(erc20), 10 ether, SpendPeriod.Month)
+        setCanCallM(KeyType.EOA, _getKeyEOA(sk), address(erc20), ANY_FN_SEL, true)
     {
         Call[] memory calls = new Call[](1);
         calls[0] = _createCall(address(erc20), 0, hex"");
@@ -415,8 +427,8 @@ contract OPF7702WithDiffKeys is Deploy {
     function test_sentUserOpWithSKEOAAllPaths()
         external
         registerSkEOACustodial
-        setTokenSpend(KeyType.EOA, _getKeyEOA(sk), address(erc20), 100 ether, SpendPeriod.Forever)
-        setCanCall(KeyType.EOA, _getKeyEOA(sk), ANY_TARGET, ANY_FN_SEL, true)
+        setTokenSpendM(KeyType.EOA, _getKeyEOA(sk), address(erc20), 100 ether, SpendPeriod.Forever)
+        setCanCallM(KeyType.EOA, _getKeyEOA(sk), ANY_TARGET, ANY_FN_SEL, true)
     {
         _getBalances(true, false);
         bytes memory data_mint = abi.encodeWithSelector(MockERC20.mint.selector, owner, 10e18);
