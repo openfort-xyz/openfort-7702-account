@@ -59,9 +59,11 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
     // ──────────────────────────────────────────────────────────────────────────────
 
     /**
-     * @param _entryPoint      ERC‑4337 EntryPoint address.
-     * @param _recoveryManager  Window (seconds) after the timelock where the action must be executed.
-     */
+    * @param _entryPoint       ERC-4337 EntryPoint address.
+    * @param _webAuthnVerifier WebAuthn verifier contract for P-256/WebAuthn signature checks.
+    * @param _gasPolicy        Gas/UserOp policy contract (used for custodial key policy init).
+    * @param _recoveryManager  Social Recovery Manager contract that manages guardians & recovery flow.
+    */
     constructor(
         address _entryPoint,
         address _webAuthnVerifier,
@@ -166,10 +168,12 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
         KeyData storage sKey = keys[keyId];
         if (sKey.isActive) revert KeyManager__KeyRegistered();
 
+        // master-key enforce id=0
         idKeys[0] = keyId;
         _addMasterKey(sKey, recoveryOwner);
     }
 
+    /// @dev writes master-key fields into storage.
     function _addMasterKey(KeyData storage _sKey, KeyDataReg memory _recoveryOwner) private {
         _sKey.keyType = _recoveryOwner.keyType;
         _sKey.key = _recoveryOwner.key;
