@@ -75,7 +75,7 @@ If either fails, the deploy reverts with `OPF7702Recoverable_InsecurePeriod()`.
 
 ```mermaid
 graph TB
-    subgraph "Account Stack"
+    subgraph Account["Account Stack"]
         OPF7702Recoverable --> OPF7702
         OPF7702Recoverable --> EIP712
         OPF7702Recoverable --> ERC7201
@@ -84,15 +84,15 @@ graph TB
         KeysManager --> BaseOPF7702
     end
 
-    subgraph "Key Components"
+    subgraph Components["Key Components"]
         GM[Guardian Management]
         RP[Recovery Process]
         TL[Timelock System]
         KM[Key Management]
-        SRM[SocialRecoveryManager<br/>(external)]
+        SRM[SocialRecoveryManager<br/>external]
     end
 
-    subgraph "Security Layers"
+    subgraph Security["Security Layers"]
         SP[Security Period]
         SW[Security Window]
         LP[Lock Period]
@@ -107,7 +107,7 @@ graph TB
     SRM --> GM
     SRM --> RP
 
-    subgraph "Storage Structure"
+    subgraph Storage["Storage Structure"]
         RD[RecoveryData]
         GD[GuardiansData]
         KD[KeyData]
