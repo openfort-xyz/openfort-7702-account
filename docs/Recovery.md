@@ -1,5 +1,5 @@
 # Recovery Module
-The OPF7702Recoverable module implements a guardian-based social recovery system for EIP-7702 + ERC-4337 smart contract wallets. This enables users to recover their accounts if they lose access to their master key, using a network of trusted guardians.
+The OPF7702Recoverable module implements a guardian-based social recovery system for EIP-7702 + ERC-4337 smart contract wallets. This enables users to recover their accounts if they lose access to their master key, using a network of trusted guardians. Recovery state and guardian coordination are managed by an **external** `SocialRecoveryManager` contract; the account delegates setup and completion of recovery flows to this manager during initialization and `completeRecovery`.
 
 ## Table of Contents
 
@@ -39,7 +39,7 @@ The OPF7702Recoverable module implements a guardian-based social recovery system
 - `securityPeriod` — **Timelock** (seconds) before a guardian add/remove can be confirmed.
 - `securityWindow` — **Confirmation window** (seconds) after `securityPeriod` during which a pending add/remove **must** be confirmed, or it expires.
 
-### Invariants 
+### Invariants
 (checked in constructor)
 - `lockPeriod ≥ recoveryPeriod`  
 - `recoveryPeriod ≥ securityPeriod + securityWindow`  
@@ -75,11 +75,13 @@ If either fails, the deploy reverts with `OPF7702Recoverable_InsecurePeriod()`.
 
 ```mermaid
 graph TB
-    subgraph "Contract Inheritance"
+    subgraph "Account Stack"
         OPF7702Recoverable --> OPF7702
         OPF7702Recoverable --> EIP712
         OPF7702Recoverable --> ERC7201
-        OPF7702 --> BaseAccount
+        OPF7702 --> Execution
+        Execution --> KeysManager
+        KeysManager --> BaseOPF7702
     end
 
     subgraph "Key Components"
@@ -87,6 +89,7 @@ graph TB
         RP[Recovery Process]
         TL[Timelock System]
         KM[Key Management]
+        SRM[SocialRecoveryManager<br/>(external)]
     end
 
     subgraph "Security Layers"
@@ -101,6 +104,8 @@ graph TB
     RP --> LP
     RP --> RCP
     KM --> TL
+    SRM --> GM
+    SRM --> RP
 
     subgraph "Storage Structure"
         RD[RecoveryData]
@@ -165,24 +170,24 @@ struct GuardiansData {
 #### Adding a Guardian
 ```mermaid
 sequenceDiagram
-    participant Owner
-    participant Contract
+    participant Account
+    participant RecoveryManager
     participant Guardian
     participant Time
 
-    Owner->>Contract: proposeGuardian(guardianHash)
-    Contract->>Contract: Validate not duplicate
-    Contract->>Contract: Set pending = now + securityPeriod
-    Contract-->>Owner: GuardianProposed event
+    Account->>RecoveryManager: proposeGuardian(guardianHash)
+    RecoveryManager->>RecoveryManager: Validate not duplicate
+    RecoveryManager->>RecoveryManager: Set pending = now + securityPeriod
+    RecoveryManager-->>Account: GuardianProposed event
     
     Time->>Time: Security Period passes
     
-    Owner->>Contract: confirmGuardianProposal(guardianHash)
-    Contract->>Contract: Check: now >= pending
-    Contract->>Contract: Check: now <= pending + securityWindow
-    Contract->>Contract: Add to guardians array
-    Contract->>Contract: Set isActive = true
-    Contract-->>Owner: GuardianAdded event
+    Account->>RecoveryManager: confirmGuardianProposal(guardianHash)
+    RecoveryManager->>RecoveryManager: Check: now ≥ pending
+    RecoveryManager->>RecoveryManager: Check: now ≤ pending + securityWindow
+    RecoveryManager->>RecoveryManager: Add to guardians array
+    RecoveryManager->>RecoveryManager: Set isActive = true
+    RecoveryManager-->>Account: GuardianAdded event
     
     Note over Guardian: Guardian is now active
 ```
@@ -190,24 +195,24 @@ sequenceDiagram
 
 ```mermaid
 sequenceDiagram
-    participant Owner
-    participant Contract
+    participant Account
+    participant RecoveryManager
     participant Guardian
     participant Time
 
-    Owner->>Contract: revokeGuardian(guardianHash)
-    Contract->>Contract: Validate is active guardian
-    Contract->>Contract: Set pending = now + securityPeriod
-    Contract-->>Owner: GuardianRevocationScheduled event
+    Account->>RecoveryManager: revokeGuardian(guardianHash)
+    RecoveryManager->>RecoveryManager: Validate is active guardian
+    RecoveryManager->>RecoveryManager: Set pending = now + securityPeriod
+    RecoveryManager-->>Account: GuardianRevocationScheduled event
     
     Time->>Time: Security Period passes
     
-    Owner->>Contract: confirmGuardianRevocation(guardianHash)
-    Contract->>Contract: Check: now >= pending
-    Contract->>Contract: Check: now <= pending + securityWindow
-    Contract->>Contract: Remove from guardians array
-    Contract->>Contract: Delete guardian data
-    Contract-->>Owner: GuardianRemoved event
+    Account->>RecoveryManager: confirmGuardianRevocation(guardianHash)
+    RecoveryManager->>RecoveryManager: Check: now ≥ pending
+    RecoveryManager->>RecoveryManager: Check: now ≤ pending + securityWindow
+    RecoveryManager->>RecoveryManager: Remove from guardians array
+    RecoveryManager->>RecoveryManager: Delete guardian data
+    RecoveryManager-->>Account: GuardianRemoved event
     
     Note over Guardian: Guardian is removed
 ```
@@ -216,9 +221,9 @@ sequenceDiagram
 #### Recovery Data Structure
 ```ts
 struct RecoveryData {
-    Key key;                  // New master key to set
+    KeyDataReg key;           // New master key to install
     uint64 executeAfter;      // Timestamp when recovery can execute
-    uint32 guardiansRequired; // Number of signatures needed
+    uint32 guardiansRequired; // Number of guardian signatures required
 }
 ```
 
@@ -231,28 +236,29 @@ sequenceDiagram
     participant Time
 
     Note over Guardian,Time: Recovery Initiation Phase
-    Guardian->>Contract: startRecovery(newKey)
-    Contract->>Contract: Validate guardian status
-    Contract->>Contract: Check wallet not locked
-    Contract->>Contract: Check no ongoing recovery
-    Contract->>Contract: Validate recovery key
-    Contract->>Contract: Calculate executeAfter = now + recoveryPeriod
-    Contract->>Contract: Calculate guardiansRequired = ceil(guardianCount / 2)
-    Contract->>Contract: Set lock = now + lockPeriod
-    Contract-->>Guardian: RecoveryStarted event
+    Guardian->>RecoveryManager: startRecovery(newKey)
+    RecoveryManager->>RecoveryManager: Validate guardian status
+    RecoveryManager->>RecoveryManager: Check wallet not locked
+    RecoveryManager->>RecoveryManager: Check no ongoing recovery
+    RecoveryManager->>RecoveryManager: Validate recovery key
+    RecoveryManager->>RecoveryManager: Calculate executeAfter = now + recoveryPeriod
+    RecoveryManager->>RecoveryManager: Calculate guardiansRequired = ceil(guardianCount / 2)
+    RecoveryManager->>RecoveryManager: Set lock = now + lockPeriod
+    RecoveryManager-->>Guardian: RecoveryStarted event
     
     Note over Guardian,Time: Recovery Execution Phase
     Time->>Time: Recovery period passes
     
-    Guardian->>Contract: completeRecovery(signatures[])
-    Contract->>Contract: Check now >= executeAfter
-    Contract->>Contract: Validate signature count
-    Contract->>Contract: Verify guardian signatures
-    Contract->>Contract: Check signatures are sorted/unique
-    Contract->>Contract: Delete old master key
-    Contract->>Contract: Set new master key
-    Contract->>Contract: Clear lock (set to 0)
-    Contract-->>Owner: RecoveryCompleted event
+    Guardian->>RecoveryManager: completeRecovery(signatures[])
+    RecoveryManager->>RecoveryManager: Check now ≥ executeAfter
+    RecoveryManager->>RecoveryManager: Validate signature count
+    RecoveryManager->>RecoveryManager: Verify guardian signatures
+    RecoveryManager->>RecoveryManager: Check signatures are sorted/unique
+    RecoveryManager->>Account: emit RecoveryCompleted
+    Account->>Account: Delete old master key
+    Account->>Account: Set new master key
+    Account->>Account: Clear lock (set to 0)
+    Account-->>Owner: RecoveryCompleted event
     
     Note over Owner,Contract: Alternative: Cancellation
     Owner->>Contract: cancelRecovery()
