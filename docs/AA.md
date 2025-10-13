@@ -19,29 +19,36 @@ EIP-7702 enables any Externally Owned Account (EOA) to delegate its code executi
 Delegation Flow
 ```mermaid
 flowchart LR
-    subgraph "EIP-7702 Delegation Process"
-        EOA["EOA Address"]
-        
-        subgraph "Implementation Contract"
-            SetCode["SET_CODE_TX<br/>delegates to OPF7702"]
-            OPF7702["OPF7702.sol<br/>Implementation"]
-            BaseOPF["BaseOPF7702.sol<br/>Core Logic"]
-        end
-        
-        subgraph "Storage Layout"
-            BaseSlot["Base Storage Slot<br/>keccak256(abi.encode(uint256(keccak256('openfort.baseAccount.7702.v1')) - 1)) & ~bytes32(uint256(0xff))"]
-            AccountData["AccountData7702<br/>• owner: Key<br/>• nonce: uint256"]
-            SessionKeys["Keys Mapping<br/>keyHash => KeyData"]
-        end
+    EOA["EOA (delegator)"]
+    SetCode["SET_CODE_TX<br/>authorizes implementation"]
+
+    subgraph "Implementation Stack"
+        OPFMain["OPFMain.sol<br/>layout at 0x…400"]
+        OPFRecoverable["OPF7702Recoverable.sol"]
+        OPF["OPF7702.sol"]
+        Execution["Execution.sol"]
+        KeysManager["KeysManager.sol"]
+        BaseOPF["BaseOPF7702.sol"]
     end
 
-    %% Flow connections
+    subgraph "Deterministic Storage"
+        Slot["Base Slot<br/>keccak256(abi.encode(uint256(keccak256('openfort.baseAccount.7702.v1')) - 1)) & ~0xff"]
+        Counters["id, idKeys"]
+        Keys["keys[keyId] => KeyData"]
+        Permissions["permissions[keyId] => ExecutePermissions"]
+        Spend["spendStore[keyId] => SpendStorage"]
+        Reentrancy["Reentrancy / Initializable state"]
+    end
+
     EOA --> SetCode
-    SetCode --> OPF7702
-    OPF7702 --> BaseOPF
-    BaseOPF --> BaseSlot
-    BaseSlot --> AccountData
-    BaseSlot --> SessionKeys
+    SetCode --> OPFMain
+    OPFMain --> OPFRecoverable --> OPF --> Execution --> KeysManager --> BaseOPF
+    BaseOPF --> Slot
+    Slot --> Counters
+    Slot --> Keys
+    Slot --> Permissions
+    Slot --> Spend
+    Slot --> Reentrancy
 ```
 
 ## ERC-4337 Integration
@@ -53,16 +60,17 @@ flowchart LR
         Bundler["Bundler/Relayer"]
         EntryPoint["EntryPoint Contract<br/>0x4337084D9E255Ff0702461CF8895CE9E3b5Ff108"]
         
-        subgraph "BaseOPF7702 Validation"
-            ValidateUserOp["validateUserOp()<br/>IAccount interface"]
-            SigValidation["_validateSignature()<br/>Key type routing"]
-            NonceValidation["_validateNonce()<br/>Replay protection"]
+        subgraph "OPF7702 Validation"
+            ValidateUserOp["OPF7702.validateUserOp(...)"]
+            SigValidation["_validateSignature()<br/>Key-type routing"]
+            NonceValidation["BaseAccount._validateNonce()<br/>Replay protection"]
         end
         
         subgraph "Signature Handlers"
-            EOAValidator["_validateEOASignature()<br/>ECDSA recovery"]
-            WebAuthnValidator["_validateWebAuthnSignature()<br/>_validateKeyTypeP256()<br/>WebAuthn/P-256 verification"]
-            SessionKeyValidator["Session Key Validation<br/>Permissions + signature"]
+            EOAValidator["_validateKeyTypeEOA()<br/>ECDSA recovery"]
+            WebAuthnValidator["_validateKeyTypeWEBAUTHN()<br/>WebAuthn verifier"]
+            P256Validator["_validateKeyTypeP256()<br/>Raw / non-key P-256"]
+            KeyGuards["KeysManager checks<br/>• _keyValidation<br/>• isValidKey<br/>• Gas policy (custodial)"]
         end
     end
 
@@ -73,7 +81,10 @@ flowchart LR
     ValidateUserOp --> NonceValidation
     SigValidation --> EOAValidator
     SigValidation --> WebAuthnValidator
-    SigValidation --> SessionKeyValidator
+    SigValidation --> P256Validator
+    EOAValidator --> KeyGuards
+    WebAuthnValidator --> KeyGuards
+    P256Validator --> KeyGuards
 ```
 
 ### IAccount Interface Implementation
@@ -91,26 +102,29 @@ flowchart TD
     subgraph "Signature Validation Router"
         UserOpSig["UserOperation.signature"]
         SigLength["_checkValidSignatureLength()<br/>Gas griefing protection"]
-        KeyType["Determine Key Type<br/>• EOA<br/>• WEBAUTHN<br/>• P256<br/>• P256NONKEY"]
+        Decode["abi.decode(signature)<br/>KeyType + payload"]
+        KeyType["Dispatch by KeyType<br/>EOA / WEBAUTHN / P256 / P256NONKEY"]
         
         subgraph "Validation Handlers"
-            EOAPath["_validateEOASignature()<br/>• ECDSA recover<br/>• Compare with owner"]
-            WebAuthnPath["_validateWebAuthnSignature()<br/>_validateKeyTypeP256()<br/>• WebAuthnVerifier call<br/>• P-256 validation"]
-            SessionPath["Session Key Validation<br/>• Permission checks<br/>• Signature verification<br/>• Gas Policy"]
+            EOAPath["_validateKeyTypeEOA()<br/>ECDSA recover"]
+            WebAuthnPath["_validateKeyTypeWEBAUTHN()<br/>WebAuthn verifier"]
+            P256Path["_validateKeyTypeP256()<br/>Raw / pre-hashed P-256"]
         end
-        
-        Result["ValidationResult<br/>• SIG_VALIDATION_SUCCEEDED<br/>• SIG_VALIDATION_FAILED"]
+
+        KeyGuards["KeysManager checks<br/>• _keyValidation<br/>• isValidKey / _validateExecuteCall<br/>• Gas policy (custodial)"]
+        Result["ValidationResult<br/>• SIG_VALIDATION_SUCCESS<br/>• SIG_VALIDATION_FAILED"]
     end
 
     %% Flow connections
     UserOpSig --> SigLength
-    SigLength --> KeyType
+    SigLength --> Decode --> KeyType
     KeyType -->|EOA| EOAPath
-    KeyType -->|WEBAUTHN/P256| WebAuthnPath
-    KeyType -->|Session Key| SessionPath
-    EOAPath --> Result
-    WebAuthnPath --> Result
-    SessionPath --> Result
+    KeyType -->|WEBAUTHN| WebAuthnPath
+    KeyType -->|P256 / P256NONKEY| P256Path
+    EOAPath --> KeyGuards
+    WebAuthnPath --> KeyGuards
+    P256Path --> KeyGuards
+    KeyGuards --> Result
 ```
 
 ## EIP-7702 and ERC-4337 Interoperability
@@ -129,25 +143,25 @@ The implementation handles both direct EOA calls (via EIP-7702 delegation) and b
 ```mermaid
 flowchart TD
     subgraph "Execution Contexts"
-        DirectCall["Direct EOA Call<br/>msg.sender = EOA"]
-        UserOpCall["UserOperation Call<br/>msg.sender = EntryPoint"]
-        
-        subgraph "Validation Layer"
-            RequireAuth["_requireFromEntryPointOrOwner()<br/>Access control"]
-            SigCheck["Signature validation<br/>Context-aware"]
+        DirectCall["Direct EOA Call<br/>msg.sender = delegating EOA"]
+        UserOpCall["UserOperation<br/>msg.sender = EntryPoint"]
+
+        subgraph "Access Control"
+            RequireEP["BaseOPF7702._requireFromEntryPoint()<br/>EntryPoint-only paths"]
+            RequireExecute["Execution._requireForExecute()<br/>msg.sender == self or EntryPoint"]
         end
-        
+
         subgraph "Execution Engine"
-            ExecuteCall["_executeCall()<br/>Target contract interaction"]
-            BatchExecution["Batch processing<br/>Multiple operations"]
+            ExecuteEntry["OPF7702.execute(mode,data)"]
+            RunWorker["Execution._run(mode,data,counter)"]
+            LowLevel["Execution._execute(to,value,data)"]
         end
     end
 
     %% Flow connections
-    DirectCall --> RequireAuth
-    UserOpCall --> RequireAuth
-    RequireAuth --> SigCheck
-    SigCheck --> ExecuteCall
-    ExecuteCall --> BatchExecution
-```
+    DirectCall --> RequireExecute
+    UserOpCall --> RequireEP --> RequireExecute
+    RequireExecute --> ExecuteEntry --> RunWorker --> LowLevel
+    RunWorker -->|mode 3 recursion| RunWorker
 
+```
