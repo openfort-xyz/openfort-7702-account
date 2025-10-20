@@ -56,7 +56,7 @@ test-all-fuzz-invariant:
 	forge clean && forge build --quiet && forge test
 
 coverage:
-	forge coverage --ir-minimum --rpc-url $(SEPOLIA_RPC_URL) >> coverage.txt
+	forge coverage --ir-minimum >> coverage.txt
 
 report-debug:
 	forge coverage --match-path "src/core/BaseOPF7702.sol" --ir-minimum --rpc-url $(SEPOLIA_RPC_URL) >> report_debug_BaseOPF7702.txt

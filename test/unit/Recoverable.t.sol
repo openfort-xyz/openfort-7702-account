@@ -7,6 +7,7 @@ import {console2 as console} from "lib/forge-std/src/Test.sol";
 import {PackedUserOperation} from
     "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
 import {IOPF7702Recoverable} from "src/interfaces/IOPF7702Recoverable.sol";
+import {IKeysManager} from "src/interfaces/IKeysManager.sol";
 import {Math} from "lib/openzeppelin-contracts/contracts/utils/math/Math.sol";
 import {SafeCast} from "lib/openzeppelin-contracts/contracts/utils/math/SafeCast.sol";
 import {SocialRecoveryManager} from "src/utils/SocialRecover.sol";
@@ -472,6 +473,279 @@ contract Recoverable is Deploy {
         _assretStartRecovery();
         _executeGuardianAction(GuardianAction.CANCEL_RECOVERY, 1);
         _assertCancelRecovery();
+    }
+
+    function test_RevertConfirmGuardianProposalWhenPendingNotOver()
+        external
+        createGuardians(1)
+    {
+        _executeGuardianAction(GuardianAction.PROPOSE, 1);
+        vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__PendingProposalNotOver.selector);
+        _confirmGuardian(guardiansID[0]);
+    }
+
+    function test_RevertConfirmGuardianProposalWhenExpired()
+        external
+        createGuardians(1)
+    {
+        _executeGuardianAction(GuardianAction.PROPOSE, 1);
+        vm.warp(block.timestamp + SECURITY_PERIOD + SECURITY_WINDOW + 1);
+        vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__PendingProposalExpired.selector);
+        _confirmGuardian(guardiansID[0]);
+    }
+
+    function test_RevertRevokeGuardianDuplicatedRevoke() external createGuardians(1) {
+        _executeGuardianAction(GuardianAction.PROPOSE, 1);
+        _executeGuardianAction(GuardianAction.CONFIRM_PROPOSAL, 1);
+        _executeGuardianAction(GuardianAction.REVOKE, 1);
+        vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__DuplicatedRevoke.selector);
+        _revokeGuardian(guardiansID[0]);
+    }
+
+    function test_RevertConfirmGuardianRevocationWhenExpired() external createGuardians(1) {
+        _executeGuardianAction(GuardianAction.PROPOSE, 1);
+        _executeGuardianAction(GuardianAction.CONFIRM_PROPOSAL, 1);
+        _executeGuardianAction(GuardianAction.REVOKE, 1);
+        vm.warp(block.timestamp + SECURITY_PERIOD + SECURITY_WINDOW + 1);
+        vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__PendingRevokeExpired.selector);
+        _confirmGuardianRevocation(guardiansID[0]);
+    }
+
+    function test_RevertCancelGuardianRevocationWhenUnknown() external createGuardians(1) {
+        _executeGuardianAction(GuardianAction.PROPOSE, 1);
+        _executeGuardianAction(GuardianAction.CONFIRM_PROPOSAL, 1);
+        vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__UnknownRevoke.selector);
+        _cancelGuardianRevocation(guardiansID[0]);
+    }
+
+    function test_RevertCancelGuardianRevocationWhenNotGuardian() external createGuardians(1) {
+        vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__MustBeGuardian.selector);
+        _cancelGuardianRevocation(guardiansID[0]);
+    }
+
+    function test_RevertConfirmGuardianProposalDuringRecovery()
+        external
+        createGuardians(3)
+        createNewOner(KeyType.EOA)
+    {
+        _executeGuardianAction(GuardianAction.PROPOSE, 3);
+        _executeGuardianAction(GuardianAction.CONFIRM_PROPOSAL, 2);
+        _executeGuardianAction(GuardianAction.START_RECOVERY, 1);
+        vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__OngoingRecovery.selector);
+        _confirmGuardian(guardiansID[2]);
+    }
+
+    function test_RevertStartRecoveryUnsupportedKeyType()
+        external
+        createGuardians(3)
+        createNewOner(KeyType.EOA)
+    {
+        _executeGuardianAction(GuardianAction.PROPOSE, 3);
+        _executeGuardianAction(GuardianAction.CONFIRM_PROPOSAL, 3);
+        recoveryKey.keyType = KeyType.P256;
+        vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__UnsupportedKeyType.selector);
+        _executeGuardianAction(GuardianAction.START_RECOVERY, 1);
+    }
+
+    function test_RevertStartRecoveryWhenKeyActive()
+        external
+        createGuardians(3)
+        createNewOner(KeyType.EOA)
+    {
+        _executeGuardianAction(GuardianAction.PROPOSE, 3);
+        _executeGuardianAction(GuardianAction.CONFIRM_PROPOSAL, 3);
+        recoveryKey = mkReg;
+        vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__RecoverCannotBeActiveKey.selector);
+        _executeGuardianAction(GuardianAction.START_RECOVERY, 1);
+    }
+
+    function test_RevertStartRecoveryKeyCantBeZero()
+        external
+        createGuardians(3)
+        createNewOner(KeyType.EOA)
+    {
+        _executeGuardianAction(GuardianAction.PROPOSE, 3);
+        _executeGuardianAction(GuardianAction.CONFIRM_PROPOSAL, 3);
+        recoveryKey.key = "";
+        vm.expectRevert(IKeysManager.KeyManager__KeyCantBeZero.selector);
+        _executeGuardianAction(GuardianAction.START_RECOVERY, 1);
+    }
+
+    function test_RevertCompleteRecoveryInvalidSignatureAmount()
+        external
+        createGuardians(3)
+        createNewOner(KeyType.EOA)
+    {
+        _executeGuardianAction(GuardianAction.PROPOSE, 3);
+        _executeGuardianAction(GuardianAction.CONFIRM_PROPOSAL, 3);
+        _executeGuardianAction(GuardianAction.START_RECOVERY, 1);
+        _signGuardians(3);
+        vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__InvalidSignatureAmount.selector);
+        _executeConfirmRecovery();
+    }
+
+    function test_RevertCompleteRecoveryInvalidSignatureOrder()
+        external
+        createGuardians(3)
+        createNewOner(KeyType.EOA)
+    {
+        _executeGuardianAction(GuardianAction.PROPOSE, 3);
+        _executeGuardianAction(GuardianAction.CONFIRM_PROPOSAL, 3);
+        _executeGuardianAction(GuardianAction.START_RECOVERY, 1);
+        _signGuardians(2);
+        (_signatures[0], _signatures[1]) = (_signatures[1], _signatures[0]);
+        vm.expectRevert(
+            IOPF7702Recoverable.OPF7702Recoverable__InvalidRecoverySignatures.selector
+        );
+        _executeConfirmRecovery();
+    }
+
+    function test_RevertCancelRecoveryWhenNoOngoingRecovery() external {
+        vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__NoOngoingRecovery.selector);
+        _cancelRecovery();
+    }
+
+    function test_RevertSocialRecoveryManagerInsecurePeriod() external {
+        vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable_InsecurePeriod.selector);
+        new SocialRecoveryManager(
+            RECOVERY_PERIOD, RECOVERY_PERIOD - 1, SECURITY_PERIOD, SECURITY_WINDOW
+        );
+    }
+
+    function test_RevertInitializeGuardiansUnauthorized() external createGuardians(1) {
+        vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__Unauthorized.selector);
+        vm.prank(sender);
+        recoveryManager.initializeGuardians(address(account), guardiansID[0]);
+    }
+
+    function test_RevertProposeGuardianUnauthorized() external createGuardians(1) {
+        vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__Unauthorized.selector);
+        vm.prank(sender);
+        recoveryManager.proposeGuardian(address(account), guardiansID[0]);
+    }
+
+    function test_RevertProposeGuardianWhenLocked()
+        external
+        createGuardians(3)
+        createNewOner(KeyType.EOA)
+    {
+        _executeGuardianAction(GuardianAction.PROPOSE, 3);
+        _executeGuardianAction(GuardianAction.CONFIRM_PROPOSAL, 3);
+        _executeGuardianAction(GuardianAction.START_RECOVERY, 1);
+        vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__AccountLocked.selector);
+        _proposeGuardian(guardiansID[0]);
+    }
+
+    function test_RevertConfirmGuardianProposalUnauthorized() external createGuardians(1) {
+        vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__Unauthorized.selector);
+        vm.prank(sender);
+        recoveryManager.confirmGuardianProposal(address(account), guardiansID[0]);
+    }
+
+    function test_RevertConfirmGuardianProposalUnknown() external createGuardians(1) {
+        vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__UnknownProposal.selector);
+        _confirmGuardian(guardiansID[0]);
+    }
+
+    function test_RevertCancelGuardianProposalUnauthorized() external createGuardians(1) {
+        vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__Unauthorized.selector);
+        vm.prank(sender);
+        recoveryManager.cancelGuardianProposal(address(account), guardiansID[0]);
+    }
+
+    function test_RevertCancelGuardianProposalUnknown() external createGuardians(1) {
+        vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__UnknownProposal.selector);
+        _cancelGuardianProposal(guardiansID[0]);
+    }
+
+    function test_RevertCancelGuardianProposalDuplicatedGuardian() external createGuardians(1) {
+        _executeGuardianAction(GuardianAction.PROPOSE, 1);
+        _executeGuardianAction(GuardianAction.CONFIRM_PROPOSAL, 1);
+        _executeGuardianAction(GuardianAction.REVOKE, 1);
+        vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__DuplicatedGuardian.selector);
+        _cancelGuardianProposal(guardiansID[0]);
+    }
+
+    function test_RevertRevokeGuardianUnauthorized() external createGuardians(1) {
+        vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__Unauthorized.selector);
+        vm.prank(sender);
+        recoveryManager.revokeGuardian(address(account), guardiansID[0]);
+    }
+
+    function test_RevertRevokeGuardianMustBeGuardian() external createGuardians(1) {
+        vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__MustBeGuardian.selector);
+        _revokeGuardian(guardiansID[0]);
+    }
+
+    function test_RevertConfirmGuardianRevocationUnauthorized() external createGuardians(1) {
+        vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__Unauthorized.selector);
+        vm.prank(sender);
+        recoveryManager.confirmGuardianRevocation(address(account), guardiansID[0]);
+    }
+
+    function test_RevertConfirmGuardianRevocationUnknown() external createGuardians(1) {
+        vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__UnknownRevoke.selector);
+        _confirmGuardianRevocation(guardiansID[0]);
+    }
+
+    function test_RevertCancelGuardianRevocationUnauthorized() external createGuardians(1) {
+        vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__Unauthorized.selector);
+        vm.prank(sender);
+        recoveryManager.cancelGuardianRevocation(address(account), guardiansID[0]);
+    }
+
+    function test_RevertCancelGuardianRevocationMustBeGuardian() external createGuardians(1) {
+        vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__MustBeGuardian.selector);
+        vm.prank(address(account));
+        recoveryManager.cancelGuardianRevocation(address(account), guardiansID[0]);
+    }
+
+    function test_RevertStartRecoveryUnauthorized()
+        external
+        createGuardians(1)
+        createNewOner(KeyType.EOA)
+    {
+        vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__MustBeGuardian.selector);
+        vm.prank(sender);
+        recoveryManager.startRecovery(address(account), recoveryKey);
+    }
+
+    function test_RevertStartRecoveryOngoing()
+        external
+        createGuardians(3)
+        createNewOner(KeyType.EOA)
+    {
+        _executeGuardianAction(GuardianAction.PROPOSE, 3);
+        _executeGuardianAction(GuardianAction.CONFIRM_PROPOSAL, 3);
+        _executeGuardianAction(GuardianAction.START_RECOVERY, 1);
+        vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__OngoingRecovery.selector);
+        vm.prank(guardians[1]);
+        recoveryManager.startRecovery(address(account), recoveryKey);
+    }
+
+    function test_RevertCancelRecoveryUnauthorized() external {
+        vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__Unauthorized.selector);
+        vm.prank(sender);
+        recoveryManager.cancelRecovery(address(account));
+    }
+
+    function test_RevertCompleteRecoveryInvalidSignaturesDirect()
+        external
+        createGuardians(3)
+        createNewOner(KeyType.EOA)
+    {
+        _executeGuardianAction(GuardianAction.PROPOSE, 3);
+        _executeGuardianAction(GuardianAction.CONFIRM_PROPOSAL, 3);
+        _executeGuardianAction(GuardianAction.START_RECOVERY, 1);
+        _signGuardians(2);
+        (_signatures[0], _signatures[1]) = (_signatures[1], _signatures[0]);
+        vm.warp(block.timestamp + RECOVERY_PERIOD + 1);
+        _etch();
+        vm.expectRevert(
+            IOPF7702Recoverable.OPF7702Recoverable__InvalidRecoverySignatures.selector
+        );
+        vm.prank(address(account));
+        recoveryManager.completeRecovery(address(account), _signatures);
     }
 
     function _assertGuardianCount(uint256 _count) internal view {
