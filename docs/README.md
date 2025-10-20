@@ -6,39 +6,36 @@
 
 > 💡 Live Demo: [https://7702.openfort.xyz](https://7702.openfort.xyz)
 
-This documentation covers the implementation of EIP-7702 compatible smart contract accounts by Openfort. These accounts enable account abstraction while leveraging the new capabilities introduced by EIP-7702 (Pectra Upgrade).
+Openfort’s smart account stack combines **EIP-7702** authorities with **ERC-4337** user operations. The contracts in `src/` provide a modular wallet that supports multi-format keys, granular permissions, custodial gas policies, and guardian-driven recovery – all without a deployment transaction.
 
 ---
 
 ## Table of Contents
-
 - [Overview](#overview)
+- [Repository Layout](#repository-layout)
 - [Docs & Deep Dives](#docs--deep-dives)
 - [Key Features](#key-features)
-  - [EIP-7702 Implementation](#eip-7702-implementation)
-  - [Keys](#keys)
-  - [WebAuthn & P-256 Support](#webauthn--p-256-support)
-  - [Spending Controls](#spending-controls)
-  - [Security Features](#security-features)
+  - [Account Abstraction Stack](#account-abstraction-stack)
+  - [Key Management](#key-management)
+  - [Permission & Budget Controls](#permission--budget-controls)
+  - [Social Recovery](#social-recovery)
+  - [Developer Ergonomics](#developer-ergonomics)
 - [Architecture](#architecture)
   - [Core Components](#core-components)
-  - [Storage](#storage)
-  - [Key Types](#key-types)
-  - [Key Structure](#key-structure)
-  - [EIP-4337 / EIP-7702 Interplay](#eip-4337--eip-7702-interplay)
-  - [Guardian Lifecycle](#guardian-lifecycle)
-  - [Social Recovery](#social-recovery)
+  - [Storage & Immutables](#storage--immutables)
+  - [Key Model](#key-model)
+  - [Execution Modes](#execution-modes)
+- [Session Gas Policy](#session-gas-policy)
+- [Social Recovery Summary](#social-recovery-summary)
 - [Usage Guide](#usage-guide)
   - [Account Initialization](#account-initialization)
-  - [Key Management](#key-management)
-  - [Transaction Execution](#transaction-execution)
+  - [Registering Keys](#registering-keys)
+  - [Configuring Permissions](#configuring-permissions)
+  - [Executing Transactions](#executing-transactions)
 - [Security Considerations](#security-considerations)
-- [Implementation Details](#implementation-details)
+- [Implementation Notes](#implementation-notes)
   - [Signature Verification](#signature-verification)
   - [Storage Clearing](#storage-clearing)
-- [Examples](#examples)
-  - [Registering a WebAuthn or P-256 Session Key](#registering-a-webauthn-or-p-256-session-key)
-  - [Using EOA Session Keys](#using-eoa-session-keys)
 - [Testing](#testing)
 - [License](#license)
 - [Disclaimer](#disclaimer)
@@ -46,56 +43,65 @@ This documentation covers the implementation of EIP-7702 compatible smart contra
 
 ---
 
-## Docs & Deep Dives
+## Overview
 
-- **Architecture** — high-level design, modules, call flow, and data shapes: [docs/Architecture.md](Architecture.md)
-- **Keys** — registration, permissions, signature envelopes, and policy limits: [docs/SessionKeys.md](SessionKeys.md)
-- **Recovery** — guardians, timelines, EIP-712 digests, and invariants: [docs/Recovery.md](Recovery.md)
-- **Gas Policy** — per-session gas/cost/tx budgets, validation flow, defaults, and examples: [docs/GasPolicy.md](GasPolicy.md)
-- **AA Primer** — how this integrates with ERC-4337 and EIP-7702: [docs/AA.md](AA.md)
+- **7702-native smart accounts** that can be enabled through a delegation without deploying new bytecode.
+- **4337-compatible validation pipeline** that plugs into the canonical EntryPoint and bundler tooling.
+- **Fine-grained key permissions** (targets, selectors, token spend, gas budgets) with first-class WebAuthn / P-256 support.
+- **Guardian-based recovery** orchestrated by an external manager so storage upgrades stay lightweight.
 
 ---
 
-## Overview
+## Repository Layout
 
-Openfort's implementation of EIP-7702 (Account Implementation Contract Standard) allows smart contracts to be executed at any address without a deployment transaction. Our architecture includes:
+```text
+src/
+  core/          # Account stack: Base -> KeysManager -> Execution -> OPF7702 -> OPF7702Recoverable -> OPFMain
+  interfaces/    # Public contract interfaces (accounts, policies, recovery)
+  libs/          # Shared helpers (key validation, signature utils, upgrade slots, initializable)
+  utils/         # Auxiliary modules (SocialRecoveryManager, GasPolicy, ERC7201 view helpers)
+docs/            # In-depth documentation and component guides
+test/            # Foundry tests
+```
 
-- **OPF7702**: A modular, production-ready smart account supporting ERC-4337 + session keys
-- **Keys**: Temporary keys (WebAuthn, EOA, P-256) with scoped permissions
-- **EIP-1271 + EIP-712**: Secure signature validation for typed and raw data
+---
+
+## Docs & Deep Dives
+
+- **Architecture** — modules, call flow, storage diagrams: [docs/Architecture.md](Architecture.md)
+- **Session Keys** — registration, permissions, signature envelopes: [docs/SessionKeys.md](SessionKeys.md)
+- **Recovery** — guardian flows, EIP-712 digests, invariants: [docs/Recovery.md](Recovery.md)
+- **Gas Policy** — per-session budgets, validation flow, defaults: [docs/GasPolicy.md](GasPolicy.md)
+- **AA Primer** — how the stack interops with ERC-4337 & EIP-7702: [docs/AA.md](AA.md)
 
 ---
 
 ## Key Features
 
-### EIP-7702 Implementation
+### Account Abstraction Stack
+- `BaseOPF7702` implements ERC-4337’s `IAccount`, ERC-1271 signing, and token receiver interfaces (ERC-721, ERC-1155, ERC-777).
+- `OPF7702` layers execution, multi-key validation, and replay protection for user operations.
+- `OPFMain` anchors storage at a fixed ERC-7201 slot and exposes an `upgradeProxyDelegation` helper for 7702 authorities.
 
-- No deployment transaction required
-- Deterministic storage layout via fixed slots
-- Compatible with ERC-4337 bundlers and EntryPoint
+### Key Management
+- Keys are identified by deterministic hashes and stored alongside validity windows, quotas, and control modes.
+- Supports `KeyType`: `EOA`, `WEBAUTHN`, `P256`, `P256NONKEY`.
+- Custodial keys (`KeyControl.Custodial`) auto-initialize gas budgets through the `GasPolicy`.
 
-### Keys
+### Permission & Budget Controls
+- `setCanCall` guards `(target, selector)` tuples with wildcard sentinels (`ANY_TARGET`, `ANY_FN_SEL`, `EMPTY_CALLDATA_FN_SEL`).
+- `setTokenSpend` / `updateTokenSpend` enforce token or native currency budgets per configurable period (minute → forever).
+- ERC-7821 style execution batches are capped at `MAX_TX = 9` low-level calls across recursion depth.
 
-- Temporary session keys with limited scope
-- EOA, WebAuthn, and P-256 support
-- Whitelisting, time limits, and transaction limits
+### Social Recovery
+- `SocialRecoveryManager` keeps all guardian storage outside the account implementation.
+- Guardians are hashed (`computeHash(address)`) and must sign ordered EIP-712 digests to finalize recovery.
+- Locking semantics ensure guardian churn and recovery cannot race.
 
-### WebAuthn & P-256 Support
-
-- Hardware-backed keys via WebAuthn (biometrics, YubiKeys)
-- **P256**: Supports extractable (standard ECDSA) and non-extractable keys via SHA-256 digests
-- Fully verified on-chain with Openfort libraries
-
-### Spending Controls
-
-- Set max ETH and ERC-20 token usage per session key
-- Limit function selectors and allowed contracts
-
-### Security Features
-
-- Reentrancy guard
-- Key expiration and usage tracking
-- Contract/function selector filters
+### Developer Ergonomics
+- EntryPoint, WebAuthn verifier, gas policy, and recovery manager are immutables with guarded upgrade hooks (`setEntryPoint`, `setWebAuthnVerifier`, `setGasPolicy`).
+- Extensive events (`KeyRegistered`, `CanCallSet`, `TokenSpendSet`, `GasPolicyAccounted`, `WalletLocked`, …) provide off-chain traceability.
+- Modular libs (`UpgradeAddress`, `KeysManagerLib`, `SigLengthLib`) isolate reusable logic.
 
 ---
 
@@ -103,226 +109,227 @@ Openfort's implementation of EIP-7702 (Account Implementation Contract Standard)
 
 ### Core Components
 
-- **`BaseOPF7702.sol`** – Abstract base with account validation, signature handling, and nonce tracking. Implements `IAccount`.
-- **`Execution.sol`** – Stateless transaction execution. Handles `execute` and `executeBatch`.
-- **`KeysManager.sol`** – Manages session key registration, validation, and revocation.
-- **`OPF7702.sol`** – Full production implementation combining `Execution` and `KeysManager`.
-- **`OPF7702Recoverable.sol`**  - Extension of the main smart account that adds advanced social recovery capabilities. Enables guardian-based recovery flows, lock/unlock mechanisms and guardian proposal/revocation lifecycle management with full event traceability.
+| Contract / Lib | Path | Responsibility | Highlights |
+|----------------|------|----------------|------------|
+| `BaseOPF7702` | `src/core/BaseOPF7702.sol` | ERC-4337 `IAccount` shim, immutables, ERC-165/1271 receivers | Guards privileged calls, emits deposit events, maintains upgrade slots |
+| `KeysManager` | `src/core/KeysManager.sol` | Key lifecycle, permissions, spend accounting | Auto-inits custodial gas policy, wildcard selector support, enumerable permissions |
+| `Execution` | `src/core/Execution.sol` | ERC-7821 executor with recursion guard | Modes 1 & 3, `MAX_TX` enforcement, reentrancy guard |
+| `OPF7702` | `src/core/OPF7702.sol` | Signature routing & call validation | Supports EOA/WebAuthn/P256/P256NONKEY, invokes `GasPolicy` for delegated keys |
+| `OPF7702Recoverable` | `src/core/OPF7702Recoverable.sol` | Recovery plumbing & initialization | Seeds guardians, integrates `SocialRecoveryManager`, rotates master key on recovery |
+| `OPFMain` | `src/core/OPFMain.sol` | Production account with fixed layout | `layout at` ERC-7201 slot, exposes `upgradeProxyDelegation` helper |
+| `SocialRecoveryManager` | `src/utils/SocialRecover.sol` | Guardian registry & recovery orchestrator | Timelocked proposals, strict signature ordering, lock tracking |
+| `GasPolicy` | `src/utils/GasPolicy.sol` | Session gas budget enforcement | Per `(configId, account)` envelope, manual/auto init, optimistic accounting |
+| `UpgradeAddress` | `src/libs/UpgradeAddress.sol` | Upgrade slot helpers | Normalises upgrade calls and emits address change events |
 
-### Storage
+### Storage & Immutables
+- Storage root: `keccak256(abi.encode(uint256(keccak256("openfort.baseAccount.7702.v1")) - 1)) & ~bytes32(uint256(0xff)) = 0xeddd...95400`
+- `BaseOPF7702` keeps immutable pointers to `ENTRY_POINT`, `WEBAUTHN_VERIFIER`, `GAS_POLICY`, `RECOVERY_MANAGER`.
+- Upgrade hooks (`setEntryPoint`, `setWebAuthnVerifier`, `setGasPolicy`) require `msg.sender` to be the account itself or the current EntryPoint (`_requireForExecute`).
+- `_clearStorage()` zeroes the ERC-7201 namespace root, upgrade slots, and `ReentrancyGuard` status to enable deterministic re-initialisation flows.
+
+### Key Model
 
 ```solidity
-keccak256(abi.encode(uint256(keccak256("openfort.baseAccount.7702.v1")) - 1)) & ~bytes32(uint256(0xff)) = 0xeddd36aac8c71936fe1d5edb073ff947aa7c1b6174e87c15677c96ab9ad95400
-```
+enum KeyType { EOA, WEBAUTHN, P256, P256NONKEY }
 
-### Key Types
+enum KeyControl { Self, Custodial }
 
-```solidity
-enum KeyType {
-    EOA,
-    WEBAUTHN,
-    P256,
-    P256NONKEY
+struct KeyData {
+    KeyType keyType;
+    bool isActive;
+    bool masterKey;
+    bool isDelegatedControl;
+    uint48 validUntil;
+    uint48 validAfter;
+    uint48 limits;    // 0 for master keys, >0 for session keys
+    bytes key;        // abi.encode(address) or abi.encode(pubKey.x, pubKey.y)
+}
+
+struct KeyDataReg {
+    KeyType keyType;
+    uint48 validUntil;
+    uint48 validAfter;
+    uint48 limits;
+    bytes key;
+    KeyControl keyControl;
 }
 ```
 
-### Key Structure
+Execution permissions (`ExecutePermissions`) and spend rules (`SpendStorage`) live in separate mappings per key. `idKeys` provides sequential indexing for iterating and maintaining master key invariants (`idKeys[0]` is always the master key).
 
-```solidity
-    struct KeyData {
-        PubKey pubKey;
-        bool isActive;
-        uint48 validUntil;
-        uint48 validAfter;
-        uint48 limit;
-        bool masterKey;
-        bool whitelisting;
-        mapping(address contractAddress => bool allowed) whitelist;
-        ISpendLimit.SpendTokenInfo spendTokenInfo;
-        bytes4[] allowedSelectors;
-        uint256 ethLimit;
-    }
-```
+### Execution Modes
+- `mode_1`: flat batch of `(target, value, data)` calls.
+- `mode_3`: batch-of-batches, recursively processed as mode 1.
+- Unsupported modes revert with `OpenfortBaseAccount7702V1__UnsupportedExecutionMode`.
+- Global call depth capped at `MAX_TX = 9` across nested batches.
 
-## EIP-4337 / EIP-7702 Interplay
+---
 
-The contract supports both:
-	•	Owner validation via EIP-712 / ECDSA
-	•	Key validation via on-chain rules + signature
+## Session Gas Policy
 
-## Social Recovery
-The OPF7702Recoverable contract extends the base smart account with advanced social recovery features that allow users to recover access through trusted guardians. These guardians can be EOAs or WebAuthn public keys.
+`GasPolicy.sol` enforces cumulative “envelope units” per `(configId, account)`:
+
+- **Manual init**: `initializeGasPolicy(account, configId, bytes16 gasLimitBE)` stores an explicit 128-bit cap.
+- **Auto init**: `initializeGasPolicy(account, configId, uint256 limit)` multiplies default legs (PVG/VGL/CGL/PMV/PO), adds `SAFETY_BPS = 12_000` (+20%), and enforces a `uint128` bound.
+- **Validation**: `checkUserOpPolicy(id, userOp)` sums gas legs (including paymaster values if supplied), checks for overflow and budget exhaustion, updates `gasUsed`, and emits `GasPolicyAccounted`.
+- Only the account (`msg.sender == userOp.sender`) may mutate budgets, preventing griefing.
+
+Custodial session keys automatically call `initializeGasPolicy(address(this), keyId, limits)` during registration.
+
+---
+
+## Social Recovery Summary
+
+- Guardians are stored as `bytes32` hashes of guardian EOAs (`computeHash`). Direct addresses never touch storage.
+- `SocialRecoveryManager` enforces `securityPeriod`/`securityWindow` timelocks for adds/removals, and `recoveryPeriod`/`lockPeriod` for recovery execution.
+- `startRecovery` checks guardian status, key eligibility (non-zero, not active, not a guardian, not P256/P256NONKEY), snapshots quorum (`ceil(guardianCount / 2)`), and locks the wallet.
+- `completeRecovery` validates strictly ordered guardian signatures over `getDigestToSign(account)` and returns the approved `KeyDataReg`. `OPF7702Recoverable` then rotates the master key.
+- `WalletLocked` events broadcast transitions; the lock clears automatically on completion/cancellation or when `lockPeriod` expires.
+
+See [docs/Recovery.md](Recovery.md) for timelines and message formats.
+
+---
 
 ## Usage Guide
 
 ### Account Initialization
 
 ```solidity
-// Create a new account with an owner
-    function initialize(
-        Key calldata _key,
-        KeyReg calldata _keyData,
-        Key calldata _sessionKey,
-        KeyReg calldata _sessionKeyData,
-        bytes memory _signature,
-        bytes32 _initialGuardian
-    );
+function initialize(
+    IKey.KeyDataReg calldata _keyData,
+    IKey.KeyDataReg calldata _sessionKeyData,
+    bytes memory _signature,
+    bytes32 _initialGuardian
+) external initializer;
 ```
 
-### Key Management
+Steps performed:
+1. `_clearStorage()` resets the ERC-7201 namespace.
+2. Validates `_keyData` (must be master: `limits == 0`, non-P256/P256NONKEY, `KeyControl.Self`).
+3. Registers the master key and optional session key (if `_sessionKeyData.key` is non-empty).
+4. Seeds the guardian set via `SocialRecoveryManager.initializeGuardians(address(this), _initialGuardian)`.
+5. Emits `IOPF7702.Initialized(_keyData)`.
+
+The call must originate from the EntryPoint or a self-call (`_requireForExecute`).
+
+### Registering Keys
 
 ```solidity
-// Register the key
-function registerKey(Key calldata _key, KeyReg calldata _keyData) 
+function registerKey(IKey.KeyDataReg calldata _keyData) external;
 ```
 
-### Transaction Execution
+- Session keys require `limits > 0`.
+- Custodial keys (`KeyControl.Custodial`) automatically set `isDelegatedControl = true` and call `GasPolicy.initializeGasPolicy`.
+- Emits `KeyRegistered` with hashed `keyId`.
+
+Master keys are registered only during initialization or recovery; `_addMasterKey` enforces `idKeys[0]`.
+
+### Configuring Permissions
+
+- **Execution permissions**  
+  `setCanCall(bytes32 keyId, address target, bytes4 selector, bool can)` grants or revokes `(target, selector)` tuples. `ANY_TARGET`, `ANY_FN_SEL`, and `EMPTY_CALLDATA_FN_SEL` are available wildcards.
+  
+- **Spend limits**  
+  - `setTokenSpend(keyId, token, limit, period)` creates per-token limits. Use `NATIVE_ADDRESS` for ETH.
+  - `updateTokenSpend(...)` mutates existing limits and resets counters.
+  - `removeTokenSpend(...)` clears individual tokens; `clearTokenSpend(keyId)` wipes all spend rules.
+
+- **Lifecycle**  
+  `pauseKey`, `unpauseKey`, and `revokeKey` manage key state while preserving stored permissions for later reactivation if needed.
+
+All management functions require `_requireForExecute()` (self-call or EntryPoint).
+
+### Executing Transactions
 
 ```solidity
-    function execute(bytes32 mode, bytes memory executionData)
-        public
-        payable
-        virtual
-        nonReentrant
-    {
-        // Authenticate *once* for the whole recursive run.
-        _requireForExecute();
-
-        // Run the worker; revert if overall call‑count > MAX_TX.
-        _run(mode, executionData, 0);
-    }
-
-        function _run(bytes32 mode, bytes memory data, uint256 counter) internal returns (uint256) {
-        uint256 id = _executionModeId(mode);
-
-        /* -------- mode 3 : batch‑of‑batches ----------------------- */
-        if (id == 3) {
-            // Clear the top‑level mode‑3 flag so inner batches can be
-            // parsed as mode 1 or 2.
-            mode ^= bytes32(uint256(3 << (22 * 8)));
-
-            bytes[] memory batches = abi.decode(data, (bytes[]));
-            _checkLength(batches.length); // per‑batch structural cap
-
-            for (uint256 i; i < batches.length; ++i) {
-                counter = _run(mode, batches[i], counter);
-            }
-            return counter;
-        }
-
-        /* -------- flat batch (mode 1 or 2) ------------------------ */
-        if (id == 0) revert IExecution.OpenfortBaseAccount7702V1__UnsupportedExecutionMode();
-
-        bool withOpData;
-        /// @solidity memory-safe-assembly
-        assembly {
-            let len := mload(data)
-            let flag := gt(mload(add(data, 0x20)), 0x3f)
-            withOpData := and(eq(id, 2), and(gt(len, 0x3f), flag))
-        }
-
-        Call[] memory calls;
-        bytes memory opData;
-        if (withOpData) {
-            (calls, opData) = abi.decode(data, (Call[], bytes));
-        } else {
-            calls = abi.decode(data, (Call[]));
-        }
-
-        _checkLength(calls.length); // per‑batch structural cap
-        if (opData.length != 0) revert IExecution.OpenfortBaseAccount7702V1__UnsupportedOpData();
-
-        for (uint256 i; i < calls.length; ++i) {
-            Call memory c = calls[i];
-            address to = c.target == address(0) ? address(this) : c.target;
-            _execute(to, c.value, c.data);
-
-            // ---- global counter enforcement -------------------- //
-            if (++counter > MAX_TX) {
-                revert IExecution.OpenfortBaseAccount7702V1__TooManyCalls(counter, MAX_TX);
-            }
-        }
-        return counter;
-    }
-
-        function _execute(address to, uint256 value, bytes memory data) internal virtual {
-        (bool success, bytes memory result) = to.call{value: value}(data);
-        if (success) return;
-        /// @solidity memory-safe-assembly
-        assembly {
-            revert(add(result, 0x20), mload(result))
-        }
-    }
+function execute(bytes32 mode, bytes memory executionData)
+    public
+    payable
+    virtual
+    nonReentrant;
 ```
 
-### Guardian Lifecycle
-Guardians are managed via a lifecycle with scheduled delays and explicit confirmations to prevent malicious takeovers:
-	•	Propose Guardian:
-A new guardian is proposed with a delay before activation.
-```solidity
-function proposeGuardian(bytes32 _guardian)
-```
-Emits: GuardianProposed
+- `mode = Execution.mode_1` → flat `Call[]` batch.
+- `mode = Execution.mode_3` → batch-of-batches (`bytes[]`).
+- `MAX_TX` (9) bounds total low-level calls per outer execution.
+- Nested batches reuse the initial authentication (`_requireForExecute`) and propagate revert data.
 
-	•	Confirm Guardian Proposal:
-After the delay, the guardian can be activated.
-```solidity
-function confirmGuardianProposal(bytes32 _guardian)
-```
-Emits: GuardianAdded
+Helper: `Execution._executionModeId` decodes the 10-byte execution flag derived from ERC-7821.
 
-	•	Cancel Guardian Proposal:
-An unconfirmed proposal can be revoked.
-```solidity
-function cancelGuardianProposal(bytes32 _guardian)
-```
+---
 
 ## Security Considerations
-	•	Use whitelisting for limited session keys
-	•	Expire session keys promptly
-	•	Use P256NONKEY for hardware-only key protection
-	•	Validate token/ETH limits on registration
 
-## Storage Clearing
+- Guardian management and recovery calls are always gated by `msg.sender == _account`; external EOAs must route through the account (e.g., via EntryPoint).
+- Recovery proposals reject zero hashes, the account’s own hash, the current master key hash, and active guardian hashes.
+- `GasPolicy` performs all accounting with explicit overflow checks and never issues external calls.
+- ERC-777, ERC-721, and ERC-1155 receiver interfaces are implemented in `BaseOPF7702`, ensuring safe token transfers.
+- Reentrancy is guarded at the execution entry point; inner calls must handle their own invariants.
+
+---
+
+## Implementation Notes
+
+### Signature Verification
+
+- **EOA**: `ECDSA.recover` against `userOpHash`; master key short-circuits to success.
+- **WebAuthn**: Delegated to `IWebAuthnVerifier.verifySignature`; rejects reused challenges and enforces signature length via `SigLengthLib`.
+- **P256 / P256NONKEY**: Verified via `IWebAuthnVerifier.verifyP256Signature` (NONKEY pre-hashes the digest).
+- Delegated (custodial) keys call `GasPolicy.checkUserOpPolicy` before allowing the execution to proceed.
+- `isValidSignature(bytes32,bytes)` (ERC-1271) wraps the same validators for off-chain signing flows.
+
+### Storage Clearing
 
 ```solidity
-    function _clearStorage() internal {
-        bytes32 baseSlot = keccak256(
-            abi.encode(uint256(keccak256("openfort.baseAccount.7702.v1")) - 1)
-        ) & ~bytes32(uint256(0xff));
+function _clearStorage() internal {
+    bytes32 baseSlot = keccak256(
+        abi.encode(uint256(keccak256("openfort.baseAccount.7702.v1")) - 1)
+    ) & ~bytes32(uint256(0xff));
 
-        // clear slot 0, _EP_SLOT & _VERIFIER_SLOT
-        bytes32 epSlot = UpgradeAddress._EP_SLOT;
-        bytes32 verifierSlot = UpgradeAddress._VERIFIER_SLOT;
-        assembly {
-            sstore(baseSlot, 0)
-            sstore(epSlot, 0)
-            sstore(verifierSlot, 0)
-        }
-
-        // ---- Clear composite structs:
-        // recoveryData: starts at base+7, size 4 slots  -> [7,8,9,10]
-        // guardiansData: starts at base+11, size 3 slots -> [11,12,13]
-        unchecked {
-            for (uint256 i = 7; i <= 13; ++i) {
-                bytes32 slot = bytes32(uint256(baseSlot) + i);
-                assembly {
-                    sstore(slot, 0)
-                }
-            }
-        }
+    bytes32 epSlot = UpgradeAddress._EP_SLOT;
+    bytes32 verifierSlot = UpgradeAddress._VERIFIER_SLOT;
+    bytes32 gasPolicySlot = UpgradeAddress._GAS_POLICY_SLOT;
+    assembly {
+        sstore(baseSlot, 0)
+        sstore(epSlot, 0)
+        sstore(verifierSlot, 0)
+        sstore(gasPolicySlot, 0)
     }
+
+    assembly {
+        sstore(add(baseSlot, 5), 0) // reset ReentrancyGuard status
+    }
+}
 ```
+
+---
+
+## Testing
+
+This repository uses **Foundry**.
+
+```bash
+forge install
+forge test
+```
+
+Tests cover key registration flows, social recovery, gas policy accounting, and execution guardrails.
+
+---
 
 ## License
 
-MIT License. See LICENSE.
+MIT License. See [LICENSE](../LICENSE).
+
+---
 
 ## Disclaimer
 
-This repository is under active development and not audited. Use at your own risk.
+The contracts are under active development and have not undergone a formal audit. Use in production at your own risk.
+
+---
 
 ## Contact
 
-Security: security@openfort.xyz
-Docs: https://docs.openfort.xyz
+- Security inquiries: [security@openfort.xyz](mailto:security@openfort.xyz)
+- Documentation: [https://docs.openfort.xyz](https://docs.openfort.xyz)

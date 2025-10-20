@@ -1,329 +1,224 @@
 # Session Keys & Permission System
 
-This document covers the session key management and permission enforcement system within the Openfort EIP-7702 Smart Accounts. Session keys enable temporary, scoped access to smart accounts with granular permission controls including spending limits, contract whitelisting, and time-based restrictions.
+Session keys provide temporary, scoped access to Openfort’s 7702/4337 smart accounts. They are registered by the account itself, authorised through the EntryPoint, and validated at execution time against a layered permission model covering quotas, target selectors, token spend limits, and (optionally) custodial gas budgets.
 
-For information about the core account abstraction implementation, see Account Abstraction Implementation. For details about authentication mechanisms and WebAuthn integration, see WebAuthn Integration.
+---
 
 ## Table of Contents
+- [Architecture Overview](#architecture-overview)
+- [Key Types](#key-types)
+- [Lifecycle & Registration](#lifecycle--registration)
+- [Permission Surfaces](#permission-surfaces)
+  - [Execution Quotas](#execution-quotas)
+  - [Selector Permissions](#selector-permissions)
+  - [Token Spend Policies](#token-spend-policies)
+  - [Custodial Gas Budgets](#custodial-gas-budgets)
+- [Storage Layout](#storage-layout)
+- [Validation Pipeline](#validation-pipeline)
+- [Spend Enforcement Details](#spend-enforcement-details)
+- [Management APIs](#management-apis)
+- [Security Considerations](#security-considerations)
 
-- [System Architecture](#system-architecture)
-- [Key Types and Capabilities](#key-types-and-capabilities)
-- [Permission Control Framework](#permission-control-framework)
-- [Permission Control Framework](#permission-control-framework-1)
-- [Session Key Data Structure](#session-key-data-structure)
-- [Key Management Lifecycle](#key-management-lifecycle)
-- [Permission Validation Flow](#permission-validation-flow)
-- [Validation and Enforcement](#validation-and-enforcement)
-  - [Spending Limit Enforcement](#spending-limit-enforcement)
-- [Security Model](#security-model)
+---
 
-## System Architecture
-The session key system is built around three primary components that work together to provide secure, temporary access delegation:
-```mermaid
-flowchart TD
-    subgraph "Key Management Layer"
-        KeyStructures["Key.sol<br/>• Key struct<br/>• KeyReg struct<br/>• SpendTokenInfo struct<br/>• KeyType enum"]
-        KeysManager["KeysManager.sol<br/>• registerSessionKey()<br/>• revokeKey()<br/>• _addKey()<br/>• _validateKeyPermissions()"]
-    end
-    
-    subgraph "Permission Validation"
-        ValidationCore["IValidation.sol<br/>• Validation interfaces<br/>• Permission structures"]
-        PermissionChecks["BaseOPF7702.sol<br/>• _checkSessionKeyPermissions()<br/>• _validateTokenSpend()<br/>• _validateEthSpend()"]
-    end
-    
-    subgraph "Storage Management"
-        SessionKeyData["SessionKey Storage<br/>• keyData mapping<br/>• activeKeys tracking<br/>• Permission states"]
-    end
-    
-    subgraph "Execution Layer"
-        ExecutionEngine["Execution.sol<br/>• execute()<br/>• executeBatch()<br/>• _executeCall()"]
-        MainAccount["OPF7702.sol<br/>• Session key integration<br/>• Permission enforcement<br/>• Transaction routing"]
-    end
-
-    %% Separate components
-    WebAuthnVerifier["WebAuthnVerifier.sol<br/>• verifySignature()<br/>• verifyP256Signature()"]
-    GasPolicy["GasPolicy.sol<br/>• checkUserOpPolicy()"]
-
-    %% Flow connections
-    KeyStructures --> KeysManager
-    KeysManager --> ValidationCore
-    KeysManager --> SessionKeyData
-    
-    ValidationCore --> PermissionChecks
-    SessionKeyData --> PermissionChecks
-    
-    PermissionChecks --> WebAuthnVerifier
-    PermissionChecks --> GasPolicy
-    PermissionChecks --> ExecutionEngine
-    
-    ExecutionEngine --> MainAccount
-```
-
-## Key Types and Capabilities
-The system supports four distinct key types, each with different cryptographic properties and security characteristics:
-
-
-| Key Type | Description | Use Cases | Validation Method |
-|----------|-------------|-----------|-------------------|
-| EOA | Traditional ECDSA keys | Standard wallets, development | ECDSA signature verification |
-| WEBAUTHN | WebAuthn credentials | Biometrics, hardware keys | WebAuthn assertion validation |
-| P256 | Standard P-256 keys | Extractable P-256 signatures | P-256 ECDSA verification |
-| P256NONKEY | Hardware-bound P-256 | Non-extractable hardware keys | SHA-256 digest validation |
+## Architecture Overview
 
 ```mermaid
 flowchart TD
-    subgraph "Key Type Hierarchy"
-        KeyType["KeyType enum<br/>EOA | WEBAUTHN | P256 | P256NONKEY"]
-        
-        EOAKey["EOA Keys<br/>• Traditional ECDSA<br/>• Private key based<br/>• Standard EOA support"]
-        WebAuthnKey["WebAuthn Keys<br/>• Hardware security keys<br/>• FaceId authentication<br/>• Biometric authentication<br/>• Platform authenticators"]
-        P256Key["P-256 Keys<br/>• Extractable P-256<br/>• Standard ECDSA flow<br/>• Cross-platform support"]
-        P256NonKey["P-256 NonExtractable<br/>• Seamless signing keys<br/>• Prehashed digest flow<br/>• Maximum security"]
-    end
-    
-    subgraph "Validation Paths"
-        EOAValidation["_validateEOASignature()<br/>• ECDSA recovery<br/>• Address comparison"]
-        WebAuthnValidation["_validateWebAuthnSignature()<br/>• Challenge verification<br/>• Client data validation<br/>• Authenticator data parsing"]
-        P256Validation["P-256 Signature Verification<br/>• Point validation<br/>• Curve operations<br/>• Digest verification"]
+    subgraph "Key Authoring"
+        IKeyDefs["IKey.sol\n• KeyData\n• KeyDataReg\n• KeyType\n• KeyControl"]
+        Owner["Account / EntryPoint"]
     end
 
-    %% Key type connections
-    KeyType --> EOAKey
-    KeyType --> WebAuthnKey
-    KeyType --> P256Key
-    KeyType --> P256NonKey
-    
-    %% Validation connections
-    EOAKey --> EOAValidation
-    WebAuthnKey --> WebAuthnValidation
-    P256Key --> P256Validation
-    P256NonKey --> P256Validation
+    subgraph "Key Management"
+        Manager["KeysManager.sol\n• registerKey\n• setCanCall\n• setTokenSpend\n• updateKeyData"]
+        Storage["Storage namespace\n• keys[keyId]\n• permissions[keyId]\n• spendStore[keyId]"]
+        GasPolicy["GasPolicy.sol\n• initializeGasPolicy\n• checkUserOpPolicy"]
+    end
+
+    subgraph ExecutionLayer["Execution Layer"]
+        OPF7702Node["OPF7702.sol\n• _validateSignature\n• _validateExecuteCall"]
+        ExecNode["Execution.sol\n• execute(mode,data)\n• MAX_TX guard"]
+        RecoveryNode["OPF7702Recoverable.sol\n• initialize\n• recovery flows"]
+    end
+
+    IKeyDefs --> Manager
+    Owner --> Manager
+    Manager --> Storage
+    Manager --> GasPolicy
+    Storage --> OPF7702Node
+    GasPolicy --> OPF7702Node
+    OPF7702Node --> ExecNode
 ```
 
-## Permission Control Framework
-Session keys operate within a comprehensive permission framework that enforces multiple layers of access control:
+Master keys are established through `initialize` / recovery flows; session keys are added post-deployment via `registerKey` (self-call or EntryPoint). All permission tables live inside the account’s ERC-7201 namespace, while the gas budget (if any) is tracked by `GasPolicy` per `(keyId, account)`.
 
-```mermaid
-flowchart TD
-    subgraph "Time Controls"
-        TimeValidation["Time-based Permissions<br/>• validAfter timestamp<br/>• validUntil expiration<br/>• Automatic cleanup"]
-    end
-    
-    subgraph "Spending Controls"
-        EthLimits["ETH Spending Limits<br/>• ethLimit field<br/>• Per-key tracking<br/>• Cumulative enforcement"]
-        TokenLimits["Token Spending Limits<br/>• SpendTokenInfo struct<br/>• ERC-20 only support<br/>• Single token per key"]
-    end
-    
-    subgraph "Access Controls"
-        ContractWhitelist["Contract Whitelisting<br/>• whitelist mapping<br/>• Address-based filtering<br/>• Boolean permissions"]
-        FunctionFilter["Function Selector Filtering<br/>• allowedSelectors array<br/>• bytes4 selector matching<br/>• Granular function control"]
-    end
-    
-    subgraph "Usage Controls"
-        TransactionLimits["Transaction Count Limits<br/>• limit field<br/>• Per-operation decrement<br/>• Usage exhaustion"]
-        WhitelistingMode["Whitelisting Mode<br/>• whitelisting boolean<br/>• Enforce restrictions<br/>• Default allow/deny"]
-    end
+---
 
-    %% Flow connections
-    TimeValidation --> EthLimits
-    EthLimits --> TokenLimits
-    TokenLimits --> ContractWhitelist
-    ContractWhitelist --> FunctionFilter
-    FunctionFilter --> TransactionLimits
-    TransactionLimits --> WhitelistingMode
-```
+## Key Types
 
-## Permission Control Framework
-Session keys operate within a comprehensive permission framework that enforces multiple layers of access control:
+`IKey.KeyType` defines four tiers of cryptographic material:
 
-```mermaid
-flowchart TD
-    subgraph "Time Controls"
-        TimeValidation["Time-based Permissions<br/>• validAfter timestamp<br/>• validUntil expiration<br/>• Automatic cleanup"]
-    end
+| Type | Description | Validation in `OPF7702` |
+|------|-------------|--------------------------|
+| `EOA` | secp256k1 ECDSA signatures (`abi.encode(address)`) | `_validateKeyTypeEOA` (ECDSA recover) |
+| `WEBAUTHN` | WebAuthn/FIDO2 credentials (`abi.encode(pubKey.x, pubKey.y)`) | `_validateKeyTypeWEBAUTHN` via `IWebAuthnVerifier.verifySignature` |
+| `P256` | Extractable P-256 keys (raw ECDSA) | `_validateKeyTypeP256` using the verifier’s P-256 path |
+| `P256NONKEY` | Non-extractable WebCrypto P-256 (pre-hashed) | `_validateKeyTypeP256NonKey` (verifier hashes first) |
 
-    subgraph "Gas Policy"
-        GasPolicy["Gas Permissions<br/>• limits counter<br/>• manual/auto config<br/>• include penalty gas"]
-    end
+All registration payloads (`KeyDataReg`) carry validity windows, per-call quotas, and a `KeyControl` (self vs custodial). Session keys **must** set `limits > 0`; master keys enforce different invariants and are not registered through `registerKey`.
 
-    subgraph "Spending Controls"
-        EthLimits["ETH Spending Limits<br/>• ethLimit field<br/>• Per-key tracking<br/>• Cumulative enforcement"]
-        TokenLimits["Token Spending Limits<br/>• SpendTokenInfo struct<br/>• ERC-20 only support<br/>• Single token per key"]
-    end
-    
-    subgraph "Access Controls"
-        ContractWhitelist["Contract Whitelisting<br/>• whitelist mapping<br/>• Address-based filtering<br/>• Boolean permissions"]
-        FunctionFilter["Function Selector Filtering<br/>• allowedSelectors array<br/>• bytes4 selector matching<br/>• Granular function control"]
-    end
-    
-    subgraph "Usage Controls"
-        TransactionLimits["Transaction Count Limits<br/>• limit field<br/>• Per-operation decrement<br/>• Usage exhaustion"]
-        WhitelistingMode["Whitelisting Mode<br/>• whitelisting boolean<br/>• Enforce restrictions<br/>• Default allow/deny"]
-    end
+---
 
-    %% Flow connections
-    TimeValidation --> GasPolicy
-    GasPolicy --> EthLimits
-    EthLimits --> TokenLimits
-    TokenLimits --> ContractWhitelist
-    ContractWhitelist --> FunctionFilter
-    FunctionFilter --> TransactionLimits
-    TransactionLimits --> WhitelistingMode
-```
+## Lifecycle & Registration
 
-## Session Key Data Structure
-The core session key storage structure contains all permission and metadata fields:
+1. **Authorisation** – Calls must pass `_requireForExecute()`, i.e. originate from the account itself (self-call) or the EntryPoint.
+2. **Payload checks** – `KeysManager.registerKey` enforces:
+   - `key` bytes non-empty (`keyCantBeZero`)
+   - `limits > 0` (`mustHaveLimits`)
+   - Valid timestamp window (`validateTimestamps` with `isUpdate = false`)
+3. **Insertion** – `_addKey` computes `keyId`, rejects duplicates, writes `KeyData`, and marks `masterKey = (_keyData.limits == 0)` (never hit for session keys).
+4. **Custodial gas budgets** – When `keyControl == KeyControl.Custodial`, `_addKey` calls `GasPolicy.initializeGasPolicy(address(this), keyId, _keyData.limits)` to seed a session envelope.
+5. **Indexing** – `idKeys[id] = keyId; id++` allows deterministic iteration (master key remains at index 0).
+6. **Eventing** – Emits `KeyRegistered(keyId, keyControl, keyType, masterKey, validAfter, validUntil, limits)`.
+
+Session keys can later be paused (`pauseKey`), unpaused, updated (`updateKeyData` extends validity/quota), or fully revoked (`revokeKey` clears metadata and permissions).
+
+---
+
+## Permission Surfaces
+
+### Execution Quotas
+- Stored in `KeyData.limits`.
+- `KeyDataValidationLib.hasQuota` returns `true` for master keys or when `limits > 0`.
+- `_validateCall` aborts if a key lacks quota; `consumeQuota()` decrements the counter after every authorised call.
+
+### Selector Permissions
+- `setCanCall` manages a per-key `EnumerableSetLib.Bytes32Set` of packed `(target, selector)` tuples.
+- Wildcards:
+  - `ANY_TARGET = 0x3232…32` (allow selector on any contract)
+  - `ANY_FN_SEL = 0x32323232` (allow any selector on a specific contract)
+  - `EMPTY_CALLDATA_FN_SEL = 0xe0e0e0e0` (plain ETH transfer)
+- `_isCanCall` attempts matches in order: exact, target wildcard, selector wildcard, full wildcard.
+- `clearExecutePermissions` iterates and removes all entries; `hasCanCall`/`executePermissionAt` provide read-only introspection.
+
+### Token Spend Policies
+- `setTokenSpend` attaches a per-period limit to a `(keyId, token)` pair (use `NATIVE_ADDRESS = 0xEeee…EEeE` for ETH).
+- `SpendPeriod` buckets: `Minute`, `Hour`, `Day`, `Week`, `Month`, `Year`, `Forever`.
+- `SpendStorage` tracks an `AddressSet` of token addresses and per-token `TokenSpendPeriod { period, limit, spent, lastUpdated }`.
+- `_isTokenSpend` inspects calldata:
+  - empty calldata ⟶ native transfer
+  - `transfer`, `transferFrom`, `approve` ⟶ extracts the amount with `LibBytes.load`
+- `_manageTokenSpend` resets counters at the start of each period (`startOfSpendPeriod`) and rejects if `spent + amount > limit`.
+- `clearSpendPermissions` removes all configured tokens; individual rules can be removed with `removeTokenSpend`.
+
+### Custodial Gas Budgets
+- Active only when `isDelegatedControl == true` (i.e. custodial keys).
+- During validation, `_validateKeyType*` calls `GasPolicy.checkUserOpPolicy(keyId, userOp)`. A non-zero return value aborts the user operation.
+- Budgets can be initialised manually on-chain (`GasPolicy.initializeGasPolicy(account, configId, bytes16 limit)`) or derived automatically from constructor defaults via the `uint256 limit` overload.
+
+---
+
+## Storage Layout
+
 ```mermaid
 erDiagram
-    SessionKey {
-        PubKey pubKey "Public key data"
-        bool isActive "Activation status"
-        uint48 validUntil "Expiration timestamp"
-        uint48 validAfter "Start timestamp"
-        uint48 limit "Transaction count limit"
-        bool masterSessionKey "Master key flag"
-        bool whitelisting "Enable restrictions"
-        uint256 ethLimit "ETH spending limit"
-        SpendTokenInfo spendTokenInfo "Token spend data"
-    }
-    
-    PubKey {
-        uint256 x "X coordinate"
-        uint256 y "Y coordinate"
-    }
-    
-    SpendTokenInfo {
-        address token "ERC-20 token address"
-        uint256 limit "Token spending limit"
-    }
-    
-    allowedSelectors {
-        bytes4 selector "Function selectors"
-    }
-    
-    whitelist {
-        address target "Contract address"
-        bool allowed "Permission flag"
+    KeyData {
+        uint8   keyType
+        bool    isActive
+        bool    masterKey
+        bool    isDelegatedControl
+        uint48  validUntil
+        uint48  validAfter
+        uint48  limits
+        bytes   key
     }
 
-    SessionKey ||--|| PubKey : contains
-    SessionKey ||--|| SpendTokenInfo : contains
-    SessionKey ||--o{ allowedSelectors : has
-    SessionKey ||--o{ whitelist : maintains
+    ExecutePermissions {
+        Bytes32Set canExecute
+    }
+
+    SpendStorage {
+        AddressSet tokens
+        mapping tokenData
+    }
+
+    TokenSpendPeriod {
+        uint8    period
+        uint256  limit
+        uint256  spent
+        uint256  lastUpdated
+    }
+
+    KeyData ||--o{ ExecutePermissions : "selector rules"
+    KeyData ||--o{ SpendStorage : "token limits"
 ```
 
+All three structures live within the ERC-7201 namespace anchored by `BaseOPF7702`. Selector and spend tables are cleared explicitly via `clearExecutePermissions` / `clearSpendPermissions` at revoke time to avoid orphaned entries.
 
-## Key Management Lifecycle
-Session keys follow a structured lifecycle from registration through usage to expiration:
+---
 
-Registration Process
-
+## Validation Pipeline
 
 ```mermaid
-sequenceDiagram
-    participant Owner as Account Owner
-    participant Account as OPF7702 Account
-    participant KeysManager
-    participant Storage as Session Key Storage
-    participant GasPolicy as Gas Policy
-
-    Owner->>Account: registerSessionKey(key, permissions)
-    Account->>Account: _requireFromEntryPointOrOwner()
-    Account->>KeysManager: _addKey(keyReg)
-    KeysManager->>KeysManager: _masterKeyValidation(keyReg)
-    KeysManager->>KeysManager: _validateKeyPermissions(keyReg)
-    KeysManager->>Storage: Store session key data
-    KeysManager->>GasPolicy: initializeGasPolicy(account, configId, limit)
-    GasPolicy->>GasPolicy: Calculate gas budgets and limits
-    GasPolicy-->>KeysManager: Gas policy configured
-    KeysManager->>Account: SessionKeyRegistered event
-    Account-->>Owner: Registration complete
-
-    Note over KeysManager, GasPolicy: Master keys: validUntil=max, validAfter=0, limit=0, whitelisting=false
-    Note over KeysManager, GasPolicy: Session keys: whitelisting=true, bounded permissions
-    Note over GasPolicy: Gas Policy: Per limits
+flowchart LR
+    UserOp["UserOperation\n(signature, key type)"] --> SigRouter["_validateSignature\n• Decode (KeyType, bytes)\n• Cryptographic check"]
+    SigRouter --> KeyState["Key lookup & state checks\n• isRegistered\n• isActive\n• hasQuota"]
+    KeyState --> TimeWindow["Timestamp window\n(validAfter/validUntil)"]
+    KeyState --> GasCheck{Delegated control?}
+    GasCheck -- Yes --> Policy["GasPolicy.checkUserOpPolicy"]
+    Policy -->|success| Selector
+    GasCheck -- No --> Selector["_isCanCall\n(target/selector match)"]
+    Selector --> SpendChecks["Optional spend rule\n_isTokenSpend/_manageTokenSpend"]
+    SpendChecks --> Quota["consumeQuota (non-master)"]
+    Quota --> Exec["Execution.sol\nexecute(mode,data)"]
 ```
 
-## Permission Validation Flow
+Failure at any stage aborts validation and the EntryPoint returns `SIG_VALIDATION_FAILED`.
 
-```mermaid
-flowchart TD
-    subgraph "Transaction Initiation"
-        UserOp["User Operation<br/>• Transaction data<br/>• Signature<br/>• Session key ID"]
-    end
-    
-    subgraph "Signature Validation"
-        SignatureCheck["_validateSignature()<br/>• Key type resolution<br/>• Cryptographic verification<br/>• Key existence check"]
-        KeyTypeSwitch["Key Type Validation<br/>• EOA: ECDSA recovery<br/>• WebAuthn: assertion verification<br/>• P-256: curve validation"]
-    end
-    
-    subgraph "Permission Enforcement"
-        TimeCheck["Time Validation<br/>• validAfter <= now<br/>• now <= validUntil<br/>• Active status check"]
-        GasPolicyCheck["Gas Policy Validation<br/>• checkUserOpPolicy()<br/>• Gas envelope calculation<br/>• Budget limit enforcement<br/>• Usage counter updates"]
-        WhitelistCheck["Contract Whitelist<br/>• Target address validation<br/>• Whitelisting mode check<br/>• Address permissions"]
-        SelectorCheck["Function Selector<br/>• Extract function selector<br/>• Check allowed selectors<br/>• Granular permissions"]
-        SpendingCheck["Spending Validation<br/>• ETH limit check<br/>• Token limit validation<br/>• Usage count decrement"]
-    end
-    
-    subgraph "Execution Authorization"
-        ExecutionGrant["Permission Granted<br/>• All checks passed<br/>• Transaction authorized<br/>• State updated"]
-    end
+---
 
-    %% Flow connections
-    UserOp --> SignatureCheck
-    SignatureCheck --> KeyTypeSwitch
-    KeyTypeSwitch --> TimeCheck
-    TimeCheck --> GasPolicyCheck
-    GasPolicyCheck --> WhitelistCheck
-    WhitelistCheck --> SelectorCheck
-    SelectorCheck --> SpendingCheck
-    SpendingCheck --> ExecutionGrant
-```
+## Spend Enforcement Details
 
-## Validation and Enforcement
-The permission system implements multiple validation layers to ensure secure execution:
+1. **Detection** – `_isTokenSpend` classifies the call based on selector:
+   - Empty calldata → native transfer (`token = NATIVE_ADDRESS`, amount = `msg.value`).
+   - `transfer`, `transferFrom`, `approve` → load the `uint256` amount argument.
+2. **Limit lookup** – If no spend rule exists (`hasTokenSpend == false`), the function returns `false` and the execution is rejected.
+3. **Period maintenance** – `_manageTokenSpend` compares `block.timestamp` with `TokenSpendPeriod.lastUpdated`. Crossing into a new period resets `spent` to zero.
+4. **Enforcement** – Ensures `spent + amount <= limit`, then increments `spent`.
 
-### Spending Limit Enforcement
-Token spending validation follows strict ERC-20 patterns with specific security constraints:
+Because native ETH is mapped to `NATIVE_ADDRESS`, a single policy can cap both ETH transfers and ERC-20 transfers independently per token.
 
-```mermaid
-flowchart TD
-    subgraph "Token Spend Validation"
-        TokenCall["ERC-20 Function Call<br/>• transfer(address,uint256)<br/>• transferFrom(address,address,uint256)<br/>• approve(address,uint256)"]
-        DataExtraction["_validateTokenSpend()<br/>• Extract value from calldata<br/>• Last 32 bytes = amount<br/>• Validate against limit"]
-        LimitCheck["Spending Limit Check<br/>• Current spend + amount <= limit<br/>• Update spend tracking<br/>• Prevent overspend"]
-    end
-    
-    subgraph "ETH Spend Validation"
-        ETHTransfer["ETH Transfer<br/>• msg.value > 0<br/>• Native ETH spending<br/>• Direct transfers"]
-        ETHValidation["_validateEthSpend()<br/>• Check ethLimit<br/>• Update ETH spending<br/>• Track cumulative usage"]
-    end
-    
-    subgraph "Spending Constraints"
-        SingleToken["Single Token Policy<br/>• One token per session key<br/>• Registered in SpendTokenInfo<br/>• No multi-token support"]
-        ERC20Only["ERC-20 Only Support<br/>• Standard transfer functions<br/>• No ERC-777, ERC-1363<br/>• No vault tokens (ERC-4626)"]
-    end
+---
 
-    %% Flow connections
-    TokenCall --> DataExtraction
-    DataExtraction --> LimitCheck
-    ETHTransfer --> ETHValidation
-    LimitCheck --> SingleToken
-    ETHValidation --> SingleToken
-    SingleToken --> ERC20Only
-```
+## Management APIs
 
+Key management entry points exposed to authorised callers:
 
-## Security Model
+| Function | Purpose |
+|----------|---------|
+| `registerKey(KeyDataReg)` | Store a new session key (limits > 0) |
+| `updateKeyData(keyId, validUntil, limits)` | Extend expiry and reset quota |
+| `pauseKey(keyId)` / `unpauseKey(keyId)` | Soft-disable or resume a key |
+| `revokeKey(keyId)` | Remove key metadata and clear associated permissions |
+| `setCanCall(keyId, target, selector, can)` | Grant/revoke selector permissions |
+| `clearExecutePermissions(keyId)` | Remove all selector entries |
+| `setTokenSpend(keyId, token, limit, period)` | Create a token/ETH spend rule |
+| `updateTokenSpend(keyId, token, limit, period)` | Mutate an existing rule |
+| `removeTokenSpend(keyId, token)` / `clearSpendPermissions(keyId)` | Remove one or all spend rules |
+| `hasTokenSpend`, `tokenSpend`, `spendTokens` | Read-only introspection of spend configuration |
 
-The session key security model implements defense-in-depth through multiple validation layers:
-| Security Layer | Purpose | Implementation |
-|----------------|---------|----------------|
-| Signature Validation | Cryptographic authenticity | Key type-specific signature verification |
-| Time Bounds | Temporal access control | validAfter and validUntil timestamp checks |
-| Usage Limits | Transaction count control | limit field with per-operation decrement |
-| Spending Caps | Financial risk mitigation | ETH and token spending limits |
-| Contract Whitelisting | Target restriction | Address-based access control |
-| Function Filtering | Operation-level control | Function selector validation |
-| Gas Policy | Resource usage control | Gas envelope calculation, budget enforcement, penalty handling |
-| Gas Griefing Protection | DoS prevention | Signature length validation |
+All functions require `_requireForExecute()`; they must be invoked via the account (self-call) or through the EntryPoint.
+
+---
+
+## Security Considerations
+
+- **Quota depletion** – Session keys exhaust `limits` and must be refreshed (`updateKeyData`) to continue operating. Master keys bypass quotas entirely.
+- **Target guarding** – `setCanCall` rejects zero addresses and self-calls, preventing privilege escalation through `address(this)`.
+- **Spend rule optionality** – If no spend rule exists for a token, `_isTokenSpend` returns `false`, so keys must opt in explicitly to move value.
+- **Custodial gas enforcement** – Delegated keys cannot consume more gas than their configured envelope; `GasPolicy` updates counters atomically within the account call.
+- **Pause/Revoke** – Pausing preserves configuration for future reactivation, while revoking wipes metadata and emits `KeyRevoked`.
+- **Recovery isolation** – Guardian storage and recovery state live in `SocialRecoveryManager`, ensuring key permissions remain untouched during recovery flows.
+
+By combining signature validation, temporal gates, execution quotas, spend accounting, and optional gas budgets, the session key framework provides granular yet auditable control over delegated access.

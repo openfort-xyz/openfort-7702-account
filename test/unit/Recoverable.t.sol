@@ -1,931 +1,1003 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.29;
+pragma solidity 0.8.29;
 
-import {Base} from "test/Base.sol";
-import {GasPolicy} from "src/utils/GasPolicy.sol";
-import {Test, console2 as console} from "lib/forge-std/src/Test.sol";
-import {EfficientHashLib} from "lib/solady/src/utils/EfficientHashLib.sol";
-import {Math} from "lib/openzeppelin-contracts/contracts/utils/math/Math.sol";
-import {EntryPoint} from "lib/account-abstraction/contracts/core/EntryPoint.sol";
-import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
-import {SafeCast} from "lib/openzeppelin-contracts/contracts/utils/math/SafeCast.sol";
-import {ECDSA} from "lib/openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
-import {IEntryPoint} from "lib/account-abstraction/contracts/interfaces/IEntryPoint.sol";
-
-import {OPFMain as OPF7702} from "src/core/OPFMain.sol";
-import {KeyHashLib} from "src/libs/KeyHashLib.sol";
-import {MockERC20} from "src/mocks/MockERC20.sol";
-import {KeysManager} from "src/core/KeysManager.sol";
-import {ISpendLimit} from "src/interfaces/ISpendLimit.sol";
-import {IKey} from "src/interfaces/IKey.sol";
-import {WebAuthnVerifier} from "src/utils/WebAuthnVerifier.sol";
+import {Deploy} from "./../Deploy.t.sol";
+import {console2 as console} from "lib/forge-std/src/Test.sol";
 import {PackedUserOperation} from
     "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
-import {MessageHashUtils} from
-    "lib/openzeppelin-contracts/contracts/utils/cryptography/MessageHashUtils.sol";
+import {IOPF7702Recoverable} from "src/interfaces/IOPF7702Recoverable.sol";
+import {IKeysManager} from "src/interfaces/IKeysManager.sol";
+import {Math} from "lib/openzeppelin-contracts/contracts/utils/math/Math.sol";
+import {SafeCast} from "lib/openzeppelin-contracts/contracts/utils/math/SafeCast.sol";
+import {SocialRecoveryManager} from "src/utils/SocialRecover.sol";
 
-contract Recoverable is Base {
-    using KeyHashLib for address;
-    /* ───────────────────────────────────────────────────────────── contracts ── */
+contract Recoverable is Deploy {
+    PubKey internal pK;
+    address[] guardians;
+    uint256[] guardiansPK;
+    bytes32[] guardiansID;
+    bytes[] _signatures;
 
-    IEntryPoint public entryPoint;
-    WebAuthnVerifier public webAuthn;
-    OPF7702 public implementation;
-    OPF7702 public account; // clone deployed at `owner`
-    GasPolicy public gasPolicy;
+    PubKey internal pKR;
+    KeyDataReg internal recoveryKey;
 
-    /* ──────────────────────────────────────────────────────── key structures ── */
-    Key internal keyMK;
-    PubKey internal pubKeyMK;
-    Key internal keySK;
-    PubKey internal pubKeySK;
-
-    Key internal recovery_keyEOA;
-    PubKey internal recovery_pubKeyEOA;
-    Key internal recovery_keyWebAuthn;
-    PubKey internal recovery_pubKeyWebAuthn;
-
-    uint256 internal proposalTimestamp;
-
-    KeyReg internal keyData;
-
-    /* ─────────────────────────────────────────────────────────────── setup ──── */
-    function setUp() public {
-        vm.startPrank(sender);
-        (owner, ownerPk) = makeAddrAndKey("owner");
-        (sender, senderPk) = makeAddrAndKey("sender");
-        (sessionKey, sessionKeyPk) = makeAddrAndKey("sessionKey");
-        (GUARDIAN_EOA_ADDRESS, GUARDIAN_EOA_PRIVATE_KEY) = makeAddrAndKey("GUARDIAN_EOA_ADDRESS");
-        (guardianB, guardianB_PK) = makeAddrAndKey("guardianB");
-
-        // forkId = vm.createFork(SEPOLIA_RPC_URL);
-        // vm.selectFork(forkId);
-
-        /* live contracts on fork */
-        entryPoint = IEntryPoint(payable(SEPOLIA_ENTRYPOINT));
-        webAuthn = WebAuthnVerifier(payable(SEPOLIA_WEBAUTHN));
-        gasPolicy = new GasPolicy(DEFAULT_PVG, DEFAULT_VGL, DEFAULT_CGL, DEFAULT_PMV, DEFAULT_PO);
-
-        _createInitialGuradian();
-        /* deploy implementation & bake it into `owner` address */
-        implementation = new OPF7702(
-            address(entryPoint),
-            WEBAUTHN_VERIFIER,
-            RECOVERY_PERIOD,
-            LOCK_PERIOD,
-            SECURITY_PERIOD,
-            SECURITY_WINDOW,
-            address(gasPolicy)
-        );
-        vm.etch(owner, abi.encodePacked(bytes3(0xef0100), address(implementation)));
-        account = OPF7702(payable(owner));
-
-        vm.stopPrank();
-
-        _initializeAccount();
-        _register_KeyEOA();
-        _register_KeyP256();
-        _register_KeyP256NonKey();
-        _poroposeGuardian();
-        _deal();
-
-        vm.prank(sender);
-        entryPoint.depositTo{value: 0.09e18}(owner);
+    enum GuardianAction {
+        PROPOSE,
+        CONFIRM_PROPOSAL,
+        CANCEL_PROPOSAL,
+        REVOKE,
+        CONFIRM_REVOCATION,
+        CANCEL_REVOCATION,
+        START_RECOVERY,
+        CANCEL_RECOVERY
     }
 
-    /* ─────────────────────────────────────────────────────────────── tests ──── */
-    function test_AfterConstructor() external view {
-        console.log("/* --------------------------------- test_AfterConstructor -------- */");
+    modifier createGuardians(uint256 _indx) {
+        _createGuardians(_indx);
+        _;
+    }
 
-        bytes32[] memory guardians;
-        guardians = account.getGuardians();
-        console.log("l", guardians.length);
-        uint256 i;
-        for (i; i < guardians.length;) {
-            console.logBytes32(guardians[i]);
-
-            unchecked {
-                ++i;
-            }
+    modifier createNewOner(KeyType kT) {
+        bytes memory _key;
+        if (kT == KeyType.EOA) {
+            _key = _getKeyEOA(makeAddr(("New Onwer")));
+        } else if (kT == KeyType.WEBAUTHN) {
+            pKR = PubKey({x: keccak256("x.NewOner"), y: keccak256("y.NewOner")});
+            _key = _getKeyP256(pKR);
         }
-        bool isActive = account.isGuardian(initialGuardian);
-        console.log("isActive", isActive);
-
-        assertTrue(isActive);
-
-        assertEq(guardians[0], initialGuardian);
-
-        console.log("/* --------------------------------- test_AfterConstructor -------- */");
-    }
-
-    function test_AfterProposal() external view {
-        console.log("/* --------------------------------- test_AfterProposal -------- */");
-
-        bool isActiveEOA = account.isGuardian(sessionKey.computeKeyId());
-        console.log("isActiveEOA", isActiveEOA);
-
-        bool isActiveB = account.isGuardian(guardianB.computeKeyId());
-        console.log("isActiveB", isActiveB);
-
-        assertFalse(isActiveEOA);
-        assertFalse(isActiveB);
-
-        uint256 pendingEOA = account.getPendingStatusGuardians(sessionKey.computeKeyId());
-        uint256 pendingEOAB = account.getPendingStatusGuardians(guardianB.computeKeyId());
-        console.log("pendingEOA", pendingEOA);
-        console.log("pendingEOAB", pendingEOAB);
-
-        assertEq(pendingEOA, proposalTimestamp + SECURITY_PERIOD);
-        assertEq(pendingEOAB, proposalTimestamp + SECURITY_PERIOD);
-        console.log("/* --------------------------------- test_AfterProposal -------- */");
-    }
-
-    function test_AfterCancellation() external {
-        console.log("/* --------------------------------- test_AfterCancellation -------- */");
-
-        bool isActiveEOA = account.isGuardian(sessionKey.computeKeyId());
-        console.log("isActiveEOA", isActiveEOA);
-
-        bool isActiveB = account.isGuardian(guardianB.computeKeyId());
-        console.log("isActiveB", isActiveB);
-
-        assertFalse(isActiveEOA);
-        assertFalse(isActiveB);
-
-        uint256 pendingEOA = account.getPendingStatusGuardians(sessionKey.computeKeyId());
-        uint256 pendingEOAB = account.getPendingStatusGuardians(guardianB.computeKeyId());
-        console.log("pendingEOA", pendingEOA);
-        console.log("pendingEOAB", pendingEOAB);
-
-        assertEq(pendingEOA, proposalTimestamp + SECURITY_PERIOD);
-        assertEq(pendingEOAB, proposalTimestamp + SECURITY_PERIOD);
-
-        _cancelGuardian();
-
-        uint256 pendingEOA_After = account.getPendingStatusGuardians(sessionKey.computeKeyId());
-        uint256 pendingEOAB_After = account.getPendingStatusGuardians(guardianB.computeKeyId());
-        console.log("pendingEOA_After", pendingEOA_After);
-        console.log("pendingEOAB_After", pendingEOAB_After);
-
-        assertEq(pendingEOA_After, 0);
-        assertEq(pendingEOAB_After, 0);
-        console.log("/* --------------------------------- test_AfterCancellation -------- */");
-    }
-
-    function test_AfterConfirmation() external {
-        console.log("/* --------------------------------- test_AfterConfirmation -------- */");
-        _confirmGuardian();
-        bytes32[] memory guardians;
-        guardians = account.getGuardians();
-        console.log("l", guardians.length);
-        uint256 i;
-        for (i; i < guardians.length;) {
-            console.logBytes32(guardians[i]);
-
-            unchecked {
-                ++i;
-            }
-        }
-        bool isActive = account.isGuardian(initialGuardian);
-        console.log("isActive", isActive);
-        bool isActiveEOA = account.isGuardian(sessionKey.computeKeyId());
-        console.log("isActiveEOA", isActiveEOA);
-        bool isActiveB = account.isGuardian(guardianB.computeKeyId());
-        console.log("isActiveB", isActiveB);
-
-        assertTrue(isActive);
-        assertTrue(isActiveEOA);
-        assertTrue(isActiveB);
-
-        assertEq(guardians[0], (initialGuardian));
-        assertEq(guardians[1], keccak256(abi.encodePacked(sessionKey)));
-        assertEq(guardians[2], keccak256(abi.encodePacked(guardianB)));
-
-        console.log("/* --------------------------------- test_AfterConfirmation -------- */");
-    }
-
-    function test_RevokeGuardian() external {
-        console.log("/* --------------------------------- test_RevokeGuardian -------- */");
-        _confirmGuardian();
-        bytes32[] memory guardians;
-        guardians = account.getGuardians();
-        console.log("l", guardians.length);
-        uint256 i;
-        for (i; i < guardians.length;) {
-            console.logBytes32(guardians[i]);
-
-            unchecked {
-                ++i;
-            }
-        }
-        bool isActive = account.isGuardian(initialGuardian);
-        console.log("isActive", isActive);
-        bool isActiveEOA = account.isGuardian(sessionKey.computeKeyId());
-        console.log("isActiveEOA", isActiveEOA);
-        bool isActiveB = account.isGuardian(guardianB.computeKeyId());
-        console.log("isActiveB", isActiveB);
-
-        assertTrue(isActive);
-        assertTrue(isActiveEOA);
-        assertTrue(isActiveB);
-
-        assertEq(guardians[0], initialGuardian);
-        assertEq(guardians[1], keccak256(abi.encodePacked(sessionKey)));
-        assertEq(guardians[2], keccak256(abi.encodePacked(guardianB)));
-        _revokeGuardian();
-
-        uint256 pendingEOA = account.getPendingStatusGuardians(sessionKey.computeKeyId());
-        uint256 pendingEOAB = account.getPendingStatusGuardians(guardianB.computeKeyId());
-
-        console.log("pendingEOA", pendingEOA);
-        console.log("pendingEOAB", pendingEOAB);
-        console.log("block.timestamp + SECURITY_PERIOD", block.timestamp + SECURITY_PERIOD);
-
-        assertEq(pendingEOA, block.timestamp + SECURITY_PERIOD);
-        assertEq(pendingEOAB, block.timestamp + SECURITY_PERIOD);
-        console.log("/* --------------------------------- test_RevokeGuardian -------- */");
-    }
-
-    function test_CancelGuardianRevocation() external {
-        console.log("/* --------------------------------- test_RevokeGuardian -------- */");
-        _confirmGuardian();
-        bytes32[] memory guardians;
-        guardians = account.getGuardians();
-        console.log("l", guardians.length);
-        uint256 i;
-        for (i; i < guardians.length;) {
-            console.logBytes32(guardians[i]);
-
-            unchecked {
-                ++i;
-            }
-        }
-        bool isActive = account.isGuardian(initialGuardian);
-        console.log("isActive", isActive);
-        bool isActiveEOA = account.isGuardian(sessionKey.computeKeyId());
-        console.log("isActiveEOA", isActiveEOA);
-        bool isActiveB = account.isGuardian(guardianB.computeKeyId());
-        console.log("isActiveB", isActiveB);
-
-        assertTrue(isActive);
-        assertTrue(isActiveEOA);
-        assertTrue(isActiveB);
-
-        assertEq(guardians[0], initialGuardian);
-        assertEq(guardians[1], keccak256(abi.encodePacked(sessionKey)));
-        assertEq(guardians[2], keccak256(abi.encodePacked(guardianB)));
-        _revokeGuardian();
-
-        uint256 pendingEOA = account.getPendingStatusGuardians(sessionKey.computeKeyId());
-        uint256 pendingEOAB = account.getPendingStatusGuardians(guardianB.computeKeyId());
-
-        console.log("pendingEOA", pendingEOA);
-        console.log("pendingEOAB", pendingEOAB);
-        console.log("block.timestamp + SECURITY_PERIOD", block.timestamp + SECURITY_PERIOD);
-
-        assertEq(pendingEOA, block.timestamp + SECURITY_PERIOD);
-        assertEq(pendingEOAB, block.timestamp + SECURITY_PERIOD);
-
-        _cancelGuardianRevocation();
-
-        uint256 pendingEOA_After = account.getPendingStatusGuardians(sessionKey.computeKeyId());
-        uint256 pendingEOAB_After = account.getPendingStatusGuardians(guardianB.computeKeyId());
-
-        assertEq(pendingEOA_After, 0);
-        assertEq(pendingEOAB_After, 0);
-        console.log("/* --------------------------------- test_RevokeGuardian -------- */");
-    }
-
-    function test_AfterRevokeConfirmation() external {
-        console.log("/* --------------------------------- test_RevokeGuardian -------- */");
-        _confirmGuardian();
-        bytes32[] memory guardians;
-        guardians = account.getGuardians();
-        console.log("l", guardians.length);
-        uint256 i;
-        for (i; i < guardians.length;) {
-            console.logBytes32(guardians[i]);
-
-            unchecked {
-                ++i;
-            }
-        }
-        bool isActive = account.isGuardian(initialGuardian);
-        console.log("isActive", isActive);
-        bool isActiveEOA = account.isGuardian(sessionKey.computeKeyId());
-        console.log("isActiveEOA", isActiveEOA);
-        bool isActiveB = account.isGuardian(guardianB.computeKeyId());
-        console.log("isActiveB", isActiveB);
-
-        assertTrue(isActive);
-        assertTrue(isActiveEOA);
-        assertTrue(isActiveB);
-
-        assertEq(guardians[0], initialGuardian);
-        assertEq(guardians[1], keccak256(abi.encodePacked(sessionKey)));
-        assertEq(guardians[2], keccak256(abi.encodePacked(guardianB)));
-
-        _revokeGuardian();
-        uint256 pendingEOA = account.getPendingStatusGuardians(sessionKey.computeKeyId());
-        uint256 pendingEOAB = account.getPendingStatusGuardians(guardianB.computeKeyId());
-
-        console.log("pendingEOA", pendingEOA);
-        console.log("pendingEOAB", pendingEOAB);
-        console.log("block.timestamp + SECURITY_PERIOD", block.timestamp + SECURITY_PERIOD);
-
-        assertEq(pendingEOA, block.timestamp + SECURITY_PERIOD);
-        assertEq(pendingEOAB, block.timestamp + SECURITY_PERIOD);
-
-        _confirmGuardianRevocationEOA();
-
-        guardians = account.getGuardians();
-        console.log("l", guardians.length);
-        i = 0;
-        for (i; i < guardians.length;) {
-            console.logBytes32(guardians[i]);
-
-            unchecked {
-                ++i;
-            }
-        }
-
-        bool isActiveEOA_After = account.isGuardian(sessionKey.computeKeyId());
-        console.log("isActiveEOA_After", isActiveEOA_After);
-        assertTrue(!isActiveEOA_After);
-
-        assertEq(guardians[0], initialGuardian);
-        assertEq(guardians[1], keccak256(abi.encodePacked(guardianB)));
-
-        _confirmGuardianRevocationWebAuthn();
-
-        guardians = account.getGuardians();
-        console.log("l", guardians.length);
-        i = 0;
-        for (i; i < guardians.length;) {
-            console.logBytes32(guardians[i]);
-
-            unchecked {
-                ++i;
-            }
-        }
-
-        bool isActiveB_After = account.isGuardian(guardianB.computeKeyId());
-        console.log("isActiveB_After", isActiveB_After);
-        assertTrue(!isActiveB_After);
-        assertEq(guardians[0], initialGuardian);
-
-        console.log("/* --------------------------------- test_RevokeGuardian -------- */");
-    }
-
-    function test_StartRecovery() external {
-        console.log("/* --------------------------------- test_StartRecovery -------- */");
-
-        _confirmGuardian();
-        _startRecovery();
-
-        (Key memory k, uint64 executeAfter, uint32 guardiansRequired) = account.recoveryData();
-        console.log("r.key.eoaAddress", k.eoaAddress);
-        console.log("executeAfter", executeAfter);
-        console.log("guardiansRequired", guardiansRequired);
-
-        assertEq(k.eoaAddress, sender);
-        assertEq(SafeCast.toUint64(block.timestamp + RECOVERY_PERIOD), executeAfter);
-        assertEq(SafeCast.toUint32(Math.ceilDiv(account.guardianCount(), 2)), guardiansRequired);
-        console.log("/* --------------------------------- test_StartRecovery -------- */");
-    }
-
-    function test_CancelRecovery() external {
-        console.log("/* --------------------------------- test_CancelRecovery -------- */");
-
-        _confirmGuardian();
-        _startRecovery();
-
-        (Key memory k, uint64 executeAfter, uint32 guardiansRequired) = account.recoveryData();
-        console.log("r.key.eoaAddress", k.eoaAddress);
-        console.log("executeAfter", executeAfter);
-        console.log("guardiansRequired", guardiansRequired);
-
-        assertEq(k.eoaAddress, sender);
-        assertEq(SafeCast.toUint64(block.timestamp + RECOVERY_PERIOD), executeAfter);
-        assertEq(SafeCast.toUint32(Math.ceilDiv(account.guardianCount(), 2)), guardiansRequired);
-
-        vm.prank(address(entryPoint));
-        account.cancelRecovery();
-
-        (Key memory k_After, uint64 executeAfter_After, uint32 guardiansRequired_After) =
-            account.recoveryData();
-        console.log("r_After.key.eoaAddress", k_After.eoaAddress);
-        console.log("executeAfter_After", executeAfter_After);
-        console.log("guardiansRequired_After", guardiansRequired_After);
-
-        assertEq(k_After.eoaAddress, address(0));
-        assertEq(0, executeAfter_After);
-        assertEq(0, guardiansRequired_After);
-        console.log("/* --------------------------------- test_CancelRecovery -------- */");
-    }
-
-    function test_CompleteRecoveryToEOA() external {
-        console.log("/* --------------------------------- test_CompleteRecoveryToEOA -------- */");
-
-        _confirmGuardian();
-        _startRecovery();
-
-        (Key memory k, uint64 executeAfter, uint32 guardiansRequired) = account.recoveryData();
-        console.log("r.key.eoaAddress", k.eoaAddress);
-        console.log("executeAfter", executeAfter);
-        console.log("guardiansRequired", guardiansRequired);
-
-        assertEq(k.eoaAddress, sender);
-        assertEq(SafeCast.toUint64(block.timestamp + RECOVERY_PERIOD), executeAfter);
-        assertEq(SafeCast.toUint32(Math.ceilDiv(account.guardianCount(), 2)), guardiansRequired);
-
-        bytes[] memory sigs = new bytes[](2);
-
-        bytes32 digest = account.getDigestToSign();
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(sessionKeyPk, digest);
-
-        bytes memory sig = abi.encodePacked(r, s, v);
-
-        sigs[1] = sig;
-
-        (uint8 v_B, bytes32 r_B, bytes32 s_B) = vm.sign(guardianB_PK, digest);
-
-        bytes memory sig_B = abi.encodePacked(r_B, s_B, v_B);
-
-        sigs[0] = sig_B;
-
-        vm.warp(block.timestamp + RECOVERY_PERIOD + 1);
-
-        Key memory old_k = account.getKeyById(0);
-        (bool isActive, uint48 validUntil, uint48 validAfter, uint48 limit) =
-            account.getKeyData(keccak256(abi.encodePacked(old_k.pubKey.x, old_k.pubKey.y)));
-        assertTrue(isActive);
-        assertEq(validUntil, type(uint48).max);
-        assertEq(validAfter, 0);
-        assertEq(limit, 0);
-
-        console.log("isActive", isActive);
-        console.log("validUntil", validUntil);
-
-        vm.prank(address(entryPoint));
-        account.completeRecovery(sigs);
-
-        (bool isActive_After, uint48 validUntil_After, uint48 validAfter_After, uint48 limit_After)
-        = account.getKeyData(keccak256(abi.encodePacked(old_k.pubKey.x, old_k.pubKey.y)));
-        assertFalse(isActive_After);
-        assertEq(validUntil_After, 0);
-        assertEq(validAfter_After, 0);
-        assertEq(limit_After, 0);
-        console.log("isActive_After", isActive_After);
-        console.log("validUntil_After", validUntil_After);
-
-        Key memory old_k_After = account.getKeyById(0);
-        assertEq(old_k_After.pubKey.x, bytes32(0));
-        assertEq(old_k_After.pubKey.y, bytes32(0));
-        assertEq(uint256(old_k_After.keyType), uint256(0));
-
-        Key memory new_k = account.getKeyById(0);
-        (bool isActive_New, uint48 validUntil_New, uint48 validAfter_New, uint48 limit_New) =
-            account.getKeyData(keccak256(abi.encodePacked(new_k.eoaAddress)));
-        assertEq(new_k.eoaAddress, k.eoaAddress);
-        assertTrue(isActive_New);
-        assertEq(validUntil_New, type(uint48).max);
-        assertEq(validAfter_New, 0);
-        assertEq(limit_New, 0);
-
-        console.log("isActive_New", isActive_New);
-        console.log("validUntil_New", validUntil_New);
-        console.log("/* --------------------------------- test_CompleteRecoveryToEOA -------- */");
-    }
-
-    function test_CompleteRecoveryToWebAuthn() external {
-        console.log(
-            "/* --------------------------------- test_CompleteRecoveryToWebAuthn -------- */"
-        );
-
-        _confirmGuardian();
-        _startRecoveryToWebAuthn();
-
-        (Key memory k, uint64 executeAfter, uint32 guardiansRequired) = account.recoveryData();
-        console.log("r.key.eoaAddress", k.eoaAddress);
-        console.logBytes32(k.pubKey.x);
-        console.logBytes32(k.pubKey.y);
-        console.log("executeAfter", executeAfter);
-        console.log("guardiansRequired", guardiansRequired);
-
-        assertEq(BATCH_VALID_PUBLIC_KEY_X, k.pubKey.x);
-        assertEq(BATCH_VALID_PUBLIC_KEY_Y, k.pubKey.y);
-        assertEq(k.eoaAddress, address(0));
-        assertEq(SafeCast.toUint64(block.timestamp + RECOVERY_PERIOD), executeAfter);
-        assertEq(SafeCast.toUint32(Math.ceilDiv(account.guardianCount(), 2)), guardiansRequired);
-
-        bytes[] memory sigs = new bytes[](2);
-
-        bytes32 digest = account.getDigestToSign();
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(sessionKeyPk, digest);
-
-        bytes memory sig = abi.encodePacked(r, s, v);
-
-        sigs[1] = sig;
-
-        (uint8 v_B, bytes32 r_B, bytes32 s_B) = vm.sign(guardianB_PK, digest);
-
-        bytes memory sig_B = abi.encodePacked(r_B, s_B, v_B);
-
-        sigs[0] = sig_B;
-
-        vm.warp(block.timestamp + RECOVERY_PERIOD + 1);
-
-        Key memory old_k = account.getKeyById(0);
-        (bool isActive, uint48 validUntil, uint48 validAfter, uint48 limit) =
-            account.getKeyData(keccak256(abi.encodePacked(old_k.pubKey.x, old_k.pubKey.y)));
-        assertTrue(isActive);
-        assertEq(validUntil, type(uint48).max);
-        assertEq(validAfter, 0);
-        assertEq(limit, 0);
-
-        console.log("isActive", isActive);
-        console.log("validUntil", validUntil);
-
-        vm.prank(address(entryPoint));
-        account.completeRecovery(sigs);
-
-        (bool isActive_After, uint48 validUntil_After, uint48 validAfter_After, uint48 limit_After)
-        = account.getKeyData(keccak256(abi.encodePacked(old_k.pubKey.x, old_k.pubKey.y)));
-        assertFalse(isActive_After);
-        assertEq(validUntil_After, 0);
-        assertEq(validAfter_After, 0);
-        assertEq(limit_After, 0);
-        console.log("isActive_After", isActive_After);
-        console.log("validUntil_After", validUntil_After);
-
-        Key memory new_k = account.getKeyById(0);
-
-        assertNotEq(old_k.pubKey.x, new_k.pubKey.x);
-        assertNotEq(old_k.pubKey.y, new_k.pubKey.y);
-
-        (bool isActive_New, uint48 validUntil_New, uint48 validAfter_New, uint48 limit_New) =
-            account.getKeyData(keccak256(abi.encodePacked(new_k.pubKey.x, new_k.pubKey.y)));
-        assertEq(new_k.eoaAddress, address(0));
-        assertEq(new_k.pubKey.x, k.pubKey.x);
-        assertEq(new_k.pubKey.y, k.pubKey.y);
-        assertTrue(isActive_New);
-        assertEq(validUntil_New, type(uint48).max);
-        assertEq(validAfter_New, 0);
-        assertEq(limit_New, 0);
-
-        console.log("isActive_New", isActive_New);
-        console.log("validUntil_New", validUntil_New);
-        console.log(
-            "/* --------------------------------- test_CompleteRecoveryToWebAuthn -------- */"
-        );
-    }
-
-    function _poroposeGuardian() internal {
-        bytes memory code = abi.encodePacked(
-            bytes3(0xef0100),
-            address(implementation) // or your logic contract
-        );
-        vm.etch(owner, code);
-
-        proposalTimestamp = block.timestamp;
-
-        vm.prank(address(entryPoint));
-        account.proposeGuardian(sessionKey.computeKeyId());
-
-        vm.etch(owner, code);
-
-        vm.prank(address(entryPoint));
-        account.proposeGuardian(guardianB.computeKeyId());
-    }
-
-    function _confirmGuardian() internal {
-        bytes memory code = abi.encodePacked(
-            bytes3(0xef0100),
-            address(implementation) // or your logic contract
-        );
-        vm.etch(owner, code);
-
-        proposalTimestamp = block.timestamp;
-
-        vm.warp(proposalTimestamp + SECURITY_PERIOD + 1);
-
-        vm.prank(address(entryPoint));
-        account.confirmGuardianProposal(sessionKey.computeKeyId());
-
-        vm.etch(owner, code);
-
-        vm.prank(address(entryPoint));
-        account.confirmGuardianProposal(guardianB.computeKeyId());
-    }
-
-    function _revokeGuardian() internal {
-        bytes memory code = abi.encodePacked(bytes3(0xef0100), address(implementation));
-        vm.etch(owner, code);
-
-        vm.prank(address(entryPoint));
-        account.revokeGuardian(sessionKey.computeKeyId());
-
-        vm.etch(owner, code);
-
-        vm.prank(address(entryPoint));
-        account.revokeGuardian(guardianB.computeKeyId());
-    }
-
-    function _cancelGuardianRevocation() internal {
-        bytes memory code = abi.encodePacked(bytes3(0xef0100), address(implementation));
-        vm.etch(owner, code);
-
-        proposalTimestamp = block.timestamp;
-
-        vm.warp(proposalTimestamp + SECURITY_PERIOD + 1);
-
-        vm.prank(address(entryPoint));
-        account.cancelGuardianRevocation(sessionKey.computeKeyId());
-
-        vm.etch(owner, code);
-
-        vm.prank(address(entryPoint));
-        account.cancelGuardianRevocation(guardianB.computeKeyId());
-    }
-
-    function _confirmGuardianRevocationEOA() internal {
-        bytes memory code = abi.encodePacked(bytes3(0xef0100), address(implementation));
-        vm.etch(owner, code);
-        proposalTimestamp = block.timestamp;
-
-        vm.warp(proposalTimestamp + SECURITY_PERIOD + SECURITY_WINDOW);
-        vm.prank(address(entryPoint));
-        account.confirmGuardianRevocation(sessionKey.computeKeyId());
-    }
-
-    function _confirmGuardianRevocationWebAuthn() internal {
-        bytes memory code = abi.encodePacked(bytes3(0xef0100), address(implementation));
-
-        vm.etch(owner, code);
-
-        vm.prank(address(entryPoint));
-        account.confirmGuardianRevocation(guardianB.computeKeyId());
-    }
-
-    function _cancelGuardian() internal {
-        bytes memory code = abi.encodePacked(
-            bytes3(0xef0100),
-            address(implementation) // or your logic contract
-        );
-        vm.etch(owner, code);
-
-        proposalTimestamp = block.timestamp;
-
-        vm.warp(proposalTimestamp + SECURITY_PERIOD + 1);
-
-        vm.prank(address(entryPoint));
-        account.cancelGuardianProposal(sessionKey.computeKeyId());
-
-        vm.etch(owner, code);
-
-        vm.prank(address(entryPoint));
-        account.cancelGuardianProposal(guardianB.computeKeyId());
-    }
-
-    function _startRecovery() internal {
-        recovery_pubKeyEOA = PubKey({
-            x: 0x0000000000000000000000000000000000000000000000000000000000000000,
-            y: 0x0000000000000000000000000000000000000000000000000000000000000000
-        });
-        recovery_keyEOA =
-            Key({pubKey: recovery_pubKeyEOA, eoaAddress: sender, keyType: KeyType.EOA});
-
-        bytes memory code = abi.encodePacked(
-            bytes3(0xef0100),
-            address(implementation) // or your logic contract
-        );
-
-        vm.etch(owner, code);
-
-        vm.prank(sessionKey);
-        account.startRecovery(recovery_keyEOA);
-    }
-
-    function _startRecoveryToWebAuthn() internal {
-        recovery_pubKeyWebAuthn = PubKey({x: BATCH_VALID_PUBLIC_KEY_X, y: BATCH_VALID_PUBLIC_KEY_Y});
-        recovery_keyWebAuthn = Key({
-            pubKey: recovery_pubKeyWebAuthn,
-            eoaAddress: address(0),
-            keyType: KeyType.WEBAUTHN
-        });
-
-        bytes memory code = abi.encodePacked(
-            bytes3(0xef0100),
-            address(implementation) // or your logic contract
-        );
-
-        vm.etch(owner, code);
-
-        vm.prank(sessionKey);
-        account.startRecovery(recovery_keyWebAuthn /*, guardianB*/ );
-    }
-
-    /* ─────────────────────────────────────────────────────────────── tests ──── */
-    function _register_KeyEOA() internal {
-        uint256 count = 15;
-
-        for (uint256 i; i < count; i++) {
-            uint48 validUntil = uint48(block.timestamp + 1 days);
-            uint48 limit = uint48(3);
-            pubKeySK = PubKey({
-                x: 0x0000000000000000000000000000000000000000000000000000000000000000,
-                y: 0x0000000000000000000000000000000000000000000000000000000000000000
-            });
-
-            string memory iString = vm.toString(i);
-            address sessionKeyAddr = makeAddr(iString);
-
-            keySK = Key({pubKey: pubKeySK, eoaAddress: sessionKeyAddr, keyType: KeyType.EOA});
-
-            ISpendLimit.SpendTokenInfo memory spendInfo =
-                ISpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000e18});
-
-            keyData = KeyReg({
-                validUntil: validUntil,
-                validAfter: 0,
-                limit: limit,
-                whitelisting: true,
-                contractAddress: ETH_RECIVE,
-                spendTokenInfo: spendInfo,
-                allowedSelectors: _allowedSelectors(),
-                ethLimit: 0
-            });
-
-            bytes memory code = abi.encodePacked(
-                bytes3(0xef0100),
-                address(implementation) // or your logic contract
-            );
-            vm.etch(owner, code);
-
-            vm.prank(address(entryPoint));
-            account.registerKey(keySK, keyData);
-        }
-    }
-
-    function _register_KeyP256() internal {
-        uint256 count = 15;
-
-        for (uint256 i; i < count; i++) {
-            uint48 validUntil = uint48(block.timestamp + 1 days);
-            uint48 limit = uint48(3);
-
-            bytes32 RANDOM_P256_PUBLIC_KEY_X =
-                keccak256(abi.encodePacked("X_KEY", i, block.timestamp));
-            bytes32 RANDOM_P256_PUBLIC_KEY_Y =
-                keccak256(abi.encodePacked("Y_KEY", i, block.timestamp, msg.sender));
-
-            pubKeySK = PubKey({x: RANDOM_P256_PUBLIC_KEY_X, y: RANDOM_P256_PUBLIC_KEY_Y});
-
-            keySK = Key({pubKey: pubKeySK, eoaAddress: address(0), keyType: KeyType.P256});
-
-            ISpendLimit.SpendTokenInfo memory spendInfo =
-                ISpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000e18});
-
-            keyData = KeyReg({
-                validUntil: validUntil,
-                validAfter: 0,
-                limit: limit,
-                whitelisting: true,
-                contractAddress: ETH_RECIVE,
-                spendTokenInfo: spendInfo,
-                allowedSelectors: _allowedSelectors(),
-                ethLimit: 0
-            });
-
-            bytes memory code = abi.encodePacked(
-                bytes3(0xef0100),
-                address(implementation) // or your logic contract
-            );
-            vm.etch(owner, code);
-
-            vm.prank(address(entryPoint));
-            account.registerKey(keySK, keyData);
-        }
-    }
-
-    function _register_KeyP256NonKey() internal {
-        uint256 count = 10;
-
-        for (uint256 i; i < count; i++) {
-            uint48 validUntil = uint48(block.timestamp + 1 days);
-            uint48 limit = uint48(3);
-
-            bytes32 RANDOM_P256_PUBLIC_KEY_X =
-                keccak256(abi.encodePacked("X_KEY", i, block.timestamp + 1000));
-            bytes32 RANDOM_P256_PUBLIC_KEY_Y =
-                keccak256(abi.encodePacked("Y_KEY", i, block.timestamp + 1000, msg.sender));
-
-            pubKeySK = PubKey({x: RANDOM_P256_PUBLIC_KEY_X, y: RANDOM_P256_PUBLIC_KEY_Y});
-
-            keySK = Key({pubKey: pubKeySK, eoaAddress: address(0), keyType: KeyType.P256NONKEY});
-
-            ISpendLimit.SpendTokenInfo memory spendInfo =
-                ISpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000e18});
-
-            keyData = KeyReg({
-                validUntil: validUntil,
-                validAfter: 0,
-                limit: limit,
-                whitelisting: true,
-                contractAddress: ETH_RECIVE,
-                spendTokenInfo: spendInfo,
-                allowedSelectors: _allowedSelectors(),
-                ethLimit: 0
-            });
-
-            bytes memory code = abi.encodePacked(
-                bytes3(0xef0100),
-                address(implementation) // or your logic contract
-            );
-            vm.etch(owner, code);
-
-            vm.prank(address(entryPoint));
-            account.registerKey(keySK, keyData);
-        }
-    }
-
-    /* ─────────────────────────────────────────────────────────── helpers ──── */
-    function _initializeAccount() internal {
-        /* sample WebAuthn public key – replace with a real one if needed */
-        pubKeyMK = PubKey({x: VALID_PUBLIC_KEY_X, y: VALID_PUBLIC_KEY_Y});
-
-        keyMK = Key({pubKey: pubKeyMK, eoaAddress: address(0), keyType: KeyType.WEBAUTHN});
-
-        ISpendLimit.SpendTokenInfo memory spendInfo =
-            ISpendLimit.SpendTokenInfo({token: TOKEN, limit: 0});
-
-        keyData = KeyReg({
+        recoveryKey = KeyDataReg({
+            keyType: KeyType.WEBAUTHN,
             validUntil: type(uint48).max,
             validAfter: 0,
-            limit: 0,
-            whitelisting: false,
-            contractAddress: address(0),
-            spendTokenInfo: spendInfo,
-            allowedSelectors: _allowedSelectors(),
-            ethLimit: 0
+            limits: 0,
+            key: _key,
+            keyControl: KeyControl.Self
         });
+        _;
+    }
 
-        pubKeyMK = PubKey({x: bytes32(0), y: bytes32(0)});
-        keySK = Key({pubKey: pubKeyMK, eoaAddress: address(0), keyType: KeyType.WEBAUTHN});
-
-        /* sign arbitrary message so initialise() passes sig check */
-        bytes memory keyEnc =
-            abi.encode(keyMK.pubKey.x, keyMK.pubKey.y, keyMK.eoaAddress, keyMK.keyType);
-
-        bytes memory keyDataEnc = abi.encode(
-            keyData.validUntil,
-            keyData.validAfter,
-            keyData.limit,
-            keyData.whitelisting,
-            keyData.contractAddress,
-            keyData.spendTokenInfo.token,
-            keyData.spendTokenInfo.limit,
-            keyData.allowedSelectors,
-            keyData.ethLimit
+    function setUp() public override {
+        super.setUp();
+        _populateWebAuthn("keysmanager.json", ".keys_register");
+        pK = PubKey({x: DEF_WEBAUTHN.X, y: DEF_WEBAUTHN.Y});
+        _createCustomFreshKey(
+            true, KeyType.WEBAUTHN, type(uint48).max, 0, 0, _getKeyP256(pK), KeyControl.Self
         );
 
-        bytes memory skEnc =
-            abi.encode(keySK.pubKey.x, keySK.pubKey.y, keySK.eoaAddress, keySK.keyType);
+        _createQuickFreshKey(false);
 
-        bytes memory skDataEnc = abi.encode(
-            keyData.validUntil,
-            keyData.validAfter,
-            keyData.limit,
-            keyData.whitelisting,
-            keyData.contractAddress,
-            keyData.spendTokenInfo.token,
-            keyData.spendTokenInfo.limit,
-            keyData.allowedSelectors
+        _initializeAccount();
+    }
+
+    function test_proposeGuardianWithRootKey() external createGuardians(3) {
+        _assertGuardianCount(1);
+        _executeGuardianAction(GuardianAction.PROPOSE, 3);
+        _assertGuardianCount(1);
+        _assertPendingGuardians(3, true);
+    }
+
+    function test_RevertOPF7702Recoverable__AddressCantBeZeroAndGuardianCannotBeAddressThis()
+        external
+    {
+        vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__AddressCantBeZero.selector);
+        _proposeGuardian(bytes32(0));
+
+        vm.expectRevert(
+            IOPF7702Recoverable.OPF7702Recoverable__GuardianCannotBeAddressThis.selector
+        );
+        _proposeGuardian(keccak256(abi.encodePacked(owner)));
+
+        vm.expectRevert(
+            IOPF7702Recoverable.OPF7702Recoverable__GuardianCannotBeCurrentMasterKey.selector
+        );
+        _proposeGuardian(_computeKeyId(KeyType.WEBAUTHN, _getKeyP256(pK)));
+    }
+
+    function test_proposeGuardianAAWithRootKey() external createGuardians(3) {
+        _assertGuardianCount(1);
+
+        PackedUserOperation memory userOp = _getFreshUserOp();
+        userOp = _populateUserOp(
+            userOp,
+            _packCallData(mode_1, _getCalls(GuardianAction.PROPOSE, guardiansID.length)),
+            _packAccountGasLimits(600_000, 400_000),
+            800_000,
+            _packGasFees(80 gwei, 15 gwei),
+            hex""
         );
 
-        bytes32 structHash = keccak256(
-            abi.encode(INIT_TYPEHASH, keyEnc, keyDataEnc, skEnc, skDataEnc, initialGuardian)
+        bytes memory signature = _signUserOp(userOp);
+        userOp.signature = _encodeEOASignature(signature);
+
+        _relayUserOp(userOp);
+
+        _assertGuardianCount(1);
+        _assertPendingGuardians(3, true);
+    }
+
+    function test_confirmGuardianProposalWithRootKey() external createGuardians(3) {
+        _assertGuardianCount(1);
+        _executeGuardianAction(GuardianAction.PROPOSE, 3);
+        _assertGuardianCount(1);
+        _assertPendingGuardians(3, true);
+        _executeGuardianAction(GuardianAction.CONFIRM_PROPOSAL, 3);
+        _assertConfirmGuardians(3);
+        _assertGuardianCount(4);
+
+        bytes32[] memory guardian = recoveryManager.getGuardians(address(account));
+        assert(guardian.length == 4);
+    }
+
+    function test_confirmGuardianProposalAAWithRootKey() external createGuardians(3) {
+        _assertGuardianCount(1);
+
+        PackedUserOperation memory userOp = _getFreshUserOp();
+        userOp = _populateUserOp(
+            userOp,
+            _packCallData(mode_1, _getCalls(GuardianAction.PROPOSE, guardiansID.length)),
+            _packAccountGasLimits(600_000, 400_000),
+            800_000,
+            _packGasFees(80 gwei, 15 gwei),
+            hex""
         );
 
-        string memory name = "OPF7702Recoverable";
-        string memory version = "1";
+        bytes memory signature = _signUserOp(userOp);
+        userOp.signature = _encodeEOASignature(signature);
 
-        bytes32 domainSeparator = keccak256(
-            abi.encode(
-                TYPE_HASH, keccak256(bytes(name)), keccak256(bytes(version)), block.chainid, owner
-            )
+        _relayUserOp(userOp);
+
+        _assertGuardianCount(1);
+        _assertPendingGuardians(3, true);
+
+        userOp.nonce = _getNonce();
+        userOp.callData =
+            _packCallData(mode_1, _getCalls(GuardianAction.CONFIRM_PROPOSAL, guardiansID.length));
+        userOp.signature = _encodeEOASignature(_signUserOp(userOp));
+
+        vm.warp(block.timestamp + SECURITY_PERIOD + 1);
+        _relayUserOp(userOp);
+
+        _assertConfirmGuardians(3);
+        _assertGuardianCount(4);
+    }
+
+    function test_cancelGuardianProposalWithRootKey() external createGuardians(3) {
+        _assertGuardianCount(1);
+        _executeGuardianAction(GuardianAction.PROPOSE, 3);
+        _assertGuardianCount(1);
+        _assertPendingGuardians(3, true);
+        _executeGuardianAction(GuardianAction.CANCEL_PROPOSAL, 3);
+        _assertPendingGuardians(3, false);
+    }
+
+    function test_cancelGuardianProposalAAWithRootKey() external createGuardians(3) {
+        _assertGuardianCount(1);
+
+        PackedUserOperation memory userOp = _getFreshUserOp();
+        userOp = _populateUserOp(
+            userOp,
+            _packCallData(mode_1, _getCalls(GuardianAction.PROPOSE, guardiansID.length)),
+            _packAccountGasLimits(600_000, 400_000),
+            800_000,
+            _packGasFees(80 gwei, 15 gwei),
+            hex""
         );
-        bytes32 digest = MessageHashUtils.toTypedDataHash(domainSeparator, structHash);
 
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPk, digest);
-        bytes memory sig = abi.encodePacked(r, s, v);
+        bytes memory signature = _signUserOp(userOp);
+        userOp.signature = _encodeEOASignature(signature);
 
-        vm.etch(owner, abi.encodePacked(bytes3(0xef0100), address(implementation)));
-        account = OPF7702(payable(owner));
+        _relayUserOp(userOp);
 
-        vm.prank(address(entryPoint));
-        account.initialize(keyMK, keyData, keySK, keyData, sig, initialGuardian);
+        _assertGuardianCount(1);
+        _assertPendingGuardians(3, true);
+
+        userOp.nonce = _getNonce();
+        userOp.callData =
+            _packCallData(mode_1, _getCalls(GuardianAction.CANCEL_PROPOSAL, guardiansID.length));
+        userOp.signature = _encodeEOASignature(_signUserOp(userOp));
+
+        _relayUserOp(userOp);
+
+        _assertPendingGuardians(3, false);
+    }
+
+    function test_revokeGuardianProposalWithRootKey() external createGuardians(3) {
+        _assertGuardianCount(1);
+        _executeGuardianAction(GuardianAction.PROPOSE, 3);
+        _assertGuardianCount(1);
+        _assertPendingGuardians(3, true);
+        _executeGuardianAction(GuardianAction.CONFIRM_PROPOSAL, 3);
+        _assertConfirmGuardians(3);
+        _assertGuardianCount(4);
+        _executeGuardianAction(GuardianAction.REVOKE, 3);
+        _assertPendingGuardians(3, true);
+    }
+
+    function test_revokeGuardianProposalAAWithRootKey() external createGuardians(3) {
+        _assertGuardianCount(1);
+
+        PackedUserOperation memory userOp = _getFreshUserOp();
+        userOp = _populateUserOp(
+            userOp,
+            _packCallData(mode_1, _getCalls(GuardianAction.PROPOSE, guardiansID.length)),
+            _packAccountGasLimits(600_000, 400_000),
+            800_000,
+            _packGasFees(80 gwei, 15 gwei),
+            hex""
+        );
+
+        bytes memory signature = _signUserOp(userOp);
+        userOp.signature = _encodeEOASignature(signature);
+
+        _relayUserOp(userOp);
+
+        _assertGuardianCount(1);
+        _assertPendingGuardians(3, true);
+
+        userOp.nonce = _getNonce();
+        userOp.callData =
+            _packCallData(mode_1, _getCalls(GuardianAction.CONFIRM_PROPOSAL, guardiansID.length));
+        userOp.signature = _encodeEOASignature(_signUserOp(userOp));
+
+        vm.warp(block.timestamp + SECURITY_PERIOD + 1);
+        _relayUserOp(userOp);
+
+        _assertConfirmGuardians(3);
+        _assertGuardianCount(4);
+
+        userOp.nonce = _getNonce();
+        userOp.callData =
+            _packCallData(mode_1, _getCalls(GuardianAction.REVOKE, guardiansID.length));
+        userOp.signature = _encodeEOASignature(_signUserOp(userOp));
+
+        _relayUserOp(userOp);
+
+        _assertPendingGuardians(3, true);
+    }
+
+    function test_confirmGuardianRevocationWithRootKey() external createGuardians(3) {
+        _assertGuardianCount(1);
+        _executeGuardianAction(GuardianAction.PROPOSE, 3);
+        _assertGuardianCount(1);
+        _assertPendingGuardians(3, true);
+        _executeGuardianAction(GuardianAction.CONFIRM_PROPOSAL, 3);
+        _assertConfirmGuardians(3);
+        _assertGuardianCount(4);
+        _executeGuardianAction(GuardianAction.REVOKE, 3);
+        _assertPendingGuardians(3, true);
+        _executeGuardianAction(GuardianAction.CONFIRM_REVOCATION, 3);
+        _assertGuardianCount(1);
+    }
+
+    function test_confirmGuardianRevocationAAWithRootKey() external createGuardians(3) {
+        _assertGuardianCount(1);
+
+        PackedUserOperation memory userOp = _getFreshUserOp();
+        userOp = _populateUserOp(
+            userOp,
+            _packCallData(mode_1, _getCalls(GuardianAction.PROPOSE, guardiansID.length)),
+            _packAccountGasLimits(600_000, 400_000),
+            800_000,
+            _packGasFees(80 gwei, 15 gwei),
+            hex""
+        );
+
+        bytes memory signature = _signUserOp(userOp);
+        userOp.signature = _encodeEOASignature(signature);
+
+        _relayUserOp(userOp);
+
+        _assertGuardianCount(1);
+        _assertPendingGuardians(3, true);
+
+        userOp.nonce = _getNonce();
+        userOp.callData =
+            _packCallData(mode_1, _getCalls(GuardianAction.CONFIRM_PROPOSAL, guardiansID.length));
+        userOp.signature = _encodeEOASignature(_signUserOp(userOp));
+
+        vm.warp(block.timestamp + SECURITY_PERIOD + 1);
+        _relayUserOp(userOp);
+
+        _assertConfirmGuardians(3);
+        _assertGuardianCount(4);
+
+        userOp.nonce = _getNonce();
+        userOp.callData =
+            _packCallData(mode_1, _getCalls(GuardianAction.REVOKE, guardiansID.length));
+        userOp.signature = _encodeEOASignature(_signUserOp(userOp));
+
+        _relayUserOp(userOp);
+
+        _assertPendingGuardians(3, true);
+
+        userOp.nonce = _getNonce();
+        userOp.callData =
+            _packCallData(mode_1, _getCalls(GuardianAction.CONFIRM_REVOCATION, guardiansID.length));
+        userOp.signature = _encodeEOASignature(_signUserOp(userOp));
+
+        vm.warp(block.timestamp + SECURITY_PERIOD + 1);
+        _relayUserOp(userOp);
+
+        _assertGuardianCount(1);
+    }
+
+    function test_cancelGuardianRevocationWithRootKey() external createGuardians(3) {
+        _assertGuardianCount(1);
+        _executeGuardianAction(GuardianAction.PROPOSE, 3);
+        _assertGuardianCount(1);
+        _assertPendingGuardians(3, true);
+        _executeGuardianAction(GuardianAction.CONFIRM_PROPOSAL, 3);
+        _assertConfirmGuardians(3);
+        _assertGuardianCount(4);
+        _executeGuardianAction(GuardianAction.REVOKE, 3);
+        _assertPendingGuardians(3, true);
+        _executeGuardianAction(GuardianAction.CANCEL_REVOCATION, 3);
+        _assertPendingGuardians(3, false);
+    }
+
+    function test_cancelGuardianRevocationAAWithRootKey() external createGuardians(3) {
+        _assertGuardianCount(1);
+
+        PackedUserOperation memory userOp = _getFreshUserOp();
+        userOp = _populateUserOp(
+            userOp,
+            _packCallData(mode_1, _getCalls(GuardianAction.PROPOSE, guardiansID.length)),
+            _packAccountGasLimits(600_000, 400_000),
+            800_000,
+            _packGasFees(80 gwei, 15 gwei),
+            hex""
+        );
+
+        bytes memory signature = _signUserOp(userOp);
+        userOp.signature = _encodeEOASignature(signature);
+
+        _relayUserOp(userOp);
+
+        _assertGuardianCount(1);
+        _assertPendingGuardians(3, true);
+
+        userOp.nonce = _getNonce();
+        userOp.callData =
+            _packCallData(mode_1, _getCalls(GuardianAction.CONFIRM_PROPOSAL, guardiansID.length));
+        userOp.signature = _encodeEOASignature(_signUserOp(userOp));
+
+        vm.warp(block.timestamp + SECURITY_PERIOD + 1);
+        _relayUserOp(userOp);
+
+        _assertConfirmGuardians(3);
+        _assertGuardianCount(4);
+
+        userOp.nonce = _getNonce();
+        userOp.callData =
+            _packCallData(mode_1, _getCalls(GuardianAction.REVOKE, guardiansID.length));
+        userOp.signature = _encodeEOASignature(_signUserOp(userOp));
+
+        _relayUserOp(userOp);
+
+        _assertPendingGuardians(3, true);
+
+        userOp.nonce = _getNonce();
+        userOp.callData =
+            _packCallData(mode_1, _getCalls(GuardianAction.CANCEL_REVOCATION, guardiansID.length));
+        userOp.signature = _encodeEOASignature(_signUserOp(userOp));
+
+        _relayUserOp(userOp);
+
+        _assertPendingGuardians(3, false);
+    }
+
+    function test_startRecoveryWithRootKeyNewOwnerEOA()
+        external
+        createGuardians(3)
+        createNewOner(KeyType.EOA)
+    {
+        _assertGuardianCount(1);
+        _executeGuardianAction(GuardianAction.PROPOSE, 3);
+        _assertGuardianCount(1);
+        _assertPendingGuardians(3, true);
+        _executeGuardianAction(GuardianAction.CONFIRM_PROPOSAL, 3);
+        _assertConfirmGuardians(3);
+        _assertGuardianCount(4);
+        _executeGuardianAction(GuardianAction.START_RECOVERY, 1);
+        _assretStartRecovery();
+    }
+
+    function test_confirmRecoveryWithRootKeyNewOwnerEOA()
+        external
+        createGuardians(3)
+        createNewOner(KeyType.EOA)
+    {
+        _assertGuardianCount(1);
+        _executeGuardianAction(GuardianAction.PROPOSE, 3);
+        _assertGuardianCount(1);
+        _assertPendingGuardians(3, true);
+        _executeGuardianAction(GuardianAction.CONFIRM_PROPOSAL, 3);
+        _assertConfirmGuardians(3);
+        _assertGuardianCount(4);
+        _executeGuardianAction(GuardianAction.START_RECOVERY, 1);
+        _assretStartRecovery();
+        _signGuardians(2);
+        _executeConfirmRecovery();
+        _assretConfirmRecovery();
+    }
+
+    function test_startRecoveryWithRootKeyNewOwnerWebAuthn()
+        external
+        createGuardians(3)
+        createNewOner(KeyType.WEBAUTHN)
+    {
+        _assertGuardianCount(1);
+        _executeGuardianAction(GuardianAction.PROPOSE, 3);
+        _assertGuardianCount(1);
+        _assertPendingGuardians(3, true);
+        _executeGuardianAction(GuardianAction.CONFIRM_PROPOSAL, 3);
+        _assertConfirmGuardians(3);
+        _assertGuardianCount(4);
+        _executeGuardianAction(GuardianAction.START_RECOVERY, 1);
+        _assretStartRecovery();
+    }
+
+    function test_confirmRecoveryWithRootKeyNewOwnerWebAuthn()
+        external
+        createGuardians(3)
+        createNewOner(KeyType.WEBAUTHN)
+    {
+        _assertGuardianCount(1);
+        _executeGuardianAction(GuardianAction.PROPOSE, 3);
+        _assertGuardianCount(1);
+        _assertPendingGuardians(3, true);
+        _executeGuardianAction(GuardianAction.CONFIRM_PROPOSAL, 3);
+        _assertConfirmGuardians(3);
+        _assertGuardianCount(4);
+        _executeGuardianAction(GuardianAction.START_RECOVERY, 1);
+        _assretStartRecovery();
+        _signGuardians(2);
+        _executeConfirmRecovery();
+        _assretConfirmRecovery();
+    }
+
+    function test_cancelRecoveryWithRootKey()
+        external
+        createGuardians(3)
+        createNewOner(KeyType.EOA)
+    {
+        _assertGuardianCount(1);
+        _executeGuardianAction(GuardianAction.PROPOSE, 3);
+        _assertGuardianCount(1);
+        _assertPendingGuardians(3, true);
+        _executeGuardianAction(GuardianAction.CONFIRM_PROPOSAL, 3);
+        _assertConfirmGuardians(3);
+        _assertGuardianCount(4);
+        _executeGuardianAction(GuardianAction.START_RECOVERY, 1);
+        _assretStartRecovery();
+        _executeGuardianAction(GuardianAction.CANCEL_RECOVERY, 1);
+        _assertCancelRecovery();
+    }
+
+    function test_RevertConfirmGuardianProposalWhenPendingNotOver()
+        external
+        createGuardians(1)
+    {
+        _executeGuardianAction(GuardianAction.PROPOSE, 1);
+        vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__PendingProposalNotOver.selector);
+        _confirmGuardian(guardiansID[0]);
+    }
+
+    function test_RevertConfirmGuardianProposalWhenExpired()
+        external
+        createGuardians(1)
+    {
+        _executeGuardianAction(GuardianAction.PROPOSE, 1);
+        vm.warp(block.timestamp + SECURITY_PERIOD + SECURITY_WINDOW + 1);
+        vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__PendingProposalExpired.selector);
+        _confirmGuardian(guardiansID[0]);
+    }
+
+    function test_RevertRevokeGuardianDuplicatedRevoke() external createGuardians(1) {
+        _executeGuardianAction(GuardianAction.PROPOSE, 1);
+        _executeGuardianAction(GuardianAction.CONFIRM_PROPOSAL, 1);
+        _executeGuardianAction(GuardianAction.REVOKE, 1);
+        vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__DuplicatedRevoke.selector);
+        _revokeGuardian(guardiansID[0]);
+    }
+
+    function test_RevertConfirmGuardianRevocationWhenExpired() external createGuardians(1) {
+        _executeGuardianAction(GuardianAction.PROPOSE, 1);
+        _executeGuardianAction(GuardianAction.CONFIRM_PROPOSAL, 1);
+        _executeGuardianAction(GuardianAction.REVOKE, 1);
+        vm.warp(block.timestamp + SECURITY_PERIOD + SECURITY_WINDOW + 1);
+        vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__PendingRevokeExpired.selector);
+        _confirmGuardianRevocation(guardiansID[0]);
+    }
+
+    function test_RevertCancelGuardianRevocationWhenUnknown() external createGuardians(1) {
+        _executeGuardianAction(GuardianAction.PROPOSE, 1);
+        _executeGuardianAction(GuardianAction.CONFIRM_PROPOSAL, 1);
+        vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__UnknownRevoke.selector);
+        _cancelGuardianRevocation(guardiansID[0]);
+    }
+
+    function test_RevertCancelGuardianRevocationWhenNotGuardian() external createGuardians(1) {
+        vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__MustBeGuardian.selector);
+        _cancelGuardianRevocation(guardiansID[0]);
+    }
+
+    function test_RevertConfirmGuardianProposalDuringRecovery()
+        external
+        createGuardians(3)
+        createNewOner(KeyType.EOA)
+    {
+        _executeGuardianAction(GuardianAction.PROPOSE, 3);
+        _executeGuardianAction(GuardianAction.CONFIRM_PROPOSAL, 2);
+        _executeGuardianAction(GuardianAction.START_RECOVERY, 1);
+        vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__OngoingRecovery.selector);
+        _confirmGuardian(guardiansID[2]);
+    }
+
+    function test_RevertStartRecoveryUnsupportedKeyType()
+        external
+        createGuardians(3)
+        createNewOner(KeyType.EOA)
+    {
+        _executeGuardianAction(GuardianAction.PROPOSE, 3);
+        _executeGuardianAction(GuardianAction.CONFIRM_PROPOSAL, 3);
+        recoveryKey.keyType = KeyType.P256;
+        vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__UnsupportedKeyType.selector);
+        _executeGuardianAction(GuardianAction.START_RECOVERY, 1);
+    }
+
+    function test_RevertStartRecoveryWhenKeyActive()
+        external
+        createGuardians(3)
+        createNewOner(KeyType.EOA)
+    {
+        _executeGuardianAction(GuardianAction.PROPOSE, 3);
+        _executeGuardianAction(GuardianAction.CONFIRM_PROPOSAL, 3);
+        recoveryKey = mkReg;
+        vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__RecoverCannotBeActiveKey.selector);
+        _executeGuardianAction(GuardianAction.START_RECOVERY, 1);
+    }
+
+    function test_RevertStartRecoveryKeyCantBeZero()
+        external
+        createGuardians(3)
+        createNewOner(KeyType.EOA)
+    {
+        _executeGuardianAction(GuardianAction.PROPOSE, 3);
+        _executeGuardianAction(GuardianAction.CONFIRM_PROPOSAL, 3);
+        recoveryKey.key = "";
+        vm.expectRevert(IKeysManager.KeyManager__KeyCantBeZero.selector);
+        _executeGuardianAction(GuardianAction.START_RECOVERY, 1);
+    }
+
+    function test_RevertCompleteRecoveryInvalidSignatureAmount()
+        external
+        createGuardians(3)
+        createNewOner(KeyType.EOA)
+    {
+        _executeGuardianAction(GuardianAction.PROPOSE, 3);
+        _executeGuardianAction(GuardianAction.CONFIRM_PROPOSAL, 3);
+        _executeGuardianAction(GuardianAction.START_RECOVERY, 1);
+        _signGuardians(3);
+        vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__InvalidSignatureAmount.selector);
+        _executeConfirmRecovery();
+    }
+
+    function test_RevertCompleteRecoveryInvalidSignatureOrder()
+        external
+        createGuardians(3)
+        createNewOner(KeyType.EOA)
+    {
+        _executeGuardianAction(GuardianAction.PROPOSE, 3);
+        _executeGuardianAction(GuardianAction.CONFIRM_PROPOSAL, 3);
+        _executeGuardianAction(GuardianAction.START_RECOVERY, 1);
+        _signGuardians(2);
+        (_signatures[0], _signatures[1]) = (_signatures[1], _signatures[0]);
+        vm.expectRevert(
+            IOPF7702Recoverable.OPF7702Recoverable__InvalidRecoverySignatures.selector
+        );
+        _executeConfirmRecovery();
+    }
+
+    function test_RevertCancelRecoveryWhenNoOngoingRecovery() external {
+        vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__NoOngoingRecovery.selector);
+        _cancelRecovery();
+    }
+
+    function test_RevertSocialRecoveryManagerInsecurePeriod() external {
+        vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable_InsecurePeriod.selector);
+        new SocialRecoveryManager(
+            RECOVERY_PERIOD, RECOVERY_PERIOD - 1, SECURITY_PERIOD, SECURITY_WINDOW
+        );
+    }
+
+    function test_RevertInitializeGuardiansUnauthorized() external createGuardians(1) {
+        vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__Unauthorized.selector);
+        vm.prank(sender);
+        recoveryManager.initializeGuardians(address(account), guardiansID[0]);
+    }
+
+    function test_RevertProposeGuardianUnauthorized() external createGuardians(1) {
+        vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__Unauthorized.selector);
+        vm.prank(sender);
+        recoveryManager.proposeGuardian(address(account), guardiansID[0]);
+    }
+
+    function test_RevertProposeGuardianWhenLocked()
+        external
+        createGuardians(3)
+        createNewOner(KeyType.EOA)
+    {
+        _executeGuardianAction(GuardianAction.PROPOSE, 3);
+        _executeGuardianAction(GuardianAction.CONFIRM_PROPOSAL, 3);
+        _executeGuardianAction(GuardianAction.START_RECOVERY, 1);
+        vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__AccountLocked.selector);
+        _proposeGuardian(guardiansID[0]);
+    }
+
+    function test_RevertConfirmGuardianProposalUnauthorized() external createGuardians(1) {
+        vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__Unauthorized.selector);
+        vm.prank(sender);
+        recoveryManager.confirmGuardianProposal(address(account), guardiansID[0]);
+    }
+
+    function test_RevertConfirmGuardianProposalUnknown() external createGuardians(1) {
+        vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__UnknownProposal.selector);
+        _confirmGuardian(guardiansID[0]);
+    }
+
+    function test_RevertCancelGuardianProposalUnauthorized() external createGuardians(1) {
+        vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__Unauthorized.selector);
+        vm.prank(sender);
+        recoveryManager.cancelGuardianProposal(address(account), guardiansID[0]);
+    }
+
+    function test_RevertCancelGuardianProposalUnknown() external createGuardians(1) {
+        vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__UnknownProposal.selector);
+        _cancelGuardianProposal(guardiansID[0]);
+    }
+
+    function test_RevertCancelGuardianProposalDuplicatedGuardian() external createGuardians(1) {
+        _executeGuardianAction(GuardianAction.PROPOSE, 1);
+        _executeGuardianAction(GuardianAction.CONFIRM_PROPOSAL, 1);
+        _executeGuardianAction(GuardianAction.REVOKE, 1);
+        vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__DuplicatedGuardian.selector);
+        _cancelGuardianProposal(guardiansID[0]);
+    }
+
+    function test_RevertRevokeGuardianUnauthorized() external createGuardians(1) {
+        vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__Unauthorized.selector);
+        vm.prank(sender);
+        recoveryManager.revokeGuardian(address(account), guardiansID[0]);
+    }
+
+    function test_RevertRevokeGuardianMustBeGuardian() external createGuardians(1) {
+        vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__MustBeGuardian.selector);
+        _revokeGuardian(guardiansID[0]);
+    }
+
+    function test_RevertConfirmGuardianRevocationUnauthorized() external createGuardians(1) {
+        vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__Unauthorized.selector);
+        vm.prank(sender);
+        recoveryManager.confirmGuardianRevocation(address(account), guardiansID[0]);
+    }
+
+    function test_RevertConfirmGuardianRevocationUnknown() external createGuardians(1) {
+        vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__UnknownRevoke.selector);
+        _confirmGuardianRevocation(guardiansID[0]);
+    }
+
+    function test_RevertCancelGuardianRevocationUnauthorized() external createGuardians(1) {
+        vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__Unauthorized.selector);
+        vm.prank(sender);
+        recoveryManager.cancelGuardianRevocation(address(account), guardiansID[0]);
+    }
+
+    function test_RevertCancelGuardianRevocationMustBeGuardian() external createGuardians(1) {
+        vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__MustBeGuardian.selector);
+        vm.prank(address(account));
+        recoveryManager.cancelGuardianRevocation(address(account), guardiansID[0]);
+    }
+
+    function test_RevertStartRecoveryUnauthorized()
+        external
+        createGuardians(1)
+        createNewOner(KeyType.EOA)
+    {
+        vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__MustBeGuardian.selector);
+        vm.prank(sender);
+        recoveryManager.startRecovery(address(account), recoveryKey);
+    }
+
+    function test_RevertStartRecoveryOngoing()
+        external
+        createGuardians(3)
+        createNewOner(KeyType.EOA)
+    {
+        _executeGuardianAction(GuardianAction.PROPOSE, 3);
+        _executeGuardianAction(GuardianAction.CONFIRM_PROPOSAL, 3);
+        _executeGuardianAction(GuardianAction.START_RECOVERY, 1);
+        vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__OngoingRecovery.selector);
+        vm.prank(guardians[1]);
+        recoveryManager.startRecovery(address(account), recoveryKey);
+    }
+
+    function test_RevertCancelRecoveryUnauthorized() external {
+        vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__Unauthorized.selector);
+        vm.prank(sender);
+        recoveryManager.cancelRecovery(address(account));
+    }
+
+    function test_RevertCompleteRecoveryInvalidSignaturesDirect()
+        external
+        createGuardians(3)
+        createNewOner(KeyType.EOA)
+    {
+        _executeGuardianAction(GuardianAction.PROPOSE, 3);
+        _executeGuardianAction(GuardianAction.CONFIRM_PROPOSAL, 3);
+        _executeGuardianAction(GuardianAction.START_RECOVERY, 1);
+        _signGuardians(2);
+        (_signatures[0], _signatures[1]) = (_signatures[1], _signatures[0]);
+        vm.warp(block.timestamp + RECOVERY_PERIOD + 1);
+        _etch();
+        vm.expectRevert(
+            IOPF7702Recoverable.OPF7702Recoverable__InvalidRecoverySignatures.selector
+        );
+        vm.prank(address(account));
+        recoveryManager.completeRecovery(address(account), _signatures);
+    }
+
+    function _assertGuardianCount(uint256 _count) internal view {
+        uint256 guardianCount = recoveryManager.guardianCount(address(account));
+        assertEq(guardianCount, _count);
+    }
+
+    function _assertPendingGuardians(uint256 _count, bool _isPending) internal view {
+        for (uint256 i = 0; i < _count;) {
+            uint256 getPendingStatusGuardians =
+                recoveryManager.getPendingStatusGuardians(address(account), guardiansID[i]);
+            if (_isPending) {
+                assert(getPendingStatusGuardians > 0);
+            } else {
+                assert(getPendingStatusGuardians == 0);
+            }
+            unchecked {
+                ++i;
+            }
+        }
+    }
+
+    function _assertConfirmGuardians(uint256 _count) internal view {
+        for (uint256 i = 0; i < _count;) {
+            uint256 getPendingStatusGuardians =
+                recoveryManager.getPendingStatusGuardians(address(account), guardiansID[i]);
+            assert(getPendingStatusGuardians == 0);
+            assertTrue(recoveryManager.isGuardian(address(account), guardiansID[i]));
+            unchecked {
+                ++i;
+            }
+        }
+    }
+
+    function _assretStartRecovery() internal view {
+        uint64 _executeAfter = SafeCast.toUint64(block.timestamp + RECOVERY_PERIOD);
+        (KeyDataReg memory kDR, uint64 executeAfter, uint32 quorum) =
+            recoveryManager.recoveryData(address(account));
+        assertEq(
+            quorum,
+            SafeCast.toUint32(Math.ceilDiv(recoveryManager.guardianCount(address(account)), 2))
+        );
+        assertEq(_executeAfter, executeAfter);
+        assertEq(kDR.key, recoveryKey.key);
+        assertEq(uint8(kDR.keyControl), uint8(recoveryKey.keyControl));
+        assertEq(kDR.limits, recoveryKey.limits);
+        assertEq(kDR.validAfter, recoveryKey.validAfter);
+        assertEq(kDR.validUntil, recoveryKey.validUntil);
+        assertEq(uint8(kDR.keyType), uint8(recoveryKey.keyType));
+    }
+
+    function _assretConfirmRecovery() internal view {
+        (KeyDataReg memory kDR, uint64 executeAfter, uint32 quorum) =
+            recoveryManager.recoveryData(address(account));
+        assertEq(executeAfter, 0);
+        assertEq(quorum, 0);
+        assertEq(kDR.key.length, 0);
+        assertEq(uint8(kDR.keyControl), 0);
+        assertEq(uint8(kDR.keyType), 0);
+        assertEq(kDR.limits, 0);
+        assertEq(kDR.validAfter, 0);
+        assertEq(kDR.validUntil, 0);
+
+        (bytes32 keyId, KeyData memory data) = account.keyAt(0);
+        assertEq(keyId, _computeKeyId(recoveryKey));
+        assertTrue(data.isActive);
+        assertTrue(data.masterKey);
+        assertFalse(data.isDelegatedControl);
+        assertEq(data.key, recoveryKey.key);
+        assertEq(data.limits, recoveryKey.limits);
+        assertEq(data.validAfter, recoveryKey.validAfter);
+        assertEq(data.validUntil, recoveryKey.validUntil);
+        assertEq(uint8(data.keyType), uint8(recoveryKey.keyType));
+    }
+
+    function _assertCancelRecovery() internal view {
+        (KeyDataReg memory kDR, uint64 executeAfter, uint32 quorum) =
+            recoveryManager.recoveryData(address(account));
+        assertEq(executeAfter, 0);
+        assertEq(quorum, 0);
+        assertEq(kDR.key.length, 0);
+        assertEq(uint8(kDR.keyControl), 0);
+        assertEq(uint8(kDR.keyType), 0);
+        assertEq(kDR.limits, 0);
+        assertEq(kDR.validAfter, 0);
+        assertEq(kDR.validUntil, 0);
+        assertFalse(recoveryManager.isLocked(address(account)));
+    }
+
+    function _createGuardians(uint256 _index) internal {
+        for (uint256 i = 0; i < _index; i++) {
+            (address addr, uint256 pk) = makeAddrAndKey(string.concat("guardian", vm.toString(i)));
+            guardians.push(addr);
+            guardiansPK.push(pk);
+            guardiansID.push(keccak256(abi.encodePacked(addr)));
+            deal(addr, 1e18);
+        }
+    }
+
+    function _signGuardians(uint32 _quorom) internal {
+        (,, uint32 quorum) = recoveryManager.recoveryData(address(account));
+        if (_quorom < quorum) revert("Increase Quorom");
+
+        bytes32 digest = recoveryManager.getDigestToSign(address(account));
+
+        bytes32[] memory sortedGuardians = new bytes32[](_quorom);
+        uint256[] memory sortedGuardiansPK = new uint256[](_quorom);
+
+        for (uint256 i; i < _quorom;) {
+            sortedGuardians[i] = guardiansID[i];
+            sortedGuardiansPK[i] = guardiansPK[i];
+            unchecked {
+                ++i;
+            }
+        }
+
+        for (uint256 i; i < sortedGuardians.length; ++i) {
+            for (uint256 j = i + 1; j < sortedGuardians.length; ++j) {
+                if (sortedGuardians[j] < sortedGuardians[i]) {
+                    (sortedGuardians[i], sortedGuardians[j]) =
+                        (sortedGuardians[j], sortedGuardians[i]);
+                    (sortedGuardiansPK[i], sortedGuardiansPK[j]) =
+                        (sortedGuardiansPK[j], sortedGuardiansPK[i]);
+                }
+            }
+        }
+
+        for (uint256 i; i < _quorom;) {
+            (uint8 v, bytes32 r, bytes32 s) = vm.sign(sortedGuardiansPK[i], digest);
+            bytes memory sig = abi.encodePacked(r, s, v);
+            _signatures.push(sig);
+
+            unchecked {
+                ++i;
+            }
+        }
+    }
+
+    function _executeGuardianAction(GuardianAction action, uint256 _count) internal {
+        if (
+            action == GuardianAction.CONFIRM_PROPOSAL || action == GuardianAction.CONFIRM_REVOCATION
+        ) {
+            vm.warp(block.timestamp + SECURITY_PERIOD + 1);
+        }
+
+        if (action == GuardianAction.START_RECOVERY) {
+            vm.warp(block.timestamp + 1);
+            vm.prank(guardians[_count]);
+            recoveryManager.startRecovery(address(account), recoveryKey);
+            return;
+        }
+
+        if (action == GuardianAction.CANCEL_RECOVERY) {
+            _cancelRecovery();
+            return;
+        }
+
+        for (uint256 i = 0; i < _count;) {
+            if (action == GuardianAction.PROPOSE) {
+                _proposeGuardian(guardiansID[i]);
+            } else if (action == GuardianAction.CONFIRM_PROPOSAL) {
+                _confirmGuardian(guardiansID[i]);
+            } else if (action == GuardianAction.CANCEL_PROPOSAL) {
+                _cancelGuardianProposal(guardiansID[i]);
+            } else if (action == GuardianAction.REVOKE) {
+                _revokeGuardian(guardiansID[i]);
+            } else if (action == GuardianAction.CONFIRM_REVOCATION) {
+                _confirmGuardianRevocation(guardiansID[i]);
+            } else if (action == GuardianAction.CANCEL_REVOCATION) {
+                _cancelGuardianRevocation(guardiansID[i]);
+            }
+            unchecked {
+                ++i;
+            }
+        }
+    }
+
+    function _getCalls(GuardianAction action, uint256 _count)
+        internal
+        view
+        returns (Call[] memory)
+    {
+        Call[] memory calls = new Call[](_count);
+
+        if (action == GuardianAction.START_RECOVERY) {
+            bytes memory data = abi.encodeWithSelector(
+                SocialRecoveryManager.startRecovery.selector, address(account), recoveryKey
+            );
+            calls[0] = _createCall(address(recoveryManager), 0, data);
+        }
+
+        for (uint256 i = 0; i < _count;) {
+            if (action == GuardianAction.PROPOSE) {
+                bytes memory data = abi.encodeWithSelector(
+                    SocialRecoveryManager.proposeGuardian.selector, address(account), guardiansID[i]
+                );
+                calls[i] = _createCall(address(recoveryManager), 0, data);
+            } else if (action == GuardianAction.CONFIRM_PROPOSAL) {
+                bytes memory data = abi.encodeWithSelector(
+                    SocialRecoveryManager.confirmGuardianProposal.selector,
+                    address(account),
+                    guardiansID[i]
+                );
+                calls[i] = _createCall(address(recoveryManager), 0, data);
+            } else if (action == GuardianAction.CANCEL_PROPOSAL) {
+                bytes memory data = abi.encodeWithSelector(
+                    SocialRecoveryManager.cancelGuardianProposal.selector,
+                    address(account),
+                    guardiansID[i]
+                );
+                calls[i] = _createCall(address(recoveryManager), 0, data);
+            } else if (action == GuardianAction.REVOKE) {
+                bytes memory data = abi.encodeWithSelector(
+                    SocialRecoveryManager.revokeGuardian.selector, address(account), guardiansID[i]
+                );
+                calls[i] = _createCall(address(recoveryManager), 0, data);
+            } else if (action == GuardianAction.CONFIRM_REVOCATION) {
+                bytes memory data = abi.encodeWithSelector(
+                    SocialRecoveryManager.confirmGuardianRevocation.selector,
+                    address(account),
+                    guardiansID[i]
+                );
+                calls[i] = _createCall(address(recoveryManager), 0, data);
+            } else if (action == GuardianAction.CANCEL_REVOCATION) {
+                bytes memory data = abi.encodeWithSelector(
+                    SocialRecoveryManager.cancelGuardianRevocation.selector,
+                    address(account),
+                    guardiansID[i]
+                );
+                calls[i] = _createCall(address(recoveryManager), 0, data);
+            }
+            unchecked {
+                ++i;
+            }
+        }
+
+        return calls;
+    }
+
+    function _executeConfirmRecovery() internal {
+        vm.warp(block.timestamp + RECOVERY_PERIOD + 1);
+        _etch();
+        vm.prank(sender);
+        account.completeRecovery(_signatures);
+    }
+
+    function _relayUserOp(PackedUserOperation memory _userOp) internal {
+        PackedUserOperation[] memory ops = new PackedUserOperation[](1);
+        ops[0] = _userOp;
+
+        _etch();
+        vm.prank(sender);
+        entryPoint.handleOps(ops, payable(sender));
     }
 }

@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2025-08-29 18:57:14</td>
+            <td class="headerValue">2025-10-20 12:41:42</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -96,43 +96,31 @@
 <span id="L34"><span class="lineNum">      34</span>              :  *    == 107588995614188179791452663824698570634674667931787294340862201729294267929600</span>
 <span id="L35"><span class="lineNum">      35</span>              :  */</span>
 <span id="L36"><span class="lineNum">      36</span>              : contract OPFMain is OPF7702Recoverable layout at 107588995614188179791452663824698570634674667931787294340862201729294267929600 {</span>
-<span id="L37"><span class="lineNum">      37</span>              :     /// @param _entryPoint      ERC-4337 EntryPoint address.</span>
-<span id="L38"><span class="lineNum">      38</span>              :     /// @param _webAuthnVerifier WebAuthn verifier contract.</span>
-<span id="L39"><span class="lineNum">      39</span>              :     /// @param _recoveryPeriod  Delay before guardians can execute recovery.</span>
-<span id="L40"><span class="lineNum">      40</span>              :     /// @param _lockPeriod      How long the wallet stays locked after recovery.</span>
-<span id="L41"><span class="lineNum">      41</span>              :     /// @param _securityPeriod  Timelock for guardian add/remove.</span>
-<span id="L42"><span class="lineNum">      42</span>              :     /// @param _securityWindow  Window during which that action must be executed.</span>
+<span id="L37"><span class="lineNum">      37</span>              :     /**</span>
+<span id="L38"><span class="lineNum">      38</span>              :      * @param _entryPoint       ERC-4337 EntryPoint address.</span>
+<span id="L39"><span class="lineNum">      39</span>              :      * @param _webAuthnVerifier WebAuthn verifier contract for P-256/WebAuthn signature checks.</span>
+<span id="L40"><span class="lineNum">      40</span>              :      * @param _gasPolicy        Gas/UserOp policy contract (used for custodial key policy init).</span>
+<span id="L41"><span class="lineNum">      41</span>              :      * @param _recoveryManager  Social Recovery Manager contract that manages guardians &amp; recovery flow.</span>
+<span id="L42"><span class="lineNum">      42</span>              :      */</span>
 <span id="L43"><span class="lineNum">      43</span>              :     constructor(</span>
 <span id="L44"><span class="lineNum">      44</span>              :         address _entryPoint,</span>
 <span id="L45"><span class="lineNum">      45</span>              :         address _webAuthnVerifier,</span>
-<span id="L46"><span class="lineNum">      46</span>              :         uint256 _recoveryPeriod,</span>
-<span id="L47"><span class="lineNum">      47</span>              :         uint256 _lockPeriod,</span>
-<span id="L48"><span class="lineNum">      48</span>              :         uint256 _securityPeriod,</span>
-<span id="L49"><span class="lineNum">      49</span>              :         uint256 _securityWindow,</span>
-<span id="L50"><span class="lineNum">      50</span>              :         address _gasPolicy</span>
-<span id="L51"><span class="lineNum">      51</span>              :     )</span>
-<span id="L52"><span class="lineNum">      52</span>              :         OPF7702Recoverable(</span>
-<span id="L53"><span class="lineNum">      53</span>              :             _entryPoint,</span>
-<span id="L54"><span class="lineNum">      54</span>              :             _webAuthnVerifier,</span>
-<span id="L55"><span class="lineNum">      55</span>              :             _recoveryPeriod,</span>
-<span id="L56"><span class="lineNum">      56</span>              :             _lockPeriod,</span>
-<span id="L57"><span class="lineNum">      57</span>              :             _securityPeriod,</span>
-<span id="L58"><span class="lineNum">      58</span>              :             _securityWindow,</span>
-<span id="L59"><span class="lineNum">      59</span>              :             _gasPolicy</span>
-<span id="L60"><span class="lineNum">      60</span>              :         )</span>
-<span id="L61"><span class="lineNum">      61</span>              :     {}</span>
-<span id="L62"><span class="lineNum">      62</span>              : </span>
-<span id="L63"><span class="lineNum">      63</span>              :     /// @dev Upgrades the proxy delegation.</span>
-<span id="L64"><span class="lineNum">      64</span>              :     /// If this delegation is delegated directly without usage of EIP7702Proxy,</span>
-<span id="L65"><span class="lineNum">      65</span>              :     /// this operation will not affect the logic until the authority is redelegated</span>
-<span id="L66"><span class="lineNum">      66</span>              :     /// to a proper EIP7702Proxy. The `newImplementation` should implement</span>
-<span id="L67"><span class="lineNum">      67</span>              :     /// `upgradeProxyDelegation` or similar, otherwise upgrades will be locked and</span>
-<span id="L68"><span class="lineNum">      68</span>              :     /// only a new EIP-7702 transaction can change the authority's logic.</span>
-<span id="L69"><span class="lineNum">      69</span> <span class="tlaGNC">           1 :     function upgradeProxyDelegation(address newImplementation) public virtual {</span></span>
-<span id="L70"><span class="lineNum">      70</span> <span class="tlaUNC">           0 :         _requireForExecute();</span></span>
-<span id="L71"><span class="lineNum">      71</span> <span class="tlaGNC">           1 :         LibEIP7702.upgradeProxyDelegation(newImplementation);</span></span>
-<span id="L72"><span class="lineNum">      72</span>              :     }</span>
-<span id="L73"><span class="lineNum">      73</span>              : }</span>
+<span id="L46"><span class="lineNum">      46</span>              :         address _gasPolicy,</span>
+<span id="L47"><span class="lineNum">      47</span>              :         address _recoveryManager</span>
+<span id="L48"><span class="lineNum">      48</span>              :     ) OPF7702Recoverable(_entryPoint, _webAuthnVerifier, _gasPolicy, _recoveryManager) {}</span>
+<span id="L49"><span class="lineNum">      49</span>              : </span>
+<span id="L50"><span class="lineNum">      50</span>              :     /**</span>
+<span id="L51"><span class="lineNum">      51</span>              :      * @notice Updates the delegated implementation used by the EIP-7702 authority proxy.</span>
+<span id="L52"><span class="lineNum">      52</span>              :      * @dev    Has no effect if the authority is not currently delegated via an EIP-7702 proxy.</span>
+<span id="L53"><span class="lineNum">      53</span>              :      *         The `newImplementation` contract must expose an `upgradeProxyDelegation` entry point</span>
+<span id="L54"><span class="lineNum">      54</span>              :      *         (or equivalent) to allow future upgrades.</span>
+<span id="L55"><span class="lineNum">      55</span>              :      * @param newImplementation Address of the implementation contract to delegate to.</span>
+<span id="L56"><span class="lineNum">      56</span>              :      */</span>
+<span id="L57"><span class="lineNum">      57</span> <span class="tlaGNC">           1 :     function upgradeProxyDelegation(address newImplementation) public virtual {</span></span>
+<span id="L58"><span class="lineNum">      58</span> <span class="tlaUNC">           0 :         _requireForExecute();</span></span>
+<span id="L59"><span class="lineNum">      59</span> <span class="tlaGNC">           1 :         LibEIP7702.upgradeProxyDelegation(newImplementation);</span></span>
+<span id="L60"><span class="lineNum">      60</span>              :     }</span>
+<span id="L61"><span class="lineNum">      61</span>              : }</span>
         </pre>
               </td>
             </tr>

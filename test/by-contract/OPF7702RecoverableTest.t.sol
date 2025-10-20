@@ -1,448 +1,178 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.29;
-
-import {BaseContract} from "test/by-contract/BaseContract.t.sol";
-
-contract OPF7702RecoverableTest is BaseContract {
-    uint256 internal proposalTimestamp;
-    bytes[] internal _signatures;
-    bytes4[] selEmpt;
-
-    function test_proposeGuardianRevertAddressCantBeZero() public {
-        _etch();
-
-        vm.expectRevert(OPF7702Recoverable__AddressCantBeZero.selector);
-        vm.prank(owner);
-        account.proposeGuardian(bytes32(0));
-    }
-
-    function test_proposeGuardianRevertGuardianCannotBeAddressThis() public {
-        _etch();
-
-        vm.expectRevert(OPF7702Recoverable__GuardianCannotBeAddressThis.selector);
-        vm.prank(owner);
-        account.proposeGuardian(keccak256(abi.encodePacked(owner)));
-    }
-
-    function test_proposeGuardianRevertGuardianCannotBeCurrentMasterKey() public {
-        _etch();
-
-        Key memory k = account.getKeyById(0);
-        vm.expectRevert(OPF7702Recoverable__GuardianCannotBeCurrentMasterKey.selector);
-        vm.prank(owner);
-        account.proposeGuardian(keccak256(abi.encodePacked(k.eoaAddress)));
-    }
-
-    function test_proposeGuardianRevertDuplicatedGuardian() public {
-        _proposeGuardian(sender);
-        proposalTimestamp = block.timestamp;
-        _wrap(proposalTimestamp + SECURITY_PERIOD + 1);
-        _confirmGuardianProposal(sender);
-
-        _etch();
-
-        vm.expectRevert(OPF7702Recoverable__DuplicatedGuardian.selector);
-        vm.prank(owner);
-        account.proposeGuardian(keccak256(abi.encodePacked(sender)));
-    }
-
-    function test_proposeGuardianRevertDuplicatedProposal() public {
-        _proposeGuardian(sender);
-
-        _etch();
-
-        vm.expectRevert(OPF7702Recoverable__DuplicatedProposal.selector);
-        vm.prank(owner);
-        account.proposeGuardian(keccak256(abi.encodePacked(sender)));
-    }
-
-    function test_confirmGuardianProposalRevertAddressCantBeZero() public {
-        _etch();
-
-        vm.expectRevert(OPF7702Recoverable__AddressCantBeZero.selector);
-        vm.prank(owner);
-        account.confirmGuardianProposal(bytes32(0));
-    }
-
-    function test_confirmGuardianPendingProposalNotOver() public {
-        _proposeGuardian(sender);
-        proposalTimestamp = block.timestamp;
-        _wrap(proposalTimestamp + 1);
-
-        _etch();
-
-        vm.expectRevert(OPF7702Recoverable__PendingProposalNotOver.selector);
-        vm.prank(owner);
-        account.confirmGuardianProposal(keccak256(abi.encodePacked(sender)));
-    }
-
-    function test_confirmGuardianPendingProposalExpired() public {
-        _proposeGuardian(sender);
-        proposalTimestamp = block.timestamp;
-        _wrap(proposalTimestamp + 60 days);
-
-        _etch();
-
-        vm.expectRevert(OPF7702Recoverable__PendingProposalExpired.selector);
-        vm.prank(owner);
-        account.confirmGuardianProposal(keccak256(abi.encodePacked(sender)));
-    }
-
-    function test_confirmGuardianDuplicatedGuardian() public {
-        _proposeGuardian(sender);
-        proposalTimestamp = block.timestamp;
-        _wrap(proposalTimestamp + SECURITY_PERIOD + 1);
-        _confirmGuardianProposal(sender);
-
-        _etch();
-
-        _wrap(proposalTimestamp + SECURITY_PERIOD + 1);
-        vm.expectRevert(OPF7702Recoverable__UnknownProposal.selector);
-        vm.prank(owner);
-        account.confirmGuardianProposal(keccak256(abi.encodePacked(sender)));
-    }
-
-    function test_confirmGuardianProposal_reverts_DuplicatedGuardian_when_revoke_pending() public {
-        _proposeGuardian(sender);
-        proposalTimestamp = block.timestamp;
-        _wrap(proposalTimestamp + SECURITY_PERIOD + 1);
-        _confirmGuardianProposal(sender);
-
-        proposalTimestamp = block.timestamp;
-        _etch();
-        _revoke(sender);
-
-        _wrap(proposalTimestamp + SECURITY_PERIOD);
-
-        _etch();
-        vm.expectRevert(OPF7702Recoverable__DuplicatedGuardian.selector);
-        vm.prank(owner);
-        account.confirmGuardianProposal(keccak256(abi.encodePacked(sender)));
-    }
-
-    function test_cancelGuardianProposalDuplicatedGuardian() public {
-        _proposeGuardian(sender);
-        proposalTimestamp = block.timestamp;
-        _wrap(proposalTimestamp + SECURITY_PERIOD + 1);
-        _confirmGuardianProposal(sender);
-
-        _etch();
-
-        vm.expectRevert(OPF7702Recoverable__UnknownProposal.selector);
-        vm.prank(owner);
-        account.cancelGuardianProposal(keccak256(abi.encodePacked(sender)));
-    }
-
-    function test_cancelGuardianProposal_reverts_DuplicatedGuardian_when_revoke_pending() public {
-        _proposeGuardian(sender);
-        proposalTimestamp = block.timestamp;
-        _wrap(proposalTimestamp + SECURITY_PERIOD + 1);
-        _confirmGuardianProposal(sender);
-
-        _etch();
-        _revoke(sender);
-
-        _etch();
-        vm.expectRevert(OPF7702Recoverable__DuplicatedGuardian.selector);
-        vm.prank(owner);
-        account.cancelGuardianProposal(keccak256(abi.encodePacked(sender)));
-    }
-
-    function test_revokeGuardianDuplicatedGuardian() public {
-        _proposeGuardian(sender);
-        proposalTimestamp = block.timestamp;
-        _wrap(proposalTimestamp + SECURITY_PERIOD + 1);
-        _confirmGuardianProposal(sender);
-
-        proposalTimestamp = block.timestamp;
-        _wrap(proposalTimestamp + SECURITY_PERIOD + 1);
-        _revoke(sender);
-
-        _etch();
-
-        vm.expectRevert(OPF7702Recoverable__DuplicatedRevoke.selector);
-        vm.prank(owner);
-        account.revokeGuardian(keccak256(abi.encodePacked(sender)));
-    }
-
-    function test_confirmGuardianRevocationPendingRevokeNotOver() public {
-        _proposeGuardian(sender);
-        proposalTimestamp = block.timestamp;
-        _wrap(proposalTimestamp + SECURITY_PERIOD + 1);
-        _confirmGuardianProposal(sender);
-
-        proposalTimestamp = block.timestamp;
-        _wrap(proposalTimestamp + SECURITY_PERIOD + 1);
-        _revoke(sender);
-
-        _etch();
-
-        vm.expectRevert(OPF7702Recoverable__PendingRevokeNotOver.selector);
-        vm.prank(owner);
-        account.confirmGuardianRevocation(keccak256(abi.encodePacked(sender)));
-    }
-
-    function test_confirmGuardianRevocationPendingRevokeExpired() public {
-        _proposeGuardian(sender);
-        proposalTimestamp = block.timestamp;
-        _wrap(proposalTimestamp + SECURITY_PERIOD + 1);
-        _confirmGuardianProposal(sender);
-
-        proposalTimestamp = block.timestamp;
-        _wrap(proposalTimestamp + SECURITY_PERIOD + 1);
-        _revoke(sender);
-
-        proposalTimestamp = block.timestamp;
-        _wrap(proposalTimestamp + 30 days);
-
-        _etch();
-        vm.expectRevert(OPF7702Recoverable__PendingRevokeExpired.selector);
-        vm.prank(owner);
-        account.confirmGuardianRevocation(keccak256(abi.encodePacked(sender)));
-    }
-
-    function test_startRecoveryMustBeGuardian() public {
-        Key memory _recoveryKey = _getKey(bytes32(0), bytes32(0), ETH_RECIVE, KeyType.EOA);
-        _proposeGuardian(sender);
-        proposalTimestamp = block.timestamp;
-        _wrap(proposalTimestamp + SECURITY_PERIOD + 1);
-        _confirmGuardianProposal(sender);
-
-        _etch();
-
-        _wrap(proposalTimestamp + SECURITY_PERIOD + 1);
-        vm.expectRevert(OPF7702Recoverable__MustBeGuardian.selector);
-        vm.prank(ENTRYPOINT_V8);
-        account.startRecovery(_recoveryKey);
-    }
-
-    function test_startRecoveryUnsupportedKeyType() public {
-        Key memory _recoveryKey = _getKey(bytes32(0), bytes32(0), ETH_RECIVE, KeyType.P256);
-        _proposeGuardian(sender);
-        proposalTimestamp = block.timestamp;
-        _wrap(proposalTimestamp + SECURITY_PERIOD + 1);
-        _confirmGuardianProposal(sender);
-
-        _etch();
-
-        _wrap(proposalTimestamp + SECURITY_PERIOD + 1);
-        vm.expectRevert(OPF7702Recoverable__UnsupportedKeyType.selector);
-        vm.prank(sender);
-        account.startRecovery(_recoveryKey);
-    }
-
-    function test_startRecoveryAddressCantBeZero() public {
-        Key memory _recoveryKey = _getKey(bytes32(0), bytes32(0), address(0), KeyType.EOA);
-        _proposeGuardian(sender);
-        proposalTimestamp = block.timestamp;
-        _wrap(proposalTimestamp + SECURITY_PERIOD + 1);
-        _confirmGuardianProposal(sender);
-
-        _etch();
-
-        _wrap(proposalTimestamp + SECURITY_PERIOD + 1);
-        vm.expectRevert(OPF7702Recoverable__AddressCantBeZero.selector);
-        vm.prank(sender);
-        account.startRecovery(_recoveryKey);
-    }
-
-    function test_startRecoveryRecoverCannotBeActiveKey() public {
-        Key memory _recoveryKey = account.getKeyById(0);
-        _proposeGuardian(sender);
-        proposalTimestamp = block.timestamp;
-        _wrap(proposalTimestamp + SECURITY_PERIOD + 1);
-        _confirmGuardianProposal(sender);
-
-        _etch();
-
-        _wrap(proposalTimestamp + SECURITY_PERIOD + 1);
-        vm.expectRevert(OPF7702Recoverable__RecoverCannotBeActiveKey.selector);
-        vm.prank(sender);
-        account.startRecovery(_recoveryKey);
-    }
-
-    function test_startRecoveryGuardianCannotBeOwner() public {
-        Key memory _recoveryKey = _getKey(bytes32(0), bytes32(0), sender, KeyType.EOA);
-        _proposeGuardian(sender);
-        proposalTimestamp = block.timestamp;
-        _wrap(proposalTimestamp + SECURITY_PERIOD + 1);
-        _confirmGuardianProposal(sender);
-
-        _etch();
-
-        _wrap(proposalTimestamp + SECURITY_PERIOD + 1);
-        vm.expectRevert(OPF7702Recoverable__GuardianCannotBeOwner.selector);
-        vm.prank(sender);
-        account.startRecovery(_recoveryKey);
-    }
-
-    function test_completeRecoveryOngoingRecovery() public {
-        _proposeGuardian(sender);
-        proposalTimestamp = block.timestamp;
-        _wrap(proposalTimestamp + SECURITY_PERIOD + 1);
-        _confirmGuardianProposal(sender);
-
-        _startRecovery();
-
-        _etch();
-
-        vm.expectRevert(OPF7702Recoverable__OngoingRecovery.selector);
-        vm.prank(sender);
-        account.completeRecovery(_signatures);
-    }
-
-    function test_completeRecoveryInvalidSignatureAmount() public {
-        _proposeGuardian(sender);
-        proposalTimestamp = block.timestamp;
-        _wrap(proposalTimestamp + SECURITY_PERIOD + 1);
-        _confirmGuardianProposal(sender);
-
-        _startRecovery();
-
-        _etch();
-
-        proposalTimestamp = block.timestamp;
-        _wrap(proposalTimestamp + RECOVERY_PERIOD + 1);
-
-        vm.expectRevert(OPF7702Recoverable__InvalidSignatureAmount.selector);
-        vm.prank(sender);
-        account.completeRecovery(_signatures);
-    }
-
-    function test_completeRecoveryInvalidRecoverySignatures() public {
-        _proposeGuardian(sender);
-        proposalTimestamp = block.timestamp;
-        _wrap(proposalTimestamp + SECURITY_PERIOD + 1);
-        _confirmGuardianProposal(sender);
-
-        _startRecovery();
-
-        bytes32 digest = keccak256("digest");
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(senderPK, digest);
-
-        _signatures.push(abi.encodePacked(r, s, v));
-        _etch();
-
-        proposalTimestamp = block.timestamp;
-        _wrap(proposalTimestamp + RECOVERY_PERIOD + 1);
-
-        vm.expectRevert(OPF7702Recoverable__InvalidRecoverySignatures.selector);
-        vm.prank(sender);
-        account.completeRecovery(_signatures);
-    }
-
-    function test_completeRecoveryKeyRegistered() public {
-        _proposeGuardian(sender);
-        proposalTimestamp = block.timestamp;
-        _wrap(proposalTimestamp + SECURITY_PERIOD + 1);
-        _confirmGuardianProposal(sender);
-
-        _startRecovery();
-
-        bytes32 digest = account.getDigestToSign();
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(senderPK, digest);
-
-        (, Key memory k, KeyReg memory kReg) = _createAnyKey(
-            bytes32(0),
-            bytes32(0),
-            GUARDIAN_EOA_ADDRESS,
-            KeyType.EOA,
-            TOKEN,
-            100e18,
-            uint48(block.timestamp + 1 days),
-            0,
-            10,
-            ETH_RECIVE,
-            0.1e18,
-            selEmpt
+pragma solidity 0.8.29;
+
+import {Deploy} from "./../Deploy.t.sol";
+import {MockERC20} from "src/mocks/MockERC20.sol";
+import {GasPolicy} from "src/utils/GasPolicy.sol";
+import {OPFMain as OPF7702} from "src/core/OPFMain.sol";
+import {SocialRecoveryManager} from "src/utils/SocialRecover.sol";
+import {WebAuthnVerifierV2} from "src/utils/WebAuthnVerifierV2.sol";
+import {IOPF7702Recoverable} from "src/interfaces/IOPF7702Recoverable.sol";
+import {IEntryPoint} from "lib/account-abstraction/contracts/interfaces/IEntryPoint.sol";
+import {MessageHashUtils} from
+    "lib/openzeppelin-contracts/contracts/utils/cryptography/MessageHashUtils.sol";
+
+contract OPF7702RecoverableTest is Deploy {
+    error GasPolicy__InitializationIncorrect();
+    error OpenfortBaseAccount7702V1__InvalidSignature();
+    error OPF7702Recoverable__AddressCantBeZero();
+
+    PubKey internal pK;
+
+    function test_RevretOPF7702Recoverable_InsecurePeriodAndGasPolicy__InitializationIncorrect()
+        external
+    {
+        vm.startPrank(sender);
+
+        entryPoint = IEntryPoint(payable(ENTRYPOINT_V8));
+        webAuthn = WebAuthnVerifierV2(payable(WEBAUTHN_VERIFIER));
+        vm.expectRevert(GasPolicy__InitializationIncorrect.selector);
+        gasPolicy = new GasPolicy(0, DEFAULT_VGL, DEFAULT_CGL, DEFAULT_PMV, DEFAULT_PO);
+        recoveryManager = new SocialRecoveryManager(
+            RECOVERY_PERIOD, LOCK_PERIOD, SECURITY_PERIOD, SECURITY_WINDOW
         );
 
+        implementation = new OPF7702(
+            address(entryPoint), WEBAUTHN_VERIFIER, address(gasPolicy), address(recoveryManager)
+        );
+
+        vm.stopPrank();
+    }
+
+    function test_RevertOpenfortBaseAccount7702V1__InvalidSignature() external {
+        vm.startPrank(sender);
+
+        entryPoint = IEntryPoint(payable(ENTRYPOINT_V8));
+        webAuthn = WebAuthnVerifierV2(payable(WEBAUTHN_VERIFIER));
+        gasPolicy = new GasPolicy(DEFAULT_PVG, DEFAULT_VGL, DEFAULT_CGL, DEFAULT_PMV, DEFAULT_PO);
+        recoveryManager = new SocialRecoveryManager(
+            RECOVERY_PERIOD, LOCK_PERIOD, SECURITY_PERIOD, SECURITY_WINDOW
+        );
+
+        _createInitialGuradian();
+
+        implementation = new OPF7702(
+            address(entryPoint), WEBAUTHN_VERIFIER, address(gasPolicy), address(recoveryManager)
+        );
+
+        erc20 = new MockERC20();
+
         _etch();
+
+        vm.stopPrank();
+
+        _createQuickFreshKey(true);
+        _createQuickFreshKey(false);
+
+        bytes memory mkDataEnc = abi.encode(
+            mkReg.keyType,
+            mkReg.validUntil,
+            mkReg.validAfter,
+            mkReg.limits,
+            mkReg.key,
+            mkReg.keyControl
+        );
+
+        bytes memory skDataEnc = abi.encode(
+            skReg.keyType,
+            skReg.validUntil,
+            skReg.validAfter,
+            skReg.limits,
+            skReg.key,
+            skReg.keyControl
+        );
+
+        bytes32 structHash =
+            keccak256(abi.encode(INIT_TYPEHASH, mkDataEnc, skDataEnc, _initialGuardian));
+
+        string memory name = "OPF7702Recoverable";
+        string memory version = "0";
+
+        bytes32 domainSeparator = keccak256(
+            abi.encode(
+                TYPE_HASH, keccak256(bytes(name)), keccak256(bytes(version)), block.chainid, owner
+            )
+        );
+        bytes32 digest = MessageHashUtils.toTypedDataHash(domainSeparator, structHash);
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPK, digest);
+        bytes memory sig = abi.encodePacked(r, s, v);
+
+        _etch();
+        vm.expectRevert(OpenfortBaseAccount7702V1__InvalidSignature.selector);
         vm.prank(owner);
-        account.registerKey(k, kReg);
-
-        _signatures.push(abi.encodePacked(r, s, v));
-
-        _etch();
-
-        proposalTimestamp = block.timestamp;
-        _wrap(proposalTimestamp + RECOVERY_PERIOD + 1);
-
-        vm.expectRevert(KeyManager__KeyRegistered.selector);
-        vm.prank(sender);
-        account.completeRecovery(_signatures);
+        account.initialize(mkReg, skReg, sig, _initialGuardian);
     }
 
-    function test_requireRecoveryRevertsNoOngoingRecovery() public {
+    function test_RevertOPF7702Recoverable__AddressCantBeZero() external {
+        vm.startPrank(sender);
+
+        entryPoint = IEntryPoint(payable(ENTRYPOINT_V8));
+        webAuthn = WebAuthnVerifierV2(payable(WEBAUTHN_VERIFIER));
+        gasPolicy = new GasPolicy(DEFAULT_PVG, DEFAULT_VGL, DEFAULT_CGL, DEFAULT_PMV, DEFAULT_PO);
+        recoveryManager = new SocialRecoveryManager(
+            RECOVERY_PERIOD, LOCK_PERIOD, SECURITY_PERIOD, SECURITY_WINDOW
+        );
+
+        _createInitialGuradian();
+
+        implementation = new OPF7702(
+            address(entryPoint), WEBAUTHN_VERIFIER, address(gasPolicy), address(recoveryManager)
+        );
+
+        erc20 = new MockERC20();
+
         _etch();
 
-        vm.expectRevert(OPF7702Recoverable__NoOngoingRecovery.selector);
+        vm.stopPrank();
+
+        _createInitialGuradian();
+
+        _populateWebAuthn("eth.json", ".eth");
+        pK = PubKey({x: DEF_WEBAUTHN.X, y: DEF_WEBAUTHN.Y});
+
+        _createCustomFreshKey(
+            true, KeyType.WEBAUTHN, type(uint48).max, 0, 0, _getKeyP256(pK), KeyControl.Self
+        );
+        _createQuickFreshKey(false);
+
+        bytes memory mkDataEnc = abi.encode(
+            mkReg.keyType,
+            mkReg.validUntil,
+            mkReg.validAfter,
+            mkReg.limits,
+            mkReg.key,
+            mkReg.keyControl
+        );
+
+        bytes memory skDataEnc = abi.encode(
+            skReg.keyType,
+            skReg.validUntil,
+            skReg.validAfter,
+            skReg.limits,
+            skReg.key,
+            skReg.keyControl
+        );
+
+        bytes32 structHash = keccak256(abi.encode(INIT_TYPEHASH, mkDataEnc, skDataEnc, bytes32(0)));
+
+        string memory name = "OPF7702Recoverable";
+        string memory version = "1";
+
+        bytes32 domainSeparator = keccak256(
+            abi.encode(
+                TYPE_HASH, keccak256(bytes(name)), keccak256(bytes(version)), block.chainid, owner
+            )
+        );
+        bytes32 digest = MessageHashUtils.toTypedDataHash(domainSeparator, structHash);
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPK, digest);
+        bytes memory sig = abi.encodePacked(r, s, v);
+
+        _etch();
+        vm.expectRevert(OPF7702Recoverable__AddressCantBeZero.selector);
         vm.prank(owner);
-        account.cancelRecovery();
-    }
-
-    function test_requireRecoveryOngoingRecoveryConfirmGuardianProposal() public {
-        _proposeGuardian(sender);
-        proposalTimestamp = block.timestamp;
-        _wrap(proposalTimestamp + SECURITY_PERIOD + 1);
-        _confirmGuardianProposal(sender);
-
-        _startRecovery();
-
-        _etch();
-        vm.expectRevert(OPF7702Recoverable__OngoingRecovery.selector);
-        vm.prank(owner);
-        account.confirmGuardianProposal(keccak256(abi.encodePacked(sender)));
-    }
-
-    function test_getGuardians() public view {
-        bytes32[] memory guardians = account.getGuardians();
-
-        assertEq(initialGuardian, guardians[0]);
-    }
-
-    function _proposeGuardian(address _guardian) internal {
-        _etch();
-
-        vm.prank(owner);
-        account.proposeGuardian(keccak256(abi.encodePacked(_guardian)));
-    }
-
-    function _confirmGuardianProposal(address _guardian) internal {
-        _etch();
-
-        vm.prank(owner);
-        account.confirmGuardianProposal(keccak256(abi.encodePacked(_guardian)));
-    }
-
-    function _revoke(address _guardian) internal {
-        _etch();
-
-        vm.prank(owner);
-        account.revokeGuardian(keccak256(abi.encodePacked(_guardian)));
-    }
-
-    function _startRecovery() internal {
-        Key memory _recoveryKey = _getKey(bytes32(0), bytes32(0), GUARDIAN_EOA_ADDRESS, KeyType.EOA);
-
-        _wrap(proposalTimestamp + SECURITY_PERIOD + 1);
-
-        _etch();
-
-        vm.prank(sender);
-        account.startRecovery(_recoveryKey);
-    }
-
-    function _wrap(uint256 _time) internal {
-        vm.warp(_time);
-    }
-
-    function _getKey(bytes32 _x, bytes32 _y, address _eoa, KeyType keyType)
-        internal
-        pure
-        returns (Key memory recoveryKey)
-    {
-        recoveryKey = Key({pubKey: PubKey({x: _x, y: _y}), eoaAddress: _eoa, keyType: keyType});
+        account.initialize(mkReg, skReg, sig, bytes32(0));
     }
 }

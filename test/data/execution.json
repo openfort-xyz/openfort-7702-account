@@ -1,0 +1,34 @@
+{
+    "batch": {
+        "challenge": "0xb3dc75bdf6e0365104000f50a3e9c7c6cb96a8729b2ef110f284e8dc9084f6a7",
+        "x": "0x5e0fd17fb09ea446cbf3e92fc95c7085571034d4f2f465980db7e9cc6d2187e2",
+        "y": "0xc5b5131579127bee600e649350b80a3495cd5c8b8b4b056b3deba98908d9773f",
+        "metadata": {
+            "authenticatorData": "0x49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d97631d00000000",
+            "clientDataJSON": "{\"type\":\"webauthn.get\",\"challenge\":\"s9x1vfbgNlEEAA9Qo-nHxsuWqHKbLvEQ8oTo3JCE9qc\",\"origin\":\"http://localhost:5173\",\"crossOrigin\":false}",
+            "challengeIndex": 23,
+            "typeIndex": 1,
+            "userVerificationRequired": true
+        },
+        "signature": {
+            "r": "0x6aa154b9b07769b10a8a6348c0c77fda5d0010874f0adb186abfeaf9d62cb2eb",
+            "s": "0x35bb968473d3709def4e8b7436a5b2543a233802116935cf71055ca2756457ae"
+        }
+    },
+    "batchofbatches": {
+        "challenge": "0x972c09a5a229ddc18ba10c5f19f4ed47156c00a319966201e4ce93a8eec9a05f",
+        "x": "0x5e0fd17fb09ea446cbf3e92fc95c7085571034d4f2f465980db7e9cc6d2187e2",
+        "y": "0xc5b5131579127bee600e649350b80a3495cd5c8b8b4b056b3deba98908d9773f",
+        "metadata": {
+            "authenticatorData": "0x49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d97631d00000000",
+            "clientDataJSON": "{\"type\":\"webauthn.get\",\"challenge\":\"lywJpaIp3cGLoQxfGfTtRxVsAKMZlmIB5M6TqO7JoF8\",\"origin\":\"http://localhost:5173\",\"crossOrigin\":false}",
+            "challengeIndex": 23,
+            "typeIndex": 1,
+            "userVerificationRequired": true
+        },
+        "signature": {
+            "r": "0x8b8b3fc62ad15d31b7ad7b8c1dc85cd33c52444f35a42c71f089d792036655d6",
+            "s": "0x13436ddf47712b72f621882f2385b3f2fbc3246b03d90099b9ce35e839dbf5bc"
+        }
+    }
+}

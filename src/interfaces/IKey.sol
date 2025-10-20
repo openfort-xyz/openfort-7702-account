@@ -1,9 +1,12 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.29;
+pragma solidity 0.8.29;
 
-import {ISpendLimit} from "src/interfaces/ISpendLimit.sol";
-
+/// @title IKey
+/// @author Openfort@0xkoiner
+/// @notice Common key types and registration payloads used by OPF 7702 accounts.
+/// @dev Consumed by KeysManager / OPF7702 / OPF7702Recoverable.
+/// @custom:encoding EOA keys are `abi.encode(address)`. P-256 / WebAuthn keys are `abi.encode(bytes32 x, bytes32 y)`.
 interface IKey {
     /**
      * @notice Types of keys supported by the account.
@@ -23,6 +26,13 @@ interface IKey {
         P256NONKEY
     }
 
+    /// @notice Control mode for a key: self-managed or custodial.
+    /// @dev `Custodial` keys may delegate gas/policy logic (e.g. via `GAS_POLICY`).
+    enum KeyControl {
+        Self,
+        Custodial
+    }
+
     /**
      * @notice Public key structure for P256 curve used in WebAuthn
      * @param x X-coordinate of the public key
@@ -33,65 +43,41 @@ interface IKey {
         bytes32 y;
     }
 
-    /**
-     * @notice Key structure containing all necessary key information
-     * @param pubKey Public key information for WebAuthn keys
-     * @param eoaAddress EOA address for standard Ethereum accounts
-     * @param keyType Type of the key (EOA or WebAuthn)
-     */
-    struct Key {
-        PubKey pubKey;
-        address eoaAddress;
-        KeyType keyType;
-    }
-
-    /**
-     * @notice Key data structure containing permissions and limits
-     * @param pubKey Public key information
-     * @param isActive Whether the key is currently active
-     * @param validUntil Timestamp until which the key is valid
-     * @param validAfter Timestamp after which the key becomes valid
-     * @param limit Number of transactions allowed (0 for unlimited/master key)
-     * @param masterKey Whether this is a master key with unlimited permissions
-     * @param whitelisting Whether contract address whitelisting is enabled
-     * @param whitelist Mapping of whitelisted contract addresses
-     * @param spendTokenInfo Token spending limit information
-     * @param allowedSelectors List of allowed function selectors
-     * @param ethLimit Maximum amount of ETH that can be spent
-     */
+    /// @notice Stored key metadata and state.
+    /// @dev `limits` is a TX quota (consumed on successful calls); spend limits for tokens are tracked separately.
     struct KeyData {
-        PubKey pubKey;
+        /// @notice Cryptographic key type (e.g., EOA / P256 / WEBAUTHN).
+        KeyType keyType;
+        /// @notice Whether the key is currently active (paused/revoked sets this to false).
         bool isActive;
-        uint48 validUntil;
-        uint48 validAfter;
-        uint48 limit;
+        /// @notice True if this is the master/admin key.
         bool masterKey;
-        bool whitelisting;
-        mapping(address contractAddress => bool allowed) whitelist;
-        ISpendLimit.SpendTokenInfo spendTokenInfo;
-        bytes4[] allowedSelectors;
-        uint256 ethLimit;
+        /// @notice True if control is delegated (see {KeyControl.Custodial}).
+        bool isDelegatedControl;
+        /// @notice Inclusive expiry timestamp (key invalid after this time).
+        uint48 validUntil;
+        /// @notice Not-before timestamp (key invalid before this time).
+        uint48 validAfter;
+        /// @notice Remaining transactions quota for this key (decremented on use).
+        uint48 limits;
+        /// @notice Encoded key
+        bytes key;
     }
 
-    /**
-     * @notice KeyReg data structure containing permissions and limits
-     * @param validUntil Timestamp until which the key is valid
-     * @param validAfter Timestamp after which the key becomes valid
-     * @param limit Number of transactions allowed (0 for unlimited/master key)
-     * @param whitelisting Whether contract address whitelisting is enabled
-     * @param contractAddress Whitelisted contract addresses
-     * @param spendTokenInfo Token spending limit information
-     * @param allowedSelectors List of allowed function selectors
-     * @param ethLimit Maximum amount of ETH that can be spent
-     */
-    struct KeyReg {
+    /// @notice Registration payload for creating a new key.
+    /// @dev Mirrors {KeyData} minus derived fields; used during `registerKey`.
+    struct KeyDataReg {
+        /// @notice Cryptographic key type (e.g., EOA / P256 / WEBAUTHN).
+        KeyType keyType;
+        /// @notice Inclusive expiry timestamp for the new key.
         uint48 validUntil;
+        /// @notice Not-before timestamp for the new key.
         uint48 validAfter;
-        uint48 limit;
-        bool whitelisting;
-        address contractAddress;
-        ISpendLimit.SpendTokenInfo spendTokenInfo;
-        bytes4[] allowedSelectors;
-        uint256 ethLimit;
+        /// @notice Initial transactions quota (must be zero for master keys).
+        uint48 limits;
+        /// @notice Encoded key
+        bytes key;
+        /// @notice Control mode for this key (self vs custodial).
+        KeyControl keyControl;
     }
 }

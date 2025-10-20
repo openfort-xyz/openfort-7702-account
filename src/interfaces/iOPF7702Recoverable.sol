@@ -1,186 +1,163 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.29;
+pragma solidity ^0.8.29;
 
 import {IKey} from "./IKey.sol";
 import {IOPF7702} from "./IOPF7702.sol";
 
-/// @title Interface for OPF7702Recoverable
-/// @notice Extends the core IOPF7702 with guardian‐based recovery functions.
+/// @title IOPF7702Recoverable
+/// @notice Interface extension for the guardian-recoverable variant of the Openfort 7702 account.
 interface IOPF7702Recoverable is IOPF7702 {
-    // ──────────────────────────────────────────────────────────────────────────────
-    //                                 Structs
-    // ──────────────────────────────────────────────────────────────────────────────
+    // =============================================================
+    //                              STRUCTS
+    // =============================================================
 
-    /// @notice Metadata kept for each guardian.
-    /// @param isActive    Whether the guardian is currently active.
-    /// @param index       Index of the guardian hash inside `guardians` array (for O(1) removal).
-    /// @param pending     Timestamp after which a proposal/revoke can be executed (0 = none).
+    /// @notice Metadata tracked for each guardian hash.
     struct GuardianIdentity {
         bool isActive;
         uint256 index;
         uint256 pending;
     }
 
-    /// @notice Encapsulates guardian related state.
-    /// @param guardians  Array of guardian identifiers (hashes) in insertion order.
-    /// @param data       Mapping from guardian hash to metadata.
-    /// @param lock       Global lock timestamp – wallet is locked until this moment.
+    /// @notice Aggregate guardian state maintained by the Social Recovery manager.
     struct GuardiansData {
         bytes32[] guardians;
         mapping(bytes32 hashAddress => GuardianIdentity guardianIdentity) data;
         uint256 lock;
     }
 
-    /// @notice Recovery flow state variables.
-    /// @param key                The new master key proposed by guardians.
-    /// @param executeAfter       Timestamp after which recovery can be executed.
-    /// @param guardiansRequired  Number of guardian signatures required to complete recovery.
+    /// @notice Snapshot of an active recovery flow.
     struct RecoveryData {
-        Key key;
+        IKey.KeyDataReg key;
         uint64 executeAfter;
         uint32 guardiansRequired;
     }
 
-    // ──────────────────────────────────────────────────────────────────────────────
-    //                                 Errors
-    // ──────────────────────────────────────────────────────────────────────────────
+    // =============================================================
+    //                              ERRORS
+    // =============================================================
 
-    /// @dev Thrown when the account is in a temporary locked state.
+    /// @notice The wallet is temporarily locked.
     error OPF7702Recoverable__AccountLocked();
-    /// @dev Thrown when a guardian revocation is unknown for the given guardian.
+    /// @notice Guardian revocation data not found.
     error OPF7702Recoverable__UnknownRevoke();
-    /// @notice Thrown when setUp incorrect of recovery time settings
+    /// @notice Recovery timing parameters violate security constraints.
     error OPF7702Recoverable_InsecurePeriod();
-    /// @dev Thrown when the caller must be an active guardian but is not.
+    /// @notice Caller must be an active guardian.
     error OPF7702Recoverable__MustBeGuardian();
-    /// @dev Thrown when a guardian addition proposal is unknown.
+    /// @notice Guardian proposal data not found.
     error OPF7702Recoverable__UnknownProposal();
-    /// @dev Thrown when another recovery flow is already in progress.
+    /// @notice Recovery already in progress.
     error OPF7702Recoverable__OngoingRecovery();
-    /// @dev Thrown when trying to revoke a guardian twice in the same security window.
+    /// @notice Duplicate guardian revocation detected.
     error OPF7702Recoverable__DuplicatedRevoke();
-    /// @dev Thrown when no recovery is currently active but one is required.
+    /// @notice No recovery in progress.
     error OPF7702Recoverable__NoOngoingRecovery();
-    /// @dev Thrown when both address in a guardian are zero values.
+    /// @notice Zero address/identifier supplied where not allowed.
     error OPF7702Recoverable__AddressCantBeZero();
-    /// @dev Thrown when a duplicate guardian proposal is submitted in the security window.
+    /// @notice Duplicate guardian proposal detected.
     error OPF7702Recoverable__DuplicatedProposal();
-    /// @dev Thrown when attempting to add a guardian that is already active.
+    /// @notice Guardian already active.
     error OPF7702Recoverable__DuplicatedGuardian();
-    /// @dev Thrown when a key type different from EOA or WebAuthn is supplied where unsupported.
+    /// @notice Provided key type is unsupported for recovery.
     error OPF7702Recoverable__UnsupportedKeyType();
-    /// @dev Thrown when the revoke window has not elapsed yet.
+    /// @notice Guardian revocation timelock not elapsed yet.
     error OPF7702Recoverable__PendingRevokeNotOver();
-    /// @dev Thrown when the revoke confirmation window has expired.
+    /// @notice Guardian revocation confirmation window expired.
     error OPF7702Recoverable__PendingRevokeExpired();
-    /// @dev Thrown when the recovery address is already a guardian.
+    /// @notice Proposed recovery owner is already a guardian.
     error OPF7702Recoverable__GuardianCannotBeOwner();
-    /// @dev Thrown when no guardians are configured on the wallet.
+    /// @notice Wallet has no guardians configured.
     error OPF7702Recoverable__NoGuardiansSetOnWallet();
-    /// @dev Thrown when the proposal confirmation window has expired.
+    /// @notice Guardian proposal confirmation window expired.
     error OPF7702Recoverable__PendingProposalExpired();
-    /// @dev Thrown when the amount of guardian signatures provided is incorrect.
+    /// @notice Number of guardian signatures supplied is incorrect.
     error OPF7702Recoverable__InvalidSignatureAmount();
-    /// @dev Thrown when attempting to confirm a proposal before the timelock elapses.
+    /// @notice Guardian proposal timelock not elapsed yet.
     error OPF7702Recoverable__PendingProposalNotOver();
-    /// @dev Thrown when recovery equals the current key.
+    /// @notice Caller is not authorized to perform the requested action.
+    error OPF7702Recoverable__Unauthorized();
+    /// @notice Recovery cannot target a key that is currently active on the wallet.
     error OPF7702Recoverable__RecoverCannotBeActiveKey();
-    /// @dev Thrown when guardian-supplied signatures are invalid.
+    /// @notice Guardian signatures failed validation.
     error OPF7702Recoverable__InvalidRecoverySignatures();
     /// @dev Thrown when guardian address equals the wallet itself.
     error OPF7702Recoverable__GuardianCannotBeAddressThis();
     /// @dev Thrown when guardian equals the current master key.
     error OPF7702Recoverable__GuardianCannotBeCurrentMasterKey();
 
-    // ──────────────────────────────────────────────────────────────────────────────
-    //                                 Events
-    // ──────────────────────────────────────────────────────────────────────────────
+    // =============================================================
+    //                             EVENTS
+    // =============================================================
 
-    /// @notice Emitted when a new guardian proposal is created.
-    event GuardianProposed(bytes32 indexed guardianHash, uint256 executeAfter);
-    /// @notice Emitted when a guardian proposal is confirmed and guardian becomes active.
-    event GuardianAdded(bytes32 indexed guardianHash);
-    /// @notice Emitted when a guardian proposal is cancelled.
-    event GuardianProposalCancelled(bytes32 indexed guardianHash);
-    /// @notice Emitted when a guardian revocation is scheduled.
-    event GuardianRevocationScheduled(bytes32 indexed guardianHash, uint256 executeAfter);
-    /// @notice Emitted when guardian revocation is confirmed and guardian removed.
-    event GuardianRemoved(bytes32 indexed guardianHash);
-    /// @notice Emitted when a scheduled revocation is cancelled.
-    event GuardianRevocationCancelled(bytes32 indexed guardianHash);
-    /// @notice Emitted when guardians start the recovery process.
+    /// @notice Emitted when guardians initiate a recovery flow.
+    /// @param executeAfter  Timestamp after which recovery can be executed.
+    /// @param guardiansRequired Number of guardian signatures required.
     event RecoveryStarted(uint64 executeAfter, uint32 guardiansRequired);
-    /// @notice Emitted when recovery completes and a new master key is set.
+
+    /// @notice Emitted when a recovery flow successfully completes.
     event RecoveryCompleted();
-    /// @notice Emitted when an ongoing recovery is cancelled.
+
+    /// @notice Emitted when an in-progress recovery is cancelled.
     event RecoveryCancelled();
-    /// @notice Emitted when the wallet is locked.
-    event WalletLocked(bool isLocked);
 
-    // ──────────────────────────────────────────────────────────────────────────────
-    //                             Public / External
-    // ──────────────────────────────────────────────────────────────────────────────
+    /// @notice Emitted when a guardian hash is activated.
+    event GuardianAdded(bytes32 indexed guardian);
+    /// @notice Emitted when a guardian hash is proposed for activation.
+    event GuardianProposed(bytes32 indexed guardian, uint256 pendingUntil);
+    /// @notice Emitted when a guardian proposal is withdrawn.
+    event GuardianProposalCancelled(bytes32 indexed guardian);
+    /// @notice Emitted when a guardian revocation is scheduled.
+    event GuardianRevocationScheduled(bytes32 indexed guardian, uint256 pendingUntil);
+    /// @notice Emitted when a guardian is removed.
+    event GuardianRemoved(bytes32 indexed guardian);
+    /// @notice Emitted when a scheduled guardian revocation is cancelled.
+    event GuardianRevocationCancelled(bytes32 indexed guardian);
+    /// @notice Emitted whenever the wallet lock state toggles.
+    /// @param locked True when the wallet becomes locked; false when unlocked.
+    event WalletLocked(bool indexed locked);
 
-    /// @notice Initialize with a master key + first guardian
+    // =============================================================
+    //                         EXTERNAL FUNCTIONS
+    // =============================================================
+
+    /**
+     * @notice Initialize the account with a master key, optional session key, and seed guardian set.
+     * @param _keyData         Master-key registration payload.
+     * @param _sessionKeyData  Optional session-key registration payload (ignored if `.key` is empty).
+     * @param _signature       Signature by the contract authorizing initialization.
+     * @param _initialGuardian Guardian hash to seed in the social recovery manager.
+     */
     function initialize(
-        Key calldata _key,
-        KeyReg calldata _keyData,
+        IKey.KeyDataReg calldata _keyData,
+        IKey.KeyDataReg calldata _sessionKeyData,
         bytes memory _signature,
         bytes32 _initialGuardian
     ) external;
 
-    /// @notice Propose a new guardian (after securityPeriod)
-    function proposeGuardian(bytes32 _guardian) external;
-
-    /// @notice Confirm a previously proposed guardian
-    function confirmGuardianProposal(bytes32 _guardian) external;
-
-    /// @notice Cancel a guardian proposal
-    function cancelGuardianProposal(bytes32 _guardian) external;
-
-    /// @notice Schedule removal of an existing guardian
-    function revokeGuardian(bytes32 _guardian) external;
-
-    /// @notice Confirm a scheduled guardian removal
-    function confirmGuardianRevocation(bytes32 _guardian) external;
-
-    /// @notice Cancel a guardian removal
-    function cancelGuardianRevocation(bytes32 _guardian) external;
-
-    /// @notice Start recovery by proposing a new master key (guardian signatures to follow)
-    function startRecovery(IKey.Key calldata _recoveryKey) external;
-
-    /// @notice Complete recovery with guardian signatures
-    function completeRecovery(bytes[] calldata _signatures) external;
-
-    /// @notice Cancel an in-progress recovery
-    function cancelRecovery() external;
-
-    // ──────────────────────────────────────────────────────────────────────────────
-    //                              View / Getter
-    // ──────────────────────────────────────────────────────────────────────────────
-
-    /// @notice Current recovery proposal data
-    function recoveryData()
+    /**
+     * @notice Finalize recovery by supplying guardian approvals obtained off-chain.
+     * @param _signatures Encoded guardian signatures authorizing the new master key.
+     * @return recoveryOwner The master-key registration data that was activated.
+     */
+    function completeRecovery(bytes[] calldata _signatures)
         external
-        view
-        returns (IKey.Key memory key, uint64 executeAfter, uint32 guardiansRequired);
+        returns (IKey.KeyDataReg memory recoveryOwner);
 
-    /// @notice All active guardian hashes
-    function getGuardians() external view returns (bytes32[] memory);
+    /**
+     * @notice Return the EIP-712 digest that must be signed to authorize `initialize`.
+     * @param _keyData         Master-key registration payload.
+     * @param _sessionKeyData  Session-key registration payload.
+     * @param _initialGuardian Guardian hash supplied during initialization.
+     * @return digest Typed data hash for the initialization payload.
+     */
+    function getDigestToInit(
+        IKey.KeyDataReg calldata _keyData,
+        IKey.KeyDataReg calldata _sessionKeyData,
+        bytes32 _initialGuardian
+    ) external view returns (bytes32 digest);
 
-    /// @notice Pending timestamp for a guardian’s proposal/revocation
-    function getPendingStatusGuardians(bytes32 _guardian) external view returns (uint256);
-
-    /// @notice Whether the wallet is currently locked
-    function isLocked() external view returns (bool);
-
-    /// @notice True if the given address is an active guardian
-    function isGuardian(bytes32 _guardian) external view returns (bool);
-
-    /// @notice Number of active guardians
-    function guardianCount() external view returns (uint256);
-
-    /// @notice EIP-712 digest that guardians must sign for recovery
-    function getDigestToSign() external view returns (bytes32);
+    /**
+     * @notice Address of the SocialRecoveryManager contract bound to this account.
+     */
+    function RECOVERY_MANAGER() external view returns (address);
 }

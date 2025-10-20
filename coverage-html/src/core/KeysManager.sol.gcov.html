@@ -31,18 +31,18 @@
             <td class="headerValue">lcov.info</td>
             <td></td>
             <td class="headerItem">Lines:</td>
-            <td class="headerCovTableEntryHi">94.5&nbsp;%</td>
-            <td class="headerCovTableEntry">91</td>
-            <td class="headerCovTableEntry">86</td>
+            <td class="headerCovTableEntryHi">93.0&nbsp;%</td>
+            <td class="headerCovTableEntry">158</td>
+            <td class="headerCovTableEntry">147</td>
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2025-08-29 18:57:14</td>
+            <td class="headerValue">2025-10-20 12:41:42</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
-            <td class="headerCovTableEntry">13</td>
-            <td class="headerCovTableEntry">13</td>
+            <td class="headerCovTableEntry">29</td>
+            <td class="headerCovTableEntry">29</td>
           </tr>
                   <tr><td><img src="../../glass.png" width=3 height=3 alt=""></td></tr>
                 </table>
@@ -74,360 +74,567 @@
 <span id="L12"><span class="lineNum">      12</span>              : </span>
 <span id="L13"><span class="lineNum">      13</span>              : // SPDX-License-Identifier: MIT</span>
 <span id="L14"><span class="lineNum">      14</span>              : </span>
-<span id="L15"><span class="lineNum">      15</span>              : pragma solidity ^0.8.29;</span>
+<span id="L15"><span class="lineNum">      15</span>              : pragma solidity 0.8.29;</span>
 <span id="L16"><span class="lineNum">      16</span>              : </span>
 <span id="L17"><span class="lineNum">      17</span>              : import {IKey} from &quot;src/interfaces/IKey.sol&quot;;</span>
-<span id="L18"><span class="lineNum">      18</span>              : import {KeyHashLib} from &quot;src/libs/KeyHashLib.sol&quot;;</span>
-<span id="L19"><span class="lineNum">      19</span>              : import {BaseOPF7702} from &quot;src/core/BaseOPF7702.sol&quot;;</span>
-<span id="L20"><span class="lineNum">      20</span>              : import {IUserOpPolicy} from &quot;src/interfaces/IPolicy.sol&quot;;</span>
-<span id="L21"><span class="lineNum">      21</span>              : import {ValidationLib} from &quot;src/libs/ValidationLib.sol&quot;;</span>
-<span id="L22"><span class="lineNum">      22</span>              : import {ISpendLimit} from &quot;src/interfaces/ISpendLimit.sol&quot;;</span>
-<span id="L23"><span class="lineNum">      23</span>              : import {IKeysManager} from &quot;src/interfaces/IKeysManager.sol&quot;;</span>
+<span id="L18"><span class="lineNum">      18</span>              : import {BaseOPF7702} from &quot;src/core/BaseOPF7702.sol&quot;;</span>
+<span id="L19"><span class="lineNum">      19</span>              : import {IUserOpPolicy} from &quot;src/interfaces/IPolicy.sol&quot;;</span>
+<span id="L20"><span class="lineNum">      20</span>              : import {KeysManagerLib} from &quot;src/libs/KeysManagerLib.sol&quot;;</span>
+<span id="L21"><span class="lineNum">      21</span>              : import {IKeysManager} from &quot;src/interfaces/IKeysManager.sol&quot;;</span>
+<span id="L22"><span class="lineNum">      22</span>              : import {EnumerableSetLib} from &quot;lib/solady/src/utils/EnumerableSetLib.sol&quot;;</span>
+<span id="L23"><span class="lineNum">      23</span>              : import {EnumerableMapLib} from &quot;lib/solady/src/utils/EnumerableMapLib.sol&quot;;</span>
 <span id="L24"><span class="lineNum">      24</span>              : </span>
 <span id="L25"><span class="lineNum">      25</span>              : /// @title KeysManager</span>
 <span id="L26"><span class="lineNum">      26</span>              : /// @author Openfort@0xkoiner</span>
-<span id="L27"><span class="lineNum">      27</span>              : /// @notice Manages registration, revocation, and querying of keys (WebAuthn/P256/EOA) with spending limits and</span>
-<span id="L28"><span class="lineNum">      28</span>              : /// whitelisting support.</span>
-<span id="L29"><span class="lineNum">      29</span>              : /// @dev Inherits BaseOPF7702 for account abstraction, IKey interface, and SpendLimit for token/ETH limits.</span>
-<span id="L30"><span class="lineNum">      30</span>              : abstract contract KeysManager is BaseOPF7702, IKey, ISpendLimit {</span>
-<span id="L31"><span class="lineNum">      31</span>              :     using KeyHashLib for Key;</span>
-<span id="L32"><span class="lineNum">      32</span>              :     using ValidationLib for *;</span>
-<span id="L33"><span class="lineNum">      33</span>              : </span>
-<span id="L34"><span class="lineNum">      34</span>              :     // =============================================================</span>
-<span id="L35"><span class="lineNum">      35</span>              :     //                          CONSTANTS</span>
-<span id="L36"><span class="lineNum">      36</span>              :     // =============================================================</span>
-<span id="L37"><span class="lineNum">      37</span>              : </span>
-<span id="L38"><span class="lineNum">      38</span>              :     /// @notice Maximum number of allowed function selectors per key</span>
-<span id="L39"><span class="lineNum">      39</span>              :     uint256 internal constant MAX_SELECTORS = 10;</span>
-<span id="L40"><span class="lineNum">      40</span>              : </span>
-<span id="L41"><span class="lineNum">      41</span>              :     // =============================================================</span>
-<span id="L42"><span class="lineNum">      42</span>              :     //                          STATE VARIABLES</span>
-<span id="L43"><span class="lineNum">      43</span>              :     // =============================================================</span>
-<span id="L44"><span class="lineNum">      44</span>              : </span>
-<span id="L45"><span class="lineNum">      45</span>              :     /// @notice Incremental ID for WebAuthn/P256/P256NONKEY keys</span>
-<span id="L46"><span class="lineNum">      46</span>              :     /// @dev Id = 0 always saved for MasterKey (Admin)</span>
-<span id="L47"><span class="lineNum">      47</span>              :     uint256 public id;</span>
-<span id="L48"><span class="lineNum">      48</span>              : </span>
-<span id="L49"><span class="lineNum">      49</span>              :     /// @notice Mapping from key ID to Key struct (WebAuthn/P256/P256NONKEY)</span>
-<span id="L50"><span class="lineNum">      50</span>              :     mapping(uint256 =&gt; Key) public idKeys;</span>
-<span id="L51"><span class="lineNum">      51</span>              :     /// @notice Mapping from hashed public key to Key struct (WebAuthn/P256/P256NONKEY)</span>
-<span id="L52"><span class="lineNum">      52</span>              :     mapping(bytes32 =&gt; KeyData) public keys;</span>
-<span id="L53"><span class="lineNum">      53</span>              :     /// @notice Tracks used challenges (to prevent replay) in WebAuthn</span>
-<span id="L54"><span class="lineNum">      54</span>              :     mapping(bytes32 =&gt; bool) public usedChallenges;</span>
+<span id="L27"><span class="lineNum">      27</span>              : /// @notice Manages registration, revocation, limits, and call permissions for keys (EOA/WebAuthn/P-256).</span>
+<span id="L28"><span class="lineNum">      28</span>              : /// @dev Inherits BaseOPF7702. Uses enumerable maps/sets for can-call and token-spend, with capacities 2048/64.</span>
+<span id="L29"><span class="lineNum">      29</span>              : /// @custom:inspired-by Ithaca Account (Token Spend &amp; Can Call permission model)</span>
+<span id="L30"><span class="lineNum">      30</span>              : abstract contract KeysManager is BaseOPF7702, IKeysManager, IKey {</span>
+<span id="L31"><span class="lineNum">      31</span>              :     using KeysManagerLib for *;</span>
+<span id="L32"><span class="lineNum">      32</span>              :     using EnumerableSetLib for *;</span>
+<span id="L33"><span class="lineNum">      33</span>              :     using EnumerableMapLib for *;</span>
+<span id="L34"><span class="lineNum">      34</span>              : </span>
+<span id="L35"><span class="lineNum">      35</span>              :     // =============================================================</span>
+<span id="L36"><span class="lineNum">      36</span>              :     //                          CONSTANTS</span>
+<span id="L37"><span class="lineNum">      37</span>              :     // =============================================================</span>
+<span id="L38"><span class="lineNum">      38</span>              : </span>
+<span id="L39"><span class="lineNum">      39</span>              :     /// @notice Wildcard sentinel for “any target” in can-call rules.</span>
+<span id="L40"><span class="lineNum">      40</span>              :     address internal constant ANY_TARGET = 0x3232323232323232323232323232323232323232;</span>
+<span id="L41"><span class="lineNum">      41</span>              :     /// @notice Wildcard sentinel for “any function selector” in can-call rules.</span>
+<span id="L42"><span class="lineNum">      42</span>              :     bytes4 internal constant ANY_FN_SEL = 0x32323232;</span>
+<span id="L43"><span class="lineNum">      43</span>              :     /// @notice Pseudo-selector used to permit calls with empty calldata (e.g., plain ETH transfers).</span>
+<span id="L44"><span class="lineNum">      44</span>              :     bytes4 internal constant EMPTY_CALLDATA_FN_SEL = 0xe0e0e0e0;</span>
+<span id="L45"><span class="lineNum">      45</span>              :     /// @notice Pseudo-address representing native ETH in spend rules.</span>
+<span id="L46"><span class="lineNum">      46</span>              :     address internal constant NATIVE_ADDRESS = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;</span>
+<span id="L47"><span class="lineNum">      47</span>              : </span>
+<span id="L48"><span class="lineNum">      48</span>              :     // =============================================================</span>
+<span id="L49"><span class="lineNum">      49</span>              :     //                          STATE VARIABLES</span>
+<span id="L50"><span class="lineNum">      50</span>              :     // =============================================================</span>
+<span id="L51"><span class="lineNum">      51</span>              : </span>
+<span id="L52"><span class="lineNum">      52</span>              :     /// @notice Incremental ID for WebAuthn/P256/P256NONKEY keys</span>
+<span id="L53"><span class="lineNum">      53</span>              :     /// @dev Id = 0 always saved for MasterKey (Admin)</span>
+<span id="L54"><span class="lineNum">      54</span>              :     uint256 public id;</span>
 <span id="L55"><span class="lineNum">      55</span>              : </span>
-<span id="L56"><span class="lineNum">      56</span>              :     // =============================================================</span>
-<span id="L57"><span class="lineNum">      57</span>              :     //                 PUBLIC / EXTERNAL FUNCTIONS</span>
-<span id="L58"><span class="lineNum">      58</span>              :     // =============================================================</span>
-<span id="L59"><span class="lineNum">      59</span>              : </span>
-<span id="L60"><span class="lineNum">      60</span>              :     /**</span>
-<span id="L61"><span class="lineNum">      61</span>              :      * @notice Registers a new  key with specified permissions and limits.</span>
-<span id="L62"><span class="lineNum">      62</span>              :      * @dev Only callable by ADMIN_ROLE via `_requireForExecute()`. Supports both WebAuthn/P256/P256NONKEY and EOA key</span>
-<span id="L63"><span class="lineNum">      63</span>              :      * types.</span>
-<span id="L64"><span class="lineNum">      64</span>              :      *      - For WebAuthn/P256/P256NONKEY, computes `keyId = keccak256(pubKey.x, pubKey.y)`.</span>
-<span id="L65"><span class="lineNum">      65</span>              :      *      - For EOA, uses `eoaAddress` as `keyId`.</span>
-<span id="L66"><span class="lineNum">      66</span>              :      *      Requires `_validUntil &gt; block.timestamp`, `_validAfter ≤ _validUntil`, and that the key is not active.</span>
-<span id="L67"><span class="lineNum">      67</span>              :      *      Emits `KeyRegistrated(keyId)`.</span>
-<span id="L68"><span class="lineNum">      68</span>              :      *</span>
-<span id="L69"><span class="lineNum">      69</span>              :      * @param _key             Struct containing key information (PubKey or EOA).</span>
-<span id="L70"><span class="lineNum">      70</span>              :      * @param _keyData KeyReg data structure containing permissions and limits</span>
-<span id="L71"><span class="lineNum">      71</span>              :      */</span>
-<span id="L72"><span class="lineNum">      72</span> <span class="tlaGNC">         790 :     function registerKey(Key calldata _key, KeyReg calldata _keyData) public {</span></span>
-<span id="L73"><span class="lineNum">      73</span> <span class="tlaUNC">           0 :         _requireForExecute();</span></span>
-<span id="L74"><span class="lineNum">      74</span>              :         // Must have limit checks to prevent register masterKey</span>
-<span id="L75"><span class="lineNum">      75</span> <span class="tlaGNC">         789 :         _keyData.limit.ensureLimit();</span></span>
-<span id="L76"><span class="lineNum">      76</span>              : </span>
-<span id="L77"><span class="lineNum">      77</span>              :         // Validate timestamps</span>
-<span id="L78"><span class="lineNum">      78</span> <span class="tlaGNC">         788 :         ValidationLib.ensureValidTimestamps(_keyData.validAfter, _keyData.validUntil);</span></span>
-<span id="L79"><span class="lineNum">      79</span>              : </span>
-<span id="L80"><span class="lineNum">      80</span> <span class="tlaGNC">         787 :         bytes32 keyId = _key.computeKeyId();</span></span>
-<span id="L81"><span class="lineNum">      81</span>              : </span>
-<span id="L82"><span class="lineNum">      82</span> <span class="tlaGNC">         787 :         KeyData storage sKey = keys[keyId];</span></span>
-<span id="L83"><span class="lineNum">      83</span>              : </span>
-<span id="L84"><span class="lineNum">      84</span> <span class="tlaGNC">           1 :         if (sKey.isActive) {</span></span>
-<span id="L85"><span class="lineNum">      85</span> <span class="tlaGNC">           1 :             revert IKeysManager.KeyManager__KeyRegistered();</span></span>
-<span id="L86"><span class="lineNum">      86</span>              :         }</span>
-<span id="L87"><span class="lineNum">      87</span>              : </span>
-<span id="L88"><span class="lineNum">      88</span> <span class="tlaGNC">         786 :         _addKey(sKey, _key, _keyData);</span></span>
-<span id="L89"><span class="lineNum">      89</span>              : </span>
-<span id="L90"><span class="lineNum">      90</span>              :         // Store Key struct by ID and increment</span>
-<span id="L91"><span class="lineNum">      91</span> <span class="tlaGNC">         786 :         idKeys[id] = _key;</span></span>
-<span id="L92"><span class="lineNum">      92</span>              :         unchecked {</span>
-<span id="L93"><span class="lineNum">      93</span> <span class="tlaGNC">         783 :             id++;</span></span>
-<span id="L94"><span class="lineNum">      94</span>              :         }</span>
-<span id="L95"><span class="lineNum">      95</span>              : </span>
-<span id="L96"><span class="lineNum">      96</span> <span class="tlaGNC">         786 :         emit IKeysManager.KeyRegistrated(keyId);</span></span>
-<span id="L97"><span class="lineNum">      97</span>              :     }</span>
-<span id="L98"><span class="lineNum">      98</span>              : </span>
-<span id="L99"><span class="lineNum">      99</span>              :     /**</span>
-<span id="L100"><span class="lineNum">     100</span>              :      * @notice Revokes a specific key, marking it inactive and clearing its parameters.</span>
-<span id="L101"><span class="lineNum">     101</span>              :      * @dev Only callable by ADMIN_ROLE via `_requireForExecute()`. Works for both WebAuthn/P256/P256NONKEY and EOA</span>
-<span id="L102"><span class="lineNum">     102</span>              :      * keys.</span>
-<span id="L103"><span class="lineNum">     103</span>              :      *      Emits `KeyRevoked(keyId)`.</span>
-<span id="L104"><span class="lineNum">     104</span>              :      *</span>
-<span id="L105"><span class="lineNum">     105</span>              :      * @param _key Struct containing key information to revoke:</span>
-<span id="L106"><span class="lineNum">     106</span>              :      *             • For WebAuthn/P256/P256NONKEY: uses `pubKey` to compute `keyId`.</span>
-<span id="L107"><span class="lineNum">     107</span>              :      *             • For EOA: uses `eoaAddress` (must be non‐zero).</span>
-<span id="L108"><span class="lineNum">     108</span>              :      */</span>
-<span id="L109"><span class="lineNum">     109</span> <span class="tlaGNC">           7 :     function revokeKey(Key calldata _key) external {</span></span>
-<span id="L110"><span class="lineNum">     110</span> <span class="tlaUNC">           0 :         _requireForExecute();</span></span>
+<span id="L56"><span class="lineNum">      56</span>              :     /// @notice Mapping from key ID to Key hash ID</span>
+<span id="L57"><span class="lineNum">      57</span>              :     mapping(uint256 =&gt; bytes32) public idKeys;</span>
+<span id="L58"><span class="lineNum">      58</span>              :     /// @notice Mapping from hashed key to Key struct (WebAuthn/P256/P256NONKEY)</span>
+<span id="L59"><span class="lineNum">      59</span>              :     /// @dev Indexed by keyId (bytes32).</span>
+<span id="L60"><span class="lineNum">      60</span>              :     mapping(bytes32 =&gt; KeyData) internal keys;</span>
+<span id="L61"><span class="lineNum">      61</span>              : </span>
+<span id="L62"><span class="lineNum">      62</span>              :     /// @notice Per-key execute permissions: allowed (target, selector) pairs.</span>
+<span id="L63"><span class="lineNum">      63</span>              :     /// @dev Indexed by keyId (bytes32).</span>
+<span id="L64"><span class="lineNum">      64</span>              :     mapping(bytes32 =&gt; ExecutePermissions) internal permissions;</span>
+<span id="L65"><span class="lineNum">      65</span>              :     /// @notice Per-key token spend configuration and accounting.</span>
+<span id="L66"><span class="lineNum">      66</span>              :     /// @dev Indexed by keyId (bytes32); tracks per-token limits, period, and counters.</span>
+<span id="L67"><span class="lineNum">      67</span>              :     mapping(bytes32 =&gt; SpendStorage) internal spendStore;</span>
+<span id="L68"><span class="lineNum">      68</span>              : </span>
+<span id="L69"><span class="lineNum">      69</span>              :     // =============================================================</span>
+<span id="L70"><span class="lineNum">      70</span>              :     //                 PUBLIC / EXTERNAL FUNCTIONS</span>
+<span id="L71"><span class="lineNum">      71</span>              :     // =============================================================</span>
+<span id="L72"><span class="lineNum">      72</span>              : </span>
+<span id="L73"><span class="lineNum">      73</span>              :     ////////////// Setters //////////////</span>
+<span id="L74"><span class="lineNum">      74</span>              : </span>
+<span id="L75"><span class="lineNum">      75</span>              :     /**</span>
+<span id="L76"><span class="lineNum">      76</span>              :      * @notice Registers a new session key (non-master) with limits and validity window.</span>
+<span id="L77"><span class="lineNum">      77</span>              :      * @dev</span>
+<span id="L78"><span class="lineNum">      78</span>              :      *      - `_keyData.key` is non-zero (`keyCantBeZero()`). abi.encode(&lt;address&gt; || &lt;bytes32(x), bytes32(y)&gt;);</span>
+<span id="L79"><span class="lineNum">      79</span>              :      *      - `_keyData.limits &gt; 0` (`mustHaveLimits()`), total transactions limit, this path does not register master keys.</span>
+<span id="L80"><span class="lineNum">      80</span>              :      *      - Timestamps are valid (`validateTimestamps(_validUntil, _validAfter)`).</span>
+<span id="L81"><span class="lineNum">      81</span>              :      *        Stores computed `keyId`, marks key active.</span>
+<span id="L82"><span class="lineNum">      82</span>              :      * @param _keyData Registration payload (key type, validity, limits, raw key bytes, control type).</span>
+<span id="L83"><span class="lineNum">      83</span>              :      */</span>
+<span id="L84"><span class="lineNum">      84</span> <span class="tlaGNC">       31805 :     function registerKey(KeyDataReg calldata _keyData) public {</span></span>
+<span id="L85"><span class="lineNum">      85</span> <span class="tlaUNC">           0 :         _requireForExecute();</span></span>
+<span id="L86"><span class="lineNum">      86</span> <span class="tlaGNC">       31804 :         _keyData.keyCantBeZero();</span></span>
+<span id="L87"><span class="lineNum">      87</span> <span class="tlaGNC">       31803 :         _keyData.mustHaveLimits();</span></span>
+<span id="L88"><span class="lineNum">      88</span>              : </span>
+<span id="L89"><span class="lineNum">      89</span>              :         // validateTimestamps: (validUntil, validAfter, currentValidUntil, isUpdate)</span>
+<span id="L90"><span class="lineNum">      90</span> <span class="tlaGNC">       31802 :         KeysManagerLib.validateTimestamps(_keyData.validUntil, _keyData.validAfter, 0, false);</span></span>
+<span id="L91"><span class="lineNum">      91</span>              : </span>
+<span id="L92"><span class="lineNum">      92</span> <span class="tlaGNC">       31805 :         _addKey(_keyData);</span></span>
+<span id="L93"><span class="lineNum">      93</span>              :     }</span>
+<span id="L94"><span class="lineNum">      94</span>              : </span>
+<span id="L95"><span class="lineNum">      95</span>              :     /**</span>
+<span id="L96"><span class="lineNum">      96</span>              :      * @notice Creates a token spend rule for a key.</span>
+<span id="L97"><span class="lineNum">      97</span>              :      * @dev Requires the key be valid/active, non-masterKey (`validateKeyBefore()`).</span>
+<span id="L98"><span class="lineNum">      98</span>              :      *      Validates `_token` and `_limit`. Inserts `_token` into the per-key set (capacity 64)</span>
+<span id="L99"><span class="lineNum">      99</span>              :      *      and initializes its period/limit.</span>
+<span id="L100"><span class="lineNum">     100</span>              :      * @param _keyId  The key identifier.</span>
+<span id="L101"><span class="lineNum">     101</span>              :      * @param _token  ERC-20 token address (non-zero) or NATIVE_ADDRESS for native token.</span>
+<span id="L102"><span class="lineNum">     102</span>              :      * @param _limit  Amount spend limit for `_token`. Per-period.</span>
+<span id="L103"><span class="lineNum">     103</span>              :      * @param _period Spending period(interval) (Minute/Hour/Day/Week/Month/Year/Forever).</span>
+<span id="L104"><span class="lineNum">     104</span>              :      */</span>
+<span id="L105"><span class="lineNum">     105</span> <span class="tlaGNC">        6834 :     function setTokenSpend(bytes32 _keyId, address _token, uint256 _limit, SpendPeriod _period)</span></span>
+<span id="L106"><span class="lineNum">     106</span>              :         public</span>
+<span id="L107"><span class="lineNum">     107</span>              :     {</span>
+<span id="L108"><span class="lineNum">     108</span> <span class="tlaUNC">           0 :         _requireForExecute();</span></span>
+<span id="L109"><span class="lineNum">     109</span> <span class="tlaGNC">        6833 :         KeyData storage sKey = keys[_keyId];</span></span>
+<span id="L110"><span class="lineNum">     110</span> <span class="tlaGNC">        6833 :         sKey.validateKeyBefore();</span></span>
 <span id="L111"><span class="lineNum">     111</span>              : </span>
-<span id="L112"><span class="lineNum">     112</span> <span class="tlaGNC">           7 :         bytes32 keyId = _key.computeKeyId();</span></span>
-<span id="L113"><span class="lineNum">     113</span>              : </span>
-<span id="L114"><span class="lineNum">     114</span> <span class="tlaGNC">           7 :         KeyData storage sKey = keys[keyId];</span></span>
-<span id="L115"><span class="lineNum">     115</span> <span class="tlaGNC">           7 :         _revokeKey(sKey);</span></span>
-<span id="L116"><span class="lineNum">     116</span> <span class="tlaGNC">           7 :         emit IKeysManager.KeyRevoked(keyId);</span></span>
-<span id="L117"><span class="lineNum">     117</span>              :     }</span>
-<span id="L118"><span class="lineNum">     118</span>              : </span>
-<span id="L119"><span class="lineNum">     119</span>              :     /**</span>
-<span id="L120"><span class="lineNum">     120</span>              :      * @notice Revokes all registered keys (WebAuthn/P256/P256NONKEY and EOA).</span>
-<span id="L121"><span class="lineNum">     121</span>              :      * @dev Only callable by ADMIN_ROLE via `_requireForExecute()`. Iterates through all IDs and revokes each.</span>
-<span id="L122"><span class="lineNum">     122</span>              :      *      Emits `KeyRevoked(keyId)` for each.</span>
-<span id="L123"><span class="lineNum">     123</span>              :      */</span>
-<span id="L124"><span class="lineNum">     124</span> <span class="tlaGNC">           1 :     function revokeAllKeys() external {</span></span>
-<span id="L125"><span class="lineNum">     125</span> <span class="tlaUNC">           0 :         _requireForExecute();</span></span>
-<span id="L126"><span class="lineNum">     126</span>              :         /// @dev i = 1 --&gt; id = 0 always saved for MasterKey (Admin)</span>
-<span id="L127"><span class="lineNum">     127</span>              :         // Revoke WebAuthn/P256/P256NONKEY/EOA keys</span>
-<span id="L128"><span class="lineNum">     128</span> <span class="tlaGNC">           1 :         for (uint256 i = 1; i &lt; id;) {</span></span>
-<span id="L129"><span class="lineNum">     129</span> <span class="tlaGNC">          40 :             Key memory k = idKeys[i];</span></span>
-<span id="L130"><span class="lineNum">     130</span>              : </span>
-<span id="L131"><span class="lineNum">     131</span> <span class="tlaGNC">          40 :             bytes32 keyId = k.computeKeyId();</span></span>
-<span id="L132"><span class="lineNum">     132</span>              : </span>
-<span id="L133"><span class="lineNum">     133</span> <span class="tlaGNC">          40 :             KeyData storage sKey = keys[keyId];</span></span>
+<span id="L112"><span class="lineNum">     112</span> <span class="tlaGNC">        6832 :         _token.checkAddress();</span></span>
+<span id="L113"><span class="lineNum">     113</span> <span class="tlaGNC">        6831 :         _limit.checkLimits();</span></span>
+<span id="L114"><span class="lineNum">     114</span>              : </span>
+<span id="L115"><span class="lineNum">     115</span> <span class="tlaGNC">        6830 :         _setTokenSpend(_keyId, _token, _limit, _period, false);</span></span>
+<span id="L116"><span class="lineNum">     116</span>              : </span>
+<span id="L117"><span class="lineNum">     117</span> <span class="tlaGNC">        6834 :         emit TokenSpendSet(_keyId, _token, _period, _limit);</span></span>
+<span id="L118"><span class="lineNum">     118</span>              :     }</span>
+<span id="L119"><span class="lineNum">     119</span>              : </span>
+<span id="L120"><span class="lineNum">     120</span>              :     /**</span>
+<span id="L121"><span class="lineNum">     121</span>              :      * @notice Grants or revokes permission for a `(target, selector)` tuple for a key.</span>
+<span id="L122"><span class="lineNum">     122</span>              :      * @dev Requires the key be valid/active. Validates `_target`. address(this) forbidden</span>
+<span id="L123"><span class="lineNum">     123</span>              :      *      Updates an enumerable set (capacity 2048) using a packed `(target, fnSel)` key.</span>
+<span id="L124"><span class="lineNum">     124</span>              :      *      Supports wildcards if your packing uses `ANY_TARGET` / `ANY_FN_SEL`.</span>
+<span id="L125"><span class="lineNum">     125</span>              :      * @param _keyId  The key identifier.</span>
+<span id="L126"><span class="lineNum">     126</span>              :      * @param _target Target contract/eoa address.</span>
+<span id="L127"><span class="lineNum">     127</span>              :      * @param _funSel Function selector on `_target` or `EMPTY_CALLDATA_FN_SEL` for native token.</span>
+<span id="L128"><span class="lineNum">     128</span>              :      * @param can     Whether the tuple is permitted (`true`) or removed/forbidden (`false`).</span>
+<span id="L129"><span class="lineNum">     129</span>              :      */</span>
+<span id="L130"><span class="lineNum">     130</span> <span class="tlaGNC">        3766 :     function setCanCall(bytes32 _keyId, address _target, bytes4 _funSel, bool can) public {</span></span>
+<span id="L131"><span class="lineNum">     131</span> <span class="tlaUNC">           0 :         _requireForExecute();</span></span>
+<span id="L132"><span class="lineNum">     132</span> <span class="tlaGNC">        3765 :         KeyData storage sKey = keys[_keyId];</span></span>
+<span id="L133"><span class="lineNum">     133</span> <span class="tlaGNC">        3765 :         sKey.validateKeyBefore();</span></span>
 <span id="L134"><span class="lineNum">     134</span>              : </span>
-<span id="L135"><span class="lineNum">     135</span> <span class="tlaGNC">          40 :             if (!sKey.isActive) {</span></span>
-<span id="L136"><span class="lineNum">     136</span>              :                 unchecked {</span>
-<span id="L137"><span class="lineNum">     137</span> <span class="tlaUNC">           0 :                     ++i;</span></span>
-<span id="L138"><span class="lineNum">     138</span>              :                 }</span>
-<span id="L139"><span class="lineNum">     139</span> <span class="tlaUNC">           0 :                 continue;</span></span>
-<span id="L140"><span class="lineNum">     140</span>              :             }</span>
+<span id="L135"><span class="lineNum">     135</span> <span class="tlaGNC">        3764 :         _target.checkTargetAddress();</span></span>
+<span id="L136"><span class="lineNum">     136</span>              : </span>
+<span id="L137"><span class="lineNum">     137</span> <span class="tlaGNC">        2639 :         _setCanCall(_keyId, _target, _funSel, can);</span></span>
+<span id="L138"><span class="lineNum">     138</span>              : </span>
+<span id="L139"><span class="lineNum">     139</span> <span class="tlaGNC">        3766 :         emit CanCallSet(_keyId, _target, _funSel, can);</span></span>
+<span id="L140"><span class="lineNum">     140</span>              :     }</span>
 <span id="L141"><span class="lineNum">     141</span>              : </span>
-<span id="L142"><span class="lineNum">     142</span> <span class="tlaGNC">          40 :             _revokeKey(sKey);</span></span>
-<span id="L143"><span class="lineNum">     143</span> <span class="tlaGNC">          40 :             emit IKeysManager.KeyRevoked(keyId);</span></span>
-<span id="L144"><span class="lineNum">     144</span>              :             unchecked {</span>
-<span id="L145"><span class="lineNum">     145</span> <span class="tlaGNC">          40 :                 ++i;</span></span>
-<span id="L146"><span class="lineNum">     146</span>              :             }</span>
-<span id="L147"><span class="lineNum">     147</span>              :         }</span>
-<span id="L148"><span class="lineNum">     148</span>              :     }</span>
-<span id="L149"><span class="lineNum">     149</span>              : </span>
-<span id="L150"><span class="lineNum">     150</span>              :     // =============================================================</span>
-<span id="L151"><span class="lineNum">     151</span>              :     //                 INTERNAL / PRIVATE HELPERS</span>
-<span id="L152"><span class="lineNum">     152</span>              :     // =============================================================</span>
-<span id="L153"><span class="lineNum">     153</span>              : </span>
-<span id="L154"><span class="lineNum">     154</span>              :     /**</span>
-<span id="L155"><span class="lineNum">     155</span>              :      * @notice Internal helper to configure a newly registered key’s parameters.</span>
-<span id="L156"><span class="lineNum">     156</span>              :      * @dev Sets common fields on `KeyData` storage, enforces whitelisting and spend‐limit logic.</span>
-<span id="L157"><span class="lineNum">     157</span>              :      *      Only called from `registerKey`.</span>
-<span id="L158"><span class="lineNum">     158</span>              :      *</span>
-<span id="L159"><span class="lineNum">     159</span>              :      * @param sKey             Storage reference to the `KeyData` being populated.</span>
-<span id="L160"><span class="lineNum">     160</span>              :      * @param _key             Struct containing key information (PubKey or EOA).</span>
-<span id="L161"><span class="lineNum">     161</span>              :      * @param _keyData KeyReg data structure containing permissions and limits</span>
-<span id="L162"><span class="lineNum">     162</span>              :      */</span>
-<span id="L163"><span class="lineNum">     163</span>              :     /// Todo: enfore to check the if _keyData.whitelisting = true</span>
-<span id="L164"><span class="lineNum">     164</span> <span class="tlaGNC">         939 :     function _addKey(KeyData storage sKey, Key memory _key, KeyReg memory _keyData) internal {</span></span>
-<span id="L165"><span class="lineNum">     165</span> <span class="tlaGNC">         939 :         sKey.pubKey = _key.pubKey;</span></span>
-<span id="L166"><span class="lineNum">     166</span> <span class="tlaGNC">         939 :         sKey.isActive = true;</span></span>
-<span id="L167"><span class="lineNum">     167</span> <span class="tlaGNC">         939 :         sKey.validUntil = _keyData.validUntil;</span></span>
-<span id="L168"><span class="lineNum">     168</span> <span class="tlaGNC">         939 :         sKey.validAfter = _keyData.validAfter;</span></span>
-<span id="L169"><span class="lineNum">     169</span> <span class="tlaGNC">         939 :         sKey.limit = _keyData.limit;</span></span>
-<span id="L170"><span class="lineNum">     170</span> <span class="tlaGNC">         939 :         sKey.masterKey = (_keyData.limit == 0);</span></span>
-<span id="L171"><span class="lineNum">     171</span>              : </span>
-<span id="L172"><span class="lineNum">     172</span>              :         // Only enforce limits if _limit &gt; 0</span>
-<span id="L173"><span class="lineNum">     173</span> <span class="tlaGNC">         939 :         if (_keyData.limit &gt; 0) {</span></span>
-<span id="L174"><span class="lineNum">     174</span> <span class="tlaGNC">         786 :             IUserOpPolicy(GAS_POLICY).initializeGasPolicy(</span></span>
-<span id="L175"><span class="lineNum">     175</span>              :                 address(this), _key.computeKeyId(), uint256(_keyData.limit)</span>
-<span id="L176"><span class="lineNum">     176</span>              :             );</span>
-<span id="L177"><span class="lineNum">     177</span> <span class="tlaGNC">         786 :             sKey.whitelisting = true;</span></span>
-<span id="L178"><span class="lineNum">     178</span>              :             /// Session Key enforced to be whitelisting</span>
-<span id="L179"><span class="lineNum">     179</span> <span class="tlaGNC">         786 :             sKey.ethLimit = _keyData.ethLimit;</span></span>
-<span id="L180"><span class="lineNum">     180</span>              : </span>
-<span id="L181"><span class="lineNum">     181</span>              :             // Whitelist contract and token if requested</span>
-<span id="L182"><span class="lineNum">     182</span> <span class="tlaGNC">         786 :             if (_keyData.whitelisting) {</span></span>
-<span id="L183"><span class="lineNum">     183</span> <span class="tlaGNC">         786 :                 _keyData.contractAddress.ensureNotZero();</span></span>
-<span id="L184"><span class="lineNum">     184</span>              :                 // Add the contract itself</span>
-<span id="L185"><span class="lineNum">     185</span> <span class="tlaGNC">         785 :                 sKey.whitelist[_keyData.contractAddress] = true;</span></span>
-<span id="L186"><span class="lineNum">     186</span>              : </span>
-<span id="L187"><span class="lineNum">     187</span>              :                 // Validate token address</span>
-<span id="L188"><span class="lineNum">     188</span> <span class="tlaGNC">         785 :                 address tokenAddr = _keyData.spendTokenInfo.token;</span></span>
-<span id="L189"><span class="lineNum">     189</span> <span class="tlaGNC">         785 :                 tokenAddr.ensureNotZero();</span></span>
-<span id="L190"><span class="lineNum">     190</span> <span class="tlaGNC">         786 :                 sKey.whitelist[tokenAddr] = true;</span></span>
-<span id="L191"><span class="lineNum">     191</span>              : </span>
-<span id="L192"><span class="lineNum">     192</span> <span class="tlaGNC">         784 :                 uint256 selCount = _keyData.allowedSelectors.length;</span></span>
-<span id="L193"><span class="lineNum">     193</span> <span class="tlaGNC">         784 :                 selCount.ensureSelectorsLen();</span></span>
-<span id="L194"><span class="lineNum">     194</span> <span class="tlaGNC">         783 :                 for (uint256 i = 0; i &lt; selCount;) {</span></span>
-<span id="L195"><span class="lineNum">     195</span> <span class="tlaGNC">        2349 :                     sKey.allowedSelectors.push(_keyData.allowedSelectors[i]);</span></span>
-<span id="L196"><span class="lineNum">     196</span>              :                     unchecked {</span>
-<span id="L197"><span class="lineNum">     197</span> <span class="tlaGNC">        2349 :                         ++i;</span></span>
-<span id="L198"><span class="lineNum">     198</span>              :                     }</span>
-<span id="L199"><span class="lineNum">     199</span>              :                 }</span>
-<span id="L200"><span class="lineNum">     200</span>              :             }</span>
-<span id="L201"><span class="lineNum">     201</span>              : </span>
-<span id="L202"><span class="lineNum">     202</span> <span class="tlaGNC">         783 :             _keyData.spendTokenInfo.token.ensureNotZero();</span></span>
-<span id="L203"><span class="lineNum">     203</span>              : </span>
-<span id="L204"><span class="lineNum">     204</span>              :             // Configure spendTokenInfo regardless of whitelisting</span>
-<span id="L205"><span class="lineNum">     205</span> <span class="tlaGNC">         783 :             sKey.spendTokenInfo.token = _keyData.spendTokenInfo.token;</span></span>
-<span id="L206"><span class="lineNum">     206</span> <span class="tlaGNC">         783 :             sKey.spendTokenInfo.limit = _keyData.spendTokenInfo.limit;</span></span>
-<span id="L207"><span class="lineNum">     207</span>              :         }</span>
-<span id="L208"><span class="lineNum">     208</span>              :     }</span>
+<span id="L142"><span class="lineNum">     142</span>              :     ////////////// Updatters //////////////</span>
+<span id="L143"><span class="lineNum">     143</span>              : </span>
+<span id="L144"><span class="lineNum">     144</span>              :     /**</span>
+<span id="L145"><span class="lineNum">     145</span>              :      * @notice Updates a key’s validity and total transactions limit.</span>
+<span id="L146"><span class="lineNum">     146</span>              :      * @dev Requires the key be valid/active.</span>
+<span id="L147"><span class="lineNum">     147</span>              :      *      Validates the new window (`validateTimestamps(_validUntil, sKey.validAfter, sKey.validUntil, true)`).</span>
+<span id="L148"><span class="lineNum">     148</span>              :      *      Overwrites `validUntil` and `limits` only; `validAfter` remains unchanged.</span>
+<span id="L149"><span class="lineNum">     149</span>              :      * @param _keyId       The key identifier.</span>
+<span id="L150"><span class="lineNum">     150</span>              :      * @param _validUntil  New inclusive expiry timestamp.</span>
+<span id="L151"><span class="lineNum">     151</span>              :      * @param _limits      New per-period transaction limit (must be &gt; 0).</span>
+<span id="L152"><span class="lineNum">     152</span>              :      */</span>
+<span id="L153"><span class="lineNum">     153</span> <span class="tlaGNC">       26988 :     function updateKeyData(bytes32 _keyId, uint48 _validUntil, uint48 _limits) public {</span></span>
+<span id="L154"><span class="lineNum">     154</span> <span class="tlaUNC">           0 :         _requireForExecute();</span></span>
+<span id="L155"><span class="lineNum">     155</span> <span class="tlaGNC">       26987 :         KeyData storage sKey = keys[_keyId];</span></span>
+<span id="L156"><span class="lineNum">     156</span> <span class="tlaGNC">       26987 :         sKey.validateKeyBefore();</span></span>
+<span id="L157"><span class="lineNum">     157</span>              : </span>
+<span id="L158"><span class="lineNum">     158</span> <span class="tlaGNC">       26987 :         KeysManagerLib.validateTimestamps(_validUntil, sKey.validAfter, sKey.validUntil, true);</span></span>
+<span id="L159"><span class="lineNum">     159</span>              : </span>
+<span id="L160"><span class="lineNum">     160</span> <span class="tlaGNC">       26984 :         _limits.checkLimits();</span></span>
+<span id="L161"><span class="lineNum">     161</span>              : </span>
+<span id="L162"><span class="lineNum">     162</span> <span class="tlaGNC">       26983 :         sKey.validUntil = _validUntil;</span></span>
+<span id="L163"><span class="lineNum">     163</span> <span class="tlaGNC">       26987 :         sKey.limits = _limits;</span></span>
+<span id="L164"><span class="lineNum">     164</span>              : </span>
+<span id="L165"><span class="lineNum">     165</span> <span class="tlaGNC">       26988 :         emit KeyUpdated(_keyId, _validUntil, _limits);</span></span>
+<span id="L166"><span class="lineNum">     166</span>              :     }</span>
+<span id="L167"><span class="lineNum">     167</span>              : </span>
+<span id="L168"><span class="lineNum">     168</span>              :     /**</span>
+<span id="L169"><span class="lineNum">     169</span>              :      * @notice Updates an existing token spend rule for a key.</span>
+<span id="L170"><span class="lineNum">     170</span>              :      * @dev Requires the key be valid/active.</span>
+<span id="L171"><span class="lineNum">     171</span>              :      *      Validates `_token` and `_limit`. Rule must already exist; otherwise reverts.</span>
+<span id="L172"><span class="lineNum">     172</span>              :      *      Resets `spent` and `lastUpdated` counters to zero.</span>
+<span id="L173"><span class="lineNum">     173</span>              :      * @param _keyId  The key identifier.</span>
+<span id="L174"><span class="lineNum">     174</span>              :      * @param _token  Token whose rule is updated.</span>
+<span id="L175"><span class="lineNum">     175</span>              :      * @param _limit  New per-period limit.</span>
+<span id="L176"><span class="lineNum">     176</span>              :      * @param _period New spend period.</span>
+<span id="L177"><span class="lineNum">     177</span>              :      */</span>
+<span id="L178"><span class="lineNum">     178</span> <span class="tlaGNC">         411 :     function updateTokenSpend(bytes32 _keyId, address _token, uint256 _limit, SpendPeriod _period)</span></span>
+<span id="L179"><span class="lineNum">     179</span>              :         public</span>
+<span id="L180"><span class="lineNum">     180</span>              :     {</span>
+<span id="L181"><span class="lineNum">     181</span> <span class="tlaUNC">           0 :         _requireForExecute();</span></span>
+<span id="L182"><span class="lineNum">     182</span> <span class="tlaGNC">         410 :         KeyData storage sKey = keys[_keyId];</span></span>
+<span id="L183"><span class="lineNum">     183</span> <span class="tlaGNC">         410 :         sKey.validateKeyBefore();</span></span>
+<span id="L184"><span class="lineNum">     184</span>              : </span>
+<span id="L185"><span class="lineNum">     185</span> <span class="tlaGNC">         409 :         _token.checkAddress();</span></span>
+<span id="L186"><span class="lineNum">     186</span> <span class="tlaGNC">         408 :         _limit.checkLimits();</span></span>
+<span id="L187"><span class="lineNum">     187</span>              : </span>
+<span id="L188"><span class="lineNum">     188</span> <span class="tlaGNC">         407 :         _setTokenSpend(_keyId, _token, _limit, _period, true);</span></span>
+<span id="L189"><span class="lineNum">     189</span>              : </span>
+<span id="L190"><span class="lineNum">     190</span> <span class="tlaGNC">         411 :         emit TokenSpendSet(_keyId, _token, _period, _limit);</span></span>
+<span id="L191"><span class="lineNum">     191</span>              :     }</span>
+<span id="L192"><span class="lineNum">     192</span>              : </span>
+<span id="L193"><span class="lineNum">     193</span>              :     ////////////// Removers //////////////</span>
+<span id="L194"><span class="lineNum">     194</span>              : </span>
+<span id="L195"><span class="lineNum">     195</span>              :     /**</span>
+<span id="L196"><span class="lineNum">     196</span>              :      * @notice Revokes a key and clears all its permissions.</span>
+<span id="L197"><span class="lineNum">     197</span>              :      * @notice Not clears idKeys.</span>
+<span id="L198"><span class="lineNum">     198</span>              :      * @dev Requires the key be valid/active.</span>
+<span id="L199"><span class="lineNum">     199</span>              :      *      Marks the key inactive and zeroizes its fields (via `_revoke`),</span>
+<span id="L200"><span class="lineNum">     200</span>              :      *      then clears both execute and spend permissions to avoid residual grants.</span>
+<span id="L201"><span class="lineNum">     201</span>              :      * @param _keyId The key identifier to revoke.</span>
+<span id="L202"><span class="lineNum">     202</span>              :      */</span>
+<span id="L203"><span class="lineNum">     203</span> <span class="tlaGNC">       25946 :     function revokeKey(bytes32 _keyId) public {</span></span>
+<span id="L204"><span class="lineNum">     204</span> <span class="tlaUNC">           0 :         _requireForExecute();</span></span>
+<span id="L205"><span class="lineNum">     205</span> <span class="tlaGNC">       25945 :         KeyData storage sKey = keys[_keyId];</span></span>
+<span id="L206"><span class="lineNum">     206</span> <span class="tlaGNC">       25945 :         sKey.validateKeyBefore();</span></span>
+<span id="L207"><span class="lineNum">     207</span>              : </span>
+<span id="L208"><span class="lineNum">     208</span> <span class="tlaGNC">       25945 :         _revoke(sKey);</span></span>
 <span id="L209"><span class="lineNum">     209</span>              : </span>
-<span id="L210"><span class="lineNum">     210</span>              :     /**</span>
-<span id="L211"><span class="lineNum">     211</span>              :      * @notice Internal helper to revoke a key’s data.</span>
-<span id="L212"><span class="lineNum">     212</span>              :      * @dev Clears all `KeyData` struct fields, marks it inactive, resets limits and whitelists.</span>
-<span id="L213"><span class="lineNum">     213</span>              :      * @dev Sets `isActive = false`, zeroes validity windows and spend limits, deletes</span>
-<span id="L214"><span class="lineNum">     214</span>              :      *      `allowedSelectors` and `spendTokenInfo`, and **deletes the stored public key** (`pubKey`).</span>
-<span id="L215"><span class="lineNum">     215</span>              :      * @dev Intentionally **does not** clear `whitelisting`. If this key ever had whitelisting</span>
-<span id="L216"><span class="lineNum">     216</span>              :      *      enabled, the flag remains `true` as a tombstone so that any attempt to re-register the same</span>
-<span id="L217"><span class="lineNum">     217</span>              :      *      keyId will revert in the registration path (see `KeyManager__ReactivationForbiddenDueToWhitelist`).</span>
-<span id="L218"><span class="lineNum">     218</span>              :      *      The `whitelist` mapping itself cannot be deleted in Solidity; keeping the flag set prevents</span>
-<span id="L219"><span class="lineNum">     219</span>              :      *      any residual entries from being reactivated.</span>
-<span id="L220"><span class="lineNum">     220</span>              :      * @param sKey Storage reference to the `KeyData` being revoked.</span>
-<span id="L221"><span class="lineNum">     221</span>              :      */</span>
-<span id="L222"><span class="lineNum">     222</span> <span class="tlaGNC">          47 :     function _revokeKey(KeyData storage sKey) internal {</span></span>
-<span id="L223"><span class="lineNum">     223</span> <span class="tlaGNC">          47 :         if (!sKey.isActive) {</span></span>
-<span id="L224"><span class="lineNum">     224</span> <span class="tlaGNC">           1 :             revert IKeysManager.KeyManager__KeyInactive();</span></span>
-<span id="L225"><span class="lineNum">     225</span>              :         }</span>
-<span id="L226"><span class="lineNum">     226</span> <span class="tlaGNC">          46 :         sKey.isActive = false;</span></span>
-<span id="L227"><span class="lineNum">     227</span> <span class="tlaGNC">          46 :         sKey.validUntil = 0;</span></span>
-<span id="L228"><span class="lineNum">     228</span> <span class="tlaGNC">          46 :         sKey.validAfter = 0;</span></span>
-<span id="L229"><span class="lineNum">     229</span> <span class="tlaGNC">          46 :         sKey.limit = 0;</span></span>
-<span id="L230"><span class="lineNum">     230</span> <span class="tlaGNC">          46 :         sKey.masterKey = false;</span></span>
-<span id="L231"><span class="lineNum">     231</span> <span class="tlaGNC">          46 :         sKey.ethLimit = 0;</span></span>
+<span id="L210"><span class="lineNum">     210</span> <span class="tlaGNC">       25944 :         emit KeyRevoked(_keyId);</span></span>
+<span id="L211"><span class="lineNum">     211</span>              : </span>
+<span id="L212"><span class="lineNum">     212</span> <span class="tlaGNC">       25944 :         clearExecutePermissions(_keyId);</span></span>
+<span id="L213"><span class="lineNum">     213</span> <span class="tlaGNC">       25946 :         clearSpendPermissions(_keyId);</span></span>
+<span id="L214"><span class="lineNum">     214</span>              :     }</span>
+<span id="L215"><span class="lineNum">     215</span>              : </span>
+<span id="L216"><span class="lineNum">     216</span>              :     /**</span>
+<span id="L217"><span class="lineNum">     217</span>              :      * @notice Removes a token spend rule from a key.</span>
+<span id="L218"><span class="lineNum">     218</span>              :      * @dev Requires the key be valid/active and the rule exist.</span>
+<span id="L219"><span class="lineNum">     219</span>              :      *      Deletes accounting for `_token` and removes it from the per-key set.</span>
+<span id="L220"><span class="lineNum">     220</span>              :      * @param _keyId The key identifier.</span>
+<span id="L221"><span class="lineNum">     221</span>              :      * @param _token Token to remove from spend tracking.</span>
+<span id="L222"><span class="lineNum">     222</span>              :      */</span>
+<span id="L223"><span class="lineNum">     223</span> <span class="tlaGNC">        2513 :     function removeTokenSpend(bytes32 _keyId, address _token) public {</span></span>
+<span id="L224"><span class="lineNum">     224</span> <span class="tlaUNC">           0 :         _requireForExecute();</span></span>
+<span id="L225"><span class="lineNum">     225</span> <span class="tlaGNC">        2512 :         KeyData storage sKey = keys[_keyId];</span></span>
+<span id="L226"><span class="lineNum">     226</span> <span class="tlaGNC">        2512 :         sKey.validateKeyBefore();</span></span>
+<span id="L227"><span class="lineNum">     227</span>              : </span>
+<span id="L228"><span class="lineNum">     228</span> <span class="tlaGNC">        1924 :         _removeTokenSpend(_keyId, _token);</span></span>
+<span id="L229"><span class="lineNum">     229</span>              : </span>
+<span id="L230"><span class="lineNum">     230</span> <span class="tlaGNC">        2513 :         emit TokenSpendRemoved(_keyId, _token);</span></span>
+<span id="L231"><span class="lineNum">     231</span>              :     }</span>
 <span id="L232"><span class="lineNum">     232</span>              : </span>
-<span id="L233"><span class="lineNum">     233</span> <span class="tlaGNC">          46 :         delete sKey.allowedSelectors;</span></span>
-<span id="L234"><span class="lineNum">     234</span> <span class="tlaGNC">          46 :         delete sKey.spendTokenInfo;</span></span>
-<span id="L235"><span class="lineNum">     235</span>              : </span>
-<span id="L236"><span class="lineNum">     236</span> <span class="tlaGNC">          46 :         delete sKey.pubKey;</span></span>
-<span id="L237"><span class="lineNum">     237</span>              :     }</span>
-<span id="L238"><span class="lineNum">     238</span>              : </span>
-<span id="L239"><span class="lineNum">     239</span>              :     /// @dev Master key must have: validUntil = max(uint48), validAfter = 0, limit = 0, whitelisting = false.</span>
-<span id="L240"><span class="lineNum">     240</span> <span class="tlaGNC">         153 :     function _masterKeyValidation(KeyReg calldata _kReg) internal pure {</span></span>
-<span id="L241"><span class="lineNum">     241</span>              :         if (</span>
-<span id="L242"><span class="lineNum">     242</span> <span class="tlaGNC">         153 :             _kReg.limit != 0 || _kReg.whitelisting // must be false</span></span>
-<span id="L243"><span class="lineNum">     243</span> <span class="tlaGNC">         152 :                 || _kReg.validAfter != 0 || _kReg.validUntil != type(uint48).max</span></span>
-<span id="L244"><span class="lineNum">     244</span> <span class="tlaGNC">           1 :         ) revert IKeysManager.KeyManager__InvalidMasterKeyReg(_kReg);</span></span>
-<span id="L245"><span class="lineNum">     245</span>              :     }</span>
-<span id="L246"><span class="lineNum">     246</span>              : </span>
-<span id="L247"><span class="lineNum">     247</span>              :     // =============================================================</span>
-<span id="L248"><span class="lineNum">     248</span>              :     //                   PUBLIC / EXTERNAL GETTERS</span>
-<span id="L249"><span class="lineNum">     249</span>              :     // =============================================================</span>
-<span id="L250"><span class="lineNum">     250</span>              : </span>
-<span id="L251"><span class="lineNum">     251</span>              :     /**</span>
-<span id="L252"><span class="lineNum">     252</span>              :      * @notice Retrieves registration info for a given key ID.</span>
-<span id="L253"><span class="lineNum">     253</span>              :      * @param _id       Identifier (index) of the key to query.</span>
-<span id="L254"><span class="lineNum">     254</span>              :      * @return keyType       The type of the key that was registered.</span>
-<span id="L255"><span class="lineNum">     255</span>              :      * @return isActive      Whether the key is currently active.</span>
-<span id="L256"><span class="lineNum">     256</span>              :      */</span>
-<span id="L257"><span class="lineNum">     257</span> <span class="tlaGNC">           1 :     function getKeyRegistrationInfo(uint256 _id)</span></span>
-<span id="L258"><span class="lineNum">     258</span>              :         external</span>
-<span id="L259"><span class="lineNum">     259</span>              :         view</span>
-<span id="L260"><span class="lineNum">     260</span>              :         returns (KeyType keyType, bool isActive)</span>
-<span id="L261"><span class="lineNum">     261</span>              :     {</span>
-<span id="L262"><span class="lineNum">     262</span> <span class="tlaGNC">           1 :         Key memory k = idKeys[_id];</span></span>
-<span id="L263"><span class="lineNum">     263</span> <span class="tlaGNC">           1 :         bytes32 keyId = k.computeKeyId();</span></span>
-<span id="L264"><span class="lineNum">     264</span>              : </span>
-<span id="L265"><span class="lineNum">     265</span> <span class="tlaGNC">           1 :         KeyData storage sKey = keys[keyId];</span></span>
-<span id="L266"><span class="lineNum">     266</span>              : </span>
-<span id="L267"><span class="lineNum">     267</span> <span class="tlaGNC">           1 :         return (k.keyType, sKey.isActive);</span></span>
-<span id="L268"><span class="lineNum">     268</span>              :     }</span>
+<span id="L233"><span class="lineNum">     233</span>              :     // =============================================================</span>
+<span id="L234"><span class="lineNum">     234</span>              :     //                 INTERNAL / PRIVATE</span>
+<span id="L235"><span class="lineNum">     235</span>              :     // =============================================================</span>
+<span id="L236"><span class="lineNum">     236</span>              : </span>
+<span id="L237"><span class="lineNum">     237</span>              :     /**</span>
+<span id="L238"><span class="lineNum">     238</span>              :      * @notice Internal: persists a newly registered key.</span>
+<span id="L239"><span class="lineNum">     239</span>              :      * @dev Computes `keyId`, rejects duplicates, initializes `KeyData` (type, key bytes, validity, limits),</span>
+<span id="L240"><span class="lineNum">     240</span>              :      *      sets `masterKey = (_keyData.limits == 0)`, and marks active.</span>
+<span id="L241"><span class="lineNum">     241</span>              :      *      If `_keyData.keyControl == KeyControl.Custodial`, enables 3'rd party control and calls</span>
+<span id="L242"><span class="lineNum">     242</span>              :      *      `IUserOpPolicy(GAS_POLICY).initializeGasPolicy(address(this), keyId, _keyData.limits)`.</span>
+<span id="L243"><span class="lineNum">     243</span>              :      *      Indexes `idKeys[id] = keyId`, increments `id`, and emits `KeyRegistered`.</span>
+<span id="L244"><span class="lineNum">     244</span>              :      * @param _keyData Registration payload to store.</span>
+<span id="L245"><span class="lineNum">     245</span>              :      */</span>
+<span id="L246"><span class="lineNum">     246</span> <span class="tlaGNC">       32026 :     function _addKey(KeyDataReg memory _keyData) internal {</span></span>
+<span id="L247"><span class="lineNum">     247</span> <span class="tlaGNC">       32026 :         bytes32 keyId = _keyData.computeKeyId();</span></span>
+<span id="L248"><span class="lineNum">     248</span> <span class="tlaGNC">       32026 :         KeyData storage sKey = keys[keyId];</span></span>
+<span id="L249"><span class="lineNum">     249</span>              : </span>
+<span id="L250"><span class="lineNum">     250</span> <span class="tlaGNC">           1 :         if (sKey.isActive) revert KeyManager__KeyRegistered();</span></span>
+<span id="L251"><span class="lineNum">     251</span>              : </span>
+<span id="L252"><span class="lineNum">     252</span> <span class="tlaGNC">       32025 :         sKey.keyType = _keyData.keyType;</span></span>
+<span id="L253"><span class="lineNum">     253</span> <span class="tlaGNC">       32025 :         sKey.key = _keyData.key;</span></span>
+<span id="L254"><span class="lineNum">     254</span> <span class="tlaGNC">       32025 :         sKey.validUntil = _keyData.validUntil;</span></span>
+<span id="L255"><span class="lineNum">     255</span> <span class="tlaGNC">       32025 :         sKey.validAfter = _keyData.validAfter;</span></span>
+<span id="L256"><span class="lineNum">     256</span> <span class="tlaGNC">       32025 :         sKey.limits = _keyData.limits;</span></span>
+<span id="L257"><span class="lineNum">     257</span> <span class="tlaGNC">       32025 :         sKey.masterKey = (_keyData.limits == 0);</span></span>
+<span id="L258"><span class="lineNum">     258</span> <span class="tlaGNC">       32025 :         sKey.isActive = true;</span></span>
+<span id="L259"><span class="lineNum">     259</span> <span class="tlaGNC">       32025 :         sKey.isDelegatedControl = false;</span></span>
+<span id="L260"><span class="lineNum">     260</span>              : </span>
+<span id="L261"><span class="lineNum">     261</span> <span class="tlaGNC">       32025 :         if (_keyData.keyControl == KeyControl.Custodial) {</span></span>
+<span id="L262"><span class="lineNum">     262</span> <span class="tlaGNC">        5912 :             sKey.isDelegatedControl = true;</span></span>
+<span id="L263"><span class="lineNum">     263</span> <span class="tlaGNC">        5912 :             IUserOpPolicy(GAS_POLICY).initializeGasPolicy(</span></span>
+<span id="L264"><span class="lineNum">     264</span>              :                 address(this), keyId, uint256(_keyData.limits)</span>
+<span id="L265"><span class="lineNum">     265</span>              :             );</span>
+<span id="L266"><span class="lineNum">     266</span>              :         }</span>
+<span id="L267"><span class="lineNum">     267</span>              : </span>
+<span id="L268"><span class="lineNum">     268</span> <span class="tlaGNC">       29086 :         idKeys[id] = keyId;</span></span>
 <span id="L269"><span class="lineNum">     269</span>              : </span>
-<span id="L270"><span class="lineNum">     270</span>              :     /**</span>
-<span id="L271"><span class="lineNum">     271</span>              :      * @notice Retrieves the `KeyData` struct stored at a given ID.</span>
-<span id="L272"><span class="lineNum">     272</span>              :      * @param _id       Identifier index for the key to retrieve.</span>
-<span id="L273"><span class="lineNum">     273</span>              :      * @return A `KeyData` struct containing key type and relevant public key or EOA address.</span>
-<span id="L274"><span class="lineNum">     274</span>              :      */</span>
-<span id="L275"><span class="lineNum">     275</span> <span class="tlaGNC">         120 :     function getKeyById(uint256 _id) public view returns (Key memory) {</span></span>
-<span id="L276"><span class="lineNum">     276</span> <span class="tlaGNC">         120 :         return idKeys[_id];</span></span>
-<span id="L277"><span class="lineNum">     277</span>              :     }</span>
-<span id="L278"><span class="lineNum">     278</span>              : </span>
-<span id="L279"><span class="lineNum">     279</span>              :     /**</span>
-<span id="L280"><span class="lineNum">     280</span>              :      * @notice Retrieves key metadata for a WebAuthn/P256/P256NONKEY key by its hash.</span>
-<span id="L281"><span class="lineNum">     281</span>              :      * @param _keyHash  Keccak256 hash of public key coordinates (x, y).</span>
-<span id="L282"><span class="lineNum">     282</span>              :      * @return isActive   Whether the key is active.</span>
-<span id="L283"><span class="lineNum">     283</span>              :      * @return validUntil UNIX timestamp until which the key is valid.</span>
-<span id="L284"><span class="lineNum">     284</span>              :      * @return validAfter UNIX timestamp after which the key is valid.</span>
-<span id="L285"><span class="lineNum">     285</span>              :      * @return limit      Remaining number of transactions allowed.</span>
-<span id="L286"><span class="lineNum">     286</span>              :      */</span>
-<span id="L287"><span class="lineNum">     287</span> <span class="tlaGNC">          59 :     function getKeyData(bytes32 _keyHash)</span></span>
-<span id="L288"><span class="lineNum">     288</span>              :         external</span>
-<span id="L289"><span class="lineNum">     289</span>              :         view</span>
-<span id="L290"><span class="lineNum">     290</span>              :         returns (bool isActive, uint48 validUntil, uint48 validAfter, uint48 limit)</span>
-<span id="L291"><span class="lineNum">     291</span>              :     {</span>
-<span id="L292"><span class="lineNum">     292</span> <span class="tlaGNC">          59 :         KeyData storage sKey = keys[_keyHash];</span></span>
-<span id="L293"><span class="lineNum">     293</span> <span class="tlaGNC">          59 :         return (sKey.isActive, sKey.validUntil, sKey.validAfter, sKey.limit);</span></span>
-<span id="L294"><span class="lineNum">     294</span>              :     }</span>
-<span id="L295"><span class="lineNum">     295</span>              : </span>
-<span id="L296"><span class="lineNum">     296</span>              :     /**</span>
-<span id="L297"><span class="lineNum">     297</span>              :      * @notice Checks if a WebAuthn/P256/P256NONKEY key is active.</span>
-<span id="L298"><span class="lineNum">     298</span>              :      * @param keyHash  Keccak256 hash of public key coordinates (x, y).</span>
-<span id="L299"><span class="lineNum">     299</span>              :      * @return True if the key is active; false otherwise.</span>
-<span id="L300"><span class="lineNum">     300</span>              :      */</span>
-<span id="L301"><span class="lineNum">     301</span> <span class="tlaGNC">           3 :     function isKeyActive(bytes32 keyHash) external view returns (bool) {</span></span>
-<span id="L302"><span class="lineNum">     302</span> <span class="tlaGNC">           3 :         return keys[keyHash].isActive;</span></span>
-<span id="L303"><span class="lineNum">     303</span>              :     }</span>
-<span id="L304"><span class="lineNum">     304</span>              : </span>
-<span id="L305"><span class="lineNum">     305</span>              :     /**</span>
-<span id="L306"><span class="lineNum">     306</span>              :      * @notice Encodes WebAuthn signature parameters into a bytes payload for submission.</span>
-<span id="L307"><span class="lineNum">     307</span>              :      * @param requireUserVerification Whether user verification is required.</span>
-<span id="L308"><span class="lineNum">     308</span>              :      * @param authenticatorData       Raw authenticator data from WebAuthn device.</span>
-<span id="L309"><span class="lineNum">     309</span>              :      * @param clientDataJSON          JSON‐formatted client data from WebAuthn challenge.</span>
-<span id="L310"><span class="lineNum">     310</span>              :      * @param challengeIndex          Index in clientDataJSON for the challenge field.</span>
-<span id="L311"><span class="lineNum">     311</span>              :      * @param typeIndex               Index in clientDataJSON for the type field.</span>
-<span id="L312"><span class="lineNum">     312</span>              :      * @param r                       R component of the ECDSA signature (32 bytes).</span>
-<span id="L313"><span class="lineNum">     313</span>              :      * @param s                       S component of the ECDSA signature (32 bytes).</span>
-<span id="L314"><span class="lineNum">     314</span>              :      * @param pubKey                  Public key (x, y) used for verifying signature.</span>
-<span id="L315"><span class="lineNum">     315</span>              :      * @return ABI‐encoded payload as:</span>
-<span id="L316"><span class="lineNum">     316</span>              :      *         KeyType.WEBAUTHN, requireUserVerification, authenticatorData, clientDataJSON,</span>
-<span id="L317"><span class="lineNum">     317</span>              :      *         challengeIndex, typeIndex, r, s, pubKey.</span>
-<span id="L318"><span class="lineNum">     318</span>              :      */</span>
-<span id="L319"><span class="lineNum">     319</span> <span class="tlaGNC">          18 :     function encodeWebAuthnSignature(</span></span>
-<span id="L320"><span class="lineNum">     320</span>              :         bool requireUserVerification,</span>
-<span id="L321"><span class="lineNum">     321</span>              :         bytes memory authenticatorData,</span>
-<span id="L322"><span class="lineNum">     322</span>              :         string memory clientDataJSON,</span>
-<span id="L323"><span class="lineNum">     323</span>              :         uint256 challengeIndex,</span>
-<span id="L324"><span class="lineNum">     324</span>              :         uint256 typeIndex,</span>
-<span id="L325"><span class="lineNum">     325</span>              :         bytes32 r,</span>
-<span id="L326"><span class="lineNum">     326</span>              :         bytes32 s,</span>
-<span id="L327"><span class="lineNum">     327</span>              :         PubKey memory pubKey</span>
-<span id="L328"><span class="lineNum">     328</span>              :     ) external pure returns (bytes memory) {</span>
-<span id="L329"><span class="lineNum">     329</span> <span class="tlaGNC">          18 :         bytes memory inner = abi.encode(</span></span>
-<span id="L330"><span class="lineNum">     330</span>              :             requireUserVerification,</span>
-<span id="L331"><span class="lineNum">     331</span>              :             authenticatorData,</span>
-<span id="L332"><span class="lineNum">     332</span>              :             clientDataJSON,</span>
-<span id="L333"><span class="lineNum">     333</span>              :             challengeIndex,</span>
-<span id="L334"><span class="lineNum">     334</span>              :             typeIndex,</span>
-<span id="L335"><span class="lineNum">     335</span>              :             r,</span>
-<span id="L336"><span class="lineNum">     336</span>              :             s,</span>
-<span id="L337"><span class="lineNum">     337</span>              :             pubKey</span>
-<span id="L338"><span class="lineNum">     338</span>              :         );</span>
-<span id="L339"><span class="lineNum">     339</span>              : </span>
-<span id="L340"><span class="lineNum">     340</span> <span class="tlaGNC">          18 :         return abi.encode(KeyType.WEBAUTHN, inner);</span></span>
-<span id="L341"><span class="lineNum">     341</span>              :     }</span>
-<span id="L342"><span class="lineNum">     342</span>              : </span>
-<span id="L343"><span class="lineNum">     343</span>              :     /**</span>
-<span id="L344"><span class="lineNum">     344</span>              :      * @notice Encodes a P-256 signature payload (KeyType.P256 || KeyType.P256NONKEY).</span>
-<span id="L345"><span class="lineNum">     345</span>              :      * @param r       R component of the P-256 signature (32 bytes).</span>
-<span id="L346"><span class="lineNum">     346</span>              :      * @param s       S component of the P-256 signature (32 bytes).</span>
-<span id="L347"><span class="lineNum">     347</span>              :      * @param pubKey  Public key (x, y) used for signing.</span>
-<span id="L348"><span class="lineNum">     348</span>              :      * @param _keyType  KeyType of key.</span>
-<span id="L349"><span class="lineNum">     349</span>              :      * @return ABI‐encoded payload as: KeyType.P256, abi.encode(r, s, pubKey).</span>
-<span id="L350"><span class="lineNum">     350</span>              :      */</span>
-<span id="L351"><span class="lineNum">     351</span> <span class="tlaGNC">          16 :     function encodeP256Signature(bytes32 r, bytes32 s, PubKey memory pubKey, KeyType _keyType)</span></span>
-<span id="L352"><span class="lineNum">     352</span>              :         external</span>
-<span id="L353"><span class="lineNum">     353</span>              :         pure</span>
-<span id="L354"><span class="lineNum">     354</span>              :         returns (bytes memory)</span>
-<span id="L355"><span class="lineNum">     355</span>              :     {</span>
-<span id="L356"><span class="lineNum">     356</span> <span class="tlaGNC">          16 :         bytes memory inner = abi.encode(r, s, pubKey);</span></span>
-<span id="L357"><span class="lineNum">     357</span> <span class="tlaGNC">          16 :         return abi.encode(_keyType, inner);</span></span>
-<span id="L358"><span class="lineNum">     358</span>              :     }</span>
-<span id="L359"><span class="lineNum">     359</span>              : </span>
-<span id="L360"><span class="lineNum">     360</span>              :     /**</span>
-<span id="L361"><span class="lineNum">     361</span>              :      * @notice Encodes an EOA signature for KeyType.EOA.</span>
-<span id="L362"><span class="lineNum">     362</span>              :      * @param _signature Raw ECDSA signature bytes over the UserOperation digest.</span>
-<span id="L363"><span class="lineNum">     363</span>              :      * @return ABI‐encoded payload as: KeyType.EOA, _signature.</span>
-<span id="L364"><span class="lineNum">     364</span>              :      */</span>
-<span id="L365"><span class="lineNum">     365</span> <span class="tlaGNC">          15 :     function encodeEOASignature(bytes calldata _signature) external pure returns (bytes memory) {</span></span>
-<span id="L366"><span class="lineNum">     366</span> <span class="tlaGNC">          15 :         return abi.encode(KeyType.EOA, _signature);</span></span>
-<span id="L367"><span class="lineNum">     367</span>              :     }</span>
-<span id="L368"><span class="lineNum">     368</span>              : }</span>
+<span id="L270"><span class="lineNum">     270</span>              :         unchecked {</span>
+<span id="L271"><span class="lineNum">     271</span> <span class="tlaGNC">       29086 :             id++;</span></span>
+<span id="L272"><span class="lineNum">     272</span>              :         }</span>
+<span id="L273"><span class="lineNum">     273</span>              : </span>
+<span id="L274"><span class="lineNum">     274</span> <span class="tlaGNC">       29086 :         emit KeyRegistered(</span></span>
+<span id="L275"><span class="lineNum">     275</span>              :             keyId,</span>
+<span id="L276"><span class="lineNum">     276</span>              :             _keyData.keyControl,</span>
+<span id="L277"><span class="lineNum">     277</span>              :             _keyData.keyType,</span>
+<span id="L278"><span class="lineNum">     278</span>              :             sKey.masterKey,</span>
+<span id="L279"><span class="lineNum">     279</span>              :             _keyData.validAfter,</span>
+<span id="L280"><span class="lineNum">     280</span>              :             _keyData.validUntil,</span>
+<span id="L281"><span class="lineNum">     281</span>              :             _keyData.limits</span>
+<span id="L282"><span class="lineNum">     282</span>              :         );</span>
+<span id="L283"><span class="lineNum">     283</span>              :     }</span>
+<span id="L284"><span class="lineNum">     284</span>              : </span>
+<span id="L285"><span class="lineNum">     285</span>              :     /**</span>
+<span id="L286"><span class="lineNum">     286</span>              :      * @notice Internal: clears and deactivates a key.</span>
+<span id="L287"><span class="lineNum">     287</span>              :      * @dev Clears `isActive`, `isDelegatedControl`, validity, limits, key bytes, and type.</span>
+<span id="L288"><span class="lineNum">     288</span>              :      *      Does not touch permission or spend stores; callers clear them separately.</span>
+<span id="L289"><span class="lineNum">     289</span>              :      * @param _sKey Storage reference to the key being revoked.</span>
+<span id="L290"><span class="lineNum">     290</span>              :      */</span>
+<span id="L291"><span class="lineNum">     291</span> <span class="tlaGNC">       25944 :     function _revoke(KeyData storage _sKey) internal {</span></span>
+<span id="L292"><span class="lineNum">     292</span> <span class="tlaGNC">       25944 :         _sKey.isActive = false;</span></span>
+<span id="L293"><span class="lineNum">     293</span> <span class="tlaGNC">       25944 :         _sKey.isDelegatedControl = false;</span></span>
+<span id="L294"><span class="lineNum">     294</span> <span class="tlaGNC">       25944 :         _sKey.validUntil = 0;</span></span>
+<span id="L295"><span class="lineNum">     295</span> <span class="tlaGNC">       25944 :         _sKey.validAfter = 0;</span></span>
+<span id="L296"><span class="lineNum">     296</span> <span class="tlaGNC">       25944 :         _sKey.limits = 0;</span></span>
+<span id="L297"><span class="lineNum">     297</span> <span class="tlaGNC">       25944 :         delete _sKey.key;</span></span>
+<span id="L298"><span class="lineNum">     298</span> <span class="tlaGNC">       25944 :         delete _sKey.keyType;</span></span>
+<span id="L299"><span class="lineNum">     299</span>              :     }</span>
+<span id="L300"><span class="lineNum">     300</span>              : </span>
+<span id="L301"><span class="lineNum">     301</span>              :     /**</span>
+<span id="L302"><span class="lineNum">     302</span>              :      * @notice Internal: sets or updates a token spend rule, resetting runtime counters.</span>
+<span id="L303"><span class="lineNum">     303</span>              :      * @dev If `update == false`, inserts `_token` into the per-key set (capacity 64); reverts if already set.</span>
+<span id="L304"><span class="lineNum">     304</span>              :      *      If `update == true`, requires the rule exist; reverts if missing.</span>
+<span id="L305"><span class="lineNum">     305</span>              :      *      In both cases, overwrites `period` and `limit`, and resets `spent` and `lastUpdated` to zero.</span>
+<span id="L306"><span class="lineNum">     306</span>              :      * @param _keyId  The key identifier.</span>
+<span id="L307"><span class="lineNum">     307</span>              :      * @param _token  Token being configured.</span>
+<span id="L308"><span class="lineNum">     308</span>              :      * @param _limit  Spending limit for `_token`.</span>
+<span id="L309"><span class="lineNum">     309</span>              :      * @param _period Spend period enum.</span>
+<span id="L310"><span class="lineNum">     310</span>              :      * @param update  `false` to create, `true` to modify an existing rule.</span>
+<span id="L311"><span class="lineNum">     311</span>              :      */</span>
+<span id="L312"><span class="lineNum">     312</span> <span class="tlaGNC">        7237 :     function _setTokenSpend(</span></span>
+<span id="L313"><span class="lineNum">     313</span>              :         bytes32 _keyId,</span>
+<span id="L314"><span class="lineNum">     314</span>              :         address _token,</span>
+<span id="L315"><span class="lineNum">     315</span>              :         uint256 _limit,</span>
+<span id="L316"><span class="lineNum">     316</span>              :         SpendPeriod _period,</span>
+<span id="L317"><span class="lineNum">     317</span>              :         bool update</span>
+<span id="L318"><span class="lineNum">     318</span>              :     ) internal {</span>
+<span id="L319"><span class="lineNum">     319</span> <span class="tlaGNC">        7237 :         SpendStorage storage sSpend = spendStore[_keyId];</span></span>
+<span id="L320"><span class="lineNum">     320</span>              : </span>
+<span id="L321"><span class="lineNum">     321</span> <span class="tlaGNC">        7237 :         if (!update) {</span></span>
+<span id="L322"><span class="lineNum">     322</span> <span class="tlaGNC">        6830 :             bool inSet = sSpend.tokens.add(_token, 64);</span></span>
+<span id="L323"><span class="lineNum">     323</span> <span class="tlaGNC">        6830 :             if (!inSet) revert KeyManager__TokenSpendAlreadySet();</span></span>
+<span id="L324"><span class="lineNum">     324</span> <span class="tlaGNC">         407 :         } else if (update) {</span></span>
+<span id="L325"><span class="lineNum">     325</span> <span class="tlaGNC">         407 :             if (!sSpend.tokens.contains(_token)) revert KeyManager__TokenSpendNotSet();</span></span>
+<span id="L326"><span class="lineNum">     326</span>              :         }</span>
+<span id="L327"><span class="lineNum">     327</span>              : </span>
+<span id="L328"><span class="lineNum">     328</span> <span class="tlaGNC">        6829 :         TokenSpendPeriod storage sTokenSpend = sSpend.tokenData[_token];</span></span>
+<span id="L329"><span class="lineNum">     329</span> <span class="tlaGNC">        6829 :         sTokenSpend.period = _period;</span></span>
+<span id="L330"><span class="lineNum">     330</span> <span class="tlaGNC">        6829 :         sTokenSpend.limit = _limit;</span></span>
+<span id="L331"><span class="lineNum">     331</span> <span class="tlaGNC">        7235 :         sTokenSpend.spent = 0;</span></span>
+<span id="L332"><span class="lineNum">     332</span> <span class="tlaGNC">        6829 :         sTokenSpend.lastUpdated = 0;</span></span>
+<span id="L333"><span class="lineNum">     333</span>              :     }</span>
+<span id="L334"><span class="lineNum">     334</span>              : </span>
+<span id="L335"><span class="lineNum">     335</span>              :     /**</span>
+<span id="L336"><span class="lineNum">     336</span>              :      * @notice Internal: deletes a token spend rule and removes it from the set.</span>
+<span id="L337"><span class="lineNum">     337</span>              :      * @dev Reverts if the rule does not exist.</span>
+<span id="L338"><span class="lineNum">     338</span>              :      * @param _keyId The key identifier.</span>
+<span id="L339"><span class="lineNum">     339</span>              :      * @param _token Token to remove.</span>
+<span id="L340"><span class="lineNum">     340</span>              :      */</span>
+<span id="L341"><span class="lineNum">     341</span> <span class="tlaGNC">        1924 :     function _removeTokenSpend(bytes32 _keyId, address _token) internal {</span></span>
+<span id="L342"><span class="lineNum">     342</span> <span class="tlaGNC">        1924 :         SpendStorage storage sSpend = spendStore[_keyId];</span></span>
+<span id="L343"><span class="lineNum">     343</span> <span class="tlaGNC">        1924 :         if (!sSpend.tokens.contains(_token)) revert KeyManager__TokenSpendNotSet();</span></span>
+<span id="L344"><span class="lineNum">     344</span> <span class="tlaGNC">        1923 :         delete sSpend.tokenData[_token];</span></span>
+<span id="L345"><span class="lineNum">     345</span> <span class="tlaGNC">        1923 :         sSpend.tokens.remove(_token);</span></span>
+<span id="L346"><span class="lineNum">     346</span>              :     }</span>
+<span id="L347"><span class="lineNum">     347</span>              : </span>
+<span id="L348"><span class="lineNum">     348</span>              :     /**</span>
+<span id="L349"><span class="lineNum">     349</span>              :      * @notice Internal: grants or revokes a `(target, selector)` permission for a key.</span>
+<span id="L350"><span class="lineNum">     350</span>              :      * @dev Packs and updates the `(target, selector)` entry in an enumerable set (capacity 2048).</span>
+<span id="L351"><span class="lineNum">     351</span>              :      * @param _keyId  The key identifier.</span>
+<span id="L352"><span class="lineNum">     352</span>              :      * @param _target Target contract/eoa address.</span>
+<span id="L353"><span class="lineNum">     353</span>              :      * @param _funSel Function selector on `_target`.</span>
+<span id="L354"><span class="lineNum">     354</span>              :      * @param can     Whether to permit (`true`) or remove/forbid (`false`) the tuple.</span>
+<span id="L355"><span class="lineNum">     355</span>              :      */</span>
+<span id="L356"><span class="lineNum">     356</span> <span class="tlaGNC">        2639 :     function _setCanCall(bytes32 _keyId, address _target, bytes4 _funSel, bool can) internal {</span></span>
+<span id="L357"><span class="lineNum">     357</span> <span class="tlaGNC">        2639 :         ExecutePermissions storage sExecute = permissions[_keyId];</span></span>
+<span id="L358"><span class="lineNum">     358</span> <span class="tlaGNC">        2639 :         sExecute.canExecute.update(_target.packCanExecute(_funSel), can, 2048);</span></span>
+<span id="L359"><span class="lineNum">     359</span>              :     }</span>
+<span id="L360"><span class="lineNum">     360</span>              : </span>
+<span id="L361"><span class="lineNum">     361</span>              :     // =============================================================</span>
+<span id="L362"><span class="lineNum">     362</span>              :     //                   PUBLIC / EXTERNAL GETTERS</span>
+<span id="L363"><span class="lineNum">     363</span>              :     // =============================================================</span>
+<span id="L364"><span class="lineNum">     364</span>              : </span>
+<span id="L365"><span class="lineNum">     365</span>              :     /**</span>
+<span id="L366"><span class="lineNum">     366</span>              :      * @notice Returns the total number of keys ever registered (monotonic counter).</span>
+<span id="L367"><span class="lineNum">     367</span>              :      * @dev Includes revoked/paused keys; this is not a count of active keys.</span>
+<span id="L368"><span class="lineNum">     368</span>              :      * @return The current value of `id`.</span>
+<span id="L369"><span class="lineNum">     369</span>              :      */</span>
+<span id="L370"><span class="lineNum">     370</span> <span class="tlaGNC">      174897 :     function keyCount() external view returns (uint256) {</span></span>
+<span id="L371"><span class="lineNum">     371</span> <span class="tlaGNC">      174897 :         return id;</span></span>
+<span id="L372"><span class="lineNum">     372</span>              :     }</span>
+<span id="L373"><span class="lineNum">     373</span>              : </span>
+<span id="L374"><span class="lineNum">     374</span>              :     /**</span>
+<span id="L375"><span class="lineNum">     375</span>              :      * @notice Returns the `keyId` and stored `KeyData` at registration index `i`.</span>
+<span id="L376"><span class="lineNum">     376</span>              :      * @dev Indexing follows insertion order: `0..id-1`.</span>
+<span id="L377"><span class="lineNum">     377</span>              :      * @param i Index in `idKeys`.</span>
+<span id="L378"><span class="lineNum">     378</span>              :      * @return keyId The key identifier at index `i`.</span>
+<span id="L379"><span class="lineNum">     379</span>              :      * @return data  The stored `KeyData` for `keyId`.</span>
+<span id="L380"><span class="lineNum">     380</span>              :      */</span>
+<span id="L381"><span class="lineNum">     381</span> <span class="tlaGNC">      997782 :     function keyAt(uint256 i) public view returns (bytes32 keyId, KeyData memory data) {</span></span>
+<span id="L382"><span class="lineNum">     382</span> <span class="tlaGNC">      997782 :         keyId = idKeys[i];</span></span>
+<span id="L383"><span class="lineNum">     383</span> <span class="tlaGNC">      997782 :         data = keys[keyId];</span></span>
+<span id="L384"><span class="lineNum">     384</span>              :     }</span>
+<span id="L385"><span class="lineNum">     385</span>              : </span>
+<span id="L386"><span class="lineNum">     386</span>              :     /**</span>
+<span id="L387"><span class="lineNum">     387</span>              :      * @notice Returns the stored `KeyData` for a given key identifier.</span>
+<span id="L388"><span class="lineNum">     388</span>              :      * @param _keyId The key identifier.</span>
+<span id="L389"><span class="lineNum">     389</span>              :      * @return The `KeyData` for `_keyId` (zeroed if never set).</span>
+<span id="L390"><span class="lineNum">     390</span>              :      */</span>
+<span id="L391"><span class="lineNum">     391</span> <span class="tlaGNC">       26700 :     function getKey(bytes32 _keyId) external view returns (KeyData memory) {</span></span>
+<span id="L392"><span class="lineNum">     392</span> <span class="tlaGNC">       26700 :         return keys[_keyId];</span></span>
+<span id="L393"><span class="lineNum">     393</span>              :     }</span>
+<span id="L394"><span class="lineNum">     394</span>              : </span>
+<span id="L395"><span class="lineNum">     395</span>              :     /**</span>
+<span id="L396"><span class="lineNum">     396</span>              :      * @notice Whether a key has ever been registered or is currently active.</span>
+<span id="L397"><span class="lineNum">     397</span>              :      * @dev Returns true if `validUntil != 0` OR `isActive == true`.</span>
+<span id="L398"><span class="lineNum">     398</span>              :      * @param _keyId The key identifier.</span>
+<span id="L399"><span class="lineNum">     399</span>              :      * @return True if registered/active, false otherwise.</span>
+<span id="L400"><span class="lineNum">     400</span>              :      */</span>
+<span id="L401"><span class="lineNum">     401</span> <span class="tlaGNC">           2 :     function isRegistered(bytes32 _keyId) external view returns (bool) {</span></span>
+<span id="L402"><span class="lineNum">     402</span> <span class="tlaGNC">           2 :         return keys[_keyId].validUntil != 0 || keys[_keyId].isActive;</span></span>
+<span id="L403"><span class="lineNum">     403</span>              :     }</span>
+<span id="L404"><span class="lineNum">     404</span>              : </span>
+<span id="L405"><span class="lineNum">     405</span>              :     /**</span>
+<span id="L406"><span class="lineNum">     406</span>              :      * @notice Whether a key is currently active.</span>
+<span id="L407"><span class="lineNum">     407</span>              :      * @param _keyId The key identifier.</span>
+<span id="L408"><span class="lineNum">     408</span>              :      * @return True if active; false otherwise.</span>
+<span id="L409"><span class="lineNum">     409</span>              :      */</span>
+<span id="L410"><span class="lineNum">     410</span> <span class="tlaGNC">       72410 :     function isKeyActive(bytes32 _keyId) external view returns (bool) {</span></span>
+<span id="L411"><span class="lineNum">     411</span> <span class="tlaGNC">       72410 :         return keys[_keyId].isActive;</span></span>
+<span id="L412"><span class="lineNum">     412</span>              :     }</span>
+<span id="L413"><span class="lineNum">     413</span>              : </span>
+<span id="L414"><span class="lineNum">     414</span>              :     /**</span>
+<span id="L415"><span class="lineNum">     415</span>              :      * @notice Returns the packed `(target, selector)` permissions for a key.</span>
+<span id="L416"><span class="lineNum">     416</span>              :      * @param _keyId The key identifier.</span>
+<span id="L417"><span class="lineNum">     417</span>              :      * @return Array of packed `bytes32` entries encoding `(target, selector)`.</span>
+<span id="L418"><span class="lineNum">     418</span>              :      */</span>
+<span id="L419"><span class="lineNum">     419</span> <span class="tlaGNC">        3430 :     function canExecutePackedInfos(bytes32 _keyId) public view returns (bytes32[] memory) {</span></span>
+<span id="L420"><span class="lineNum">     420</span> <span class="tlaGNC">        3430 :         return permissions[_keyId].canExecute.values();</span></span>
+<span id="L421"><span class="lineNum">     421</span>              :     }</span>
+<span id="L422"><span class="lineNum">     422</span>              : </span>
+<span id="L423"><span class="lineNum">     423</span>              :     /**</span>
+<span id="L424"><span class="lineNum">     424</span>              :      * @notice Number of `(target, selector)` entries a key is allowed to call.</span>
+<span id="L425"><span class="lineNum">     425</span>              :      * @param _keyId The key identifier.</span>
+<span id="L426"><span class="lineNum">     426</span>              :      * @return The size of the permission set.</span>
+<span id="L427"><span class="lineNum">     427</span>              :      */</span>
+<span id="L428"><span class="lineNum">     428</span> <span class="tlaGNC">       63356 :     function canExecuteLength(bytes32 _keyId) external view returns (uint256) {</span></span>
+<span id="L429"><span class="lineNum">     429</span> <span class="tlaGNC">       63356 :         return permissions[_keyId].canExecute.length();</span></span>
+<span id="L430"><span class="lineNum">     430</span>              :     }</span>
+<span id="L431"><span class="lineNum">     431</span>              : </span>
+<span id="L432"><span class="lineNum">     432</span>              :     /**</span>
+<span id="L433"><span class="lineNum">     433</span>              :      * @notice Returns the `(target, selector)` tuple at index `i` for a key.</span>
+<span id="L434"><span class="lineNum">     434</span>              :      * @param _keyId The key identifier.</span>
+<span id="L435"><span class="lineNum">     435</span>              :      * @param i      Index into the permission set.</span>
+<span id="L436"><span class="lineNum">     436</span>              :      * @return target Target contract address.</span>
+<span id="L437"><span class="lineNum">     437</span>              :      * @return fnSel  Function selector on `target`.</span>
+<span id="L438"><span class="lineNum">     438</span>              :      */</span>
+<span id="L439"><span class="lineNum">     439</span> <span class="tlaGNC">          25 :     function canExecuteAt(bytes32 _keyId, uint256 i)</span></span>
+<span id="L440"><span class="lineNum">     440</span>              :         external</span>
+<span id="L441"><span class="lineNum">     441</span>              :         view</span>
+<span id="L442"><span class="lineNum">     442</span>              :         returns (address target, bytes4 fnSel)</span>
+<span id="L443"><span class="lineNum">     443</span>              :     {</span>
+<span id="L444"><span class="lineNum">     444</span> <span class="tlaGNC">          25 :         bytes32 packed = permissions[_keyId].canExecute.at(i);</span></span>
+<span id="L445"><span class="lineNum">     445</span> <span class="tlaGNC">          25 :         return packed.unpackCanExecute();</span></span>
+<span id="L446"><span class="lineNum">     446</span>              :     }</span>
+<span id="L447"><span class="lineNum">     447</span>              : </span>
+<span id="L448"><span class="lineNum">     448</span>              :     /**</span>
+<span id="L449"><span class="lineNum">     449</span>              :      * @notice Checks if a `(target, selector)` tuple is permitted for a key.</span>
+<span id="L450"><span class="lineNum">     450</span>              :      * @param _keyId  The key identifier.</span>
+<span id="L451"><span class="lineNum">     451</span>              :      * @param _target Target contract address.</span>
+<span id="L452"><span class="lineNum">     452</span>              :      * @param _funSel Function selector on `_target`.</span>
+<span id="L453"><span class="lineNum">     453</span>              :      * @return True if the tuple is present; false otherwise.</span>
+<span id="L454"><span class="lineNum">     454</span>              :      */</span>
+<span id="L455"><span class="lineNum">     455</span> <span class="tlaGNC">          37 :     function hasCanCall(bytes32 _keyId, address _target, bytes4 _funSel)</span></span>
+<span id="L456"><span class="lineNum">     456</span>              :         external</span>
+<span id="L457"><span class="lineNum">     457</span>              :         view</span>
+<span id="L458"><span class="lineNum">     458</span>              :         returns (bool)</span>
+<span id="L459"><span class="lineNum">     459</span>              :     {</span>
+<span id="L460"><span class="lineNum">     460</span> <span class="tlaGNC">          37 :         return permissions[_keyId].canExecute.contains(_target.packCanExecute(_funSel));</span></span>
+<span id="L461"><span class="lineNum">     461</span>              :     }</span>
+<span id="L462"><span class="lineNum">     462</span>              : </span>
+<span id="L463"><span class="lineNum">     463</span>              :     /**</span>
+<span id="L464"><span class="lineNum">     464</span>              :      * @notice Lists all tokens with configured spend limits for a key.</span>
+<span id="L465"><span class="lineNum">     465</span>              :      * @param _keyId The key identifier.</span>
+<span id="L466"><span class="lineNum">     466</span>              :      * @return Array of token addresses with spend rules.</span>
+<span id="L467"><span class="lineNum">     467</span>              :      */</span>
+<span id="L468"><span class="lineNum">     468</span> <span class="tlaGNC">      129030 :     function spendTokens(bytes32 _keyId) external view returns (address[] memory) {</span></span>
+<span id="L469"><span class="lineNum">     469</span> <span class="tlaGNC">      129030 :         return spendStore[_keyId].tokens.values();</span></span>
+<span id="L470"><span class="lineNum">     470</span>              :     }</span>
+<span id="L471"><span class="lineNum">     471</span>              : </span>
+<span id="L472"><span class="lineNum">     472</span>              :     /**</span>
+<span id="L473"><span class="lineNum">     473</span>              :      * @notice Whether a token spend rule exists for a key.</span>
+<span id="L474"><span class="lineNum">     474</span>              :      * @param _keyId The key identifier.</span>
+<span id="L475"><span class="lineNum">     475</span>              :      * @param _token Token address.</span>
+<span id="L476"><span class="lineNum">     476</span>              :      * @return True if a rule exists; false otherwise.</span>
+<span id="L477"><span class="lineNum">     477</span>              :      */</span>
+<span id="L478"><span class="lineNum">     478</span> <span class="tlaGNC">       14439 :     function hasTokenSpend(bytes32 _keyId, address _token) public view returns (bool) {</span></span>
+<span id="L479"><span class="lineNum">     479</span> <span class="tlaGNC">       14439 :         return spendStore[_keyId].tokens.contains(_token);</span></span>
+<span id="L480"><span class="lineNum">     480</span>              :     }</span>
+<span id="L481"><span class="lineNum">     481</span>              : </span>
+<span id="L482"><span class="lineNum">     482</span>              :     /**</span>
+<span id="L483"><span class="lineNum">     483</span>              :      * @notice Returns the spend rule for (`_keyId`, `_token`).</span>
+<span id="L484"><span class="lineNum">     484</span>              :      * @param _keyId The key identifier.</span>
+<span id="L485"><span class="lineNum">     485</span>              :      * @param _token Token address.</span>
+<span id="L486"><span class="lineNum">     486</span>              :      * @return period      Spend period enum.</span>
+<span id="L487"><span class="lineNum">     487</span>              :      * @return limit       Per-period spend limit.</span>
+<span id="L488"><span class="lineNum">     488</span>              :      * @return spent       Amount spent in the current period.</span>
+<span id="L489"><span class="lineNum">     489</span>              :      * @return lastUpdated Timestamp of the last counter reset/update.</span>
+<span id="L490"><span class="lineNum">     490</span>              :      */</span>
+<span id="L491"><span class="lineNum">     491</span> <span class="tlaGNC">         449 :     function tokenSpend(bytes32 _keyId, address _token)</span></span>
+<span id="L492"><span class="lineNum">     492</span>              :         external</span>
+<span id="L493"><span class="lineNum">     493</span>              :         view</span>
+<span id="L494"><span class="lineNum">     494</span>              :         returns (SpendPeriod period, uint256 limit, uint256 spent, uint256 lastUpdated)</span>
+<span id="L495"><span class="lineNum">     495</span>              :     {</span>
+<span id="L496"><span class="lineNum">     496</span> <span class="tlaGNC">         449 :         TokenSpendPeriod storage s = spendStore[_keyId].tokenData[_token];</span></span>
+<span id="L497"><span class="lineNum">     497</span> <span class="tlaGNC">         449 :         return (s.period, s.limit, s.spent, s.lastUpdated);</span></span>
+<span id="L498"><span class="lineNum">     498</span>              :     }</span>
+<span id="L499"><span class="lineNum">     499</span>              : </span>
+<span id="L500"><span class="lineNum">     500</span>              :     // =============================================================</span>
+<span id="L501"><span class="lineNum">     501</span>              :     //                          ADMIN FUNC.</span>
+<span id="L502"><span class="lineNum">     502</span>              :     // =============================================================</span>
+<span id="L503"><span class="lineNum">     503</span>              : </span>
+<span id="L504"><span class="lineNum">     504</span>              :     /**</span>
+<span id="L505"><span class="lineNum">     505</span>              :      * @notice Pauses a key (soft-disable without wiping data/permissions).</span>
+<span id="L506"><span class="lineNum">     506</span>              :      * @dev Reverts if already paused.</span>
+<span id="L507"><span class="lineNum">     507</span>              :      * @param _keyId The key identifier to pause.</span>
+<span id="L508"><span class="lineNum">     508</span>              :      */</span>
+<span id="L509"><span class="lineNum">     509</span> <span class="tlaGNC">        6699 :     function pauseKey(bytes32 _keyId) public {</span></span>
+<span id="L510"><span class="lineNum">     510</span> <span class="tlaUNC">           0 :         _requireForExecute();</span></span>
+<span id="L511"><span class="lineNum">     511</span> <span class="tlaGNC">        6698 :         KeyData storage sKey = keys[_keyId];</span></span>
+<span id="L512"><span class="lineNum">     512</span> <span class="tlaGNC">        6698 :         if (!sKey.isActive) revert KeyManager__KeyAlreadyPaused();</span></span>
+<span id="L513"><span class="lineNum">     513</span>              : </span>
+<span id="L514"><span class="lineNum">     514</span> <span class="tlaGNC">        6697 :         sKey.isActive = false;</span></span>
+<span id="L515"><span class="lineNum">     515</span> <span class="tlaGNC">        6697 :         emit KeyPaused(_keyId);</span></span>
+<span id="L516"><span class="lineNum">     516</span>              :     }</span>
+<span id="L517"><span class="lineNum">     517</span>              : </span>
+<span id="L518"><span class="lineNum">     518</span>              :     /**</span>
+<span id="L519"><span class="lineNum">     519</span>              :      * @notice Unpauses a previously paused key.</span>
+<span id="L520"><span class="lineNum">     520</span>              :      * @dev Reverts if already active.</span>
+<span id="L521"><span class="lineNum">     521</span>              :      * @param _keyId The key identifier to unpause.</span>
+<span id="L522"><span class="lineNum">     522</span>              :      */</span>
+<span id="L523"><span class="lineNum">     523</span> <span class="tlaGNC">        5298 :     function unpauseKey(bytes32 _keyId) public {</span></span>
+<span id="L524"><span class="lineNum">     524</span> <span class="tlaUNC">           0 :         _requireForExecute();</span></span>
+<span id="L525"><span class="lineNum">     525</span> <span class="tlaGNC">        5297 :         KeyData storage sKey = keys[_keyId];</span></span>
+<span id="L526"><span class="lineNum">     526</span> <span class="tlaGNC">           1 :         if (sKey.isActive) revert KeyManager__KeyAlreadyActive();</span></span>
+<span id="L527"><span class="lineNum">     527</span>              : </span>
+<span id="L528"><span class="lineNum">     528</span> <span class="tlaGNC">        5296 :         sKey.isActive = true;</span></span>
+<span id="L529"><span class="lineNum">     529</span> <span class="tlaGNC">        5296 :         emit KeyUnpaused(_keyId);</span></span>
+<span id="L530"><span class="lineNum">     530</span>              :     }</span>
+<span id="L531"><span class="lineNum">     531</span>              : </span>
+<span id="L532"><span class="lineNum">     532</span>              :     /**</span>
+<span id="L533"><span class="lineNum">     533</span>              :      * @notice Clears **all** token spend rules for a key.</span>
+<span id="L534"><span class="lineNum">     534</span>              :      * @dev Iterates and deletes each rule; gas scales with rule count.</span>
+<span id="L535"><span class="lineNum">     535</span>              :      * @param _keyId The key identifier whose spend rules are cleared.</span>
+<span id="L536"><span class="lineNum">     536</span>              :      */</span>
+<span id="L537"><span class="lineNum">     537</span> <span class="tlaGNC">       28319 :     function clearSpendPermissions(bytes32 _keyId) public {</span></span>
+<span id="L538"><span class="lineNum">     538</span> <span class="tlaUNC">           0 :         _requireForExecute();</span></span>
+<span id="L539"><span class="lineNum">     539</span> <span class="tlaGNC">       28318 :         SpendStorage storage sSpend = spendStore[_keyId];</span></span>
+<span id="L540"><span class="lineNum">     540</span>              : </span>
+<span id="L541"><span class="lineNum">     541</span> <span class="tlaGNC">       32514 :         while (sSpend.tokens.length() != 0) {</span></span>
+<span id="L542"><span class="lineNum">     542</span> <span class="tlaGNC">        4196 :             address token = sSpend.tokens.at(sSpend.tokens.length() - 1);</span></span>
+<span id="L543"><span class="lineNum">     543</span> <span class="tlaGNC">        4196 :             delete sSpend.tokenData[token];</span></span>
+<span id="L544"><span class="lineNum">     544</span> <span class="tlaGNC">        4196 :             sSpend.tokens.remove(token);</span></span>
+<span id="L545"><span class="lineNum">     545</span>              :         }</span>
+<span id="L546"><span class="lineNum">     546</span> <span class="tlaGNC">       28318 :         emit SpendPermissionsCleared(_keyId);</span></span>
+<span id="L547"><span class="lineNum">     547</span>              :     }</span>
+<span id="L548"><span class="lineNum">     548</span>              : </span>
+<span id="L549"><span class="lineNum">     549</span>              :     /**</span>
+<span id="L550"><span class="lineNum">     550</span>              :      * @notice Clears **all** `(target, selector)` permissions for a key.</span>
+<span id="L551"><span class="lineNum">     551</span>              :      * @dev Iterates and deletes each packed entry; gas scales with entry count.</span>
+<span id="L552"><span class="lineNum">     552</span>              :      * @param _keyId The key identifier whose execute permissions are cleared.</span>
+<span id="L553"><span class="lineNum">     553</span>              :      */</span>
+<span id="L554"><span class="lineNum">     554</span> <span class="tlaGNC">       27235 :     function clearExecutePermissions(bytes32 _keyId) public {</span></span>
+<span id="L555"><span class="lineNum">     555</span> <span class="tlaUNC">           0 :         _requireForExecute();</span></span>
+<span id="L556"><span class="lineNum">     556</span> <span class="tlaGNC">       27234 :         ExecutePermissions storage sExecute = permissions[_keyId];</span></span>
+<span id="L557"><span class="lineNum">     557</span>              : </span>
+<span id="L558"><span class="lineNum">     558</span> <span class="tlaGNC">       29293 :         while (sExecute.canExecute.length() != 0) {</span></span>
+<span id="L559"><span class="lineNum">     559</span> <span class="tlaGNC">        2059 :             bytes32 packed = sExecute.canExecute.at(sExecute.canExecute.length() - 1);</span></span>
+<span id="L560"><span class="lineNum">     560</span> <span class="tlaGNC">        2059 :             sExecute.canExecute.remove(packed);</span></span>
+<span id="L561"><span class="lineNum">     561</span>              :         }</span>
+<span id="L562"><span class="lineNum">     562</span>              : </span>
+<span id="L563"><span class="lineNum">     563</span> <span class="tlaGNC">       27234 :         emit ExecutePermissionsCleared(_keyId);</span></span>
+<span id="L564"><span class="lineNum">     564</span>              :     }</span>
+<span id="L565"><span class="lineNum">     565</span>              : </span>
+<span id="L566"><span class="lineNum">     566</span>              :     /// @dev Master key must have: validUntil = max(uint48), validAfter = 0, limit = 0, whitelisting = false.</span>
+<span id="L567"><span class="lineNum">     567</span> <span class="tlaGNC">        4049 :     function _masterKeyValidation(KeyDataReg memory _keyData) internal pure {</span></span>
+<span id="L568"><span class="lineNum">     568</span> <span class="tlaGNC">        4049 :         _keyData.keyCantBeZero();</span></span>
+<span id="L569"><span class="lineNum">     569</span>              :         if (</span>
+<span id="L570"><span class="lineNum">     570</span> <span class="tlaGNC">        4048 :             _keyData.limits != 0 || _keyData.validAfter != 0</span></span>
+<span id="L571"><span class="lineNum">     571</span> <span class="tlaGNC">        4046 :                 || _keyData.validUntil != type(uint48).max || _keyData.keyControl != KeyControl.Self</span></span>
+<span id="L572"><span class="lineNum">     572</span> <span class="tlaGNC">        4044 :                 || _keyData.keyType == KeyType.P256 || _keyData.keyType == KeyType.P256NONKEY</span></span>
+<span id="L573"><span class="lineNum">     573</span> <span class="tlaGNC">           6 :         ) revert IKeysManager.KeyManager__InvalidMasterKeyReg(_keyData);</span></span>
+<span id="L574"><span class="lineNum">     574</span>              :     }</span>
+<span id="L575"><span class="lineNum">     575</span>              : }</span>
         </pre>
               </td>
             </tr>

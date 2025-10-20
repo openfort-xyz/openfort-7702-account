@@ -22,34 +22,41 @@ solady:
 install-forge: openzeppelin account-abstraction solady
 
 test-keys:
-	forge test --mp test/unit/Keys.t.sol -vv --rpc-url $(SEPOLIA_RPC_URL)
+	forge test --mp test/unit/KeysManager.t.sol -vv 
 
 test-upgrade-addresses:
-	forge test --mp test/unit/UpgradeAddresses.t.sol -vv --rpc-url $(SEPOLIA_RPC_URL)
-
-test-P256:
-	npx tsx --experimental-global-webcrypto script/P256_Single_Mint.ts && forge test --mp test/unit/P256.t.sol -vv --rpc-url $(SEPOLIA_RPC_URL)
-
-test-registartion:
-	forge test --mp test/unit/Registartion.t.sol -vv --rpc-url $(SEPOLIA_RPC_URL)
+	forge test --mp test/unit/UpgradeAddresses.t.sol -vv
 
 test-eth:
-	npx tsx --experimental-global-webcrypto script/P256_ETH.ts && forge test --mp test/unit/DepositAndTransferETH.t.sol -vv --rpc-url $(SEPOLIA_RPC_URL)
+	npx tsx --experimental-global-webcrypto script/P256_ETH.ts && npx tsx --experimental-global-webcrypto script/P256_ETH_Batch.ts && forge test --mp test/unit/DepositAndTransferETH.t.sol -vv
 
 test-execution:
-	npx tsx --experimental-global-webcrypto script/P256_Single_Mint.ts && npx tsx --experimental-global-webcrypto script/P256.ts && forge test --mp test/unit/Execution.t.sol -vv --rpc-url $(SEPOLIA_RPC_URL)
+	npx tsx --experimental-global-webcrypto script/P256_EXE.ts && npx tsx --experimental-global-webcrypto script/P256_EXE_Batch.ts && forge test --mp test/unit/Execution.t.sol -vv
 
 test-recovery:
-	forge test --mp test/unit/Recoverable.t.sol --rpc-url $(SEPOLIA_RPC_URL) -vv 
+	forge test --mp test/unit/Recoverable.t.sol -vv
 
 test-gas:
-	forge test --mp test/gas/GasFuzzing.t.sol --rpc-url $(SEPOLIA_RPC_URL) -vv  && forge test --mp test/gas/GasPolicyTest.t.sol --rpc-url $(SEPOLIA_RPC_URL) -vv 
+	forge test --mp test/gas/GasFuzzing.t.sol -vv  && forge test --mp test/gas/GasPolicyTest.t.sol -vv 
 
-test-all:
-	npx tsx --experimental-global-webcrypto  script/P256_Single_Mint.ts && npx tsx --experimental-global-webcrypto  script/P256_ETH.ts && npx tsx --experimental-global-webcrypto  script/P256.ts && forge test -vv --rpc-url $(SEPOLIA_RPC_URL)
+test-by-contract:
+	forge test --mp test/by-contract/BaseOPF7702Test.t.sol && forge test --mp test/by-contract/KeyManagerTest.t.sol && forge test --mp test/by-contract/OPF7702RecoverableTest.t.sol && forge test --mp test/by-contract/OPF7702Test.t.sol && forge test --mp test/by-contract/OPF7702WithDiffKeys.t.sol && forge test --mp test/by-contract/RecoverableReverts.t.sol && forge test --mp test/by-contract/Upgrade7702.sol
+
+test-fuzz:
+	forge test --mp test/fuzz/ExecutionFuzz.t.sol && forge test --mp test/fuzz/KeysManagerFuzz.t.sol && forge test --mp test/fuzz/RecoverableGuardiansFuzz.t.sol && forge test --mp test/fuzz/RecoveryFuzz.t.sol && forge test --mp test/fuzz/UserOpExecutionFuzz.t.sol
+
+test-invariant:
+	forge clean && forge build --quiet && forge test --mp test/invariant/CoreInvariant.t.sol && forge test --mp test/invariant/KeysManagerInvariant.t.sol
+
+test-all: test-keys test-upgrade-addresses test-eth test-execution test-recovery test-gas test-by-contract
+
+test-all-fuzz: test-keys test-upgrade-addresses test-eth test-execution test-recovery test-gas test-by-contract test-fuzz
+
+test-all-fuzz-invariant: 
+	forge clean && forge build --quiet && forge test
 
 coverage:
-	forge coverage --ir-minimum --rpc-url $(SEPOLIA_RPC_URL) >> coverage.txt
+	forge coverage --ir-minimum >> coverage.txt
 
 report-debug:
 	forge coverage --match-path "src/core/BaseOPF7702.sol" --ir-minimum --rpc-url $(SEPOLIA_RPC_URL) >> report_debug_BaseOPF7702.txt
@@ -58,11 +65,11 @@ report-json:
 	forge coverage --report json --ir-minimum --rpc-url $(SEPOLIA_RPC_URL) >> coverage.json
 
 lcov:
-	forge coverage --report lcov --ir-minimum --rpc-url $(SEPOLIA_RPC_URL)  && genhtml lcov.info -o coverage-html/ --ignore-errors inconsistent,corrupt
+	forge coverage --report lcov --ir-minimum && genhtml lcov.info -o coverage-html/ --ignore-errors inconsistent,corrupt
 
-gas:
-	forge test --gas-report --rpc-url $(SEPOLIA_RPC_URL)
-	
+size:
+	forge clean && forge build --sizes
+
 storage:
 	forge clean && forge inspect src/core/OPFMain.sol:OPFMain storageLayout
 	
@@ -125,4 +132,4 @@ script-init:
 	-vvvv
 
 push:
-	git push -u origin OPF7702_PROXY_After_Audit_Gas_Policy_Module
+	git push -u origin 0xkoiner/Social-Recovery-Contract

@@ -34,38 +34,26 @@ import {OPF7702Recoverable} from "src/core/OPF7702Recoverable.sol";
  *    == 107588995614188179791452663824698570634674667931787294340862201729294267929600
  */
 contract OPFMain is OPF7702Recoverable layout at 107588995614188179791452663824698570634674667931787294340862201729294267929600 {
-    /// @param _entryPoint      ERC-4337 EntryPoint address.
-    /// @param _webAuthnVerifier WebAuthn verifier contract.
-    /// @param _recoveryPeriod  Delay before guardians can execute recovery.
-    /// @param _lockPeriod      How long the wallet stays locked after recovery.
-    /// @param _securityPeriod  Timelock for guardian add/remove.
-    /// @param _securityWindow  Window during which that action must be executed.
+    /**
+     * @param _entryPoint       ERC-4337 EntryPoint address.
+     * @param _webAuthnVerifier WebAuthn verifier contract for P-256/WebAuthn signature checks.
+     * @param _gasPolicy        Gas/UserOp policy contract (used for custodial key policy init).
+     * @param _recoveryManager  Social Recovery Manager contract that manages guardians & recovery flow.
+     */
     constructor(
         address _entryPoint,
         address _webAuthnVerifier,
-        uint256 _recoveryPeriod,
-        uint256 _lockPeriod,
-        uint256 _securityPeriod,
-        uint256 _securityWindow,
-        address _gasPolicy
-    )
-        OPF7702Recoverable(
-            _entryPoint,
-            _webAuthnVerifier,
-            _recoveryPeriod,
-            _lockPeriod,
-            _securityPeriod,
-            _securityWindow,
-            _gasPolicy
-        )
-    {}
+        address _gasPolicy,
+        address _recoveryManager
+    ) OPF7702Recoverable(_entryPoint, _webAuthnVerifier, _gasPolicy, _recoveryManager) {}
 
-    /// @dev Upgrades the proxy delegation.
-    /// If this delegation is delegated directly without usage of EIP7702Proxy,
-    /// this operation will not affect the logic until the authority is redelegated
-    /// to a proper EIP7702Proxy. The `newImplementation` should implement
-    /// `upgradeProxyDelegation` or similar, otherwise upgrades will be locked and
-    /// only a new EIP-7702 transaction can change the authority's logic.
+    /**
+     * @notice Updates the delegated implementation used by the EIP-7702 authority proxy.
+     * @dev    Has no effect if the authority is not currently delegated via an EIP-7702 proxy.
+     *         The `newImplementation` contract must expose an `upgradeProxyDelegation` entry point
+     *         (or equivalent) to allow future upgrades.
+     * @param newImplementation Address of the implementation contract to delegate to.
+     */
     function upgradeProxyDelegation(address newImplementation) public virtual {
         _requireForExecute();
         LibEIP7702.upgradeProxyDelegation(newImplementation);

@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2025-08-29 18:57:14</td>
+            <td class="headerValue">2025-10-20 12:41:42</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryLo">0.0&nbsp;%</td>
@@ -75,11 +75,14 @@
 <span id="L13"><span class="lineNum">      13</span>              :     bytes32 public constant CUSTOM_STORAGE_ROOT =</span>
 <span id="L14"><span class="lineNum">      14</span>              :         0xeddd36aac8c71936fe1d5edb073ff947aa7c1b6174e87c15677c96ab9ad95400;</span>
 <span id="L15"><span class="lineNum">      15</span>              : </span>
-<span id="L16"><span class="lineNum">      16</span>              :     /// @notice Returns the namespace and version of the contract</span>
-<span id="L17"><span class="lineNum">      17</span> <span class="tlaUNC">           0 :     function namespaceAndVersion() external pure returns (string memory) {</span></span>
-<span id="L18"><span class="lineNum">      18</span> <span class="tlaUNC">           0 :         return &quot;openfort.baseAccount.7702.v1&quot;;</span></span>
-<span id="L19"><span class="lineNum">      19</span>              :     }</span>
-<span id="L20"><span class="lineNum">      20</span>              : }</span>
+<span id="L16"><span class="lineNum">      16</span>              :     /**</span>
+<span id="L17"><span class="lineNum">      17</span>              :      * @notice Exposes the storage namespace and semantic version encoded for ERC-7201.</span>
+<span id="L18"><span class="lineNum">      18</span>              :      * @return Namespace string of the form `openfort.baseAccount.7702.v1`.</span>
+<span id="L19"><span class="lineNum">      19</span>              :      */</span>
+<span id="L20"><span class="lineNum">      20</span> <span class="tlaUNC">           0 :     function namespaceAndVersion() external pure returns (string memory) {</span></span>
+<span id="L21"><span class="lineNum">      21</span> <span class="tlaUNC">           0 :         return &quot;openfort.baseAccount.7702.v1&quot;;</span></span>
+<span id="L22"><span class="lineNum">      22</span>              :     }</span>
+<span id="L23"><span class="lineNum">      23</span>              : }</span>
         </pre>
               </td>
             </tr>

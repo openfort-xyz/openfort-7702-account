@@ -1,1796 +1,704 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier:MIT
 
-pragma solidity ^0.8.29;
+pragma solidity 0.8.29;
 
-import {Base} from "test/Base.sol";
-import {GasPolicy} from "src/utils/GasPolicy.sol";
-import {Test, console2 as console} from "lib/forge-std/src/Test.sol";
-import {EfficientHashLib} from "lib/solady/src/utils/EfficientHashLib.sol";
-import {EntryPoint} from "lib/account-abstraction/contracts/core/EntryPoint.sol";
-import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
-import {IEntryPoint} from "lib/account-abstraction/contracts/interfaces/IEntryPoint.sol";
-
-import {IKey} from "src/interfaces/IKey.sol";
+import {Deploy} from "./../Deploy.t.sol";
 import {MockERC20} from "src/mocks/MockERC20.sol";
-import {ISpendLimit} from "src/interfaces/ISpendLimit.sol";
-import {WebAuthnVerifier} from "src/utils/WebAuthnVerifier.sol";
-import {OPFMain as OPF7702} from "src/core/OPFMain.sol";
+import {console2 as console} from "lib/forge-std/src/Test.sol";
 import {PackedUserOperation} from
     "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
-import {MessageHashUtils} from
-    "lib/openzeppelin-contracts/contracts/utils/cryptography/MessageHashUtils.sol";
+import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 
-contract Execution7821 is Base {
-    /* ───────────────────────────────────────────────────────────── contracts ── */
-    IEntryPoint public entryPoint;
-    WebAuthnVerifier public webAuthn;
-    OPF7702 public implementation;
-    OPF7702 public account; // clone deployed at `owner`
-    GasPolicy public gasPolicy;
+contract Execution is Deploy {
+    error OpenfortBaseAccount7702V1__TooManyCalls(uint256 total, uint256 max);
+    error OpenfortBaseAccount7702V1__InvalidTransactionLength();
 
-    /* ──────────────────────────────────────────────────────── key structures ── */
-    Key internal keyMK;
-    PubKey internal pubKeyMK;
-    Key internal keyMK_Mint;
-    PubKey internal pubKeyMK_Mint;
-    Key internal keyMK_BATCH;
-    PubKey internal pubKeyMK_BATCH;
-    Key internal keyMK_BATCHS;
-    PubKey internal pubKeyMK_BATCHS;
-    Key internal keySK;
-    PubKey internal pubKeySK;
-    Key internal keySK_B;
-    PubKey internal pubKeySK_B;
+    address reciver;
+    PubKey internal pK;
+    PubKey internal pK_SK;
 
-    KeyReg internal keyData;
-    /* ─────────────────────────────────────────────────────────────── setup ──── */
+    uint256 balanceAccounBefore;
+    uint256 balanceAccounAfter;
+    uint256 balanceReciverBefore;
+    uint256 balanceReciverAfter;
 
-    function setUp() public {
-        vm.startPrank(sender);
-        (owner, ownerPk) = makeAddrAndKey("owner");
-        (sender, senderPk) = makeAddrAndKey("sender");
-        (sessionKey, sessionKeyPk) = makeAddrAndKey("sessionKey");
-        (GUARDIAN_EOA_ADDRESS, GUARDIAN_EOA_PRIVATE_KEY) = makeAddrAndKey("GUARDIAN_EOA_ADDRESS");
-        (guardianB, guardianB_PK) = makeAddrAndKey("guardianB");
+    bytes32[2] internal modes = [mode_1, mode_3];
 
-        // forkId = vm.createFork(SEPOLIA_RPC_URL);
-        // vm.selectFork(forkId);
-
-        /* live contracts on fork */
-        entryPoint = IEntryPoint(payable(SEPOLIA_ENTRYPOINT));
-        webAuthn = WebAuthnVerifier(payable(SEPOLIA_WEBAUTHN));
-        gasPolicy = new GasPolicy(DEFAULT_PVG, DEFAULT_VGL, DEFAULT_CGL, DEFAULT_PMV, DEFAULT_PO);
-
-        _createInitialGuradian();
-        /* deploy implementation & bake it into `owner` address */
-        implementation = new OPF7702(
-            address(entryPoint),
-            WEBAUTHN_VERIFIER,
-            RECOVERY_PERIOD,
-            LOCK_PERIOD,
-            SECURITY_PERIOD,
-            SECURITY_WINDOW,
-            address(gasPolicy)
+    modifier registerSkEOASelf() {
+        _createCustomFreshKey(
+            false,
+            KeyType.EOA,
+            uint48(block.timestamp + 1 days),
+            0,
+            10,
+            _getKeyEOA(sessionKey),
+            KeyControl.Self
         );
-        vm.etch(owner, abi.encodePacked(bytes3(0xef0100), address(implementation)));
-        account = OPF7702(payable(owner));
+        _etch();
+        vm.prank(owner);
+        account.registerKey(skReg);
+        _;
+    }
 
-        vm.stopPrank();
+    modifier registerSkP256Self() {
+        _populateP256("p256_exe.json", ".result");
+        pK_SK = PubKey({x: DEF_P256.X, y: DEF_P256.Y});
+        _createCustomFreshKey(
+            false,
+            KeyType.P256,
+            uint48(block.timestamp + 1 days),
+            0,
+            10,
+            _getKeyP256(pK_SK),
+            KeyControl.Self
+        );
+        _etch();
+        vm.prank(owner);
+        account.registerKey(skReg);
+        _;
+    }
 
-        _deal();
+    modifier registerSkP256SelfBatchs() {
+        _populateP256("p256_exe_batch.json", ".result");
+        pK_SK = PubKey({x: DEF_P256.X, y: DEF_P256.Y});
+        _createCustomFreshKey(
+            false,
+            KeyType.P256,
+            uint48(block.timestamp + 1 days),
+            0,
+            10,
+            _getKeyP256(pK_SK),
+            KeyControl.Self
+        );
+        _etch();
+        vm.prank(owner);
+        account.registerKey(skReg);
+        _;
+    }
+
+    modifier registerSkP256NonSelf() {
+        _populateP256NON("p256_exe.json", ".result2");
+        pK_SK = PubKey({x: DEF_P256.X, y: DEF_P256.Y});
+        _createCustomFreshKey(
+            false,
+            KeyType.P256NONKEY,
+            uint48(block.timestamp + 1 days),
+            0,
+            10,
+            _getKeyP256(pK_SK),
+            KeyControl.Self
+        );
+        _etch();
+        vm.prank(owner);
+        account.registerKey(skReg);
+        _;
+    }
+
+    modifier registerSkP256NonSelfBatchs() {
+        _populateP256NON("p256_exe_batch.json", ".result2");
+        pK_SK = PubKey({x: DEF_P256.X, y: DEF_P256.Y});
+        _createCustomFreshKey(
+            false,
+            KeyType.P256NONKEY,
+            uint48(block.timestamp + 1 days),
+            0,
+            10,
+            _getKeyP256(pK_SK),
+            KeyControl.Self
+        );
+        _etch();
+        vm.prank(owner);
+        account.registerKey(skReg);
+        _;
+    }
+
+    modifier setTokenSpendM(
+        KeyType _keyType,
+        bytes memory _key,
+        address _token,
+        uint256 _limit,
+        SpendPeriod _period
+    ) {
+        _etch();
+        vm.prank(owner);
+        account.setTokenSpend(_computeKeyId(_keyType, _key), _token, _limit, _period);
+        _;
+    }
+
+    modifier setCanCallM(
+        KeyType _keyType,
+        bytes memory _key,
+        address _target,
+        bytes4 _funSel,
+        bool _can
+    ) {
+        _etch();
+        vm.prank(owner);
+        account.setCanCall(_computeKeyId(_keyType, _key), _target, _funSel, _can);
+        _;
+    }
+
+    function setUp() public override {
+        super.setUp();
+        reciver = makeAddr("reciver");
+        _populateWebAuthn("execution.json", ".batch");
+        pK = PubKey({x: DEF_WEBAUTHN.X, y: DEF_WEBAUTHN.Y});
+        _createCustomFreshKey(
+            true, KeyType.WEBAUTHN, type(uint48).max, 0, 0, _getKeyP256(pK), KeyControl.Self
+        );
+        _createQuickFreshKey(false);
+
         _initializeAccount();
-        _register_SessionKeyEOA();
-        _register_SessionKeyP256();
-        _register_SessionKeyP256NonKey();
-
-        vm.prank(sender);
-        entryPoint.depositTo{value: 0.09e18}(owner);
     }
 
-    /* ─────────────────────────────────────────────────────────────── tests ──── */
-    function test_getKeyById_zero() external view {
-        Key memory k = account.getKeyById(0);
-        console.log("/* --------------------------------- test_getKeyById_zero -------- */");
+    function test_ExecuteDirectWithRootKey() external {
+        _getBalances(true);
+        bytes memory data = abi.encodeWithSelector(MockERC20.mint.selector, owner, 10e18);
+        Call[] memory calls = _getCalls(1, address(erc20), 0, data);
+        bytes memory executionData = abi.encode(calls);
 
-        console.logBytes32(k.pubKey.x);
-        console.logBytes32(k.pubKey.y);
+        _etch();
+        vm.prank(owner);
+        account.execute(mode_1, executionData);
 
-        Key memory kSk = account.getKeyById(1);
-        console.logBytes32(kSk.pubKey.x);
-        console.logBytes32(kSk.pubKey.y);
-
-        Key memory kSkNonKey = account.getKeyById(1);
-        console.logBytes32(kSkNonKey.pubKey.x);
-        console.logBytes32(kSkNonKey.pubKey.y);
-        console.log("/* --------------------------------- test_getKeyById_zero -------- */");
+        _getBalances(false);
+        _assertBalances(int256(10e18), false);
     }
 
-    function test_ExecuteOwnerCall7821() public {
-        console.log("/* -------------------------------- test_ExecuteOwnerCall -------- */");
+    function test_ExecuteBatchDirectWithRootKey() external {
+        _getBalances(true);
+        bytes memory data = abi.encodeWithSelector(MockERC20.mint.selector, owner, 10e18);
+        Call[] memory calls = _getCalls(3, address(erc20), 0, data);
+        bytes memory executionData = abi.encode(calls);
 
-        Call[] memory calls = new Call[](1);
+        _etch();
+        vm.prank(owner);
+        account.execute(mode_1, executionData);
+
+        _getBalances(false);
+        _assertBalances(int256(10e18 * 3), false);
+    }
+
+    function test_ExecuteBatchDirectWithRootKeyRevertInvalidTransactionLength() external {
+        _getBalances(true);
+        bytes memory data = abi.encodeWithSelector(MockERC20.mint.selector, owner, 10e18);
+        Call[] memory calls = _getCalls(10, address(erc20), 0, data);
+        bytes memory executionData = abi.encode(calls);
+
+        _etch();
+        vm.expectRevert(
+            abi.encodeWithSelector(OpenfortBaseAccount7702V1__InvalidTransactionLength.selector)
+        );
+        vm.prank(owner);
+        account.execute(mode_1, executionData);
+    }
+
+    function test_ExecuteAAWithRootKey() external {
+        _getBalances(true);
+        bytes memory data = abi.encodeWithSelector(MockERC20.mint.selector, owner, 10e18);
+        Call[] memory calls = _getCalls(1, address(erc20), 0, data);
+        PackedUserOperation memory userOp = _getFreshUserOp();
+        userOp = _populateUserOp(
+            userOp,
+            _packCallData(mode_1, calls),
+            _packAccountGasLimits(600_000, 400_000),
+            800_000,
+            _packGasFees(80 gwei, 15 gwei),
+            hex""
+        );
+
+        bytes memory signature = _signUserOp(userOp);
+        userOp.signature = _encodeEOASignature(signature);
+
+        _relayUserOp(userOp);
+
+        _getBalances(false);
+        _assertBalances(int256(10e18), false);
+    }
+
+    function test_ExecuteBatchAAWithRootKey() external {
+        _getBalances(true);
+        bytes memory data = abi.encodeWithSelector(MockERC20.mint.selector, owner, 10e18);
+        Call[] memory calls = _getCalls(3, address(erc20), 0, data);
+        PackedUserOperation memory userOp = _getFreshUserOp();
+        userOp = _populateUserOp(
+            userOp,
+            _packCallData(mode_1, calls),
+            _packAccountGasLimits(600_000, 400_000),
+            800_000,
+            _packGasFees(80 gwei, 15 gwei),
+            hex""
+        );
+
+        bytes memory signature = _signUserOp(userOp);
+        userOp.signature = _encodeEOASignature(signature);
+
+        _relayUserOp(userOp);
+
+        _getBalances(false);
+        _assertBalances(int256(10e18 * 3), false);
+    }
+
+    function test_executeMode3RevertTooManyCalls() public {
+        Call[] memory calls_1 = new Call[](6);
+        Call[] memory calls_2 = new Call[](6);
+        Call[] memory calls_3 = new Call[](6);
 
         bytes memory dataHex = abi.encodeWithSelector(MockERC20.mint.selector, owner, 10e18);
 
-        calls[0] = Call({target: TOKEN, value: 0, data: dataHex});
+        for (uint256 i = 0; i < calls_1.length;) {
+            calls_1[i] = Call({target: address(erc20), value: 0, data: dataHex});
+            calls_2[i] = Call({target: address(erc20), value: 0, data: dataHex});
+            calls_3[i] = Call({target: address(erc20), value: 0, data: dataHex});
+            unchecked {
+                i++;
+            }
+        }
 
-        // ERC-7821 mode for single execution (mode ID = 1)
-        // The mode value should have the pattern at position 22*8 bits
-        bytes32 mode = bytes32(uint256(0x01000000000000000000) << (22 * 8));
+        bytes memory batch1Data = abi.encode(calls_1);
+        bytes memory batch2Data = abi.encode(calls_2);
+        bytes memory batch3Data = abi.encode(calls_3);
 
-        // Encode the execution data as Call[] array
-        bytes memory executionData = abi.encode(calls);
+        bytes[] memory batches = new bytes[](3);
+        batches[0] = batch1Data;
+        batches[1] = batch2Data;
+        batches[2] = batch3Data;
 
-        bytes memory callData =
-            abi.encodeWithSelector(bytes4(keccak256("execute(bytes32,bytes)")), mode, executionData);
+        bytes memory executionData = abi.encode(batches);
 
-        uint256 nonce = entryPoint.getNonce(owner, 1);
+        _etch();
 
-        PackedUserOperation memory userOp = PackedUserOperation({
-            sender: owner,
-            nonce: nonce,
-            initCode: hex"7702",
-            callData: callData,
-            accountGasLimits: _packAccountGasLimits(480_000, 520_000),
-            preVerificationGas: 130_000,
-            gasFees: _packGasFees(2 gwei, 50 gwei),
-            paymasterAndData: hex"",
-            signature: hex""
-        });
-
-        bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
-
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPk, userOpHash);
-        bytes memory signature = abi.encodePacked(r, s, v);
-
-        bytes memory _signature = account.encodeEOASignature(signature);
-
-        bytes4 magicValue = account.isValidSignature(userOpHash, signature);
-        console.logBytes4(magicValue);
-
-        userOp.signature = _signature;
-
-        uint256 balanceOfBefore = IERC20(TOKEN).balanceOf(owner);
-
-        PackedUserOperation[] memory ops = new PackedUserOperation[](1);
-        ops[0] = userOp;
-
-        bytes memory code = abi.encodePacked(bytes3(0xef0100), address(implementation));
-        vm.etch(owner, code);
-
-        vm.prank(sender);
-        entryPoint.handleOps(ops, payable(sender));
-
-        uint256 balanceOfAfter = IERC20(TOKEN).balanceOf(owner);
-        console.log("balanceOfBefore", balanceOfBefore);
-        console.log("balanceOfAfter", balanceOfAfter);
-        assertEq(balanceOfBefore + 10e18, balanceOfAfter);
-        console.log("/* -------------------------------- test_ExecuteOwnerCall -------- */");
+        vm.expectRevert(
+            abi.encodeWithSelector(OpenfortBaseAccount7702V1__TooManyCalls.selector, 10, 9)
+        );
+        vm.prank(owner);
+        account.execute(mode_3, executionData);
     }
 
-    function test_ExecuteBatchOwnerCall7821() public {
-        console.log("/* -------------------------------- test_ExecuteBatchOwnerCall -------- */");
-
-        // Create the Call array with multiple transactions
+    function test_ExecuteBatchAAWithRootKeyAndTrasfer() external {
+        _getBalances(true);
+        bytes memory data_mint = abi.encodeWithSelector(MockERC20.mint.selector, owner, 10e18);
+        bytes memory data_transfer =
+            abi.encodeWithSelector(IERC20.transfer.selector, reciver, 10e18);
         Call[] memory calls = new Call[](2);
+        calls[0] = _createCall(address(erc20), 0, data_mint);
+        calls[1] = _createCall(address(erc20), 0, data_transfer);
 
-        bytes memory dataHex = abi.encodeWithSelector(MockERC20.mint.selector, owner, 10e18);
-        bytes memory dataHex2 =
-            abi.encodeWithSelector(IERC20(TOKEN).transfer.selector, sender, 5e18);
-
-        calls[0] = Call({target: TOKEN, value: 0, data: dataHex});
-        calls[1] = Call({target: TOKEN, value: 0, data: dataHex2});
-
-        // ERC-7821 mode for batch execution (still mode ID = 1)
-        bytes32 mode = bytes32(uint256(0x01000000000000000000) << (22 * 8));
-
-        // Encode the execution data as Call[] array
-        bytes memory executionData = abi.encode(calls);
-
-        // Create the callData for the ERC-7821 execute function
-        bytes memory callData =
-            abi.encodeWithSelector(bytes4(keccak256("execute(bytes32,bytes)")), mode, executionData);
-
-        uint256 nonce = entryPoint.getNonce(owner, 1);
-
-        PackedUserOperation memory userOp = PackedUserOperation({
-            sender: owner,
-            nonce: nonce,
-            initCode: hex"7702",
-            callData: callData,
-            accountGasLimits: _packAccountGasLimits(480_000, 520_000),
-            preVerificationGas: 130_000,
-            gasFees: _packGasFees(2 gwei, 50 gwei),
-            paymasterAndData: hex"",
-            signature: hex""
-        });
-
-        bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
-
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPk, userOpHash);
-        bytes memory signature = abi.encodePacked(r, s, v);
-
-        bytes memory _signature = account.encodeEOASignature(signature);
-
-        bytes4 magicValue = account.isValidSignature(userOpHash, signature);
-        console.logBytes4(magicValue);
-
-        userOp.signature = _signature;
-
-        uint256 balanceOfBefore = IERC20(TOKEN).balanceOf(owner);
-        uint256 balanceOfBeforeSender = IERC20(TOKEN).balanceOf(sender);
-
-        PackedUserOperation[] memory ops = new PackedUserOperation[](1);
-        ops[0] = userOp;
-
-        bytes memory code = abi.encodePacked(bytes3(0xef0100), address(implementation));
-        vm.etch(owner, code);
-
-        vm.prank(sender);
-        entryPoint.handleOps(ops, payable(sender));
-
-        uint256 balanceOfAfter = IERC20(TOKEN).balanceOf(owner);
-        uint256 balanceOfAfterSender = IERC20(TOKEN).balanceOf(sender);
-        console.log("balanceOfBefore", balanceOfBefore);
-        console.log("balanceOfAfter", balanceOfAfter);
-        assertEq(balanceOfBefore, balanceOfAfter - 5e18);
-        assertEq(balanceOfBeforeSender + 5e18, balanceOfAfterSender);
-        console.log("/* -------------------------------- test_ExecuteBatchOwnerCall -------- */");
-    }
-
-    function test_ExecuteBatchOfBatches7821() public {
-        console.log("/* -------------------------------- test_ExecuteBatchOfBatches -------- */");
-
-        // Create first batch - minting operations
-        Call[] memory mintBatch = new Call[](2);
-        mintBatch[0] = Call({
-            target: TOKEN,
-            value: 0,
-            data: abi.encodeWithSelector(MockERC20.mint.selector, owner, 10e18)
-        });
-        mintBatch[1] = Call({
-            target: TOKEN,
-            value: 0,
-            data: abi.encodeWithSelector(MockERC20.mint.selector, sender, 5e18)
-        });
-
-        // Create second batch - transfer operations (FROM OWNER)
-        Call[] memory transferBatch = new Call[](2);
-        transferBatch[0] = Call({
-            target: TOKEN,
-            value: 0,
-            data: abi.encodeWithSelector(IERC20.transfer.selector, sender, 3e18)
-        });
-        transferBatch[1] = Call({
-            target: TOKEN,
-            value: 0,
-            data: abi.encodeWithSelector(IERC20.transfer.selector, address(0x123), 2e18)
-        });
-
-        // Create third batch - approval operations
-        Call[] memory approveBatch = new Call[](1);
-        approveBatch[0] = Call({
-            target: TOKEN,
-            value: 0,
-            data: abi.encodeWithSelector(IERC20.approve.selector, address(0x456), 1e18)
-        });
-
-        // Encode each batch separately
-        bytes memory batch1Data = abi.encode(mintBatch);
-        bytes memory batch2Data = abi.encode(transferBatch);
-        bytes memory batch3Data = abi.encode(approveBatch);
-
-        // Create array of batch data
-        bytes[] memory batches = new bytes[](3);
-        batches[0] = batch1Data;
-        batches[1] = batch2Data;
-        batches[2] = batch3Data;
-
-        // Mode for batch of batches (ID = 3)
-        bytes32 mode = bytes32(uint256(0x01000000000078210002) << (22 * 8));
-
-        // Encode the execution data as bytes[] array
-        bytes memory executionData = abi.encode(batches);
-
-        // Create the callData for the ERC-7821 execute function
-        bytes memory callData =
-            abi.encodeWithSelector(bytes4(keccak256("execute(bytes32,bytes)")), mode, executionData);
-
-        uint256 nonce = entryPoint.getNonce(owner, 1);
-
-        PackedUserOperation memory userOp = PackedUserOperation({
-            sender: owner,
-            nonce: nonce,
-            initCode: hex"7702",
-            callData: callData,
-            accountGasLimits: _packAccountGasLimits(480_000, 520_000),
-            preVerificationGas: 130_000,
-            gasFees: _packGasFees(2 gwei, 50 gwei),
-            paymasterAndData: hex"",
-            signature: hex""
-        });
-
-        bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
-
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPk, userOpHash);
-        bytes memory signature = abi.encodePacked(r, s, v);
-
-        bytes memory _signature = account.encodeEOASignature(signature);
-
-        bytes4 magicValue = account.isValidSignature(userOpHash, signature);
-        console.logBytes4(magicValue);
-
-        userOp.signature = _signature;
-
-        uint256 balanceOfBefore = IERC20(TOKEN).balanceOf(owner);
-        uint256 balanceOfBeforeSender = IERC20(TOKEN).balanceOf(sender);
-        uint256 balanceOfBefore0x123 = IERC20(TOKEN).balanceOf(address(0x123));
-
-        console.log("BEFORE EXECUTION:");
-        console.log("Owner balance:", balanceOfBefore);
-        console.log("Sender balance:", balanceOfBeforeSender);
-        console.log("0x123 balance:", balanceOfBefore0x123);
-
-        PackedUserOperation[] memory ops = new PackedUserOperation[](1);
-        ops[0] = userOp;
-
-        bytes memory code = abi.encodePacked(bytes3(0xef0100), address(implementation));
-        vm.etch(owner, code);
-
-        vm.prank(sender);
-        entryPoint.handleOps(ops, payable(sender));
-
-        uint256 balanceOfAfter = IERC20(TOKEN).balanceOf(owner);
-        uint256 balanceOfAfterSender = IERC20(TOKEN).balanceOf(sender);
-        uint256 balanceOfAfter0x123 = IERC20(TOKEN).balanceOf(address(0x123));
-
-        console.log("AFTER EXECUTION:");
-        console.log("Owner balance:", balanceOfAfter);
-        console.log("Sender balance:", balanceOfAfterSender);
-        console.log("0x123 balance:", balanceOfAfter0x123);
-
-        // CORRECTED ASSERTIONS - Check balance CHANGES, not absolute values:
-
-        // Owner should gain: +10e18 (minted) -3e18 (to sender) -2e18 (to 0x123) = +5e18
-        assertEq(balanceOfAfter, balanceOfBefore + 5e18, "Owner should gain 5e18");
-
-        // Sender should gain: +5e18 (minted) +3e18 (from owner) = +8e18
-        assertEq(balanceOfAfterSender, balanceOfBeforeSender + 8e18, "Sender should gain 8e18");
-
-        // 0x123 should gain: +2e18 (from owner) = +2e18
-        assertEq(balanceOfAfter0x123, balanceOfBefore0x123 + 2e18, "0x123 should gain 2e18");
-
-        // Verify approval was set
-        uint256 allowance = IERC20(TOKEN).allowance(owner, address(0x456));
-        assertEq(allowance, 1e18, "Approval should be 1e18");
-
-        console.log("/* -------------------------------- test_ExecuteBatchOfBatches -------- */");
-    }
-
-    function test_ExecuteBatchOfBatches7821Reverts() public {
-        console.log(
-            "/* -------------------------------- test_ExecuteBatchOfBatches7821Reverts -------- */"
+        PackedUserOperation memory userOp = _getFreshUserOp();
+        userOp = _populateUserOp(
+            userOp,
+            _packCallData(mode_1, calls),
+            _packAccountGasLimits(600_000, 400_000),
+            800_000,
+            _packGasFees(80 gwei, 15 gwei),
+            hex""
         );
 
-        // Create first batch - minting operations
-        Call[] memory mintBatch = new Call[](10);
-        mintBatch[0] = Call({
-            target: TOKEN,
-            value: 0,
-            data: abi.encodeWithSelector(MockERC20.mint.selector, owner, 10e18)
-        });
-        mintBatch[1] = Call({
-            target: TOKEN,
-            value: 0,
-            data: abi.encodeWithSelector(MockERC20.mint.selector, sender, 5e18)
-        });
-        mintBatch[2] = Call({
-            target: TOKEN,
-            value: 0,
-            data: abi.encodeWithSelector(MockERC20.mint.selector, sender, 5e18)
-        });
-        mintBatch[3] = Call({
-            target: TOKEN,
-            value: 0,
-            data: abi.encodeWithSelector(MockERC20.mint.selector, sender, 5e18)
-        });
-        mintBatch[4] = Call({
-            target: TOKEN,
-            value: 0,
-            data: abi.encodeWithSelector(MockERC20.mint.selector, sender, 5e18)
-        });
-        mintBatch[5] = Call({
-            target: TOKEN,
-            value: 0,
-            data: abi.encodeWithSelector(MockERC20.mint.selector, sender, 5e18)
-        });
-        mintBatch[6] = Call({
-            target: TOKEN,
-            value: 0,
-            data: abi.encodeWithSelector(MockERC20.mint.selector, sender, 5e18)
-        });
-        mintBatch[7] = Call({
-            target: TOKEN,
-            value: 0,
-            data: abi.encodeWithSelector(MockERC20.mint.selector, sender, 5e18)
-        });
-        mintBatch[8] = Call({
-            target: TOKEN,
-            value: 0,
-            data: abi.encodeWithSelector(MockERC20.mint.selector, sender, 5e18)
-        });
-        mintBatch[9] = Call({
-            target: TOKEN,
-            value: 0,
-            data: abi.encodeWithSelector(MockERC20.mint.selector, sender, 5e18)
-        });
-        // Create second batch - transfer operations (FROM OWNER)
-        Call[] memory transferBatch = new Call[](2);
-        transferBatch[0] = Call({
-            target: TOKEN,
-            value: 0,
-            data: abi.encodeWithSelector(IERC20.transfer.selector, sender, 3e18)
-        });
-        transferBatch[1] = Call({
-            target: TOKEN,
-            value: 0,
-            data: abi.encodeWithSelector(IERC20.transfer.selector, address(0x123), 2e18)
-        });
+        bytes memory signature = _signUserOp(userOp);
+        userOp.signature = _encodeEOASignature(signature);
 
-        // Create third batch - approval operations
-        Call[] memory approveBatch = new Call[](1);
-        approveBatch[0] = Call({
-            target: TOKEN,
-            value: 0,
-            data: abi.encodeWithSelector(IERC20.approve.selector, address(0x456), 1e18)
-        });
+        _relayUserOp(userOp);
 
-        // Encode each batch separately
-        bytes memory batch1Data = abi.encode(mintBatch);
-        bytes memory batch2Data = abi.encode(transferBatch);
-        bytes memory batch3Data = abi.encode(approveBatch);
+        _getBalances(false);
+        _assertBalances(int256(10e18), true);
+    }
 
-        // Create array of batch data
-        bytes[] memory batches = new bytes[](3);
-        batches[0] = batch1Data;
-        batches[1] = batch2Data;
-        batches[2] = batch3Data;
+    function test_ExecuteBatchofBatchesAAWithRootKeyAndTrasfer() external {
+        _getBalances(true);
 
-        // Mode for batch of batches (ID = 3)
-        bytes32 mode = bytes32(uint256(0x01000000000078210002) << (22 * 8));
+        address[] memory targets = new address[](3);
+        targets[0] = address(erc20);
+        targets[1] = address(erc20);
+        targets[2] = address(erc20);
 
-        // Encode the execution data as bytes[] array
-        bytes memory executionData = abi.encode(batches);
+        uint256[] memory values = new uint256[](3);
 
-        // Create the callData for the ERC-7821 execute function
-        bytes memory callData =
-            abi.encodeWithSelector(bytes4(keccak256("execute(bytes32,bytes)")), mode, executionData);
+        bytes[] memory datas = new bytes[](2);
+        datas[0] = abi.encodeWithSelector(MockERC20.mint.selector, owner, 10e18);
+        datas[1] = abi.encodeWithSelector(IERC20.transfer.selector, reciver, 10e18);
 
-        uint256 nonce = entryPoint.getNonce(owner, 1);
-
-        PackedUserOperation memory userOp = PackedUserOperation({
-            sender: owner,
-            nonce: nonce,
-            initCode: hex"7702",
-            callData: callData,
-            accountGasLimits: _packAccountGasLimits(480_000, 520_000),
-            preVerificationGas: 130_000,
-            gasFees: _packGasFees(2 gwei, 50 gwei),
-            paymasterAndData: hex"",
-            signature: hex""
-        });
-
-        bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
-
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPk, userOpHash);
-        bytes memory signature = abi.encodePacked(r, s, v);
-
-        bytes memory _signature = account.encodeEOASignature(signature);
-
-        bytes4 magicValue = account.isValidSignature(userOpHash, signature);
-        console.logBytes4(magicValue);
-
-        userOp.signature = _signature;
-
-        // uint256 balanceOfBefore = IERC20(TOKEN).balanceOf(owner);
-        // uint256 balanceOfBeforeSender = IERC20(TOKEN).balanceOf(sender);
-        // uint256 balanceOfBefore0x123 = IERC20(TOKEN).balanceOf(address(0x123));
-
-        // console.log("BEFORE EXECUTION:");
-        // console.log("Owner balance:", balanceOfBefore);
-        // console.log("Sender balance:", balanceOfBeforeSender);
-        // console.log("0x123 balance:", balanceOfBefore0x123);
-
-        PackedUserOperation[] memory ops = new PackedUserOperation[](1);
-        ops[0] = userOp;
-
-        bytes memory code = abi.encodePacked(bytes3(0xef0100), address(implementation));
-        vm.etch(owner, code);
-
-        vm.prank(sender);
-        entryPoint.handleOps(ops, payable(sender));
-
-        // uint256 balanceOfAfter = IERC20(TOKEN).balanceOf(owner);
-        // uint256 balanceOfAfterSender = IERC20(TOKEN).balanceOf(sender);
-        // uint256 balanceOfAfter0x123 = IERC20(TOKEN).balanceOf(address(0x123));
-
-        // console.log("AFTER EXECUTION:");
-        // console.log("Owner balance:", balanceOfAfter);
-        // console.log("Sender balance:", balanceOfAfterSender);
-        // console.log("0x123 balance:", balanceOfAfter0x123);
-
-        // CORRECTED ASSERTIONS - Check balance CHANGES, not absolute values:
-
-        // Owner should gain: +10e18 (minted) -3e18 (to sender) -2e18 (to 0x123) = +5e18
-        // assertEq(balanceOfAfter, balanceOfBefore + 5e18, "Owner should gain 5e18");
-
-        // // Sender should gain: +5e18 (minted) +3e18 (from owner) = +8e18
-        // assertEq(balanceOfAfterSender, balanceOfBeforeSender + 8e18, "Sender should gain 8e18");
-
-        // // 0x123 should gain: +2e18 (from owner) = +2e18
-        // assertEq(balanceOfAfter0x123, balanceOfBefore0x123 + 2e18, "0x123 should gain 2e18");
-
-        // // Verify approval was set
-        // uint256 allowance = IERC20(TOKEN).allowance(owner, address(0x456));
-        // assertEq(allowance, 1e18, "Approval should be 1e18");
-
-        console.log(
-            "/* -------------------------------- test_ExecuteBatchOfBatches7821Reverts -------- */"
+        PackedUserOperation memory userOp = _getFreshUserOp();
+        userOp = _populateUserOp(
+            userOp,
+            _packBatchOfBatches(3, targets, values, datas),
+            _packAccountGasLimits(600_000, 400_000),
+            800_000,
+            _packGasFees(80 gwei, 15 gwei),
+            hex""
         );
+
+        bytes memory signature = _signUserOp(userOp);
+        userOp.signature = _encodeEOASignature(signature);
+
+        _relayUserOp(userOp);
+
+        _getBalances(false);
+        _assertBalances(int256(10e18 * 3), true);
     }
 
-    function test_ExecuteSKEOA7821() public {
-        console.log("/* -------------------------------- test_ExecuteBatchSKEOA7821 -------- */");
-
-        Call[] memory calls = new Call[](1);
-
-        bytes memory dataHex = abi.encodeWithSelector(MockERC20.mint.selector, owner, 10e18);
-
-        calls[0] = Call({target: TOKEN, value: 0, data: dataHex});
-
-        // ERC-7821 mode for single execution (mode ID = 1)
-        // The mode value should have the pattern at position 22*8 bits
-        bytes32 mode = bytes32(uint256(0x01000000000000000000) << (22 * 8));
-
-        // Encode the execution data as Call[] array
-        bytes memory executionData = abi.encode(calls);
-
-        bytes memory callData =
-            abi.encodeWithSelector(bytes4(keccak256("execute(bytes32,bytes)")), mode, executionData);
-
-        uint256 nonce = entryPoint.getNonce(owner, 1);
-
-        PackedUserOperation memory userOp = PackedUserOperation({
-            sender: owner,
-            nonce: nonce,
-            initCode: hex"7702",
-            callData: callData,
-            accountGasLimits: _packAccountGasLimits(180_000, 220_000),
-            preVerificationGas: 90_000,
-            gasFees: _packGasFees(2 gwei, 50 gwei),
-            paymasterAndData: hex"",
-            signature: hex""
-        });
-
-        bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
-
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(sessionKeyPk, userOpHash);
-        bytes memory signature = abi.encodePacked(r, s, v);
-
-        bytes memory _signature = account.encodeEOASignature(signature);
-
-        bytes4 magicValue = account.isValidSignature(userOpHash, signature);
-        console.logBytes4(magicValue);
-
-        userOp.signature = _signature;
-
-        uint256 balanceOfBefore = IERC20(TOKEN).balanceOf(owner);
-
-        PackedUserOperation[] memory ops = new PackedUserOperation[](1);
-        ops[0] = userOp;
-
-        bytes memory code = abi.encodePacked(bytes3(0xef0100), address(implementation));
-        vm.etch(owner, code);
-
-        vm.prank(sender);
-        entryPoint.handleOps(ops, payable(sender));
-
-        uint256 balanceOfAfter = IERC20(TOKEN).balanceOf(owner);
-        console.log("balanceOfBefore", balanceOfBefore);
-        console.log("balanceOfAfter", balanceOfAfter);
-        assertEq(balanceOfBefore + 10e18, balanceOfAfter);
-        console.log("/* -------------------------------- test_ExecuteBatchSKEOA7821 -------- */");
-    }
-
-    function test_ExecuteBatchSKEOA7821() public {
-        console.log("/* -------------------------------- test_ExecuteBatchSKEOA7821 -------- */");
-
-        // Create the Call array with multiple transactions
+    function test_ExecuteBatchAAWithSKEOASelfAndTrasfer()
+        external
+        registerSkEOASelf
+        setTokenSpendM(KeyType.EOA, _getKeyEOA(sessionKey), address(erc20), 10 ether, SpendPeriod.Month)
+        setCanCallM(KeyType.EOA, _getKeyEOA(sessionKey), address(erc20), ANY_FN_SEL, true)
+    {
+        _getBalances(true);
+        bytes memory data_mint = abi.encodeWithSelector(MockERC20.mint.selector, owner, 10e18);
+        bytes memory data_transfer =
+            abi.encodeWithSelector(IERC20.transfer.selector, reciver, 10e18);
         Call[] memory calls = new Call[](2);
-
-        bytes memory dataHex = abi.encodeWithSelector(MockERC20.mint.selector, owner, 10e18);
-        bytes memory dataHex2 =
-            abi.encodeWithSelector(IERC20(TOKEN).transfer.selector, sender, 5e18);
-
-        calls[0] = Call({target: TOKEN, value: 0, data: dataHex});
-        calls[1] = Call({target: TOKEN, value: 0, data: dataHex2});
-
-        // ERC-7821 mode for batch execution (still mode ID = 1)
-        bytes32 mode = bytes32(uint256(0x01000000000000000000) << (22 * 8));
-
-        // Encode the execution data as Call[] array
-        bytes memory executionData = abi.encode(calls);
-
-        // Create the callData for the ERC-7821 execute function
-        bytes memory callData =
-            abi.encodeWithSelector(bytes4(keccak256("execute(bytes32,bytes)")), mode, executionData);
-
-        uint256 nonce = entryPoint.getNonce(owner, 1);
-
-        PackedUserOperation memory userOp = PackedUserOperation({
-            sender: owner,
-            nonce: nonce,
-            initCode: hex"7702",
-            callData: callData,
-            accountGasLimits: _packAccountGasLimits(180_000, 220_000),
-            preVerificationGas: 90_000,
-            gasFees: _packGasFees(2 gwei, 50 gwei),
-            paymasterAndData: hex"",
-            signature: hex""
-        });
-
-        bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
-
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(sessionKeyPk, userOpHash);
-        bytes memory signature = abi.encodePacked(r, s, v);
-
-        bytes memory _signature = account.encodeEOASignature(signature);
-
-        bytes4 magicValue = account.isValidSignature(userOpHash, signature);
-        console.logBytes4(magicValue);
-
-        userOp.signature = _signature;
-
-        uint256 balanceOfBefore = IERC20(TOKEN).balanceOf(sender);
-
-        PackedUserOperation[] memory ops = new PackedUserOperation[](1);
-        ops[0] = userOp;
-
-        bytes memory code = abi.encodePacked(bytes3(0xef0100), address(implementation));
-        vm.etch(owner, code);
-
-        vm.prank(sender);
-        entryPoint.handleOps(ops, payable(sender));
-
-        uint256 balanceOfAfter = IERC20(TOKEN).balanceOf(sender);
-        console.log("balanceOf", balanceOfAfter);
-        assertEq(balanceOfBefore + 5e18, balanceOfAfter);
-        console.log("/* -------------------------------- test_ExecuteBatchSKEOA7821 -------- */");
-    }
-
-    function test_ExecuteBatchSKEOA7821ApproveSendETH() public {
-        console.log("/* -------------------------------- test_ExecuteBatchSKEOA7821 -------- */");
-
-        // Create the Call array with multiple transactions
-        Call[] memory calls = new Call[](3);
-
-        bytes memory dataHex = abi.encodeWithSelector(MockERC20.mint.selector, owner, 10e18);
-        bytes memory dataHex2 =
-            abi.encodeWithSelector(IERC20(TOKEN).transfer.selector, sender, 5e18);
-
-        calls[0] = Call({target: TOKEN, value: 0, data: dataHex});
-        calls[1] = Call({target: ETH_RECIVE, value: 0.1e18, data: hex""});
-        calls[2] = Call({target: TOKEN, value: 0, data: dataHex2});
-
-        // ERC-7821 mode for batch execution (still mode ID = 1)
-        bytes32 mode = bytes32(uint256(0x01000000000000000000) << (22 * 8));
-
-        // Encode the execution data as Call[] array
-        bytes memory executionData = abi.encode(calls);
-
-        // Create the callData for the ERC-7821 execute function
-        bytes memory callData =
-            abi.encodeWithSelector(bytes4(keccak256("execute(bytes32,bytes)")), mode, executionData);
-
-        uint256 nonce = entryPoint.getNonce(owner, 1);
-
-        PackedUserOperation memory userOp = PackedUserOperation({
-            sender: owner,
-            nonce: nonce,
-            initCode: hex"7702",
-            callData: callData,
-            accountGasLimits: _packAccountGasLimits(180_000, 220_000),
-            preVerificationGas: 90_000,
-            gasFees: _packGasFees(2 gwei, 50 gwei),
-            paymasterAndData: hex"",
-            signature: hex""
-        });
-
-        bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
-
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(guardianB_PK, userOpHash);
-        bytes memory signature = abi.encodePacked(r, s, v);
-
-        bytes memory _signature = account.encodeEOASignature(signature);
-
-        bytes4 magicValue = account.isValidSignature(userOpHash, signature);
-        console.logBytes4(magicValue);
-
-        userOp.signature = _signature;
-
-        uint256 balanceOfBefore = IERC20(TOKEN).balanceOf(sender);
-
-        PackedUserOperation[] memory ops = new PackedUserOperation[](1);
-        ops[0] = userOp;
-
-        bytes memory code = abi.encodePacked(bytes3(0xef0100), address(implementation));
-        vm.etch(owner, code);
-
-        vm.prank(sender);
-        entryPoint.handleOps(ops, payable(sender));
-
-        uint256 balanceOfAfter = IERC20(TOKEN).balanceOf(sender);
-        console.log("balanceOf", balanceOfAfter);
-        assertEq(balanceOfBefore + 5e18, balanceOfAfter);
-        console.log("/* -------------------------------- test_ExecuteBatchSKEOA7821 -------- */");
-    }
-
-    function test_ExecuteBatchOfBatchesSKEOA7821() public {
-        // Create first batch - minting operations
-        Call[] memory mintBatch = new Call[](2);
-        mintBatch[0] = Call({
-            target: TOKEN,
-            value: 0,
-            data: abi.encodeWithSelector(MockERC20.mint.selector, owner, 10e18)
-        });
-        mintBatch[1] = Call({
-            target: TOKEN,
-            value: 0,
-            data: abi.encodeWithSelector(MockERC20.mint.selector, sender, 1e18)
-        });
-
-        // Create second batch - transfer operations (FROM OWNER)
-        Call[] memory transferBatch = new Call[](2);
-        transferBatch[0] = Call({
-            target: TOKEN,
-            value: 0,
-            data: abi.encodeWithSelector(IERC20.transfer.selector, sender, 1e18)
-        });
-        transferBatch[1] = Call({
-            target: TOKEN,
-            value: 0,
-            data: abi.encodeWithSelector(IERC20.transfer.selector, address(0x123), 1e18)
-        });
-
-        // Create third batch - approval operations
-        Call[] memory approveBatch = new Call[](1);
-        approveBatch[0] = Call({
-            target: TOKEN,
-            value: 0,
-            data: abi.encodeWithSelector(IERC20.transfer.selector, address(0x456), 1e18)
-        });
-
-        // Encode each batch separately
-        bytes memory batch1Data = abi.encode(mintBatch);
-        bytes memory batch2Data = abi.encode(transferBatch);
-        bytes memory batch3Data = abi.encode(approveBatch);
-
-        // Create array of batch data
-        bytes[] memory batches = new bytes[](3);
-        batches[0] = batch1Data;
-        batches[1] = batch2Data;
-        batches[2] = batch3Data;
-
-        // Mode for batch of batches (ID = 3)
-        bytes32 mode = bytes32(uint256(0x01000000000078210002) << (22 * 8));
-
-        // Encode the execution data as bytes[] array
-        bytes memory executionData = abi.encode(batches);
-
-        // Create the callData for the ERC-7821 execute function
-        bytes memory callData =
-            abi.encodeWithSelector(bytes4(keccak256("execute(bytes32,bytes)")), mode, executionData);
-
-        uint256 nonce = entryPoint.getNonce(owner, 1);
-
-        PackedUserOperation memory userOp = PackedUserOperation({
-            sender: owner,
-            nonce: nonce,
-            initCode: hex"7702",
-            callData: callData,
-            accountGasLimits: _packAccountGasLimits(180_000, 220_000),
-            preVerificationGas: 90_000,
-            gasFees: _packGasFees(2 gwei, 50 gwei),
-            paymasterAndData: hex"",
-            signature: hex""
-        });
-
-        bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
-
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(sessionKeyPk, userOpHash);
-        bytes memory signature = abi.encodePacked(r, s, v);
-
-        bytes memory _signature = account.encodeEOASignature(signature);
-
-        bytes4 magicValue = account.isValidSignature(userOpHash, signature);
-        console.logBytes4(magicValue);
-
-        userOp.signature = _signature;
-
-        uint256 balanceOfBefore = IERC20(TOKEN).balanceOf(owner);
-        uint256 balanceOfBeforeSender = IERC20(TOKEN).balanceOf(sender);
-        uint256 balanceOfBefore0x123 = IERC20(TOKEN).balanceOf(address(0x123));
-
-        console.log("BEFORE EXECUTION:");
-        console.log("Owner balance:", balanceOfBefore);
-        console.log("Sender balance:", balanceOfBeforeSender);
-        console.log("0x123 balance:", balanceOfBefore0x123);
-
-        PackedUserOperation[] memory ops = new PackedUserOperation[](1);
-        ops[0] = userOp;
-
-        bytes memory code = abi.encodePacked(bytes3(0xef0100), address(implementation));
-        vm.etch(owner, code);
-
-        vm.prank(sender);
-        entryPoint.handleOps(ops, payable(sender));
-
-        uint256 balanceOfAfter = IERC20(TOKEN).balanceOf(owner);
-        uint256 balanceOfAfterSender = IERC20(TOKEN).balanceOf(sender);
-        uint256 balanceOfAfter0x123 = IERC20(TOKEN).balanceOf(address(0x123));
-
-        console.log("AFTER EXECUTION:");
-        console.log("Owner balance:", balanceOfAfter);
-        console.log("Sender balance:", balanceOfAfterSender);
-        console.log("0x123 balance:", balanceOfAfter0x123);
-
-        // CORRECTED ASSERTIONS based on your actual test transactions:
-
-        // Owner should: +10e18 (mint) -1e18 (to sender) -1e18 (to 0x123) -1e18 (to 0x456) = +7e18
-        assertEq(balanceOfAfter, balanceOfBefore + 7e18, "Owner should gain 7e18");
-
-        // Sender should: +1e18 (mint) +1e18 (from owner) = +2e18
-        assertEq(balanceOfAfterSender, balanceOfBeforeSender + 2e18, "Sender should gain 2e18");
-
-        // 0x123 should: +1e18 (from owner) = +1e18
-        assertEq(balanceOfAfter0x123, balanceOfBefore0x123 + 1e18, "0x123 should gain 1e18");
-
-        // Remove or comment out the approval check since third batch is doing transfer, not approve
-        // uint256 allowance = IERC20(TOKEN).allowance(owner, address(0x456));
-        // assertEq(allowance, 1e18, "Approval should be 1e18");
-        console.log(
-            "/* -------------------------------- test_ExecuteBatchOfBatchesSKEOA7821 -------- */"
-        );
-    }
-
-    function test_ExecuteBatchMasterKey7821() public {
-        console.log(
-            "/* ---------------------------------- test_ExecuteBatchMasterKey7821 -------- */"
+        calls[0] = _createCall(address(erc20), 0, data_mint);
+        calls[1] = _createCall(address(erc20), 0, data_transfer);
+
+        PackedUserOperation memory userOp = _getFreshUserOp();
+        userOp = _populateUserOp(
+            userOp,
+            _packCallData(mode_1, calls),
+            _packAccountGasLimits(600_000, 400_000),
+            800_000,
+            _packGasFees(80 gwei, 15 gwei),
+            hex""
         );
 
-        // Create the Call array with multiple transactions
+        bytes memory signature = _signUserOpWithSK(userOp);
+        userOp.signature = _encodeEOASignature(signature);
+
+        _relayUserOp(userOp);
+
+        _getBalances(false);
+        _assertBalances(int256(10e18), true);
+    }
+
+    function test_ExecuteBatchofBatchesAAWithSKEOASelfAndTrasfer()
+        external
+        registerSkEOASelf
+        setTokenSpendM(KeyType.EOA, _getKeyEOA(sessionKey), address(erc20), 30 ether, SpendPeriod.Month)
+        setCanCallM(KeyType.EOA, _getKeyEOA(sessionKey), address(erc20), ANY_FN_SEL, true)
+    {
+        _getBalances(true);
+
+        address[] memory targets = new address[](3);
+        targets[0] = address(erc20);
+        targets[1] = address(erc20);
+        targets[2] = address(erc20);
+
+        uint256[] memory values = new uint256[](3);
+
+        bytes[] memory datas = new bytes[](2);
+        datas[0] = abi.encodeWithSelector(MockERC20.mint.selector, owner, 10e18);
+        datas[1] = abi.encodeWithSelector(IERC20.transfer.selector, reciver, 10e18);
+
+        PackedUserOperation memory userOp = _getFreshUserOp();
+        userOp = _populateUserOp(
+            userOp,
+            _packBatchOfBatches(3, targets, values, datas),
+            _packAccountGasLimits(600_000, 400_000),
+            800_000,
+            _packGasFees(80 gwei, 15 gwei),
+            hex""
+        );
+
+        bytes memory signature = _signUserOpWithSK(userOp);
+        userOp.signature = _encodeEOASignature(signature);
+
+        _relayUserOp(userOp);
+
+        _getBalances(false);
+        _assertBalances(int256(10e18 * 3), true);
+    }
+
+    function test_ExecuteBatchAAWithMKAndTrasfer() external {
+        _getBalances(true);
+        bytes memory data_mint = abi.encodeWithSelector(MockERC20.mint.selector, owner, 10e18);
+        bytes memory data_transfer =
+            abi.encodeWithSelector(IERC20.transfer.selector, reciver, 10e18);
         Call[] memory calls = new Call[](2);
+        calls[0] = _createCall(address(erc20), 0, data_mint);
+        calls[1] = _createCall(address(erc20), 0, data_transfer);
 
-        bytes memory dataHex = abi.encodeWithSelector(MockERC20.mint.selector, owner, 10e18);
-        bytes memory dataHex2 =
-            abi.encodeWithSelector(IERC20(TOKEN).transfer.selector, sender, 5e18);
-
-        calls[0] = Call({target: TOKEN, value: 0, data: dataHex});
-        calls[1] = Call({target: TOKEN, value: 0, data: dataHex2});
-
-        // ERC-7821 mode for batch execution (still mode ID = 1)
-        bytes32 mode = bytes32(uint256(0x01000000000000000000) << (22 * 8));
-
-        // Encode the execution data as Call[] array
-        bytes memory executionData = abi.encode(calls);
-
-        // Create the callData for the ERC-7821 execute function
-        bytes memory callData =
-            abi.encodeWithSelector(bytes4(keccak256("execute(bytes32,bytes)")), mode, executionData);
-
-        uint256 nonce = entryPoint.getNonce(owner, 1);
-
-        PackedUserOperation memory userOp = PackedUserOperation({
-            sender: owner,
-            nonce: nonce,
-            initCode: hex"7702",
-            callData: callData,
-            accountGasLimits: _packAccountGasLimits(600_000, 400_000),
-            preVerificationGas: 800_000,
-            gasFees: _packGasFees(80 gwei, 15 gwei),
-            paymasterAndData: hex"",
-            signature: hex""
-        });
-
-        bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
-        console.logBytes32(userOpHash);
-
-        IKey.PubKey memory pubKeyExecuteBatch =
-            IKey.PubKey({x: BATCH_VALID_PUBLIC_KEY_X, y: BATCH_VALID_PUBLIC_KEY_Y});
-
-        bytes memory _signature = account.encodeWebAuthnSignature(
-            true,
-            BATCH_AUTHENTICATOR_DATA,
-            BATCH_CLIENT_DATA_JSON,
-            BATCH_CHALLENGE_INDEX,
-            BATCH_TYPE_INDEX,
-            BATCH_VALID_SIGNATURE_R,
-            BATCH_VALID_SIGNATURE_S,
-            pubKeyExecuteBatch
+        PackedUserOperation memory userOp = _getFreshUserOp();
+        userOp = _populateUserOp(
+            userOp,
+            _packCallData(mode_1, calls),
+            _packAccountGasLimits(600_000, 400_000),
+            800_000,
+            _packGasFees(80 gwei, 15 gwei),
+            hex""
         );
 
-        (, bytes memory sigData) = abi.decode(_signature, (KeyType, bytes));
+        bytes32 userOpHash = _getUserOpHash(userOp);
+        console.log("userOpHash:", vm.toString(userOpHash));
 
-        bytes4 magicValue = account.isValidSignature(userOpHash, sigData);
-        bool usedChallenge = account.usedChallenges(userOpHash);
-        console.log("usedChallenge", usedChallenge);
-        console.logBytes4(magicValue);
+        _populateWebAuthn("execution.json", ".batch");
+        pK = PubKey({x: DEF_WEBAUTHN.X, y: DEF_WEBAUTHN.Y});
 
-        bool isValid = webAuthn.verifySignature(
-            userOpHash,
-            true,
-            BATCH_AUTHENTICATOR_DATA,
-            BATCH_CLIENT_DATA_JSON,
-            BATCH_CHALLENGE_INDEX,
-            BATCH_TYPE_INDEX,
-            BATCH_VALID_SIGNATURE_R,
-            BATCH_VALID_SIGNATURE_S,
-            BATCH_VALID_PUBLIC_KEY_X,
-            BATCH_VALID_PUBLIC_KEY_Y
-        );
-        console.log("isValid", isValid);
+        userOp.signature = _getSignedUserOpByWebAuthn(DEF_WEBAUTHN, pK);
 
-        userOp.signature = _signature;
+        _relayUserOp(userOp);
 
-        uint256 balanceOfBefore = IERC20(TOKEN).balanceOf(sender);
-
-        PackedUserOperation[] memory ops = new PackedUserOperation[](1);
-        ops[0] = userOp;
-
-        bytes memory code = abi.encodePacked(bytes3(0xef0100), address(implementation));
-        vm.etch(owner, code);
-
-        vm.prank(sender);
-        entryPoint.handleOps(ops, payable(sender));
-
-        uint256 balanceOfAfter = IERC20(TOKEN).balanceOf(sender);
-        console.log("balanceOf", balanceOfAfter);
-        assertEq(balanceOfBefore + 5e18, balanceOfAfter);
-        console.log("/* ---------------------------------- test_ExecuteBatchMasterKey -------- */");
+        _getBalances(false);
+        _assertBalances(int256(10e18), true);
     }
 
-    function test_ExecuteBatchOfBatchesMasterKey7821() public {
-        // Create first batch - minting operations
-        Call[] memory mintBatch = new Call[](2);
-        mintBatch[0] = Call({
-            target: TOKEN,
-            value: 0,
-            data: abi.encodeWithSelector(MockERC20.mint.selector, owner, 10e18)
-        });
-        mintBatch[1] = Call({
-            target: TOKEN,
-            value: 0,
-            data: abi.encodeWithSelector(MockERC20.mint.selector, sender, 1e18)
-        });
+    function test_ExecuteBatchofBatchesAAWithMKAndTrasfer() external {
+        _getBalances(true);
 
-        // Create second batch - transfer operations (FROM OWNER)
-        Call[] memory transferBatch = new Call[](2);
-        transferBatch[0] = Call({
-            target: TOKEN,
-            value: 0,
-            data: abi.encodeWithSelector(IERC20.transfer.selector, sender, 1e18)
-        });
-        transferBatch[1] = Call({
-            target: TOKEN,
-            value: 0,
-            data: abi.encodeWithSelector(IERC20.transfer.selector, address(0x123), 1e18)
-        });
+        address[] memory targets = new address[](3);
+        targets[0] = address(erc20);
+        targets[1] = address(erc20);
+        targets[2] = address(erc20);
 
-        // Create third batch - approval operations
-        Call[] memory approveBatch = new Call[](1);
-        approveBatch[0] = Call({
-            target: TOKEN,
-            value: 0,
-            data: abi.encodeWithSelector(IERC20.transfer.selector, address(0x456), 1e18)
-        });
+        uint256[] memory values = new uint256[](3);
 
-        // Encode each batch separately
-        bytes memory batch1Data = abi.encode(mintBatch);
-        bytes memory batch2Data = abi.encode(transferBatch);
-        bytes memory batch3Data = abi.encode(approveBatch);
+        bytes[] memory datas = new bytes[](2);
+        datas[0] = abi.encodeWithSelector(MockERC20.mint.selector, owner, 10e18);
+        datas[1] = abi.encodeWithSelector(IERC20.transfer.selector, reciver, 10e18);
 
-        // Create array of batch data
-        bytes[] memory batches = new bytes[](3);
-        batches[0] = batch1Data;
-        batches[1] = batch2Data;
-        batches[2] = batch3Data;
-
-        // Mode for batch of batches (ID = 3)
-        bytes32 mode = bytes32(uint256(0x01000000000078210002) << (22 * 8));
-
-        // Encode the execution data as bytes[] array
-        bytes memory executionData = abi.encode(batches);
-
-        // Create the callData for the ERC-7821 execute function
-        bytes memory callData =
-            abi.encodeWithSelector(bytes4(keccak256("execute(bytes32,bytes)")), mode, executionData);
-
-        uint256 nonce = entryPoint.getNonce(owner, 1);
-
-        PackedUserOperation memory userOp = PackedUserOperation({
-            sender: owner,
-            nonce: nonce,
-            initCode: hex"7702",
-            callData: callData,
-            accountGasLimits: _packAccountGasLimits(600_000, 400_000),
-            preVerificationGas: 800_000,
-            gasFees: _packGasFees(80 gwei, 15 gwei),
-            paymasterAndData: hex"",
-            signature: hex""
-        });
-
-        bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
-        console.logBytes32(userOpHash);
-
-        IKey.PubKey memory pubKeyExecuteBatch =
-            IKey.PubKey({x: BATCH_VALID_PUBLIC_KEY_X, y: BATCH_VALID_PUBLIC_KEY_Y});
-
-        bytes memory _signature = account.encodeWebAuthnSignature(
-            true,
-            BATCHS_AUTHENTICATOR_DATA,
-            BATCHS_CLIENT_DATA_JSON,
-            BATCHS_CHALLENGE_INDEX,
-            BATCHS_TYPE_INDEX,
-            BATCHS_VALID_SIGNATURE_R,
-            BATCHS_VALID_SIGNATURE_S,
-            pubKeyExecuteBatch
+        PackedUserOperation memory userOp = _getFreshUserOp();
+        userOp = _populateUserOp(
+            userOp,
+            _packBatchOfBatches(3, targets, values, datas),
+            _packAccountGasLimits(600_000, 400_000),
+            800_000,
+            _packGasFees(80 gwei, 15 gwei),
+            hex""
         );
 
-        (, bytes memory sigData) = abi.decode(_signature, (KeyType, bytes));
+        bytes32 userOpHash = _getUserOpHash(userOp);
+        console.log("userOpHash:", vm.toString(userOpHash));
 
-        bytes4 magicValue = account.isValidSignature(userOpHash, sigData);
-        bool usedChallenge = account.usedChallenges(userOpHash);
-        console.log("usedChallenge", usedChallenge);
-        console.logBytes4(magicValue);
+        _populateWebAuthn("execution.json", ".batchofbatches");
+        pK = PubKey({x: DEF_WEBAUTHN.X, y: DEF_WEBAUTHN.Y});
 
-        bool isValid = webAuthn.verifySignature(
-            userOpHash,
-            true,
-            BATCHS_AUTHENTICATOR_DATA,
-            BATCHS_CLIENT_DATA_JSON,
-            BATCHS_CHALLENGE_INDEX,
-            BATCHS_TYPE_INDEX,
-            BATCHS_VALID_SIGNATURE_R,
-            BATCHS_VALID_SIGNATURE_S,
-            BATCH_VALID_PUBLIC_KEY_X,
-            BATCH_VALID_PUBLIC_KEY_Y
-        );
-        console.log("isValid", isValid);
+        userOp.signature = _getSignedUserOpByWebAuthn(DEF_WEBAUTHN, pK);
 
-        userOp.signature = _signature;
+        _relayUserOp(userOp);
 
-        uint256 balanceOfBefore = IERC20(TOKEN).balanceOf(owner);
-        uint256 balanceOfBeforeSender = IERC20(TOKEN).balanceOf(sender);
-        uint256 balanceOfBefore0x123 = IERC20(TOKEN).balanceOf(address(0x123));
-
-        console.log("BEFORE EXECUTION:");
-        console.log("Owner balance:", balanceOfBefore);
-        console.log("Sender balance:", balanceOfBeforeSender);
-        console.log("0x123 balance:", balanceOfBefore0x123);
-
-        PackedUserOperation[] memory ops = new PackedUserOperation[](1);
-        ops[0] = userOp;
-
-        bytes memory code = abi.encodePacked(bytes3(0xef0100), address(implementation));
-        vm.etch(owner, code);
-
-        vm.prank(sender);
-        entryPoint.handleOps(ops, payable(sender));
-
-        uint256 balanceOfAfter = IERC20(TOKEN).balanceOf(owner);
-        uint256 balanceOfAfterSender = IERC20(TOKEN).balanceOf(sender);
-        uint256 balanceOfAfter0x123 = IERC20(TOKEN).balanceOf(address(0x123));
-
-        console.log("AFTER EXECUTION:");
-        console.log("Owner balance:", balanceOfAfter);
-        console.log("Sender balance:", balanceOfAfterSender);
-        console.log("0x123 balance:", balanceOfAfter0x123);
-
-        // CORRECTED ASSERTIONS based on your actual test transactions:
-
-        // Owner should: +10e18 (mint) -1e18 (to sender) -1e18 (to 0x123) -1e18 (to 0x456) = +7e18
-        assertEq(balanceOfAfter, balanceOfBefore + 7e18, "Owner should gain 7e18");
-
-        // Sender should: +1e18 (mint) +1e18 (from owner) = +2e18
-        assertEq(balanceOfAfterSender, balanceOfBeforeSender + 2e18, "Sender should gain 2e18");
-
-        // 0x123 should: +1e18 (from owner) = +1e18
-        assertEq(balanceOfAfter0x123, balanceOfBefore0x123 + 1e18, "0x123 should gain 1e18");
-
-        // Remove or comment out the approval check since third batch is doing transfer, not approve
-        // uint256 allowance = IERC20(TOKEN).allowance(owner, address(0x456));
-        // assertEq(allowance, 1e18, "Approval should be 1e18");
-        console.log(
-            "/* -------------------------------- test_ExecuteBatchOfBatchesSKEOA7821 -------- */"
-        );
+        _getBalances(false);
+        _assertBalances(int256(10e18 * 3), true);
     }
 
-    function test_ExecuteBatchP2567821() public {
-        console.log("/* ---------------------------------- test_ExecuteBatchP2567821 -------- */");
-
-        // Create the Call array with multiple transactions
+    function test_ExecuteBatchAAWithSKP256SelfAndTrasfer()
+        external
+        registerSkP256Self
+        setTokenSpendM(KeyType.P256, _getKeyP256(pK_SK), address(erc20), 10 ether, SpendPeriod.Month)
+        setCanCallM(KeyType.P256, _getKeyP256(pK_SK), address(erc20), ANY_FN_SEL, true)
+    {
+        _getBalances(true);
+        bytes memory data_mint = abi.encodeWithSelector(MockERC20.mint.selector, owner, 10e18);
+        bytes memory data_transfer =
+            abi.encodeWithSelector(IERC20.transfer.selector, reciver, 10e18);
         Call[] memory calls = new Call[](2);
+        calls[0] = _createCall(address(erc20), 0, data_mint);
+        calls[1] = _createCall(address(erc20), 0, data_transfer);
 
-        bytes memory dataHex = abi.encodeWithSelector(MockERC20.mint.selector, owner, 10e18);
-        bytes memory dataHex2 =
-            abi.encodeWithSelector(IERC20(TOKEN).transfer.selector, sender, 5e18);
-
-        calls[0] = Call({target: TOKEN, value: 0, data: dataHex});
-        calls[1] = Call({target: TOKEN, value: 0, data: dataHex2});
-
-        // ERC-7821 mode for batch execution (still mode ID = 1)
-        bytes32 mode = bytes32(uint256(0x01000000000000000000) << (22 * 8));
-
-        // Encode the execution data as Call[] array
-        bytes memory executionData = abi.encode(calls);
-
-        // Create the callData for the ERC-7821 execute function
-        bytes memory callData =
-            abi.encodeWithSelector(bytes4(keccak256("execute(bytes32,bytes)")), mode, executionData);
-
-        uint256 nonce = entryPoint.getNonce(owner, 1);
-
-        PackedUserOperation memory userOp = PackedUserOperation({
-            sender: owner,
-            nonce: nonce,
-            initCode: hex"7702",
-            callData: callData,
-            accountGasLimits: _packAccountGasLimits(360_000, 240_000),
-            preVerificationGas: 110_000,
-            gasFees: _packGasFees(2 gwei, 50 gwei),
-            paymasterAndData: hex"",
-            signature: hex""
-        });
-
-        bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
-        console.logBytes32(userOpHash);
-
-        IKey.PubKey memory pubKeyExecuteBatch =
-            IKey.PubKey({x: MINT_P256_PUBLIC_KEY_X, y: MINT_P256_PUBLIC_KEY_Y});
-
-        bytes memory _signature = account.encodeP256Signature(
-            MINT_P256_SIGNATURE_R, MINT_P256_SIGNATURE_S, pubKeyExecuteBatch, KeyType.P256
+        PackedUserOperation memory userOp = _getFreshUserOp();
+        userOp = _populateUserOp(
+            userOp,
+            _packCallData(mode_1, calls),
+            _packAccountGasLimits(600_000, 400_000),
+            800_000,
+            _packGasFees(80 gwei, 15 gwei),
+            hex""
         );
 
-        // bytes4 magicValue = account.isValidSignature(userOpHash, _signature);
-        // bool usedChallenge = account.usedChallenges(userOpHash);
-        // console.log("usedChallenge", usedChallenge);
-        // console.logBytes4(magicValue);
+        bytes32 userOpHash = _getUserOpHash(userOp);
+        console.log("userOpHash:", vm.toString(userOpHash));
 
-        bool isValid = webAuthn.verifyP256Signature(
-            userOpHash,
-            MINT_P256_SIGNATURE_R,
-            MINT_P256_SIGNATURE_S,
-            MINT_P256_PUBLIC_KEY_X,
-            MINT_P256_PUBLIC_KEY_Y
-        );
-        console.log("isValid", isValid);
+        userOp.signature = _encodeP256Signature(DEF_P256.R, DEF_P256.S, pK_SK, KeyType.P256);
 
-        userOp.signature = _signature;
+        _relayUserOp(userOp);
 
-        uint256 balanceOfBefore = IERC20(TOKEN).balanceOf(sender);
-
-        PackedUserOperation[] memory ops = new PackedUserOperation[](1);
-        ops[0] = userOp;
-
-        bytes memory code = abi.encodePacked(bytes3(0xef0100), address(implementation));
-        vm.etch(owner, code);
-
-        vm.prank(sender);
-        entryPoint.handleOps(ops, payable(sender));
-
-        uint256 balanceOfAfter = IERC20(TOKEN).balanceOf(sender);
-        console.log("balanceOf", balanceOfAfter);
-        assertEq(balanceOfBefore + 5e18, balanceOfAfter);
-        console.log("/* ---------------------------------- test_ExecuteBatchP2567821 -------- */");
+        _getBalances(false);
+        _assertBalances(int256(10e18), true);
     }
 
-    function test_ExecuteBatchOfBatchesP2567821() public {
-        // Create first batch - minting operations
-        Call[] memory mintBatch = new Call[](2);
-        mintBatch[0] = Call({
-            target: TOKEN,
-            value: 0,
-            data: abi.encodeWithSelector(MockERC20.mint.selector, owner, 10e18)
-        });
-        mintBatch[1] = Call({
-            target: TOKEN,
-            value: 0,
-            data: abi.encodeWithSelector(MockERC20.mint.selector, sender, 1e18)
-        });
+    function test_ExecuteBatchofBatchesAAWithSKP256SelfAndTrasfer()
+        external
+        registerSkP256SelfBatchs
+        setTokenSpendM(KeyType.P256, _getKeyP256(pK_SK), address(erc20), 30 ether, SpendPeriod.Month)
+        setCanCallM(KeyType.P256, _getKeyP256(pK_SK), address(erc20), ANY_FN_SEL, true)
+    {
+        _getBalances(true);
 
-        // Create second batch - transfer operations (FROM OWNER)
-        Call[] memory transferBatch = new Call[](2);
-        transferBatch[0] = Call({
-            target: TOKEN,
-            value: 0,
-            data: abi.encodeWithSelector(IERC20.transfer.selector, sender, 1e18)
-        });
-        transferBatch[1] = Call({
-            target: TOKEN,
-            value: 0,
-            data: abi.encodeWithSelector(IERC20.transfer.selector, address(0x123), 1e18)
-        });
+        address[] memory targets = new address[](3);
+        targets[0] = address(erc20);
+        targets[1] = address(erc20);
+        targets[2] = address(erc20);
 
-        // Create third batch - approval operations
-        Call[] memory approveBatch = new Call[](1);
-        approveBatch[0] = Call({
-            target: TOKEN,
-            value: 0,
-            data: abi.encodeWithSelector(IERC20.transfer.selector, address(0x456), 1e18)
-        });
+        uint256[] memory values = new uint256[](3);
 
-        // Encode each batch separately
-        bytes memory batch1Data = abi.encode(mintBatch);
-        bytes memory batch2Data = abi.encode(transferBatch);
-        bytes memory batch3Data = abi.encode(approveBatch);
+        bytes[] memory datas = new bytes[](2);
+        datas[0] = abi.encodeWithSelector(MockERC20.mint.selector, owner, 10e18);
+        datas[1] = abi.encodeWithSelector(IERC20.transfer.selector, reciver, 10e18);
 
-        // Create array of batch data
-        bytes[] memory batches = new bytes[](3);
-        batches[0] = batch1Data;
-        batches[1] = batch2Data;
-        batches[2] = batch3Data;
-
-        // Mode for batch of batches (ID = 3)
-        bytes32 mode = bytes32(uint256(0x01000000000078210002) << (22 * 8));
-
-        // Encode the execution data as bytes[] array
-        bytes memory executionData = abi.encode(batches);
-
-        // Create the callData for the ERC-7821 execute function
-        bytes memory callData =
-            abi.encodeWithSelector(bytes4(keccak256("execute(bytes32,bytes)")), mode, executionData);
-
-        uint256 nonce = entryPoint.getNonce(owner, 1);
-
-        PackedUserOperation memory userOp = PackedUserOperation({
-            sender: owner,
-            nonce: nonce,
-            initCode: hex"7702",
-            callData: callData,
-            accountGasLimits: _packAccountGasLimits(360_000, 240_000),
-            preVerificationGas: 110_000,
-            gasFees: _packGasFees(2 gwei, 50 gwei),
-            paymasterAndData: hex"",
-            signature: hex""
-        });
-
-        bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
-        console.logBytes32(userOpHash);
-
-        IKey.PubKey memory pubKeyExecuteBatch =
-            IKey.PubKey({x: P256_PUBLIC_KEY_X, y: P256_PUBLIC_KEY_Y});
-
-        bytes memory _signature = account.encodeP256Signature(
-            P256_SIGNATURE_R, P256_SIGNATURE_S, pubKeyExecuteBatch, KeyType.P256
+        PackedUserOperation memory userOp = _getFreshUserOp();
+        userOp = _populateUserOp(
+            userOp,
+            _packBatchOfBatches(3, targets, values, datas),
+            _packAccountGasLimits(600_000, 400_000),
+            800_000,
+            _packGasFees(80 gwei, 15 gwei),
+            hex""
         );
 
-        // bytes4 magicValue = account.isValidSignature(userOpHash, _signature);
-        // bool usedChallenge = account.usedChallenges(userOpHash);
-        // console.log("usedChallenge", usedChallenge);
-        // console.logBytes4(magicValue);
+        bytes32 userOpHash = _getUserOpHash(userOp);
+        console.log("userOpHash:", vm.toString(userOpHash));
 
-        bool isValid = webAuthn.verifyP256Signature(
-            userOpHash, P256_SIGNATURE_R, P256_SIGNATURE_S, P256_PUBLIC_KEY_X, P256_PUBLIC_KEY_Y
-        );
-        console.log("isValid", isValid);
+        userOp.signature = _encodeP256Signature(DEF_P256.R, DEF_P256.S, pK_SK, KeyType.P256);
 
-        userOp.signature = _signature;
+        _relayUserOp(userOp);
 
-        uint256 balanceOfBefore = IERC20(TOKEN).balanceOf(owner);
-        uint256 balanceOfBeforeSender = IERC20(TOKEN).balanceOf(sender);
-        uint256 balanceOfBefore0x123 = IERC20(TOKEN).balanceOf(address(0x123));
-
-        console.log("BEFORE EXECUTION:");
-        console.log("Owner balance:", balanceOfBefore);
-        console.log("Sender balance:", balanceOfBeforeSender);
-        console.log("0x123 balance:", balanceOfBefore0x123);
-
-        PackedUserOperation[] memory ops = new PackedUserOperation[](1);
-        ops[0] = userOp;
-
-        bytes memory code = abi.encodePacked(bytes3(0xef0100), address(implementation));
-        vm.etch(owner, code);
-
-        vm.prank(sender);
-        entryPoint.handleOps(ops, payable(sender));
-
-        uint256 balanceOfAfter = IERC20(TOKEN).balanceOf(owner);
-        uint256 balanceOfAfterSender = IERC20(TOKEN).balanceOf(sender);
-        uint256 balanceOfAfter0x123 = IERC20(TOKEN).balanceOf(address(0x123));
-
-        console.log("AFTER EXECUTION:");
-        console.log("Owner balance:", balanceOfAfter);
-        console.log("Sender balance:", balanceOfAfterSender);
-        console.log("0x123 balance:", balanceOfAfter0x123);
-
-        // CORRECTED ASSERTIONS based on your actual test transactions:
-
-        // Owner should: +10e18 (mint) -1e18 (to sender) -1e18 (to 0x123) -1e18 (to 0x456) = +7e18
-        assertEq(balanceOfAfter, balanceOfBefore + 7e18, "Owner should gain 7e18");
-
-        // Sender should: +1e18 (mint) +1e18 (from owner) = +2e18
-        assertEq(balanceOfAfterSender, balanceOfBeforeSender + 2e18, "Sender should gain 2e18");
-
-        // 0x123 should: +1e18 (from owner) = +1e18
-        assertEq(balanceOfAfter0x123, balanceOfBefore0x123 + 1e18, "0x123 should gain 1e18");
-
-        // Remove or comment out the approval check since third batch is doing transfer, not approve
-        // uint256 allowance = IERC20(TOKEN).allowance(owner, address(0x456));
-        // assertEq(allowance, 1e18, "Approval should be 1e18");
-        console.log(
-            "/* -------------------------------- test_ExecuteBatchOfBatchesSKEOA7821 -------- */"
-        );
+        _getBalances(false);
+        _assertBalances(int256(10e18 * 3), true);
     }
 
-    function test_ExecuteBatchP256NonKey7821() public {
-        console.log("/* ---------------------------------- test_ExecuteBatchP2567821 -------- */");
-
-        // Create the Call array with multiple transactions
+    function test_ExecuteBatchAAWithSKP256NonSelfAndTrasfer()
+        external
+        registerSkP256NonSelf
+        setTokenSpendM(
+            KeyType.P256NONKEY,
+            _getKeyP256(pK_SK),
+            address(erc20),
+            10 ether,
+            SpendPeriod.Month
+        )
+        setCanCallM(KeyType.P256NONKEY, _getKeyP256(pK_SK), address(erc20), ANY_FN_SEL, true)
+    {
+        _getBalances(true);
+        bytes memory data_mint = abi.encodeWithSelector(MockERC20.mint.selector, owner, 10e18);
+        bytes memory data_transfer =
+            abi.encodeWithSelector(IERC20.transfer.selector, reciver, 10e18);
         Call[] memory calls = new Call[](2);
+        calls[0] = _createCall(address(erc20), 0, data_mint);
+        calls[1] = _createCall(address(erc20), 0, data_transfer);
 
-        bytes memory dataHex = abi.encodeWithSelector(MockERC20.mint.selector, owner, 10e18);
-        bytes memory dataHex2 =
-            abi.encodeWithSelector(IERC20(TOKEN).transfer.selector, sender, 5e18);
-
-        calls[0] = Call({target: TOKEN, value: 0, data: dataHex});
-        calls[1] = Call({target: TOKEN, value: 0, data: dataHex2});
-
-        // ERC-7821 mode for batch execution (still mode ID = 1)
-        bytes32 mode = bytes32(uint256(0x01000000000000000000) << (22 * 8));
-
-        // Encode the execution data as Call[] array
-        bytes memory executionData = abi.encode(calls);
-
-        // Create the callData for the ERC-7821 execute function
-        bytes memory callData =
-            abi.encodeWithSelector(bytes4(keccak256("execute(bytes32,bytes)")), mode, executionData);
-
-        uint256 nonce = entryPoint.getNonce(owner, 1);
-
-        PackedUserOperation memory userOp = PackedUserOperation({
-            sender: owner,
-            nonce: nonce,
-            initCode: hex"7702",
-            callData: callData,
-            accountGasLimits: _packAccountGasLimits(360_000, 240_000),
-            preVerificationGas: 110_000,
-            gasFees: _packGasFees(2 gwei, 50 gwei),
-            paymasterAndData: hex"",
-            signature: hex""
-        });
-
-        bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
-        console.logBytes32(userOpHash);
-
-        IKey.PubKey memory pubKeyExecuteBatch =
-            IKey.PubKey({x: MINT_P256NOKEY_PUBLIC_KEY_X, y: MINT_P256NOKEY_PUBLIC_KEY_Y});
-
-        bytes memory _signature = account.encodeP256Signature(
-            MINT_P256NOKEY_SIGNATURE_R,
-            MINT_P256NOKEY_SIGNATURE_S,
-            pubKeyExecuteBatch,
-            KeyType.P256NONKEY
+        PackedUserOperation memory userOp = _getFreshUserOp();
+        userOp = _populateUserOp(
+            userOp,
+            _packCallData(mode_1, calls),
+            _packAccountGasLimits(600_000, 400_000),
+            800_000,
+            _packGasFees(80 gwei, 15 gwei),
+            hex""
         );
 
-        // bytes4 magicValue = account.isValidSignature(userOpHash, _signature);
-        // bool usedChallenge = account.usedChallenges(userOpHash);
-        // console.log("usedChallenge", usedChallenge);
-        // console.logBytes4(magicValue);
+        bytes32 userOpHash = _getUserOpHash(userOp);
+        console.log("userOpHash:", vm.toString(userOpHash));
 
-        bytes32 _hash = EfficientHashLib.sha2(userOpHash);
-        console.logBytes32(_hash);
-        bool isValid = webAuthn.verifyP256Signature(
-            _hash,
-            MINT_P256NOKEY_SIGNATURE_R,
-            MINT_P256NOKEY_SIGNATURE_S,
-            MINT_P256NOKEY_PUBLIC_KEY_X,
-            MINT_P256NOKEY_PUBLIC_KEY_Y
-        );
-        console.log("isValid Test", isValid);
+        userOp.signature = _encodeP256Signature(DEF_P256.R, DEF_P256.S, pK_SK, KeyType.P256NONKEY);
 
-        userOp.signature = _signature;
+        _relayUserOp(userOp);
 
-        uint256 balanceOfBefore = IERC20(TOKEN).balanceOf(sender);
-
-        PackedUserOperation[] memory ops = new PackedUserOperation[](1);
-        ops[0] = userOp;
-
-        bytes memory code = abi.encodePacked(bytes3(0xef0100), address(implementation));
-        vm.etch(owner, code);
-
-        vm.prank(sender);
-        entryPoint.handleOps(ops, payable(sender));
-
-        uint256 balanceOfAfter = IERC20(TOKEN).balanceOf(sender);
-        console.log("balanceOf", balanceOfAfter);
-        assertEq(balanceOfBefore + 5e18, balanceOfAfter);
-        console.log("/* ---------------------------------- test_ExecuteBatchP2567821 -------- */");
+        _getBalances(false);
+        _assertBalances(int256(10e18), true);
     }
 
-    function test_ExecuteBatchOfBatchesP256NonKey7821() public {
-        // Create first batch - minting operations
-        Call[] memory mintBatch = new Call[](2);
-        mintBatch[0] = Call({
-            target: TOKEN,
-            value: 0,
-            data: abi.encodeWithSelector(MockERC20.mint.selector, owner, 10e18)
-        });
-        mintBatch[1] = Call({
-            target: TOKEN,
-            value: 0,
-            data: abi.encodeWithSelector(MockERC20.mint.selector, sender, 1e18)
-        });
+    function test_ExecuteBatchofBatchesAAWithSKP256NonSelfAndTrasfer()
+        external
+        registerSkP256NonSelfBatchs
+        setTokenSpendM(
+            KeyType.P256NONKEY,
+            _getKeyP256(pK_SK),
+            address(erc20),
+            30 ether,
+            SpendPeriod.Month
+        )
+        setCanCallM(KeyType.P256NONKEY, _getKeyP256(pK_SK), address(erc20), ANY_FN_SEL, true)
+    {
+        _getBalances(true);
 
-        // Create second batch - transfer operations (FROM OWNER)
-        Call[] memory transferBatch = new Call[](2);
-        transferBatch[0] = Call({
-            target: TOKEN,
-            value: 0,
-            data: abi.encodeWithSelector(IERC20.transfer.selector, sender, 1e18)
-        });
-        transferBatch[1] = Call({
-            target: TOKEN,
-            value: 0,
-            data: abi.encodeWithSelector(IERC20.transfer.selector, address(0x123), 1e18)
-        });
+        address[] memory targets = new address[](3);
+        targets[0] = address(erc20);
+        targets[1] = address(erc20);
+        targets[2] = address(erc20);
 
-        // Create third batch - approval operations
-        Call[] memory approveBatch = new Call[](1);
-        approveBatch[0] = Call({
-            target: TOKEN,
-            value: 0,
-            data: abi.encodeWithSelector(IERC20.transfer.selector, address(0x456), 1e18)
-        });
+        uint256[] memory values = new uint256[](3);
 
-        // Encode each batch separately
-        bytes memory batch1Data = abi.encode(mintBatch);
-        bytes memory batch2Data = abi.encode(transferBatch);
-        bytes memory batch3Data = abi.encode(approveBatch);
+        bytes[] memory datas = new bytes[](2);
+        datas[0] = abi.encodeWithSelector(MockERC20.mint.selector, owner, 10e18);
+        datas[1] = abi.encodeWithSelector(IERC20.transfer.selector, reciver, 10e18);
 
-        // Create array of batch data
-        bytes[] memory batches = new bytes[](3);
-        batches[0] = batch1Data;
-        batches[1] = batch2Data;
-        batches[2] = batch3Data;
+        PackedUserOperation memory userOp = _getFreshUserOp();
+        userOp = _populateUserOp(
+            userOp,
+            _packBatchOfBatches(3, targets, values, datas),
+            _packAccountGasLimits(600_000, 400_000),
+            800_000,
+            _packGasFees(80 gwei, 15 gwei),
+            hex""
+        );
 
-        // Mode for batch of batches (ID = 3)
-        bytes32 mode = bytes32(uint256(0x01000000000078210002) << (22 * 8));
+        bytes32 userOpHash = _getUserOpHash(userOp);
+        console.log("userOpHash:", vm.toString(userOpHash));
 
-        // Encode the execution data as bytes[] array
+        userOp.signature = _encodeP256Signature(DEF_P256.R, DEF_P256.S, pK_SK, KeyType.P256NONKEY);
+
+        _relayUserOp(userOp);
+
+        _getBalances(false);
+        _assertBalances(int256(10e18 * 3), true);
+    }
+
+    function test_supportsExecutionMode() public view {
+        for (uint256 i = 0; i < modes.length;) {
+            bool res = account.supportsExecutionMode(modes[i]);
+            assertTrue(res);
+
+            unchecked {
+                i++;
+            }
+        }
+    }
+
+    function _getBalances(bool isBefore) internal {
+        if (isBefore) {
+            balanceAccounBefore = IERC20(erc20).balanceOf(owner);
+            balanceReciverBefore = IERC20(erc20).balanceOf(reciver);
+        } else {
+            balanceAccounAfter = IERC20(erc20).balanceOf(owner);
+            balanceReciverAfter = IERC20(erc20).balanceOf(reciver);
+        }
+    }
+
+    function _assertBalances(int256 _value, bool _includeReciver) internal view {
+        if (!_includeReciver) {
+            assertEq(int256(balanceAccounBefore) + _value, int256(balanceAccounAfter));
+        } else if (_includeReciver) {
+            assertEq(int256(balanceReciverBefore) + _value, int256(balanceReciverAfter));
+        }
+    }
+
+    function _relayUserOp(PackedUserOperation memory _userOp) internal {
+        PackedUserOperation[] memory ops = new PackedUserOperation[](1);
+        ops[0] = _userOp;
+
+        _etch();
+        vm.prank(sender);
+        entryPoint.handleOps(ops, payable(sender));
+    }
+
+    function _packBatchOfBatches(
+        uint256 _indx,
+        address[] memory _targets,
+        uint256[] memory _values,
+        bytes[] memory _datas
+    ) internal pure returns (bytes memory callData) {
+        bytes[] memory batches = new bytes[](_indx);
+
+        for (uint256 i = 0; i < _indx; i++) {
+            Call[] memory calls = new Call[](_datas.length);
+
+            for (uint256 j = 0; j < _datas.length; j++) {
+                calls[j] = Call({target: _targets[i], value: _values[i], data: _datas[j]});
+            }
+
+            batches[i] = abi.encode(calls);
+        }
+
         bytes memory executionData = abi.encode(batches);
-
-        // Create the callData for the ERC-7821 execute function
-        bytes memory callData =
-            abi.encodeWithSelector(bytes4(keccak256("execute(bytes32,bytes)")), mode, executionData);
-
-        uint256 nonce = entryPoint.getNonce(owner, 1);
-
-        PackedUserOperation memory userOp = PackedUserOperation({
-            sender: owner,
-            nonce: nonce,
-            initCode: hex"7702",
-            callData: callData,
-            accountGasLimits: _packAccountGasLimits(360_000, 240_000),
-            preVerificationGas: 110_000,
-            gasFees: _packGasFees(2 gwei, 50 gwei),
-            paymasterAndData: hex"",
-            signature: hex""
-        });
-
-        bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
-        console.logBytes32(userOpHash);
-
-        IKey.PubKey memory pubKeyExecuteBatch =
-            IKey.PubKey({x: P256NOKEY_PUBLIC_KEY_X, y: P256NOKEY_PUBLIC_KEY_Y});
-
-        bytes memory _signature = account.encodeP256Signature(
-            P256NOKEY_SIGNATURE_R, P256NOKEY_SIGNATURE_S, pubKeyExecuteBatch, KeyType.P256NONKEY
+        callData = abi.encodeWithSelector(
+            bytes4(keccak256("execute(bytes32,bytes)")), mode_3, executionData
         );
-
-        // bytes4 magicValue = account.isValidSignature(userOpHash, _signature);
-        // bool usedChallenge = account.usedChallenges(userOpHash);
-        // console.log("usedChallenge", usedChallenge);
-        // console.logBytes4(magicValue);
-
-        bytes32 _hash = EfficientHashLib.sha2(userOpHash);
-        console.logBytes32(_hash);
-        bool isValid = webAuthn.verifyP256Signature(
-            _hash,
-            P256NOKEY_SIGNATURE_R,
-            P256NOKEY_SIGNATURE_S,
-            P256NOKEY_PUBLIC_KEY_X,
-            P256NOKEY_PUBLIC_KEY_Y
-        );
-        console.log("isValid Test", isValid);
-
-        userOp.signature = _signature;
-
-        uint256 balanceOfBefore = IERC20(TOKEN).balanceOf(owner);
-        uint256 balanceOfBeforeSender = IERC20(TOKEN).balanceOf(sender);
-        uint256 balanceOfBefore0x123 = IERC20(TOKEN).balanceOf(address(0x123));
-
-        console.log("BEFORE EXECUTION:");
-        console.log("Owner balance:", balanceOfBefore);
-        console.log("Sender balance:", balanceOfBeforeSender);
-        console.log("0x123 balance:", balanceOfBefore0x123);
-
-        PackedUserOperation[] memory ops = new PackedUserOperation[](1);
-        ops[0] = userOp;
-
-        bytes memory code = abi.encodePacked(bytes3(0xef0100), address(implementation));
-        vm.etch(owner, code);
-
-        vm.prank(sender);
-        entryPoint.handleOps(ops, payable(sender));
-
-        uint256 balanceOfAfter = IERC20(TOKEN).balanceOf(owner);
-        uint256 balanceOfAfterSender = IERC20(TOKEN).balanceOf(sender);
-        uint256 balanceOfAfter0x123 = IERC20(TOKEN).balanceOf(address(0x123));
-
-        console.log("AFTER EXECUTION:");
-        console.log("Owner balance:", balanceOfAfter);
-        console.log("Sender balance:", balanceOfAfterSender);
-        console.log("0x123 balance:", balanceOfAfter0x123);
-
-        // CORRECTED ASSERTIONS based on your actual test transactions:
-
-        // Owner should: +10e18 (mint) -1e18 (to sender) -1e18 (to 0x123) -1e18 (to 0x456) = +7e18
-        assertEq(balanceOfAfter, balanceOfBefore + 7e18, "Owner should gain 7e18");
-
-        // Sender should: +1e18 (mint) +1e18 (from owner) = +2e18
-        assertEq(balanceOfAfterSender, balanceOfBeforeSender + 2e18, "Sender should gain 2e18");
-
-        // 0x123 should: +1e18 (from owner) = +1e18
-        assertEq(balanceOfAfter0x123, balanceOfBefore0x123 + 1e18, "0x123 should gain 1e18");
-
-        // Remove or comment out the approval check since third batch is doing transfer, not approve
-        // uint256 allowance = IERC20(TOKEN).allowance(owner, address(0x456));
-        // assertEq(allowance, 1e18, "Approval should be 1e18");
-        console.log(
-            "/* -------------------------------- test_ExecuteBatchOfBatchesSKEOA7821 -------- */"
-        );
-    }
-
-    function _register_SessionKeyEOA() internal {
-        uint48 validUntil = uint48(block.timestamp + 1 days);
-        uint48 limit = uint48(10);
-        pubKeySK = PubKey({
-            x: 0x0000000000000000000000000000000000000000000000000000000000000000,
-            y: 0x0000000000000000000000000000000000000000000000000000000000000000
-        });
-
-        keySK = Key({pubKey: pubKeySK, eoaAddress: sessionKey, keyType: KeyType.EOA});
-
-        ISpendLimit.SpendTokenInfo memory spendInfo =
-            ISpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000e18});
-
-        keyData = KeyReg({
-            validUntil: validUntil,
-            validAfter: 0,
-            limit: limit,
-            whitelisting: true,
-            contractAddress: TOKEN,
-            spendTokenInfo: spendInfo,
-            allowedSelectors: _allowedSelectors(),
-            ethLimit: 0
-        });
-
-        bytes memory code = abi.encodePacked(
-            bytes3(0xef0100),
-            address(implementation) // or your logic contract
-        );
-        vm.etch(owner, code);
-
-        vm.prank(address(entryPoint));
-        account.registerKey(keySK, keyData);
-
-        keySK_B = Key({pubKey: pubKeySK, eoaAddress: guardianB, keyType: KeyType.EOA});
-
-        keyData = KeyReg({
-            validUntil: validUntil,
-            validAfter: 0,
-            limit: limit,
-            whitelisting: true,
-            contractAddress: ETH_RECIVE,
-            spendTokenInfo: spendInfo,
-            allowedSelectors: _allowedSelectors(),
-            ethLimit: ETH_LIMIT
-        });
-
-        vm.etch(owner, code);
-
-        vm.prank(address(entryPoint));
-        account.registerKey(keySK_B, keyData);
-    }
-
-    function _register_SessionKeyP256() internal {
-        uint48 validUntil = uint48(block.timestamp + 1 days);
-        uint48 limit = uint48(10);
-        pubKeySK = PubKey({x: P256_PUBLIC_KEY_X, y: P256_PUBLIC_KEY_Y});
-
-        keySK = Key({pubKey: pubKeySK, eoaAddress: address(0), keyType: KeyType.P256});
-
-        ISpendLimit.SpendTokenInfo memory spendInfo =
-            ISpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000e18});
-
-        keyData = KeyReg({
-            validUntil: validUntil,
-            validAfter: 0,
-            limit: limit,
-            whitelisting: true,
-            contractAddress: TOKEN,
-            spendTokenInfo: spendInfo,
-            allowedSelectors: _allowedSelectors(),
-            ethLimit: 0
-        });
-
-        bytes memory code = abi.encodePacked(
-            bytes3(0xef0100),
-            address(implementation) // or your logic contract
-        );
-        vm.etch(owner, code);
-
-        vm.prank(address(entryPoint));
-        account.registerKey(keySK, keyData);
-
-        pubKeySK = PubKey({x: MINT_P256_PUBLIC_KEY_X, y: MINT_P256_PUBLIC_KEY_Y});
-
-        keySK = Key({pubKey: pubKeySK, eoaAddress: address(0), keyType: KeyType.P256});
-
-        keyData = KeyReg({
-            validUntil: validUntil,
-            validAfter: 0,
-            limit: limit,
-            whitelisting: true,
-            contractAddress: TOKEN,
-            spendTokenInfo: spendInfo,
-            allowedSelectors: _allowedSelectors(),
-            ethLimit: 0
-        });
-
-        vm.etch(owner, code);
-
-        vm.prank(address(entryPoint));
-        account.registerKey(keySK, keyData);
-    }
-
-    function _register_SessionKeyP256NonKey() internal {
-        uint48 validUntil = uint48(block.timestamp + 1 days);
-        uint48 limit = uint48(10);
-        pubKeySK = PubKey({x: P256NOKEY_PUBLIC_KEY_X, y: P256NOKEY_PUBLIC_KEY_Y});
-
-        keySK = Key({pubKey: pubKeySK, eoaAddress: address(0), keyType: KeyType.P256NONKEY});
-
-        ISpendLimit.SpendTokenInfo memory spendInfo =
-            ISpendLimit.SpendTokenInfo({token: TOKEN, limit: 1000e18});
-
-        bytes memory code = abi.encodePacked(
-            bytes3(0xef0100),
-            address(implementation) // or your logic contract
-        );
-        vm.etch(owner, code);
-
-        keyData = KeyReg({
-            validUntil: validUntil,
-            validAfter: 0,
-            limit: limit,
-            whitelisting: true,
-            contractAddress: TOKEN,
-            spendTokenInfo: spendInfo,
-            allowedSelectors: _allowedSelectors(),
-            ethLimit: 0
-        });
-
-        vm.prank(address(entryPoint));
-        account.registerKey(keySK, keyData);
-
-        pubKeySK = PubKey({x: MINT_P256NOKEY_PUBLIC_KEY_X, y: MINT_P256NOKEY_PUBLIC_KEY_Y});
-
-        keySK = Key({pubKey: pubKeySK, eoaAddress: address(0), keyType: KeyType.P256});
-
-        vm.etch(owner, code);
-
-        keyData = KeyReg({
-            validUntil: validUntil,
-            validAfter: 0,
-            limit: limit,
-            whitelisting: true,
-            contractAddress: TOKEN,
-            spendTokenInfo: spendInfo,
-            allowedSelectors: _allowedSelectors(),
-            ethLimit: 0
-        });
-
-        vm.prank(address(entryPoint));
-        account.registerKey(keySK, keyData);
-    }
-
-    /* ─────────────────────────────────────────────────────────── helpers ──── */
-    function _initializeAccount() internal {
-        /* sample WebAuthn public key – replace with a real one if needed */
-        pubKeyMK = PubKey({x: BATCH_VALID_PUBLIC_KEY_X, y: BATCH_VALID_PUBLIC_KEY_Y});
-
-        keyMK = Key({pubKey: pubKeyMK, eoaAddress: address(0), keyType: KeyType.WEBAUTHN});
-
-        ISpendLimit.SpendTokenInfo memory spendInfo =
-            ISpendLimit.SpendTokenInfo({token: TOKEN, limit: 0});
-
-        keyData = KeyReg({
-            validUntil: type(uint48).max,
-            validAfter: 0,
-            limit: 0,
-            whitelisting: false,
-            contractAddress: address(0),
-            spendTokenInfo: spendInfo,
-            allowedSelectors: _allowedSelectors(),
-            ethLimit: 0
-        });
-
-        pubKeyMK = PubKey({x: bytes32(0), y: bytes32(0)});
-        keySK = Key({pubKey: pubKeyMK, eoaAddress: address(0), keyType: KeyType.WEBAUTHN});
-
-        /* sign arbitrary message so initialise() passes sig check */
-        bytes memory keyEnc =
-            abi.encode(keyMK.pubKey.x, keyMK.pubKey.y, keyMK.eoaAddress, keyMK.keyType);
-
-        bytes memory keyDataEnc = abi.encode(
-            keyData.validUntil,
-            keyData.validAfter,
-            keyData.limit,
-            keyData.whitelisting,
-            keyData.contractAddress,
-            keyData.spendTokenInfo.token,
-            keyData.spendTokenInfo.limit,
-            keyData.allowedSelectors,
-            keyData.ethLimit
-        );
-
-        bytes memory skEnc =
-            abi.encode(keySK.pubKey.x, keySK.pubKey.y, keySK.eoaAddress, keySK.keyType);
-
-        bytes memory skDataEnc = abi.encode(
-            keyData.validUntil,
-            keyData.validAfter,
-            keyData.limit,
-            keyData.whitelisting,
-            keyData.contractAddress,
-            keyData.spendTokenInfo.token,
-            keyData.spendTokenInfo.limit,
-            keyData.allowedSelectors
-        );
-
-        bytes32 structHash = keccak256(
-            abi.encode(INIT_TYPEHASH, keyEnc, keyDataEnc, skEnc, skDataEnc, initialGuardian)
-        );
-
-        string memory name = "OPF7702Recoverable";
-        string memory version = "1";
-
-        bytes32 domainSeparator = keccak256(
-            abi.encode(
-                TYPE_HASH, keccak256(bytes(name)), keccak256(bytes(version)), block.chainid, owner
-            )
-        );
-        bytes32 digest = MessageHashUtils.toTypedDataHash(domainSeparator, structHash);
-
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPk, digest);
-        bytes memory sig = abi.encodePacked(r, s, v);
-
-        vm.etch(owner, abi.encodePacked(bytes3(0xef0100), address(implementation)));
-        account = OPF7702(payable(owner));
-
-        vm.prank(address(entryPoint));
-        account.initialize(keyMK, keyData, keySK, keyData, sig, initialGuardian);
     }
 }

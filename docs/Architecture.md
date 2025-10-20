@@ -38,13 +38,15 @@ TL;DR
 
     - `Execution` → ERC‑7821 batch executor (single batch, batch+opData, batch‑of‑batches).
 
-    - `KeysManager` → key registry, spending limits, whitelists, session quotas.
+    - `KeysManager` → key registry, selector permissions, spend limits, session quotas.
 
     - `BaseOPF7702` → EntryPoint/WebAuthnVerifier/GasPolicy wiring, ERC‑165/777/721/1155 holders, storage helpers.
 
+* `SocialRecoveryManager` (bound through the immutable `RECOVERY_MANAGER`) owns guardian storage, enforces security windows, and emits the recovery lifecycle events consumed by the account.
+
 * `Signature` schemes: EOA (secp256k1), WebAuthn (P‑256), P‑256 raw, P‑256NONKEY (pre‑SHA‑256 for non‑extractable keys).
 
-* `Sessions`: limit‑bounded keys (limit>0) get GasPolicy budgets and enforced whitelists/selectors/token limits.
+* `Sessions`: `limits > 0` triggers quota tracking; custodial keys initialise GasPolicy envelopes while permissions/spend caps are configured via `setCanCall`/`setTokenSpend`.
 
 * `Recovery`: guardians co‑sign an EIP‑712 digest to rotate the master key (limit==0) after time locks.
 
@@ -55,7 +57,7 @@ TL;DR
 src/
   core/
     BaseOPF7702.sol        # Base 4337 account + infra wiring
-    KeysManager.sol        # Registry for keys + limits + whitelists
+    KeysManager.sol        # Registry for keys + limits + permissions
     Execution.sol          # ERC‑7821 batch executor (modes 1/2/3)
     OPF7702.sol            # 4337 validation + ERC‑1271 + call gating
     OPF7702Recoverable.sol # Guardians + EIP‑712 + recovery state machine
@@ -84,19 +86,22 @@ flowchart TD
     subgraph "Authentication Layer"
         EOAKeys["EOA Keys<br/>(secp256k1)"]
         WebAuthnKeys["WebAuthn Keys<br/>(P-256 extractable)"]
-        P256Keys["P-256 Keys<br/>(hardware-backed)"]
+        P256Keys["P-256 Keys<br/>(non-extractable)"]
     end
     
     subgraph "Core Smart Contracts"
-        BaseOPF7702["BaseOPF7702.sol<br/>Abstract base account"]
-        KeysManager["KeysManager.sol<br/>Key management"]
-        Execution["Execution.sol<br/>Transaction execution"]
-        OPF7702["OPF7702.sol<br/>Main account implementation"]
-        OPFRecoverable["OPF7702Recoverable.sol<br/>Social recovery extension"]
+        BaseOPF7702["BaseOPF7702.sol<br/>EntryPoint/WebAuthn/Gas wiring"]
+        KeysManager["KeysManager.sol<br/>Key & permission registry"]
+        Execution["Execution.sol<br/>ERC-7821 executor"]
+        OPF7702["OPF7702.sol<br/>4337 validation + ERC-1271"]
+        OPFRecoverable["OPF7702Recoverable.sol<br/>Recovery + init"]
+        OPFMain["OPFMain.sol<br/>EIP-7702 authority"]
+        SocialRecovery["SocialRecoveryManager.sol<br/>Guardian orchestration"]
     end
     
     subgraph "Verification System"
-        WebAuthnVerifier["WebAuthnVerifier.sol<br/>P-256 signature validation"]
+        WebAuthnVerifier["WebAuthnVerifier*.sol<br/>P-256/WebAuthn verifiers"]
+        GasPolicy["GasPolicy.sol<br/>Session gas envelopes"]
     end
     
     subgraph "ERC-4337 Infrastructure"
@@ -106,16 +111,21 @@ flowchart TD
     end
 
     %% Connections
-    EOAKeys --> BaseOPF7702
+    EOAKeys --> KeysManager
     WebAuthnKeys --> WebAuthnVerifier
     P256Keys --> WebAuthnVerifier
-    
-    BaseOPF7702 --> OPF7702
-    KeysManager --> OPF7702
+    GasPolicy --> KeysManager
+
+    BaseOPF7702 --> KeysManager
+    BaseOPF7702 --> Execution
     Execution --> OPF7702
+    KeysManager --> OPF7702
     WebAuthnVerifier --> OPF7702
     
     OPF7702 --> OPFRecoverable
+    OPFRecoverable --> SocialRecovery
+    OPFRecoverable --> OPFMain
+    SocialRecovery --> OPFRecoverable
     OPF7702 --> EntryPoint
     EntryPoint --> Bundlers
     Bundlers --> Paymasters
@@ -125,13 +135,15 @@ flowchart TD
 The system consists of several interconnected smart contracts, each handling specific responsibilities:
 
 
-| **Contract** | **Purpose** | **Key Functions** |
-|--------------|-------------|-------------------|
-| `BaseOPF7702` | Abstract base providing ERC-4337 IAccount interface and signature validation | `validateUserOp()`, `_validateSignature()` |
-| `KeysManager` | Key registration, validation, and permission enforcement | `registerSessionKey()`, `isValidKey()`, `revokeKey()` |
-| `Execution` | Stateless transaction execution with batch support | `execute()`, `executeBatch()` |
-| `OPF7702` | Main account implementation combining execution and key management | `initialize()`, `registerKey()` |
-| `OPF7702Recoverable` | Social recovery extension with guardian management | `proposeGuardian()`, `executeRecovery()` |
+| **Contract** | **Purpose** | **Representative Functions** |
+|--------------|-------------|---------------------------|
+| `BaseOPF7702` | Anchors EntryPoint/WebAuthn/GasPolicy addresses and enforces privileged-call guards | `setEntryPoint()`, `setWebAuthnVerifier()`, `setGasPolicy()`, `_requireForExecute()` |
+| `KeysManager` | Key lifecycle, execution permissions, and spend-policy bookkeeping | `registerKey()`, `setCanCall()`, `setTokenSpend()`, `updateKeyData()`, `revokeKey()` |
+| `Execution` | ERC-7821-inspired executor with flat and recursive batch modes | `execute(bytes32,bytes)`, `supportsExecutionMode()` |
+| `OPF7702` | ERC-4337 `_validateSignature` router + ERC-1271 implementation | `_validateSignature()`, `isValidSignature()`, `startOfSpendPeriod()` |
+| `OPF7702Recoverable` | Recovery wrapper integrating guardians, initialization, and EIP-712 digests | `initialize()`, `completeRecovery()`, `getDigestToInit()`, `RECOVERY_MANAGER()` |
+| `SocialRecoveryManager` | External guardian registry & recovery state machine | `initializeGuardians()`, `startRecovery()`, `completeRecovery()`, `cancelRecovery()` |
+| `OPFMain` | Concrete EIP-7702 authority with upgrade hook | `upgradeProxyDelegation()` |
 
 ## Core contracts & responsibilities
 ### BaseOPF7702
@@ -139,162 +151,153 @@ Inherits: `BaseAccount (4337)`, `ERC721Holder`, `ERC1155Holder`, `IERC777Recipie
 
 * Immutables:
 
-    - `ENTRY_POINT` → 4337 singleton.
+    - `ENTRY_POINT`, `WEBAUTHN_VERIFIER`, `GAS_POLICY`, `RECOVERY_MANAGER` – default singletons resolved through `UpgradeAddress`. The recovery manager address remains `address(0)` for plain `OPF7702` deployments and is set by `OPF7702Recoverable`.
 
-    - `WEBAUTHN_VERIFIER` → on‑chain P‑256/WebAuthn verifier.
+* Admin surface (restricted to `address(this)` or `entryPoint()`):
 
-    - `GAS_POLICY` → per‑session budget validator.
+    - `setEntryPoint(address)` / `setWebAuthnVerifier(address)` / `setGasPolicy(address)`; each emission is proxied through `UpgradeAddress`.
 
-* Admin (self or EntryPoint only):
+* Runtime helpers:
 
-    - `setEntryPoint(address)` (via `UpgradeAddress` lib)
+    - `entryPoint()`, `webAuthnVerifier()`, and `gasPolicy()` dereference the override slots, enabling delegation without redeploying accounts.
 
-    - `setWebAuthnVerifier(address)`
+    - `supportsInterface()` covers ERC‑165, `IAccount`, `IERC1271`, ERC‑7821 (`supportsExecutionMode`), ERC‑721/1155 receivers, and ERC‑777 recipient.
 
-* Helpers:
+    - `_requireForExecute()` and `_requireFromEntryPoint()` gate internal privileged flows used by `Execution`/`OPFMain`.
 
-    - `entryPoint()` and `webAuthnVerifier()` read through UpgradeAddress indirection.
-
-    - `supportsInterface` covers: ERC‑165, IAccount, ERC‑1271, ERC‑7821, ERC‑721/1155 receivers, ERC‑777 recipient.
-
-    - `_clearStorage()` wipes the account’s custom storage layout (incl. recovery/guardian slots) for clean re‑init flows.
-
-    - `_requireForExecute()` gates admin paths to `address(this)` or `entryPoint()`.
+    - `_clearStorage()` zeroes the ERC‑7201 namespace (ID counters, key mappings, status flags) to support controlled re‑initialization scenarios.
 
 ## KeysManager
 
-Stateful registry around keys and permissions.
+Stateful registry around keys, execution permissions, and spend policies.
 
 * Key model (`IKey`):
 
-    - `KeyType`: `EOA` | `WEBAUTHN` | `P256` | `P256NONKEY`.
+    - `KeyType`: `EOA`, `WEBAUTHN`, `P256`, `P256NONKEY` (pre-hash challenge path).
 
-    - `Key` = `{ pubKey(P‑256 x,y), eoaAddress, keyType }`.
+    - `KeyData` (per `keyId = computeKeyId(key)`): `{ keyType, bool isActive, bool masterKey, bool isDelegatedControl, uint48 validUntil, uint48 validAfter, uint48 limits, bytes key }`.
 
-    - `KeyData` (per keyId = keccak256(pubKey) or keccak256(eoa)): `{ isActive, validUntil/After, limit, masterKey, whitelisting, whitelist[address] => bool, spendTokenInfo{token,limit}, allowedSelectors[≤10], ethLimit }`.
+    - Master keys are identified by `limits == 0`; non-master (“session”) keys consume quotas via `limits`.
 
-    - Master key is `limit == 0` (Admin/Second Owner).
+    - `KeyControl`: `Self` or `Custodial`. Custodial keys delegate gas budgeting to `GasPolicy` at registration time.
 
-* Mappings: `idKeys[uint256] → Key`(index 0 holds the master key); `keys[bytes32 keyId] → KeyData`; `usedChallenges[bytes32]` (WebAuthn/P‑256 replay guard).
+* Storage: `id` (monotonic counter), `idKeys[id] → keyId`, `keys[keyId] → KeyData`, `permissions[keyId]` (packed target+selector set), `spendStore[keyId]` (token spend map).
 
-* Lifecycle:
+* Lifecycle helpers:
 
-    - `registerKey(Key, KeyReg)` → validates times, uniqueness; marks active; for session keys `(limit>0)` forces `whitelisting=true` and initializes GasPolicy budgets with `configId=keyId`.
+    - `registerKey(KeyDataReg)` validates timestamps, uniqueness, and stores the raw key bytes. For custodial keys it initializes a gas envelope via `GasPolicy.initializeGasPolicy` using `limits` as the session bound.
 
-    - Revocation / updates keep per‑key invariants tight (`ensureLimit`, `ensureValidTimestamps`).
+    - `setCanCall(keyId, target, selector, can)` maintains per-key execution permissions with wildcard support (`ANY_TARGET`, `ANY_FN_SEL`).
 
-* Encoding helpers (for 4337 userOp.signature):
+    - `setTokenSpend`, `updateTokenSpend`, `removeTokenSpend` manage ERC-20/ETH spend caps by period; `SpendPeriod` enumerates minute → forever.
 
-    - `encodeWebAuthnSignature(...)` → `abi.encode(KeyType.WEBAUTHN, uv, authData, clientDataJSON, challengeIdx, typeIdx, r, s, pubKey)`
-
-    - `encodeP256Signature(r,s,pubKey,keyType)` where keyType ∈ `{P256,P256NONKEY}` → `abi.encode(KeyType, abi.encode(r,s,pubKey))`
-
-    - `encodeEOASignature(sig)` → `abi.encode(KeyType.EOA, sig)`
+    - `updateKeyData`, `pauseKey`, `unpauseKey`, and `revokeKey` offer lifecycle management without disturbing stored permissions unless explicitly cleared.
 
 ### Execution 
-[(ERC‑7821‑style)](https://eips.ethereum.org/EIPS/eip-7821`)
+[(ERC‑7821‑style)](https://eips.ethereum.org/EIPS/eip-7821)
 
 Inherits: `KeysManager`, `ReentrancyGuard`.
 
-* Modes (top 10‑byte word):
+* Modes (high 10 bytes):
 
-    - 1: `0x01000000000000000000…` → single flat `Call[]` batch.
+    - `mode_1 = 0x01000000000000000000…` – flat `Call[]` batch.
 
-    - 2: `0x01000000000078210001…` → flat `Call[]` plus opaque opData.
+    - `mode_3 = 0x01000000000078210002…` – batch-of-batches (`bytes[]`), each recursively processed as `mode_1`.
 
-    - 3: `0x01000000000078210002…` → batch of batches (`bytes[]`), internally re‑runs as Mode‑2 per sub‑batch.
+* Payloads:
 
-* Shape:
+    - `Call` struct: `{ address target; uint256 value; bytes data; }`.
 
-    - `Call` = `{ address target; uint256 value; bytes data; }`
+    - Mode 1: `abi.encode(Call[])`.
 
-    - Mode‑1: `executionData = abi.encode(Call[])`
+    - Mode 3: `abi.encode(bytes[] innerBatches)`.
 
-    - Mode‑2: executionData = `abi.encode(Call[], bytes opData)` (opaque to executor; used by validators/policies)
+* Guards:
 
-    - Mode‑3: executionData = `abi.encode(bytes[] batches)`
+    - `MAX_TX = 9` calls enforced across recursion depth (`_checkLength`, loop counter check).
 
-* Guards: **`MAX_TX = 9`** calls (across recursion), structural length checks, reentrancy guard, low‑level bubble‑up of revert data.
+    - Reentrancy protected via `nonReentrant` modifier.
+
+    - Low-level calls bubble revert data (`_execute`).
 
 ### OPF7702 
-(4337 + 1271 + call‑gating)
+(ERC‑4337 `_validateSignature` + ERC‑1271 + call gating)
 
 Inherits: `Execution`, `Initializable`.
 
-* 4337 hook: overrides `_validateSignature(userOp, userOpHash)` → dispatch by `KeyType`:
+* `_validateSignature(userOp, userOpHash)` decodes `(KeyType sigType, bytes payload)` and routes:
 
-    - EOA → `ECDSA.recover(userOpHash, sig)`; if signer is this account or master key → accept.
+    - `KeyType.EOA` → `ECDSA.recover`; success if signer equals the account or a registered key (master keys short‑circuit to success).
 
-    - WEBAUTHN → decode full payload, reject reused `userOpHash` in `usedChallenges`, `IWebAuthnVerifier.verifySignature(...)`, then permission checks.
+    - `KeyType.WEBAUTHN` → decode WebAuthn tuple, call `IWebAuthnVerifier.verifySignature`, then run `_keyValidation` and per-call guards.
 
-    - P256 / P256NONKEY → for NONKEY pre‑hash `userOpHash` with SHA‑256, then `P256.verifySignature` → permission checks.
+    - `KeyType.P256` / `KeyType.P256NONKEY` → verify via `IWebAuthnVerifier.verifyP256Signature`; NONKEY mode hashes with SHA-256 first.
 
-    - On success → return `_packValidationData(false, validUntil, validAfter);` else `SIG_VALIDATION_FAILED`.
+    - For custodial keys (`isDelegatedControl`) the contract calls `GasPolicy.checkUserOpPolicy` and rejects if the policy reports non-zero.
 
-* Permission check: `isValidKey(callData, sKey)` only authorizes the account’s own `execute(bytes32,bytes)` selector, and delegates to `_validateExecuteCall`:
+    - On success returns `_packValidationData(false, validUntil, validAfter)`; otherwise `SIG_VALIDATION_FAILED`.
 
-    - Reject self‑calls (`call.target == address(this)`).
+* Execution authorisation:
 
-    - If master key → allow.
+    - `isValidKey(callData, sKey)` only recognises the wallet’s own `execute(bytes32,bytes)` selector and defers to `_validateExecuteCall`.
 
-    - Else enforce for every `Call`:
+    - `_validateExecuteCall` decodes batches (mode 1 or 3) and enforces for each `Call`:
 
-        - `limit > 0` and decrement (`consumeQuota()`);
+        - No self-calls (`target != address(this)`).
 
-        - `ethLimit ≥` value and decrement;
+        - Master keys bypass additional checks; non-master keys consume `limits` via `consumeQuota()`.
 
-        - `bytes4(innerData)` ∈ `allowedSelectors` (≤10 allowed);
+        - `_isCanCall` verifies packed `(target, selector)` permissions with wildcard support (`ANY_TARGET`, `ANY_FN_SEL`, `EMPTY_CALLDATA_FN_SEL`).
 
-        - If `spendTokenInfo.token == target` → `_validateTokenSpend` checks last‑arg amount;
+        - `_isTokenSpend` applies spend caps tracked in `spendStore` (native transfers map to `NATIVE_ADDRESS`).
 
-        - `whitelisting` and `whitelist[target] == true`.
+        - Successful checks leave the call authorised; any failure aborts validation.
 
-* ERC‑1271: `isValidSignature(hash, signature)`
-
-    - 64/65‑byte → EOA path.
-
-    - Otherwise → WebAuthn payload path (same verifier / challenge rules) → returns `0x1626ba7e` on success.
+* ERC‑1271: `isValidSignature(hash, signature)` delegates to `_validateEOASignature` (64/65‑byte) or `_validateWebAuthnSignature` (ABI-encoded payload) and returns `0x1626ba7e` on success.
 
 ### OPF7702Recoverable 
 (guardians + EIP‑712)
 
 Inherits: `OPF7702`, `EIP712`, `ERC7201`.
 
-* State:
+* Constructor parameters: `_entryPoint`, `_webAuthnVerifier`, `_gasPolicy`, `_recoveryManager`. The first three populate the base immutables; `_recoveryManager` sets the new `RECOVERY_MANAGER` pointer.
 
-    - `guardiansData`: `{ bytes32[] guardians; mapping(bytes32 => {isActive, index, pending}); lockUntil }`.
+* Guardian and recovery state is externalised. All guardian lists, locks, and proposal timers live inside the `SocialRecoveryManager` referenced via `RECOVERY_MANAGER()`.
 
-    - `recoveryData`: `{ Key key; uint64 executeAfter; uint32 guardiansRequired; }`.
+* Workflow highlights:
 
-* Parameters (immutable at deploy):
+    - `initialize(...)` registers the master key (must satisfy `_masterKeyValidation` – `limits == 0`, `KeyType` not P256/P256NONKEY, `KeyControl.Self`), optionally registers a session key, and seeds the guardian set via `SocialRecoveryManager.initializeGuardians`.
 
-    - `recoveryPeriod` (cool‑down before execute), `lockPeriod` (wallet lock duration after recovery start), `securityPeriod` (add/remove delay), securityWindow (execution window).
+    - Guardian add/remove proposals and recovery initiation happen on the manager contract (`proposeGuardian`, `confirmGuardianProposal`, `startRecovery`, `cancelRecovery`, etc.). The account simply gates access through `_requireForExecute` and exposes `RECOVERY_MANAGER()` for off-chain tooling.
 
-* Flows:
+    - `completeRecovery(signatures)` calls `SocialRecoveryManager.completeRecovery` to verify ordered guardian signatures over `getDigestToSign(account)` and obtain the replacement `KeyDataReg`. The account then wipes the previous master key (`_deleteOldKeys`) and installs the new one (`_setNewMasterKey`).
 
-    - Guardian add/remove
+    - `getDigestToInit(...)` publishes the EIP-712 digest signed during initialization; the domain is `OPF7702Recoverable`.
 
-        - `proposeGuardian(guardianId)` / `proposeGuardianRemoval(guardianId)` → set `pending = now + securityPeriod`.
+### SocialRecoveryManager
+(guardian registry & recovery orchestration)
 
-        - After `securityPeriod` and within `securityWindow` → `acceptGuardian()` / `acceptGuardianRemoval()` to finalize.
+Located at `src/utils/SocialRecover.sol`. Inherits `EIP712`, implements `ISocialRecoveryManager`.
 
-    - Start recovery (guardian‑only):
+* Immutables:
 
-        - `startRecovery(Key recoveryKey)` → lock wallet, set `executeAfter = now + recoveryPeriod`, snapshot `guardiansRequired`, store target `recoveryKey` (EOA/WebAuthn allowed; P‑256 keys are rejected for recovery ownership).
+    - `recoveryPeriod`, `lockPeriod`, `securityPeriod`, `securityWindow` (enforced relationships: `lockPeriod ≥ recoveryPeriod ≥ securityPeriod + securityWindow`).
 
-    - Complete recovery:
+* Guardian lifecycle:
 
-        - After `executeAfter` → `completeRecovery(bytes[] signatures)`.
+    - `initializeGuardians` seeds the first guardian during account setup.
 
-        - Verifies sorted unique guardian signatures over `getDigestToSign()` (EIP‑712), checks quorum, then:
+    - `proposeGuardian` / `confirmGuardianProposal` / `cancelGuardianProposal` manage additions with timelocks (`securityPeriod`) and execution windows (`securityWindow`).
 
-            1. Delete old master key (`idKeys[0]` & `keys[mkId]`).
+    - `revokeGuardian` / `confirmGuardianRevocation` / `cancelGuardianRevocation` mirror the flow for removals.
 
-            2. Install `recoveryKey` as new master (sets `validUntil=max`, `validAfter=0`, `limit=0`, `whitelisting=false`).
+* Recovery flow:
 
-            3. Clear lock.
+    - `startRecovery` locks the account, snapshots the required quorum (`ceil(activeGuardians / 2)`), and stores the proposed master key (EOA/WebAuthn only).
 
-* Cancel/lock control: `cancelRecovery()` (self/admin), `lock()/unlock()` time locks.
+    - `completeRecovery` validates strictly ordered guardian signatures over `getDigestToSign(account)` and returns the approved `KeyDataReg` to the wallet.
+
+    - `cancelRecovery` clears pending recovery data and unlocks the account.
 
 ### OPFMain (concrete wallet)
 Binds the stack and exposes EIP‑7702 authority upgrade:
@@ -312,7 +315,7 @@ Note: If the authority is delegated directly (not via an EIP‑7702 proxy), upgr
 
 * Root slot (CUSTOM_STORAGE_ROOT): `0xeddd…95400` (see `ERC7201.sol`).
 
-* `BaseOPF7702._clearStorage()` zeroes known sub‑ranges (incl. guardian/recovery structs) to enable safe re‑initialization in advanced deployments.
+* `BaseOPF7702._clearStorage()` zeroes the custom storage namespace (ID counters, key mappings, status flags) to enable safe re‑initialization in advanced deployments.
 
 ```mermaid
 flowchart TD
@@ -320,15 +323,14 @@ flowchart TD
         BaseSlot["Base Storage Slot<br/>keccak256('openfort.baseAccount.7702.v1')<br/>0xeddd...95400"]
         
         IdSlot["ID Slot<br/>BaseSlot + 0<br/>uint256 id"]
-        IdKeysSlot["ID Keys Mapping<br/>BaseSlot + 1<br/>mapping(uint256 => Key)"]
+        IdKeysSlot["ID Keys Mapping<br/>BaseSlot + 1<br/>mapping(uint256 => bytes32)"]
         KeysSlot["Keys Mapping<br/>BaseSlot + 2<br/>mapping(bytes32 => KeyData)"]
-        ChallengesSlot["Used Challenges<br/>BaseSlot + 3<br/>mapping(bytes32 => bool)"]
-        StatusSlot["Status Slot<br/>BaseSlot + 4<br/>uint256 _status"]
-        InitializedSlot["Initialized Fields<br/>BaseSlot + 5<br/>uint64 _initialized + bool _initializing"]
-        NameSlot["Name Fallback<br/>BaseSlot + 6<br/>string _nameFallback"]
-        VersionSlot["Version Fallback<br/>BaseSlot + 7<br/>string _versionFallback"]
-        RecoverySlot["Recovery Data<br/>BaseSlot + 8<br/>RecoveryData (128 bytes)"]
-        GuardianSlot["Guardian Data<br/>BaseSlot + 12<br/>GuardiansData (96 bytes)"]
+        PermissionsSlot["Execute Permissions<br/>BaseSlot + 3<br/>mapping(bytes32 => set)"]
+        SpendSlot["Spend Store<br/>BaseSlot + 4<br/>mapping(bytes32 => SpendStorage)"]
+        StatusSlot["Status Slot<br/>BaseSlot + 5<br/>uint256 _status"]
+        InitSlot["Init Flags<br/>BaseSlot + 6<br/>uint64 _initialized / bool _initializing"]
+        NameSlot["Name Fallback<br/>BaseSlot + 7<br/>string _nameFallback"]
+        VersionSlot["Version Fallback<br/>BaseSlot + 8<br/>string _versionFallback"]
     end
     
     subgraph "Key Types Enum"
@@ -342,12 +344,12 @@ flowchart TD
     BaseSlot --> IdSlot
     BaseSlot --> IdKeysSlot
     BaseSlot --> KeysSlot
-    BaseSlot --> ChallengesSlot
+    BaseSlot --> PermissionsSlot
+    BaseSlot --> SpendSlot
     BaseSlot --> StatusSlot
+    BaseSlot --> InitSlot
     BaseSlot --> NameSlot
     BaseSlot --> VersionSlot
-    BaseSlot --> RecoverySlot
-    BaseSlot --> GuardianSlot
     
     %% Key mappings to key types
     KeysSlot --> EOAType
@@ -372,25 +374,25 @@ Session keys provide temporary, restricted access to smart accounts with customi
 
     - WebAuthn/P‑256: `keccak256(abi.encodePacked(pubKey.x, pubKey.y))`.
 
-    - Challenge replay protection: `usedChallenges[userOpHash]` is set on successful verification for WebAuthn/P‑256 userOps (and 1271), preventing replay.
+    - Replay protection relies on ERC-4337 nonces and guardian-enforced digests; there is no per-hash `usedChallenges` mapping in the current implementation.
 
 ```mermaid
 flowchart LR
     subgraph "Session Key Registration"
-        RegisterKey["registerSessionKey()<br/>KeysManager.sol"]
-        ValidateParams["Parameter Validation<br/>Time limits, spending caps"]
-        GasPolicy["Gas Policy<br/>Set gas config"]
-        StoreKey["Store in mapping<br/>sessionKeys[keyHash]"]
+        RegisterKey["registerKey()<br/>KeysManager.sol"]
+        ValidateParams["Parameter Validation<br/>timestamp & uniqueness"]
+        GasPolicy["Gas Policy (custodial keys)<br/>initializeGasPolicy"]
+        StoreKey["Persist KeyData<br/>keys[keyId]"]
     end
     
     subgraph "Session Key Structure"
-        SessionKeyStruct["SessionKey struct<br/>- pubKey: PubKey<br/>- isActive: bool<br/>- validUntil: uint48<br/>- validAfter: uint48<br/>- limit: uint48<br/>- ethLimit: uint256<br/>- whitelisting: bool<br/>- allowedSelectors: bytes4[]"]
+        SessionKeyStruct["KeyData<br/>- keyType<br/>- isActive<br/>- masterKey (false)<br/>- isDelegatedControl<br/>- validUntil / validAfter<br/>- limits (quota)<br/>- key bytes"]
     end
     
     subgraph "Permission Enforcement"
-        ValidateKey["isValidKey()<br/>Check expiration, limits"]
-        CheckSpending["validateSpendingLimits()<br/>ETH and token limits"]
-        CheckWhitelist["validateWhitelist()<br/>Contract and function filters"]
+        ValidateKey["OPF7702._keyValidation()<br/>Active + registered"]
+        CheckSelectors["_isCanCall()<br/>Target/selector sets"]
+        CheckSpending["_isTokenSpend()<br/>Token & ETH caps"]
     end
 
     %% Flow connections
@@ -399,29 +401,25 @@ flowchart LR
     GasPolicy --> StoreKey
     StoreKey --> SessionKeyStruct
     SessionKeyStruct --> ValidateKey
-    ValidateKey --> CheckSpending
-    CheckSpending --> CheckWhitelist
+    ValidateKey --> CheckSelectors
+    CheckSelectors --> CheckSpending
 ``` 
 
 ## GasPolicy 
 (per‑session budgets)
 
 
-* Keyed by (`configId=keyId, account`). Only the account itself may mutate usage (`msg.sender == userOp.sender`).
+* Namespacing: budgets are stored per `(configId = keyId, account)`; the policy can only mutate state when `msg.sender == userOp.sender` to prevent griefing.
 
-* Budgets: `gasLimit`, `costLimit` (wei), `perOpMaxCostWei`, `txLimit`, with optional penalty shaping (BPS) across `callGas` + `postOp`.
+* Budgets: a single `gasLimit` counter (gas units) per session plus the live `gasUsed` tally. Auto-initialisation derives the budget from default leg estimates × `limits`; manual paths accept explicit 128-bit budgets.
 
-* Validation path: `checkUserOpPolicy(id, userOp)`:
-
-    - Decodes envelope (`preVerificationGas`, `verificationGasLimit`, `callGasLimit`, optional paymaster legs), computes worst‑case wei via `userOp.gasPrice()`.
-
-    - Ensures usage ≤ budgets; then atomically accounts (`gasUsed`, `costUsed`, `txUsed`).
+* Validation path: `checkUserOpPolicy(id, userOp)` decodes the ERC-4337 envelope (`preVerificationGas`, verification gas, call gas, optional paymaster legs) and sums them with a safety margin (`SAFETY_BPS`). If the remaining budget covers the envelope, the function increments `gasUsed` and returns `VALIDATION_SUCCESS`.
 
 * Initialization:
 
-    - Auto: `KeysManager._addKey` calls `initializeGasPolicy(account=this, configId=keyId, limit)` for session keys (limit>0).
+    - Auto: custodial keys (`KeyControl.Custodial`) trigger `initializeGasPolicy(address(this), keyId, limits)` inside `_addKey`.
 
-    - Manual: `initializeGasPolicy(account, configId, initData)` to set exact budgets.
+    - Manual: accounts can call either overload of `initializeGasPolicy` to seed bespoke budgets.
 
 ## CallData expectations and examples
 
@@ -445,10 +443,12 @@ bytes memory executionData = abi.encode(
   })
 );
 account.execute(MODE_1, executionData);
-
-// Single batch + opData (mode 2)
-bytes memory executionData = abi.encode(calls, opData);
-account.execute(MODE_2, executionData);
-
-// Batch of batches
 ```
+
+```ts
+// Batch of batches (mode 3)
+bytes memory executionData = abi.encode(new bytes[](2));
+account.execute(MODE_3, executionData);
+```
+
+> **Note:** Calls executed by non-master keys must conform to permissions configured via `setCanCall` and optional spend caps (`setTokenSpend`). Custodial keys additionally require sufficient gas budget in `GasPolicy`.

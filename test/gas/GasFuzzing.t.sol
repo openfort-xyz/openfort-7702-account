@@ -254,9 +254,9 @@ contract GasFuzzing is Test {
     // formerly reverted; with gas-only init it should succeed
     function test_auto_init_reverts_when_basefee_extreme() public {
         bytes32 configId = keccak256(abi.encodePacked(uint256(14)));
-        vm.fee(4e32);
+        vm.fee(type(uint64).max - 1);
         vm.prank(account);
-        gP.initializeGasPolicy(account, configId, uint256(1));
+        gP.initializeGasPolicy(account, configId, 1);
         vm.fee(0);
 
         (uint128 gasLimit, uint128 gasUsed) = gP.getGasConfig(configId, account);

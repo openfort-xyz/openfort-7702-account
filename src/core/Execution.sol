@@ -16,7 +16,6 @@ pragma solidity ^0.8.29;
 import {KeysManager} from "src/core/KeysManager.sol";
 import {IExecution} from "src/interfaces/IExecution.sol";
 import {ReentrancyGuard} from "lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
-import {console2 as console} from "lib/forge-std/src/Test.sol";
 
 /// @title Execution
 /// @author Openfort@0xkoiner
@@ -62,8 +61,11 @@ abstract contract Execution is KeysManager, ReentrancyGuard {
     /*  ERC‑165 helper                                                */
     /* ────────────────────────────────────────────────────────────── */
 
-    /// @dev Convenience helper for wallets / bundlers to pre‑check
-    ///      whether a specific `mode` is understood.
+    /**
+     * @notice Reports whether a specific ERC‑7821 execution `mode` is supported.
+     * @param mode Execution-mode word to check.
+     * @return True if `mode` resolves to a known execution handler; false otherwise.
+     */
     function supportsExecutionMode(bytes32 mode) public view virtual returns (bool) {
         return _executionModeId(mode) != 0;
     }

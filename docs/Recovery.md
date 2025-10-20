@@ -1,5 +1,5 @@
 # Recovery Module
-The OPF7702Recoverable module implements a guardian-based social recovery system for EIP-7702 + ERC-4337 smart contract wallets. This enables users to recover their accounts if they lose access to their master key, using a network of trusted guardians.
+The OPF7702Recoverable module implements a guardian-based social recovery system for EIP-7702 + ERC-4337 smart contract wallets. This enables users to recover their accounts if they lose access to their master key, using a network of trusted guardians. Recovery state and guardian coordination are managed by an **external** `SocialRecoveryManager` contract; the account delegates setup and completion of recovery flows to this manager during initialization and `completeRecovery`.
 
 ## Table of Contents
 
@@ -26,6 +26,7 @@ The OPF7702Recoverable module implements a guardian-based social recovery system
   - [Initialization](#initialization)
   - [Guardian Management Functions](#guardian-management-functions)
   - [Recovery Functions](#recovery-functions)
+  - [View Helpers](#view-helpers)
   - [EIP-712 Signature Schemas](#eip-712-signature-schemas)
     - [Recovery Signature](#recovery-signature)
     - [Initialization Signature](#initialization-signature)
@@ -38,8 +39,9 @@ The OPF7702Recoverable module implements a guardian-based social recovery system
 - `lockPeriod` — **Seconds the wallet stays “locked”** after `startRecovery`. The lock is cleared early on `completeRecovery()` or `cancelRecovery()`.
 - `securityPeriod` — **Timelock** (seconds) before a guardian add/remove can be confirmed.
 - `securityWindow` — **Confirmation window** (seconds) after `securityPeriod` during which a pending add/remove **must** be confirmed, or it expires.
+- `guardian hash` — Deterministic hash of a guardian address (`computeHash(address)`); all guardian lists operate on these hashes instead of raw addresses.
 
-### Invariants 
+### Invariants
 (checked in constructor)
 - `lockPeriod ≥ recoveryPeriod`  
 - `recoveryPeriod ≥ securityPeriod + securityWindow`  
@@ -55,41 +57,49 @@ If either fails, the deploy reverts with `OPF7702Recoverable_InsecurePeriod()`.
 - **Cancel add**: `cancelGuardianProposal(g)` before confirmation.
 - **Revoke**: symmetric to add (`revokeGuardian` → `confirmGuardianRevocation` / `cancelGuardianRevocation`).
 - **During lock**: guardian mutations are blocked (`AccountLocked`).
+- **Caller requirement**: all guardian mutations must originate from the account contract itself (`msg.sender == _account`).
 
 #### Recovery flow
 - **Start**: `startRecovery(newKey)` (guardian-only) sets:
   - `executeAfter = now + recoveryPeriod`
   - `lock = now + lockPeriod`
   - `guardiansRequired = ceil(guardianCount / 2)`
+  - rejects zeroed keys, keys already active on the wallet, keys matching an existing guardian, and recovery payloads with `KeyType.P256` / `KeyType.P256NONKEY`
 - **Complete**: `completeRecovery(signatures)` allowed when `now ≥ executeAfter` and signature count/ordering check passes. On success:
   - old master key is deleted; `newKey` becomes **master**
   - lock is **cleared** (`lock = 0`) even if `lockPeriod` hasn’t elapsed
-- **Cancel**: `cancelRecovery()` (Owner/EntryPoint) clears recovery and lock.
+  - guardian signatures must be strictly ordered by guardian hash (`computeHash(signer)`) to prevent duplicates
+- **Cancel**: `cancelRecovery()` (account contract via self-call/EntryPoint) clears recovery and lock.
+- **Lock events**: each call to `_setLock` emits `WalletLocked(locked)` so off-chain monitors can track the wallet’s lock state.
 
 ## Key Features
 * Guardian-based recovery with multi-signature thresholds
 * Time-locked operations for security
-* Multiple key types support (EOA, WebAuthn, P256)
+* Recovery targets support EOA and WebAuthn master keys (P256 / P256NONKEY proposals are rejected)
 * Progressive security periods for guardian management
 * Account locking during recovery process
+* Guardian identities stored as hashed addresses with strictly ordered signature validation
 
 ```mermaid
 graph TB
-    subgraph "Contract Inheritance"
+    subgraph Account["Account Stack"]
         OPF7702Recoverable --> OPF7702
         OPF7702Recoverable --> EIP712
         OPF7702Recoverable --> ERC7201
-        OPF7702 --> BaseAccount
+        OPF7702 --> Execution
+        Execution --> KeysManager
+        KeysManager --> BaseOPF7702
     end
 
-    subgraph "Key Components"
+    subgraph Components["Key Components"]
         GM[Guardian Management]
         RP[Recovery Process]
         TL[Timelock System]
         KM[Key Management]
+        SRM[SocialRecoveryManager<br/>external]
     end
 
-    subgraph "Security Layers"
+    subgraph Security["Security Layers"]
         SP[Security Period]
         SW[Security Window]
         LP[Lock Period]
@@ -101,8 +111,10 @@ graph TB
     RP --> LP
     RP --> RCP
     KM --> TL
+    SRM --> GM
+    SRM --> RP
 
-    subgraph "Storage Structure"
+    subgraph Storage["Storage Structure"]
         RD[RecoveryData]
         GD[GuardiansData]
         KD[KeyData]
@@ -116,6 +128,7 @@ graph TB
     GD --> |maps| GI[Guardian Identity]
     GD --> |tracks| Lock[Lock Status]
 ```
+> `GuardiansData` and `RecoveryData` live inside the `SocialRecoveryManager`; the account contract only keeps key metadata (`KeyData`).
 
 ## Guardian Management System
 
@@ -160,29 +173,30 @@ struct GuardiansData {
     uint256 lock;                           // Global lock timestamp
 }
 ```
+> Guardian identities are stored as `bytes32` hashes derived from EOA guardians (`computeHash(address))`; raw addresses never enter storage.
 
 ### Guardian Operations
 #### Adding a Guardian
 ```mermaid
 sequenceDiagram
-    participant Owner
-    participant Contract
+    participant Account
+    participant RecoveryManager
     participant Guardian
     participant Time
 
-    Owner->>Contract: proposeGuardian(guardianHash)
-    Contract->>Contract: Validate not duplicate
-    Contract->>Contract: Set pending = now + securityPeriod
-    Contract-->>Owner: GuardianProposed event
+    Account->>RecoveryManager: proposeGuardian(guardianHash)
+    RecoveryManager->>RecoveryManager: Validate not duplicate
+    RecoveryManager->>RecoveryManager: Set pending = now + securityPeriod
+    RecoveryManager-->>Account: GuardianProposed event
     
     Time->>Time: Security Period passes
     
-    Owner->>Contract: confirmGuardianProposal(guardianHash)
-    Contract->>Contract: Check: now >= pending
-    Contract->>Contract: Check: now <= pending + securityWindow
-    Contract->>Contract: Add to guardians array
-    Contract->>Contract: Set isActive = true
-    Contract-->>Owner: GuardianAdded event
+    Account->>RecoveryManager: confirmGuardianProposal(guardianHash)
+    RecoveryManager->>RecoveryManager: Check: now ≥ pending
+    RecoveryManager->>RecoveryManager: Check: now ≤ pending + securityWindow
+    RecoveryManager->>RecoveryManager: Add to guardians array
+    RecoveryManager->>RecoveryManager: Set isActive = true
+    RecoveryManager-->>Account: GuardianAdded event
     
     Note over Guardian: Guardian is now active
 ```
@@ -190,35 +204,37 @@ sequenceDiagram
 
 ```mermaid
 sequenceDiagram
-    participant Owner
-    participant Contract
+    participant Account
+    participant RecoveryManager
     participant Guardian
     participant Time
 
-    Owner->>Contract: revokeGuardian(guardianHash)
-    Contract->>Contract: Validate is active guardian
-    Contract->>Contract: Set pending = now + securityPeriod
-    Contract-->>Owner: GuardianRevocationScheduled event
+    Account->>RecoveryManager: revokeGuardian(guardianHash)
+    RecoveryManager->>RecoveryManager: Validate is active guardian
+    RecoveryManager->>RecoveryManager: Set pending = now + securityPeriod
+    RecoveryManager-->>Account: GuardianRevocationScheduled event
     
     Time->>Time: Security Period passes
     
-    Owner->>Contract: confirmGuardianRevocation(guardianHash)
-    Contract->>Contract: Check: now >= pending
-    Contract->>Contract: Check: now <= pending + securityWindow
-    Contract->>Contract: Remove from guardians array
-    Contract->>Contract: Delete guardian data
-    Contract-->>Owner: GuardianRemoved event
+    Account->>RecoveryManager: confirmGuardianRevocation(guardianHash)
+    RecoveryManager->>RecoveryManager: Check: now ≥ pending
+    RecoveryManager->>RecoveryManager: Check: now ≤ pending + securityWindow
+    RecoveryManager->>RecoveryManager: Remove from guardians array
+    RecoveryManager->>RecoveryManager: Delete guardian data
+    RecoveryManager-->>Account: GuardianRemoved event
     
     Note over Guardian: Guardian is removed
 ```
+
+> All guardian management calls enforce `msg.sender == _account`; in practice these are routed through the OPF account itself (self-call/EntryPoint), never directly from an external owner address.
 
 ### Recovery Process
 #### Recovery Data Structure
 ```ts
 struct RecoveryData {
-    Key key;                  // New master key to set
+    KeyDataReg key;           // New master key to install
     uint64 executeAfter;      // Timestamp when recovery can execute
-    uint32 guardiansRequired; // Number of signatures needed
+    uint32 guardiansRequired; // Number of guardian signatures required
 }
 ```
 
@@ -226,39 +242,37 @@ struct RecoveryData {
 ```mermaid
 sequenceDiagram
     participant Guardian
-    participant Contract
-    participant Owner
+    participant Account as OPF Account
+    participant Manager as SocialRecoveryManager
     participant Time
 
     Note over Guardian,Time: Recovery Initiation Phase
-    Guardian->>Contract: startRecovery(newKey)
-    Contract->>Contract: Validate guardian status
-    Contract->>Contract: Check wallet not locked
-    Contract->>Contract: Check no ongoing recovery
-    Contract->>Contract: Validate recovery key
-    Contract->>Contract: Calculate executeAfter = now + recoveryPeriod
-    Contract->>Contract: Calculate guardiansRequired = ceil(guardianCount / 2)
-    Contract->>Contract: Set lock = now + lockPeriod
-    Contract-->>Guardian: RecoveryStarted event
-    
+    Guardian->>Manager: startRecovery(newKey)
+    Manager->>Manager: Validate guardian status (hash, active)
+    Manager->>Manager: Ensure wallet not locked / no ongoing recovery
+    Manager->>Manager: Validate recovery key (non-zero, not active, not guardian, allowed type)
+    Manager->>Manager: Calculate executeAfter = now + recoveryPeriod
+    Manager->>Manager: Calculate guardiansRequired = ceil(guardianCount / 2)
+    Manager->>Manager: Set lock = now + lockPeriod
+    Manager-->>Guardian: RecoveryStarted event
+
     Note over Guardian,Time: Recovery Execution Phase
     Time->>Time: Recovery period passes
-    
-    Guardian->>Contract: completeRecovery(signatures[])
-    Contract->>Contract: Check now >= executeAfter
-    Contract->>Contract: Validate signature count
-    Contract->>Contract: Verify guardian signatures
-    Contract->>Contract: Check signatures are sorted/unique
-    Contract->>Contract: Delete old master key
-    Contract->>Contract: Set new master key
-    Contract->>Contract: Clear lock (set to 0)
-    Contract-->>Owner: RecoveryCompleted event
-    
-    Note over Owner,Contract: Alternative: Cancellation
-    Owner->>Contract: cancelRecovery()
-    Contract->>Contract: Clear recovery data
-    Contract->>Contract: Clear lock
-    Contract-->>Owner: RecoveryCancelled event
+
+    Account->>Manager: completeRecovery(signatures[])
+    Manager->>Manager: Check now ≥ executeAfter
+    Manager->>Manager: Validate signature count
+    Manager->>Manager: Verify guardian signatures (active, strictly ordered)
+    Manager-->>Account: emit RecoveryCompleted + return KeyDataReg
+    Account->>Account: Delete old master key & install new master key
+    Account->>Account: Clear lock (set to 0)
+    Account-->>Account: KeyRegistered/Recovery bookkeeping events
+
+    Note over Account,Guardian: Alternative: Cancellation
+    Account->>Manager: cancelRecovery()
+    Manager->>Manager: Clear recovery data
+    Manager->>Manager: Clear lock
+    Manager-->>Account: RecoveryCancelled event
 ```
 
 #### Recovery Timeline
@@ -374,61 +388,70 @@ flowchart TD
 #### Initialization
 ```ts
 function initialize(
-    Key calldata _key,
-    KeyReg calldata _keyData,
-    Key calldata _sessionKey,
-    KeyReg calldata _sessionKeyData,
+    IKey.KeyDataReg calldata _keyData,
+    IKey.KeyDataReg calldata _sessionKeyData,
     bytes memory _signature,
     bytes32 _initialGuardian
 ) external initializer
 ```
-**Purpose**: Initialize the wallet with a master key and first guardian
+**Purpose**: Initialize the wallet with a master key, optional session key, and seed the first guardian via `SocialRecoveryManager.initializeGuardians`.
+
 Parameters:
 
-* `_key`: Master key structure
-* `_keyData`: Master key permissions (must be unrestricted)
-* `_sessionKey`: Optional session key
-* `_sessionKeyData`: Session key permissions
-* `_signature`: EIP-712 signature authorizing initialization
-* `_initialGuardian`: First guardian hash (required)
+* `_keyData`: Master key registration payload (must pass `_masterKeyValidation` → limits = 0, non-P256 type, self control)
+* `_sessionKeyData`: Optional session key payload (ignored if `.key` is empty)
+* `_signature`: EIP-712 signature computed by `getDigestToInit`
+* `_initialGuardian`: Guardian hash to activate immediately (must be non-zero)
 
 ### Guardian Management Functions
-| Function                          | Purpose                      | Access Control    | Timelock                      |
-|-----------------------------------|------------------------------|-------------------|-------------------------------|
-| `proposeGuardian(bytes32)`        | Propose new guardian         | Owner/EntryPoint  | Yes — `securityPeriod`        |
-| `confirmGuardianProposal(bytes32)`| Activate proposed guardian   | Owner/EntryPoint  | Within `securityWindow`       |
-| `cancelGuardianProposal(bytes32)` | Cancel guardian proposal     | Owner/EntryPoint  | Before confirmation           |
-| `revokeGuardian(bytes32)`         | Schedule guardian removal    | Owner/EntryPoint  | Yes — `securityPeriod`        |
-| `confirmGuardianRevocation(bytes32)`| Remove guardian           | Owner/EntryPoint  | Within `securityWindow`       |
-| `cancelGuardianRevocation(bytes32)`| Cancel removal             | Owner/EntryPoint  | Before confirmation           |
+| Function                          | Purpose                      | Access Control                         | Timelock                      |
+|-----------------------------------|------------------------------|----------------------------------------|-------------------------------|
+| `proposeGuardian(bytes32)`        | Propose new guardian         | Account contract (`msg.sender == _account`) | Yes — `securityPeriod`        |
+| `confirmGuardianProposal(bytes32)`| Activate proposed guardian   | Account contract                        | Within `securityWindow`       |
+| `cancelGuardianProposal(bytes32)` | Cancel guardian proposal     | Account contract                        | Before confirmation           |
+| `revokeGuardian(bytes32)`         | Schedule guardian removal    | Account contract                        | Yes — `securityPeriod`        |
+| `confirmGuardianRevocation(bytes32)`| Remove guardian           | Account contract                        | Within `securityWindow`       |
+| `cancelGuardianRevocation(bytes32)`| Cancel removal             | Account contract                        | Before confirmation           |
 
 ### Recovery Functions
-| Function                      | Purpose            | Access Control   | Requirements                                   |
-|-------------------------------|--------------------|------------------|-----------------------------------------------|
-| `startRecovery(Key)`          | Initiate recovery  | Active Guardian  | Not locked, no ongoing recovery               |
-| `completeRecovery(bytes[])`   | Execute recovery   | Anyone           | After `recoveryPeriod`, valid signatures      |
-| `cancelRecovery()`            | Cancel recovery    | Owner/EntryPoint | Ongoing recovery exists                       |
+| Function                      | Purpose            | Access Control                                     | Requirements                                   |
+|-------------------------------|--------------------|----------------------------------------------------|-----------------------------------------------|
+| `startRecovery(KeyDataReg)`   | Initiate recovery  | Active guardian address (`msg.sender`)             | Not locked, no ongoing recovery, key not active/guardian/P256 |
+| `completeRecovery(bytes[])`   | Execute recovery   | Typically the account contract (no caller check)   | After `recoveryPeriod`, signatures ordered & match quorum    |
+| `cancelRecovery()`            | Cancel recovery    | Account contract (`msg.sender == _account`)        | Ongoing recovery exists                       |
+
+`OPF7702Recoverable.completeRecovery` invokes the manager, receives the approved `KeyDataReg`, and then updates its own storage (deleting the old master key, installing the new one, and clearing the lock).
+
+#### View Helpers
+| Function                                | Returns                                 | Notes                                                   |
+|-----------------------------------------|------------------------------------------|---------------------------------------------------------|
+| `getGuardians(address)`                 | `bytes32[]` guardian hashes              | Hashes are stored in the order guardians were activated. |
+| `getPendingStatusGuardians(address,bytes32)` | Pending timestamp (0 if none)         | Shared field for both add and revoke workflows.         |
+| `isLocked(address)`                     | `bool`                                   | `true` while `lock > block.timestamp`.                  |
+| `isGuardian(address,bytes32)`           | `bool`                                   | Checks active status in `GuardiansData`.                |
+| `guardianCount(address)`                | `uint256`                                | Number of active guardians.                             |
+| `getDigestToSign(address)`              | `bytes32` EIP-712 digest                 | Guardians sign this digest during `completeRecovery`.   |
 
 ###  EIP-712 Signature Schemas
 #### Recovery Signature
 ```ts
-bytes32 constant RECOVER_TYPEHASH = keccak256(
-    "Recover(Key key,uint64 executeAfter,uint32 guardiansRequired)"
+// SocialRecoveryManager
+bytes32 private constant RECOVER_TYPEHASH = keccak256(
+    "Recover((uint8 keyType,uint48 validUntil,uint48 validAfter,uint48 limits,bytes key,uint8 keyControl) key,uint64 executeAfter,uint32 guardiansRequired)"
 );
 
-struct RecoverData {
-    Key key;              // New master key
-    uint64 executeAfter;  // Execution timestamp
-    uint32 guardiansRequired; // Signature threshold
-}
+// getDigestToSign(account) := _hashTypedDataV4(
+//   keccak256(abi.encode(
+//     RECOVER_TYPEHASH,
+//     recoveryData[account].key,
+//     recoveryData[account].executeAfter,
+//     recoveryData[account].guardiansRequired
+//   ))
+// )
 ```
 
 #### Initialization Signature
-```ts
-bytes32 constant INIT_TYPEHASH = keccak256(
-    "Initialize(bytes key,bytes keyData,bytes sessionKey,bytes sessionKeyData,bytes32 guardian)"
-);
-```
+Initialization digests are produced by `OPF7702Recoverable.getDigestToInit` (see `Architecture.md`). The recovery manager only receives the already-initialized guardian hash via `initializeGuardians`.
 
 ### Recommended ranges (non-binding)
 | Parameter         | Typical Value | Rationale |
@@ -445,6 +468,7 @@ bytes32 constant INIT_TYPEHASH = keccak256(
   - Wallet is already locked (`AccountLocked`), or
   - A recovery is ongoing (`_requireRecovery(false)`).
 - Completion requires **sorted, unique** guardian signatures over the EIP-712 digest (`getDigestToSign()`), exactly `guardiansRequired` entries.
+- Recovery proposals using `KeyType.P256` or `KeyType.P256NONKEY` revert with `UnsupportedKeyType`.
 
 ### Testing checklist
 - Enforce constructor invariants with boundary values (equalities allowed).
