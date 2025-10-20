@@ -15,7 +15,11 @@ fs_permissions = [
 runs = 256                               
 seed = '0x3e8'
 
-
+[invariant]
+runs = 256
+depth = 100
+fail_on_revert = false
+include_storage = true
 
 # Add CI profile with same settings
 [profile.ci]
