@@ -36,19 +36,19 @@ flowchart TD
         GasPolicy["GasPolicy.sol\n• initializeGasPolicy\n• checkUserOpPolicy"]
     end
 
-    subgraph "Execution"
-        OPF7702["OPF7702.sol\n• _validateSignature\n• _validateExecuteCall"]
-        Execution["Execution.sol\n• execute(mode,data)\n• MAX_TX guard"]
-        Recovery["OPF7702Recoverable.sol\n• initialize\n• recovery flows"]
+    subgraph ExecutionLayer["Execution Layer"]
+        OPF7702Node["OPF7702.sol\n• _validateSignature\n• _validateExecuteCall"]
+        ExecNode["Execution.sol\n• execute(mode,data)\n• MAX_TX guard"]
+        RecoveryNode["OPF7702Recoverable.sol\n• initialize\n• recovery flows"]
     end
 
     IKeyDefs --> Manager
     Owner --> Manager
     Manager --> Storage
     Manager --> GasPolicy
-    Storage --> OPF7702
-    GasPolicy --> OPF7702
-    OPF7702 --> Execution
+    Storage --> OPF7702Node
+    GasPolicy --> OPF7702Node
+    OPF7702Node --> ExecNode
 ```
 
 Master keys are established through `initialize` / recovery flows; session keys are added post-deployment via `registerKey` (self-call or EntryPoint). All permission tables live inside the account’s ERC-7201 namespace, while the gas budget (if any) is tracked by `GasPolicy` per `(keyId, account)`.
