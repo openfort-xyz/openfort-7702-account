@@ -42,6 +42,8 @@ TL;DR
 
     - `BaseOPF7702` → EntryPoint/WebAuthnVerifier/GasPolicy wiring, ERC‑165/777/721/1155 holders, storage helpers.
 
+* `SocialRecoveryManager` (bound through the immutable `RECOVERY_MANAGER`) owns guardian storage, enforces security windows, and emits the recovery lifecycle events consumed by the account.
+
 * `Signature` schemes: EOA (secp256k1), WebAuthn (P‑256), P‑256 raw, P‑256NONKEY (pre‑SHA‑256 for non‑extractable keys).
 
 * `Sessions`: `limits > 0` triggers quota tracking; custodial keys initialise GasPolicy envelopes while permissions/spend caps are configured via `setCanCall`/`setTokenSpend`.
@@ -94,6 +96,7 @@ flowchart TD
         OPF7702["OPF7702.sol<br/>4337 validation + ERC-1271"]
         OPFRecoverable["OPF7702Recoverable.sol<br/>Recovery + init"]
         OPFMain["OPFMain.sol<br/>EIP-7702 authority"]
+        SocialRecovery["SocialRecoveryManager.sol<br/>Guardian orchestration"]
     end
     
     subgraph "Verification System"
@@ -120,7 +123,9 @@ flowchart TD
     WebAuthnVerifier --> OPF7702
     
     OPF7702 --> OPFRecoverable
+    OPFRecoverable --> SocialRecovery
     OPFRecoverable --> OPFMain
+    SocialRecovery --> OPFRecoverable
     OPF7702 --> EntryPoint
     EntryPoint --> Bundlers
     Bundlers --> Paymasters
@@ -136,7 +141,8 @@ The system consists of several interconnected smart contracts, each handling spe
 | `KeysManager` | Key lifecycle, execution permissions, and spend-policy bookkeeping | `registerKey()`, `setCanCall()`, `setTokenSpend()`, `updateKeyData()`, `revokeKey()` |
 | `Execution` | ERC-7821-inspired executor with flat and recursive batch modes | `execute(bytes32,bytes)`, `supportsExecutionMode()` |
 | `OPF7702` | ERC-4337 `_validateSignature` router + ERC-1271 implementation | `_validateSignature()`, `isValidSignature()`, `startOfSpendPeriod()` |
-| `OPF7702Recoverable` | Recovery wrapper integrating guardians, initialization, and EIP-712 digests | `initialize()`, `startRecovery()`, `completeRecovery()`, `getDigestToInit()` |
+| `OPF7702Recoverable` | Recovery wrapper integrating guardians, initialization, and EIP-712 digests | `initialize()`, `completeRecovery()`, `getDigestToInit()`, `RECOVERY_MANAGER()` |
+| `SocialRecoveryManager` | External guardian registry & recovery state machine | `initializeGuardians()`, `startRecovery()`, `completeRecovery()`, `cancelRecovery()` |
 | `OPFMain` | Concrete EIP-7702 authority with upgrade hook | `upgradeProxyDelegation()` |
 
 ## Core contracts & responsibilities
@@ -145,7 +151,7 @@ Inherits: `BaseAccount (4337)`, `ERC721Holder`, `ERC1155Holder`, `IERC777Recipie
 
 * Immutables:
 
-    - `ENTRY_POINT`, `WEBAUTHN_VERIFIER`, `GAS_POLICY` – default singletons resolved through `UpgradeAddress`.
+    - `ENTRY_POINT`, `WEBAUTHN_VERIFIER`, `GAS_POLICY`, `RECOVERY_MANAGER` – default singletons resolved through `UpgradeAddress`. The recovery manager address remains `address(0)` for plain `OPF7702` deployments and is set by `OPF7702Recoverable`.
 
 * Admin surface (restricted to `address(this)` or `entryPoint()`):
 
@@ -159,7 +165,7 @@ Inherits: `BaseAccount (4337)`, `ERC721Holder`, `ERC1155Holder`, `IERC777Recipie
 
     - `_requireForExecute()` and `_requireFromEntryPoint()` gate internal privileged flows used by `Execution`/`OPFMain`.
 
-    - `_clearStorage()` zeroes the ERC‑7201 namespace (including guardian/recovery structs) to support controlled re‑initialization scenarios.
+    - `_clearStorage()` zeroes the ERC‑7201 namespace (ID counters, key mappings, status flags) to support controlled re‑initialization scenarios.
 
 ## KeysManager
 
@@ -254,27 +260,44 @@ Inherits: `Execution`, `Initializable`.
 
 Inherits: `OPF7702`, `EIP712`, `ERC7201`.
 
-* Constructor parameters: guardian timing (`recoveryPeriod`, `lockPeriod`, `securityPeriod`, `securityWindow`) and the `RECOVERY_MANAGER` address (external `SocialRecoveryManager`).
+* Constructor parameters: `_entryPoint`, `_webAuthnVerifier`, `_gasPolicy`, `_recoveryManager`. The first three populate the base immutables; `_recoveryManager` sets the new `RECOVERY_MANAGER` pointer.
 
-* State held in the account:
-
-    - `guardiansData`: `{ bytes32[] guardians; mapping(bytes32 => { bool isActive; uint256 index; uint256 pending; }); uint256 lock; }`.
-
-    - `recoveryData`: `{ KeyDataReg key; uint64 executeAfter; uint32 guardiansRequired; }`.
+* Guardian and recovery state is externalised. All guardian lists, locks, and proposal timers live inside the `SocialRecoveryManager` referenced via `RECOVERY_MANAGER()`.
 
 * Workflow highlights:
 
-    - The account defers guardian book-keeping to `SocialRecoveryManager` during `initialize`, `startRecovery`, and `completeRecovery`, ensuring consistent storage across upgrades.
+    - `initialize(...)` registers the master key (must satisfy `_masterKeyValidation` – `limits == 0`, `KeyType` not P256/P256NONKEY, `KeyControl.Self`), optionally registers a session key, and seeds the guardian set via `SocialRecoveryManager.initializeGuardians`.
 
-    - `initialize(...)` registers the master key (must satisfy `_masterKeyValidation` – `limits == 0`, `KeyType` not P256/P256NONKEY, `KeyControl.Self`), optionally registers a session key, and seeds the guardian set.
+    - Guardian add/remove proposals and recovery initiation happen on the manager contract (`proposeGuardian`, `confirmGuardianProposal`, `startRecovery`, `cancelRecovery`, etc.). The account simply gates access through `_requireForExecute` and exposes `RECOVERY_MANAGER()` for off-chain tooling.
 
-    - Guardian add/remove proposals are timestamped (`pending`) and must be confirmed within `securityWindow` once `securityPeriod` elapses.
+    - `completeRecovery(signatures)` calls `SocialRecoveryManager.completeRecovery` to verify ordered guardian signatures over `getDigestToSign(account)` and obtain the replacement `KeyDataReg`. The account then wipes the previous master key (`_deleteOldKeys`) and installs the new one (`_setNewMasterKey`).
 
-    - `startRecovery(recoveryKey)` (guardian-only) locks the wallet, snapshots required quorum (`ceil(guardianCount / 2)`), and stores the new master key proposal (EOA/WebAuthn only).
+    - `getDigestToInit(...)` publishes the EIP-712 digest signed during initialization; the domain is `OPF7702Recoverable`.
 
-    - `completeRecovery(signatures)` verifies ordered guardian signatures over the EIP-712 digest (`getDigestToSign()`), then wipes the old master key slot and installs the new one before clearing the lock.
+### SocialRecoveryManager
+(guardian registry & recovery orchestration)
 
-    - `cancelRecovery()` unlocks and clears pending recovery data when invoked by the account.
+Located at `src/utils/SocialRecover.sol`. Inherits `EIP712`, implements `ISocialRecoveryManager`.
+
+* Immutables:
+
+    - `recoveryPeriod`, `lockPeriod`, `securityPeriod`, `securityWindow` (enforced relationships: `lockPeriod ≥ recoveryPeriod ≥ securityPeriod + securityWindow`).
+
+* Guardian lifecycle:
+
+    - `initializeGuardians` seeds the first guardian during account setup.
+
+    - `proposeGuardian` / `confirmGuardianProposal` / `cancelGuardianProposal` manage additions with timelocks (`securityPeriod`) and execution windows (`securityWindow`).
+
+    - `revokeGuardian` / `confirmGuardianRevocation` / `cancelGuardianRevocation` mirror the flow for removals.
+
+* Recovery flow:
+
+    - `startRecovery` locks the account, snapshots the required quorum (`ceil(activeGuardians / 2)`), and stores the proposed master key (EOA/WebAuthn only).
+
+    - `completeRecovery` validates strictly ordered guardian signatures over `getDigestToSign(account)` and returns the approved `KeyDataReg` to the wallet.
+
+    - `cancelRecovery` clears pending recovery data and unlocks the account.
 
 ### OPFMain (concrete wallet)
 Binds the stack and exposes EIP‑7702 authority upgrade:
@@ -292,7 +315,7 @@ Note: If the authority is delegated directly (not via an EIP‑7702 proxy), upgr
 
 * Root slot (CUSTOM_STORAGE_ROOT): `0xeddd…95400` (see `ERC7201.sol`).
 
-* `BaseOPF7702._clearStorage()` zeroes known sub‑ranges (incl. guardian/recovery structs) to enable safe re‑initialization in advanced deployments.
+* `BaseOPF7702._clearStorage()` zeroes the custom storage namespace (ID counters, key mappings, status flags) to enable safe re‑initialization in advanced deployments.
 
 ```mermaid
 flowchart TD
@@ -308,8 +331,6 @@ flowchart TD
         InitSlot["Init Flags<br/>BaseSlot + 6<br/>uint64 _initialized / bool _initializing"]
         NameSlot["Name Fallback<br/>BaseSlot + 7<br/>string _nameFallback"]
         VersionSlot["Version Fallback<br/>BaseSlot + 8<br/>string _versionFallback"]
-        RecoverySlot["Recovery Data<br/>BaseSlot + 9"]
-        GuardianSlot["Guardian Data<br/>BaseSlot + 13"]
     end
     
     subgraph "Key Types Enum"
@@ -329,8 +350,6 @@ flowchart TD
     BaseSlot --> InitSlot
     BaseSlot --> NameSlot
     BaseSlot --> VersionSlot
-    BaseSlot --> RecoverySlot
-    BaseSlot --> GuardianSlot
     
     %% Key mappings to key types
     KeysSlot --> EOAType
