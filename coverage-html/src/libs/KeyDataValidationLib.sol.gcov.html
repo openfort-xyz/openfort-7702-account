@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2025-10-08 17:36:56</td>
+            <td class="headerValue">2025-10-20 12:41:42</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -88,15 +88,15 @@
 <span id="L26"><span class="lineNum">      26</span>              : </span>
 <span id="L27"><span class="lineNum">      27</span>              :     /// @dev Master‑keys have unlimited tx budget; sub‑keys consume one unit per tx.</span>
 <span id="L28"><span class="lineNum">      28</span>              :     /// @return true if the caller *may* execute one more tx right now.</span>
-<span id="L29"><span class="lineNum">      29</span> <span class="tlaGNC">         564 :     function hasQuota(IKey.KeyData storage sKey) internal view returns (bool) {</span></span>
-<span id="L30"><span class="lineNum">      30</span> <span class="tlaGNC">         564 :         return sKey.masterKey || sKey.limits &gt; 0;</span></span>
+<span id="L29"><span class="lineNum">      29</span> <span class="tlaGNC">         552 :     function hasQuota(IKey.KeyData storage sKey) internal view returns (bool) {</span></span>
+<span id="L30"><span class="lineNum">      30</span> <span class="tlaGNC">         552 :         return sKey.masterKey || sKey.limits &gt; 0;</span></span>
 <span id="L31"><span class="lineNum">      31</span>              :     }</span>
 <span id="L32"><span class="lineNum">      32</span>              : </span>
 <span id="L33"><span class="lineNum">      33</span>              :     /// @notice Decrements the tx counter for sub‑keys in an unchecked block (gas).</span>
-<span id="L34"><span class="lineNum">      34</span> <span class="tlaGNC">         559 :     function consumeQuota(IKey.KeyData storage sKey) internal {</span></span>
-<span id="L35"><span class="lineNum">      35</span> <span class="tlaGNC">         559 :         if (!sKey.masterKey &amp;&amp; sKey.limits &gt; 0) {</span></span>
+<span id="L34"><span class="lineNum">      34</span> <span class="tlaGNC">         547 :     function consumeQuota(IKey.KeyData storage sKey) internal {</span></span>
+<span id="L35"><span class="lineNum">      35</span> <span class="tlaGNC">         547 :         if (!sKey.masterKey &amp;&amp; sKey.limits &gt; 0) {</span></span>
 <span id="L36"><span class="lineNum">      36</span>              :             unchecked {</span>
-<span id="L37"><span class="lineNum">      37</span> <span class="tlaGNC">         559 :                 sKey.limits -= 1;</span></span>
+<span id="L37"><span class="lineNum">      37</span> <span class="tlaGNC">         547 :                 sKey.limits -= 1;</span></span>
 <span id="L38"><span class="lineNum">      38</span>              :             }</span>
 <span id="L39"><span class="lineNum">      39</span>              :         }</span>
 <span id="L40"><span class="lineNum">      40</span>              :     }</span>
