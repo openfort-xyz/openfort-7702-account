@@ -38,7 +38,7 @@ Openfort 7702 Accounts combine EIP‑7702 delegation with ERC‑4337 account abs
 - Social recovery with guardian timelocks and wallet-wide locking
 - Zero-deployment onboarding by reusing delegation storage (EIP‑7702)
 
-Use the contracts as a drop-in wallet implementation, extend the recovery layer, or plug the session-key policy engine into your own flows. A live demo is available at [https://7702.openfort.xyz](https://7702.openfort.xyz).
+Use the contracts as a drop-in wallet implementation, extend the recovery layer, or plug the session-key policy engine into your own flows. A live demo is available at [https://passkey-wallet.com](https://passkey-wallet.com/).
 
 ---
 
