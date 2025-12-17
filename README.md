@@ -4,10 +4,10 @@
   <img src="./docs/Logo_black_primary_no_bg.png" alt="Openfort" style="width: 300px;" />
 </p>
 
-> 🚧 **Work In Progress**
+> ✅ **Ready for Use**
 > 
-> This repository is under active development.  
-> Contracts are **unaudited**, and the codebase may have **breaking changes** without notice.
+> This repository is open source under the **MIT License**.  
+> Contracts have been **audited by Quantstamp** — see the report: [Openfort Final Report v2.pdf](audit/Openfort%20Final%20Report%20v2.pdf)
 
 **All-in-one EIP-7702 powered smart accounts with session key support**
 <br></br>
@@ -16,7 +16,7 @@
   <a href="https://github.com/openfort/openfort-7702-account/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="License MIT"></a>
   <img src="https://img.shields.io/badge/solidity-0.8.29-blue" alt="Solidity 0.8.29">
   <a href="https://eips.ethereum.org/EIPS/eip-7702"><img src="https://img.shields.io/badge/tech-EIP7702-red" alt="EIP 7702">
-  <img src="https://img.shields.io/badge/status-unaudited-orange" alt="Unaudited">
+  <img src="https://img.shields.io/badge/status-AUDITED-green" alt="AUDITED">
 </p>
 
 <p align="center">
