@@ -2,7 +2,7 @@
 ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 ░░░░░     ░░░░░░        ░░░         ░    ░░░░░   ░        ░░░░░░     ░░░░░░        ░░░░░           ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 ▒▒▒   ▒▒▒▒   ▒▒▒   ▒▒▒▒   ▒   ▒▒▒▒▒▒▒  ▒   ▒▒▒   ▒   ▒▒▒▒▒▒▒▒▒   ▒▒▒▒   ▒▒▒   ▒▒▒▒   ▒▒▒▒▒▒▒   ▒▒▒▒▒      ▒   ▒      ▒   ▒▒▒▒▒   ▒▒▒▒▒▒▒   ▒  ▒▒▒
-▒   ▒▒▒▒▒▒▒▒   ▒   ▒▒▒▒   ▒   ▒▒▒▒▒▒▒   ▒   ▒▒   ▒   ▒▒▒▒▒▒▒   ▒▒▒▒▒▒▒▒   ▒   ▒▒▒▒   ▒▒▒▒▒▒▒   ▒▒▒▒▒▒▒▒▒▒▒   ▒▒▒▒▒▒▒▒   ▒▒▒▒   ▒▒   ▒▒▒  ▒▒▒▒▒   
+▒   ▒▒▒▒▒▒▒▒   ▒   ▒▒▒▒   ▒   ▒▒▒▒▒▒▒   ▒   ▒▒   ▒   ▒▒▒▒▒▒▒   ▒▒▒▒▒▒▒▒   ▒   ▒▒▒▒   ▒▒▒▒▒▒▒   ▒▒▒▒▒▒▒▒▒▒▒   ▒▒▒▒▒▒▒▒   ▒▒▒▒   ▒▒   ▒▒▒  ▒▒▒▒▒
 ▓   ▓▓▓▓▓▓▓▓   ▓        ▓▓▓       ▓▓▓   ▓▓   ▓   ▓       ▓▓▓   ▓▓▓▓▓▓▓▓   ▓  ▓   ▓▓▓▓▓▓▓▓▓▓▓   ▓▓▓▓▓▓▓▓▓▓   ▓▓▓▓▓▓▓▓   ▓▓▓   ▓▓▓▓▓   ▓▓▓▓▓▓▓   ▓▓
 ▓   ▓▓▓▓▓▓▓▓   ▓   ▓▓▓▓▓▓▓▓   ▓▓▓▓▓▓▓   ▓▓▓  ▓   ▓   ▓▓▓▓▓▓▓   ▓▓▓▓▓▓▓▓   ▓   ▓▓   ▓▓▓▓▓▓▓▓▓   ▓▓▓▓▓▓▓▓▓   ▓▓▓▓▓▓▓▓   ▓▓▓▓   ▓▓▓▓▓▓   ▓▓▓▓   ▓▓▓▓
 ▓▓▓   ▓▓▓▓▓   ▓▓   ▓▓▓▓▓▓▓▓   ▓▓▓▓▓▓▓   ▓▓▓▓  ▓  ▓   ▓▓▓▓▓▓▓▓▓   ▓▓▓▓▓   ▓▓   ▓▓▓▓   ▓▓▓▓▓▓▓   ▓▓▓▓▓▓▓▓▓   ▓▓▓▓▓▓▓▓   ▓▓▓▓▓   ▓▓▓▓   ▓▓▓   ▓▓▓▓▓▓
@@ -26,8 +26,9 @@ import {EnumerableSetLib} from "lib/solady/src/utils/EnumerableSetLib.sol";
 import {FixedPointMathLib as Math} from "lib/solady/src/utils/FixedPointMathLib.sol";
 import {KeyDataValidationLib as KeyValidation} from "src/libs/KeyDataValidationLib.sol";
 import {ECDSA} from "lib/openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
-import {PackedUserOperation} from
-    "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
+import {
+    PackedUserOperation
+} from "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
 import {
     SIG_VALIDATION_FAILED,
     SIG_VALIDATION_SUCCESS,
@@ -204,18 +205,19 @@ contract OPF7702 is Execution, Initializable {
             userOp.signature.length, authenticatorData.length, bytes(clientDataJSON).length
         );
 
-        bool sigOk = IWebAuthnVerifier(webAuthnVerifier()).verifySignature(
-            userOpHash,
-            requireUV,
-            authenticatorData,
-            clientDataJSON,
-            challengeIndex,
-            typeIndex,
-            r,
-            s,
-            pubKey.x,
-            pubKey.y
-        );
+        bool sigOk = IWebAuthnVerifier(webAuthnVerifier())
+            .verifySignature(
+                userOpHash,
+                requireUV,
+                authenticatorData,
+                clientDataJSON,
+                challengeIndex,
+                typeIndex,
+                r,
+                s,
+                pubKey.x,
+                pubKey.y
+            );
 
         // bytes32 keyId = pubKey.computeKeyId();
         bytes32 keyId = KeyType.WEBAUTHN.computeKeyId(abi.encode(pubKey.x, pubKey.y));
@@ -265,9 +267,8 @@ contract OPF7702 is Execution, Initializable {
         bytes32 challenge =
             (sigType == KeyType.P256NONKEY) ? EfficientHashLib.sha2(userOpHash) : userOpHash;
 
-        bool sigOk = IWebAuthnVerifier(webAuthnVerifier()).verifyP256Signature(
-            challenge, r, sSig, pubKey.x, pubKey.y
-        );
+        bool sigOk = IWebAuthnVerifier(webAuthnVerifier())
+            .verifyP256Signature(challenge, r, sSig, pubKey.x, pubKey.y);
 
         // bytes32 keyId = pubKey.computeKeyId();
         bytes32 keyId = KeyType.P256 == sigType
@@ -645,18 +646,21 @@ contract OPF7702 is Execution, Initializable {
         }
 
         bool sigOk;
-        try IWebAuthnVerifier(webAuthnVerifier()).verifySignature(
-            _hash,
-            requireUV,
-            authenticatorData,
-            clientDataJSON,
-            challengeIndex,
-            typeIndex,
-            r,
-            s,
-            pubKey.x,
-            pubKey.y
-        ) returns (bool ok) {
+        try IWebAuthnVerifier(webAuthnVerifier())
+            .verifySignature(
+                _hash,
+                requireUV,
+                authenticatorData,
+                clientDataJSON,
+                challengeIndex,
+                typeIndex,
+                r,
+                s,
+                pubKey.x,
+                pubKey.y
+            ) returns (
+            bool ok
+        ) {
             sigOk = ok;
         } catch {
             return bytes4(0xffffffff);
@@ -724,9 +728,13 @@ contract OPF7702 is Execution, Initializable {
         pure
         returns (uint256)
     {
-        if (period == SpendPeriod.Minute) return Math.rawMul(Math.rawDiv(unixTimestamp, 60), 60);
+        if (period == SpendPeriod.Minute) {
+            return Math.rawMul(Math.rawDiv(unixTimestamp, 60), 60);
+        }
         if (period == SpendPeriod.Hour) return Math.rawMul(Math.rawDiv(unixTimestamp, 3600), 3600);
-        if (period == SpendPeriod.Day) return Math.rawMul(Math.rawDiv(unixTimestamp, 86400), 86400);
+        if (period == SpendPeriod.Day) {
+            return Math.rawMul(Math.rawDiv(unixTimestamp, 86400), 86400);
+        }
         if (period == SpendPeriod.Week) return DateTimeLib.mondayTimestamp(unixTimestamp);
         (uint256 year, uint256 month,) = DateTimeLib.timestampToDate(unixTimestamp);
         // Note: DateTimeLib's months and month-days start from 1.

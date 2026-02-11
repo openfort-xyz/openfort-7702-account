@@ -5,8 +5,9 @@ pragma solidity 0.8.29;
 import {Deploy} from "./../Deploy.t.sol";
 import {MockERC20} from "src/mocks/MockERC20.sol";
 import {console2 as console} from "lib/forge-std/src/Test.sol";
-import {PackedUserOperation} from
-    "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
+import {
+    PackedUserOperation
+} from "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
 import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 
 contract Execution is Deploy {
@@ -339,7 +340,9 @@ contract Execution is Deploy {
     function test_ExecuteBatchAAWithSKEOASelfAndTrasfer()
         external
         registerSkEOASelf
-        setTokenSpendM(KeyType.EOA, _getKeyEOA(sessionKey), address(erc20), 10 ether, SpendPeriod.Month)
+        setTokenSpendM(
+            KeyType.EOA, _getKeyEOA(sessionKey), address(erc20), 10 ether, SpendPeriod.Month
+        )
         setCanCallM(KeyType.EOA, _getKeyEOA(sessionKey), address(erc20), ANY_FN_SEL, true)
     {
         _getBalances(true);
@@ -372,7 +375,9 @@ contract Execution is Deploy {
     function test_ExecuteBatchofBatchesAAWithSKEOASelfAndTrasfer()
         external
         registerSkEOASelf
-        setTokenSpendM(KeyType.EOA, _getKeyEOA(sessionKey), address(erc20), 30 ether, SpendPeriod.Month)
+        setTokenSpendM(
+            KeyType.EOA, _getKeyEOA(sessionKey), address(erc20), 30 ether, SpendPeriod.Month
+        )
         setCanCallM(KeyType.EOA, _getKeyEOA(sessionKey), address(erc20), ANY_FN_SEL, true)
     {
         _getBalances(true);
@@ -481,7 +486,9 @@ contract Execution is Deploy {
     function test_ExecuteBatchAAWithSKP256SelfAndTrasfer()
         external
         registerSkP256Self
-        setTokenSpendM(KeyType.P256, _getKeyP256(pK_SK), address(erc20), 10 ether, SpendPeriod.Month)
+        setTokenSpendM(
+            KeyType.P256, _getKeyP256(pK_SK), address(erc20), 10 ether, SpendPeriod.Month
+        )
         setCanCallM(KeyType.P256, _getKeyP256(pK_SK), address(erc20), ANY_FN_SEL, true)
     {
         _getBalances(true);
@@ -516,7 +523,9 @@ contract Execution is Deploy {
     function test_ExecuteBatchofBatchesAAWithSKP256SelfAndTrasfer()
         external
         registerSkP256SelfBatchs
-        setTokenSpendM(KeyType.P256, _getKeyP256(pK_SK), address(erc20), 30 ether, SpendPeriod.Month)
+        setTokenSpendM(
+            KeyType.P256, _getKeyP256(pK_SK), address(erc20), 30 ether, SpendPeriod.Month
+        )
         setCanCallM(KeyType.P256, _getKeyP256(pK_SK), address(erc20), ANY_FN_SEL, true)
     {
         _getBalances(true);
@@ -557,11 +566,7 @@ contract Execution is Deploy {
         external
         registerSkP256NonSelf
         setTokenSpendM(
-            KeyType.P256NONKEY,
-            _getKeyP256(pK_SK),
-            address(erc20),
-            10 ether,
-            SpendPeriod.Month
+            KeyType.P256NONKEY, _getKeyP256(pK_SK), address(erc20), 10 ether, SpendPeriod.Month
         )
         setCanCallM(KeyType.P256NONKEY, _getKeyP256(pK_SK), address(erc20), ANY_FN_SEL, true)
     {
@@ -598,11 +603,7 @@ contract Execution is Deploy {
         external
         registerSkP256NonSelfBatchs
         setTokenSpendM(
-            KeyType.P256NONKEY,
-            _getKeyP256(pK_SK),
-            address(erc20),
-            30 ether,
-            SpendPeriod.Month
+            KeyType.P256NONKEY, _getKeyP256(pK_SK), address(erc20), 30 ether, SpendPeriod.Month
         )
         setCanCallM(KeyType.P256NONKEY, _getKeyP256(pK_SK), address(erc20), ANY_FN_SEL, true)
     {

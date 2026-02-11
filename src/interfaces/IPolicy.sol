@@ -3,8 +3,9 @@
 pragma solidity ^0.8.29;
 
 import "lib/openzeppelin-contracts/contracts/utils/introspection/IERC165.sol";
-import {PackedUserOperation} from
-    "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
+import {
+    PackedUserOperation
+} from "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
 
 /// @title IPolicy
 /// @notice Marker interface for policy contracts that expose ERC-165 discovery.

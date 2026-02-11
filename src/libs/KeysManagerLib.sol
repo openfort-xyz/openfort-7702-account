@@ -166,11 +166,7 @@ library KeysManagerLib {
      * @return target Target address.
      * @return fnSel  Function selector.
      */
-    function unpackCanExecute(bytes32 packed)
-        internal
-        pure
-        returns (address target, bytes4 fnSel)
-    {
+    function unpackCanExecute(bytes32 packed) internal pure returns (address target, bytes4 fnSel) {
         assembly ("memory-safe") {
             target := shr(96, packed)
             fnSel := shl(224, packed)

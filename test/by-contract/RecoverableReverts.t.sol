@@ -4,8 +4,9 @@ pragma solidity 0.8.29;
 
 import {Deploy} from "./../Deploy.t.sol";
 import {console2 as console} from "lib/forge-std/src/Test.sol";
-import {PackedUserOperation} from
-    "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
+import {
+    PackedUserOperation
+} from "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
 import {IOPF7702Recoverable} from "src/interfaces/IOPF7702Recoverable.sol";
 import {Math} from "lib/openzeppelin-contracts/contracts/utils/math/Math.sol";
 import {SafeCast} from "lib/openzeppelin-contracts/contracts/utils/math/SafeCast.sol";
@@ -135,8 +136,10 @@ contract RecoverableReverts is Deploy {
         _confirmGuardianRevocation(guardiansID[0]);
     }
 
-    function test_startRecoveryRevertMustBeGuardianAndUnsupportedKeyTypeAndRecoverCannotBeActiveKey(
-    ) external createGuardians(3) {
+    function test_startRecoveryRevertMustBeGuardianAndUnsupportedKeyTypeAndRecoverCannotBeActiveKey()
+        external
+        createGuardians(3)
+    {
         bytes memory _key;
         pKR = PubKey({x: keccak256("x.NewOner"), y: keccak256("y.NewOner")});
         _key = _getKeyP256(pKR);
@@ -272,10 +275,7 @@ contract RecoverableReverts is Deploy {
         _cancelRecovery();
     }
 
-    function test_requireRecovery_NoOngoingRecovery_completeRecovery()
-        external
-        createGuardians(1)
-    {
+    function test_requireRecovery_NoOngoingRecovery_completeRecovery() external createGuardians(1) {
         _proposeGuardian(guardiansID[0]);
 
         vm.warp(block.timestamp + SECURITY_PERIOD + 1);

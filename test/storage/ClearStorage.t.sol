@@ -58,9 +58,9 @@ contract ClearStorage is Test {
     }
 
     function _baseSlot() internal pure returns (uint256) {
-        return (
-            uint256(keccak256(abi.encode(uint256(keccak256("openfort.baseAccount.7702.v1")) - 1)))
-        ) & ~uint256(0xff);
+        return (uint256(
+                keccak256(abi.encode(uint256(keccak256("openfort.baseAccount.7702.v1")) - 1))
+            )) & ~uint256(0xff);
     }
 }
 
@@ -108,7 +108,12 @@ contract Storag {
     }
 }
 
-contract OPF is Storag, ReentrancyGuard, Initializable layout at 107588995614188179791452663824698570634674667931787294340862201729294267929600 {
+contract OPF layout at 107588995614188179791452663824698570634674667931787294340862201729294267929600
+    is
+    Storag,
+    ReentrancyGuard,
+    Initializable
+{
     function populateReservedSlots(
         bytes32 baseValue,
         bytes32 entryPointValue,
@@ -116,9 +121,9 @@ contract OPF is Storag, ReentrancyGuard, Initializable layout at 107588995614188
         bytes32 gasPolicyValue,
         bytes32 reentrancyValue
     ) external {
-        uint256 baseSlot = (
-            uint256(keccak256(abi.encode(uint256(keccak256("openfort.baseAccount.7702.v1")) - 1)))
-        ) & ~uint256(0xff);
+        uint256 baseSlot =
+            (uint256(keccak256(abi.encode(uint256(keccak256("openfort.baseAccount.7702.v1")) - 1))))
+                & ~uint256(0xff);
 
         bytes32 epSlot = _EP_SLOT;
         bytes32 verifierSlot = _VERIFIER_SLOT;

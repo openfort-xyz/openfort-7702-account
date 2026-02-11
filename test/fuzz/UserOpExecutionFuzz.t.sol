@@ -5,8 +5,9 @@ pragma solidity 0.8.29;
 import {Deploy} from "../Deploy.t.sol";
 import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {MockERC20} from "src/mocks/MockERC20.sol";
-import {PackedUserOperation} from
-    "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
+import {
+    PackedUserOperation
+} from "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
 
 contract UserOpExecutionFuzz is Deploy {
     address internal recipient;

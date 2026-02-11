@@ -24,7 +24,6 @@ interface IKeysManager {
         Month, // Per-month bucket
         Year, // Per-year bucket
         Forever // No reset; single running cap
-
     }
 
     /// @notice Per-key execute permissions.

@@ -4,8 +4,9 @@ pragma solidity ^0.8.29;
 
 import {GasPolicy} from "src/utils/GasPolicy.sol";
 import {Test, console2 as console} from "lib/forge-std/src/Test.sol";
-import {PackedUserOperation} from
-    "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
+import {
+    PackedUserOperation
+} from "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
 import {IUserOpPolicy} from "src/interfaces/IPolicy.sol";
 
 error GasPolicy__InitializationIncorrect();
@@ -147,25 +148,15 @@ contract GasPolicyTest is Test {
     }
 
     function test_checkUserOpPolicy_UnauthorizedCaller() public {
-        PackedUserOperation memory userOp = _buildUserOp(
-            account,
-            10,
-            _packAccountGasLimits(0, 0),
-            bytes32(0),
-            hex""
-        );
+        PackedUserOperation memory userOp =
+            _buildUserOp(account, 10, _packAccountGasLimits(0, 0), bytes32(0), hex"");
         uint256 res = gP.checkUserOpPolicy(CONFIG_ID, userOp);
         assertEq(res, 1);
     }
 
     function test_checkUserOpPolicy_NotInitialized() public {
-        PackedUserOperation memory userOp = _buildUserOp(
-            account,
-            10,
-            _packAccountGasLimits(0, 0),
-            bytes32(0),
-            hex""
-        );
+        PackedUserOperation memory userOp =
+            _buildUserOp(account, 10, _packAccountGasLimits(0, 0), bytes32(0), hex"");
         vm.prank(account);
         uint256 res = gP.checkUserOpPolicy(CONFIG_ID, userOp);
         assertEq(res, 1);
@@ -174,13 +165,8 @@ contract GasPolicyTest is Test {
     function test_checkUserOpPolicy_GasLimitExceeded() public {
         bytes32 configId = keccak256("manual");
         _initGasManual(configId, 50);
-        PackedUserOperation memory userOp = _buildUserOp(
-            account,
-            60,
-            _packAccountGasLimits(0, 0),
-            bytes32(0),
-            hex""
-        );
+        PackedUserOperation memory userOp =
+            _buildUserOp(account, 60, _packAccountGasLimits(0, 0), bytes32(0), hex"");
         vm.prank(account);
         uint256 res = gP.checkUserOpPolicy(configId, userOp);
         assertEq(res, 1);
@@ -194,16 +180,10 @@ contract GasPolicyTest is Test {
         bytes32 baseSlot = keccak256(abi.encode(account, outerSlot));
 
         vm.store(address(gP), baseSlot, bytes32(uint256(0)));
-        vm.store(
-            address(gP), bytes32(uint256(baseSlot) + 1), bytes32(uint256(1))
-        );
+        vm.store(address(gP), bytes32(uint256(baseSlot) + 1), bytes32(uint256(1)));
 
         PackedUserOperation memory userOp = _buildUserOp(
-            account,
-            type(uint128).max,
-            _packAccountGasLimits(1, 0),
-            _packGasFees(0, 0),
-            hex""
+            account, type(uint128).max, _packAccountGasLimits(1, 0), _packGasFees(0, 0), hex""
         );
 
         vm.prank(account);
@@ -214,11 +194,7 @@ contract GasPolicyTest is Test {
     function test_checkUserOpPolicy_NoPaymasterSuccess() public {
         _initGas(CONFIG_ID);
         PackedUserOperation memory userOp = _buildUserOp(
-            account,
-            50_000,
-            _packAccountGasLimits(40_000, 30_000),
-            _packGasFees(0, 0),
-            hex""
+            account, 50_000, _packAccountGasLimits(40_000, 30_000), _packGasFees(0, 0), hex""
         );
         vm.prank(account);
         uint256 res = gP.checkUserOpPolicy(CONFIG_ID, userOp);
