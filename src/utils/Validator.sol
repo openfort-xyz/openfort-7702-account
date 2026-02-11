@@ -12,7 +12,7 @@ pragma solidity 0.8.29;
 import {IKey} from "../interfaces/IKey.sol";
 
 interface IOPF7702Account {
-    function startRecovery(IKey.KeyDataReg memory _recoveryKey) external;
+    function completeRecovery(IKey.KeyDataReg memory _recoveryKey) external;
 }
 
 /**
@@ -52,11 +52,11 @@ contract Validator is IKey {
      * @dev msg.sender is the account. Forwards Key to account's startRecovery
      * @param _newOwnerKey The new owner KeyDataReg struct
      */
-    function startRecovery(KeyDataReg memory _newOwnerKey) external {
+    function completeRecovery(KeyDataReg memory _newOwnerKey) external {
         require(isInstalled[msg.sender], "Validator not installed");
 
         emit RecoveryForwarded(msg.sender, _newOwnerKey.key, _newOwnerKey.keyType);
 
-        IOPF7702Account(msg.sender).startRecovery(_newOwnerKey);
+        IOPF7702Account(msg.sender).completeRecovery(_newOwnerKey);
     }
 }

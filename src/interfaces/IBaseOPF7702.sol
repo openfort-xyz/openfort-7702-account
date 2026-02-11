@@ -36,6 +36,10 @@ interface IBaseOPF7702 is
     error OpenfortBaseAccount7702V1_UnauthorizedCaller();
     /// @notice Thrown when attempting to update an address with the same value already stored.
     error BaseOPF7702__NoChangeUpdateContractAddress();
+    /// @notice Thrown when attempting to install a module that is already installed.
+    error IOPF7702Recoverable__ModuleAlreadyInstalled();
+    /// @notice Thrown when attempting to uninstall a module that is not currently installed.
+    error IOPF7702Recoverable__ModuleNotInstalled();
 
     // =============================================================
     //                             EVENTS

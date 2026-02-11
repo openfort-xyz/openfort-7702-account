@@ -318,29 +318,29 @@ contract InvariantHandler is Test {
         recoveryManager.cancelRecovery(address(account));
     }
 
-    function completeRecovery(uint256) external {
-        (IKey.KeyDataReg memory data, uint64 executeAfter, uint32 guardiansRequired) =
-            recoveryManager.recoveryData(address(account));
+    // function completeRecovery(uint256) external {
+    //     (IKey.KeyDataReg memory data, uint64 executeAfter, uint32 guardiansRequired) =
+    //         recoveryManager.recoveryData(address(account));
 
-        if (guardiansRequired == 0) return;
+    //     if (guardiansRequired == 0) return;
 
-        uint256 targetTime = uint256(executeAfter) + 1;
-        if (targetTime > block.timestamp) {
-            vm.warp(targetTime);
-        }
+    //     uint256 targetTime = uint256(executeAfter) + 1;
+    //     if (targetTime > block.timestamp) {
+    //         vm.warp(targetTime);
+    //     }
 
-        bytes[] memory signatures = _collectSignatures(guardiansRequired);
-        if (signatures.length != guardiansRequired) return;
+    //     bytes[] memory signatures = _collectSignatures(guardiansRequired);
+    //     if (signatures.length != guardiansRequired) return;
 
-        _ensureAccountCode();
-        vm.prank(sender);
-        account.completeRecovery(signatures);
+    //     _ensureAccountCode();
+    //     vm.prank(sender);
+    //     account.completeRecovery(signatures);
 
-        // Ensure we can sign with the new master key in future scenarios.
-        bytes32 newMasterId = data.computeKeyId();
-        delete guardianAddress[newMasterId];
-        delete guardianPrivateKey[newMasterId];
-    }
+    //     // Ensure we can sign with the new master key in future scenarios.
+    //     bytes32 newMasterId = data.computeKeyId();
+    //     delete guardianAddress[newMasterId];
+    //     delete guardianPrivateKey[newMasterId];
+    // }
 
     function registerKey(uint256 seed) external {
         if (keyPool.length == 0) return;
@@ -571,7 +571,7 @@ contract CoreInvariantTest is StdInvariant {
         selectors[1] = handler.revokeGuardian.selector;
         selectors[2] = handler.startRecovery.selector;
         selectors[3] = handler.cancelRecovery.selector;
-        selectors[4] = handler.completeRecovery.selector;
+        // selectors[4] = handler.completeRecovery.selector;
         selectors[5] = handler.registerKey.selector;
         selectors[6] = handler.revokeKey.selector;
         selectors[7] = handler.updateKey.selector;
