@@ -41,14 +41,14 @@ contract OPFMain layout at 10758899561418817979145266382469857063467466793178729
      * @param _entryPoint       ERC-4337 EntryPoint address.
      * @param _webAuthnVerifier WebAuthn verifier contract for P-256/WebAuthn signature checks.
      * @param _gasPolicy        Gas/UserOp policy contract (used for custodial key policy init).
-     * @param _recoveryManager  Social Recovery Manager contract that manages guardians & recovery flow.
+     * @param _validator        External validator contract that forwards recovery calls.
      */
     constructor(
         address _entryPoint,
         address _webAuthnVerifier,
         address _gasPolicy,
-        address _recoveryManager
-    ) OPF7702Recoverable(_entryPoint, _webAuthnVerifier, _gasPolicy, _recoveryManager) {}
+        address _validator
+    ) OPF7702Recoverable(_entryPoint, _webAuthnVerifier, _gasPolicy, _validator) {}
 
     /**
      * @notice Updates the delegated implementation used by the EIP-7702 authority proxy.

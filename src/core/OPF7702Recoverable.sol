@@ -62,15 +62,15 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
      * @param _entryPoint       ERC-4337 EntryPoint address.
      * @param _webAuthnVerifier WebAuthn verifier contract for P-256/WebAuthn signature checks.
      * @param _gasPolicy        Gas/UserOp policy contract (used for custodial key policy init).
-     * @param _recoveryManager  Social Recovery Manager contract that manages guardians & recovery flow.
+     * @param _validator        External validator contract that forwards recovery calls.
      */
     constructor(
         address _entryPoint,
         address _webAuthnVerifier,
         address _gasPolicy,
-        address _recoveryManager
+        address _validator
     ) OPF7702(_entryPoint, _webAuthnVerifier, _gasPolicy) EIP712("OPF7702Recoverable", "1") {
-        RECOVERY_MANAGER = _recoveryManager;
+        VALIDATOR = _validator;
     }
 
     // ──────────────────────────────────────────────────────────────────────────────
@@ -119,7 +119,7 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
             registerKey(_sessionKeyData);
         }
 
-        ISocialRecoveryManager(RECOVERY_MANAGER)
+        ISocialRecoveryManager(VALIDATOR)
             .initializeGuardians(address(this), _initialGuardian);
 
         emit IOPF7702.Initialized(_keyData);
@@ -135,7 +135,7 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
      */
     function completeRecovery(bytes[] calldata _signatures) external virtual {
         KeyDataReg memory recoveryOwner =
-            ISocialRecoveryManager(RECOVERY_MANAGER).completeRecovery(address(this), _signatures);
+            ISocialRecoveryManager(VALIDATOR).completeRecovery(address(this), _signatures);
 
         _deleteOldKeys();
         _setNewMasterKey(recoveryOwner);
