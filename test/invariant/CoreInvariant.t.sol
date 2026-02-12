@@ -114,8 +114,7 @@ contract DeployInvariantHelper is BaseData {
             skReg.keyControl
         );
 
-        bytes32 structHash =
-            keccak256(abi.encode(INIT_TYPEHASH, mkDataEnc, skDataEnc));
+        bytes32 structHash = keccak256(abi.encode(INIT_TYPEHASH, mkDataEnc, skDataEnc));
 
         string memory name = "OPF7702Recoverable";
         string memory version = "1";

@@ -204,10 +204,11 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
      * @param _sessionKeyData   Session key registration payload.
      * @return digest           EIP-712 typed data hash to be signed off-chain.
      */
-    function getDigestToInit(
-        KeyDataReg calldata _keyData,
-        KeyDataReg calldata _sessionKeyData
-    ) public view returns (bytes32 digest) {
+    function getDigestToInit(KeyDataReg calldata _keyData, KeyDataReg calldata _sessionKeyData)
+        public
+        view
+        returns (bytes32 digest)
+    {
         bytes memory keyDataEnc = abi.encode(
             _keyData.keyType,
             _keyData.validUntil,
@@ -227,8 +228,7 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
             _sessionKeyData.keyControl
         );
 
-        bytes32 structHash =
-            keccak256(abi.encode(INIT_TYPEHASH, keyDataEnc, skDataEnc));
+        bytes32 structHash = keccak256(abi.encode(INIT_TYPEHASH, keyDataEnc, skDataEnc));
 
         return _hashTypedDataV4(structHash);
     }
