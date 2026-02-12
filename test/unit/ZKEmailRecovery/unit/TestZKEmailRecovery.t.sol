@@ -43,6 +43,8 @@ contract TestZKEmailRecovery is Helpers {
 
         // Install MockValidator on the account (as TYPE_VALIDATOR)
         _installValidator();
+
+        console.log("erc7579Module address:", address(erc7579Module));
     }
 
     function test_recovery_full_cycle_with_key_proofs() external {

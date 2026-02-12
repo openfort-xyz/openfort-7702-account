@@ -86,6 +86,36 @@ abstract contract ERC7579 is BaseOPF7702 {
         IERC7579Module(module).onUninstall(deInitData);
     }
 
+    function executeFromExecutor(bytes32 mode, bytes calldata executionCalldata)
+        external
+        payable
+        virtual
+        returns (bytes[] memory returnData)
+    {
+        require(_executors.contains(msg.sender), ERC7579UninstalledModule(MODULE_TYPE_EXECUTOR, msg.sender));
+
+        uint8 callType = uint8(bytes1(mode));
+
+        if (callType == 0) {
+            // Single call: packed as target(20) + value(32) + calldata(rest)
+            require(executionCalldata.length >= 52, "Invalid execution calldata");
+            address target = address(bytes20(executionCalldata[0:20]));
+            uint256 value = uint256(bytes32(executionCalldata[20:52]));
+            bytes calldata data = executionCalldata[52:];
+
+            (bool success, bytes memory result) = target.call{value: value}(data);
+            if (!success) {
+                assembly {
+                    revert(add(result, 32), mload(result))
+                }
+            }
+            returnData = new bytes[](1);
+            returnData[0] = result;
+        } else {
+            revert("Unsupported call type");
+        }
+    }
+
     function isModuleInstalled(uint256 moduleTypeId, address module)
         public
         view
