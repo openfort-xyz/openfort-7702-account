@@ -563,16 +563,15 @@ contract CoreInvariantTest is StdInvariant {
 
         targetContract(address(handler));
 
-        bytes4[] memory selectors = new bytes4[](9);
+        bytes4[] memory selectors = new bytes4[](8);
         selectors[0] = handler.addGuardian.selector;
         selectors[1] = handler.revokeGuardian.selector;
         selectors[2] = handler.startRecovery.selector;
         selectors[3] = handler.cancelRecovery.selector;
-        // selectors[4] = handler.completeRecovery.selector;
-        selectors[5] = handler.registerKey.selector;
-        selectors[6] = handler.revokeKey.selector;
-        selectors[7] = handler.updateKey.selector;
-        selectors[8] = handler.warp.selector;
+        selectors[4] = handler.registerKey.selector;
+        selectors[5] = handler.revokeKey.selector;
+        selectors[6] = handler.updateKey.selector;
+        selectors[7] = handler.warp.selector;
 
         FuzzSelector memory selectorData =
             FuzzSelector({addr: address(handler), selectors: selectors});

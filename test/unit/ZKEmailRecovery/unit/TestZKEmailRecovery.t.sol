@@ -27,7 +27,7 @@ contract TestZKEmailRecovery is Helpers {
     bytes32 internal recoveryDataHash;
 
     function setUp() public override {
-        _enableFork();
+        _enableFork('https://ethereum-sepolia-rpc.publicnode.com');
         super.setUp();
 
         // Load all proofs (acceptance + recovery)
