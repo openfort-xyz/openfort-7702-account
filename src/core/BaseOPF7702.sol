@@ -62,9 +62,6 @@ abstract contract BaseOPF7702 is
     /// @notice The Gas Policy Verifier singleton contract used to verify and set gas policy of session keys.
     address public immutable GAS_POLICY;
 
-    /// @notice The external validator contract that forwards recovery calls to this account.
-    address public immutable VALIDATOR;
-
     // =============================================================
     //                       RECEIVE / FALLBACK
     // =============================================================

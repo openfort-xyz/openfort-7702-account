@@ -22,12 +22,8 @@ abstract contract ERC7579 is BaseOPF7702 {
     /// @dev The module is not installed.
     error ERC7579UninstalledModule(uint256 moduleTypeId, address module);
 
-    uint256 constant VALIDATION_SUCCESS = 0;
-    uint256 constant VALIDATION_FAILED = 1;
     uint256 constant MODULE_TYPE_VALIDATOR = 1;
     uint256 constant MODULE_TYPE_EXECUTOR = 2;
-    uint256 constant MODULE_TYPE_FALLBACK = 3;
-    uint256 constant MODULE_TYPE_HOOK = 4;
 
     EnumerableSetLib.AddressSet internal _validators;
     EnumerableSetLib.AddressSet internal _executors;

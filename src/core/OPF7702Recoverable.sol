@@ -58,15 +58,12 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
      * @param _entryPoint       ERC-4337 EntryPoint address.
      * @param _webAuthnVerifier WebAuthn verifier contract for P-256/WebAuthn signature checks.
      * @param _gasPolicy        Gas/UserOp policy contract (used for custodial key policy init).
-     * @param _validator        External validator contract that forwards recovery calls.
      */
     constructor(
         address _entryPoint,
         address _webAuthnVerifier,
-        address _gasPolicy,
-        address _validator
+        address _gasPolicy
     ) OPF7702(_entryPoint, _webAuthnVerifier, _gasPolicy) EIP712("OPF7702Recoverable", "1") {
-        VALIDATOR = _validator;
     }
 
     // ──────────────────────────────────────────────────────────────────────────────
@@ -127,7 +124,7 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
      * @param _recoveryKey The new owner key data.
      */
     function completeRecovery(KeyDataReg memory _recoveryKey) external virtual {
-        if (msg.sender != VALIDATOR || !_validators.contains(msg.sender)) {
+        if (!_validators.contains(msg.sender)) {
             revert IBaseOPF7702.OpenfortBaseAccount7702V1_UnauthorizedCaller();
         }
         _deleteOldKeys();
