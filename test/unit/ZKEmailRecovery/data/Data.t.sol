@@ -2,11 +2,11 @@
 pragma solidity ^0.8.29;
 
 import "lib/forge-std/src/StdJson.sol";
-import { Constants } from "./Constants.sol";
-import { OPFMain } from "src/core/OPFMain.sol";
+import {Constants} from "./Constants.sol";
+import {OPFMain} from "src/core/OPFMain.sol";
 import {GasPolicy} from "src/utils/GasPolicy.sol";
-import { RecoveryProofs } from "./RecoveryProofs.t.sol";
-import { ERC7579Module } from "src/utils/ERC7579Module.sol";
+import {RecoveryProofs} from "./RecoveryProofs.t.sol";
+import {ERC7579Module} from "src/utils/ERC7579Module.sol";
 
 abstract contract Data is RecoveryProofs {
     uint256 private __FORK_ID;
@@ -25,10 +25,12 @@ abstract contract Data is RecoveryProofs {
 
     // Read guardian accountSalts from ProofsData.json (source of truth from ZK proofs)
     string public proofsJson = vm.readFile("src/data/proofs/ProofsDataGeneral.json");
-    bytes32 internal __GUARDIAN_1_ACCOUNT_SALT = stdJson.readBytes32(proofsJson, ".Guardian1_Proof.account_salt");
-    bytes32 internal __GUARDIAN_2_ACCOUNT_SALT = stdJson.readBytes32(proofsJson, ".Guardian2_Proof.account_salt");
+    bytes32 internal __GUARDIAN_1_ACCOUNT_SALT =
+        stdJson.readBytes32(proofsJson, ".Guardian1_Proof.account_salt");
+    bytes32 internal __GUARDIAN_2_ACCOUNT_SALT =
+        stdJson.readBytes32(proofsJson, ".Guardian2_Proof.account_salt");
 
-    OPFMain internal account;
+    OPFMain internal implementation;
     GasPolicy public gasPolicy;
 
     ERC7579Module internal erc7579Module;
@@ -37,8 +39,15 @@ abstract contract Data is RecoveryProofs {
         _initExistContracts();
         _labelContracts();
 
-        gasPolicy = new GasPolicy(Constants.DEFAULT_PVG, Constants.DEFAULT_VGL, Constants.DEFAULT_CGL, Constants.DEFAULT_PMV, Constants.DEFAULT_PO);
-        account = new OPFMain(Constants.ENTRY_POINT_9, Constants.WEBAUTHN_VERIFIER, address(gasPolicy));
+        gasPolicy = new GasPolicy(
+            Constants.DEFAULT_PVG,
+            Constants.DEFAULT_VGL,
+            Constants.DEFAULT_CGL,
+            Constants.DEFAULT_PMV,
+            Constants.DEFAULT_PO
+        );
+        implementation =
+            new OPFMain(Constants.ENTRY_POINT_9, Constants.WEBAUTHN_VERIFIER, address(gasPolicy));
         erc7579Module = new ERC7579Module();
     }
 

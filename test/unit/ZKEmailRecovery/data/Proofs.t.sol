@@ -2,7 +2,7 @@
 pragma solidity ^0.8.29;
 
 import "lib/forge-std/src/StdJson.sol";
-import { Etch } from "./Etch.t.sol";
+import {Etch} from "./Etch.t.sol";
 
 abstract contract Proofs is Etch {
     enum ProofType {
@@ -28,7 +28,8 @@ abstract contract Proofs is Etch {
     string public path;
     string public json_proofs = vm.readFile("src/data/proofs/ProofsDataGeneral.json");
     string public json_proofs_key_eoa = vm.readFile("src/data/proofs/ProofsDataKeyEOA.json");
-    string public json_proofs_key_webAuthn = vm.readFile("src/data/proofs/ProofsDataKeyWebAuthn.json");
+    string public json_proofs_key_webAuthn =
+        vm.readFile("src/data/proofs/ProofsDataKeyWebAuthn.json");
 
     function _loadAllProofs(ProofType _proofType) internal {
         if (_proofType == ProofType.SAFE) {
@@ -44,8 +45,10 @@ abstract contract Proofs is Etch {
 
     function _loadGuardian1_Proof() internal {
         guardian1_Proof.DOMAIN = stdJson.readString(path, ".Guardian1_Proof.domain");
-        guardian1_Proof.PUBLIC_KEY_HASH = stdJson.readBytes32(path, ".Guardian1_Proof.public_key_hash");
-        guardian1_Proof.EMAIL_NULLIFIER = stdJson.readBytes32(path, ".Guardian1_Proof.email_nullifier");
+        guardian1_Proof.PUBLIC_KEY_HASH =
+            stdJson.readBytes32(path, ".Guardian1_Proof.public_key_hash");
+        guardian1_Proof.EMAIL_NULLIFIER =
+            stdJson.readBytes32(path, ".Guardian1_Proof.email_nullifier");
         guardian1_Proof.TIMESTAMP = stdJson.readUint(path, ".Guardian1_Proof.timestamp");
         guardian1_Proof.ACCOUNT_SALT = stdJson.readBytes32(path, ".Guardian1_Proof.account_salt");
         guardian1_Proof.IS_CODE_EXIST = stdJson.readBool(path, ".Guardian1_Proof.is_code_exist");
@@ -53,15 +56,18 @@ abstract contract Proofs is Etch {
 
         // Load public signals array
         for (uint256 i = 0; i < 34; i++) {
-            string memory key = string.concat(".Guardian1_Proof.public_signals[", vm.toString(i), "]");
+            string memory key =
+                string.concat(".Guardian1_Proof.public_signals[", vm.toString(i), "]");
             guardian1_Proof.PUBLIC_SIGNALS[i] = stdJson.readUint(path, key);
         }
     }
 
     function _loadGuardian2_Proof() internal {
         guardian2_Proof.DOMAIN = stdJson.readString(path, ".Guardian2_Proof.domain");
-        guardian2_Proof.PUBLIC_KEY_HASH = stdJson.readBytes32(path, ".Guardian2_Proof.public_key_hash");
-        guardian2_Proof.EMAIL_NULLIFIER = stdJson.readBytes32(path, ".Guardian2_Proof.email_nullifier");
+        guardian2_Proof.PUBLIC_KEY_HASH =
+            stdJson.readBytes32(path, ".Guardian2_Proof.public_key_hash");
+        guardian2_Proof.EMAIL_NULLIFIER =
+            stdJson.readBytes32(path, ".Guardian2_Proof.email_nullifier");
         guardian2_Proof.TIMESTAMP = stdJson.readUint(path, ".Guardian2_Proof.timestamp");
         guardian2_Proof.ACCOUNT_SALT = stdJson.readBytes32(path, ".Guardian2_Proof.account_salt");
         guardian2_Proof.IS_CODE_EXIST = stdJson.readBool(path, ".Guardian2_Proof.is_code_exist");
@@ -69,7 +75,8 @@ abstract contract Proofs is Etch {
 
         // Load public signals array
         for (uint256 i = 0; i < 34; i++) {
-            string memory key = string.concat(".Guardian2_Proof.public_signals[", vm.toString(i), "]");
+            string memory key =
+                string.concat(".Guardian2_Proof.public_signals[", vm.toString(i), "]");
             guardian2_Proof.PUBLIC_SIGNALS[i] = stdJson.readUint(path, key);
         }
     }

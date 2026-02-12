@@ -2,7 +2,7 @@
 pragma solidity ^0.8.29;
 
 import "lib/forge-std/src/StdJson.sol";
-import { Proofs } from "./Proofs.t.sol";
+import {Proofs} from "./Proofs.t.sol";
 
 /**
  * @title RecoveryProofs
@@ -36,40 +36,49 @@ abstract contract RecoveryProofs is Proofs {
     RecoveryProof guardian2_RecoveryProof;
 
     string public path_recovery;
-    string public json_proofs_recovery = vm.readFile("src/data/proofs/RecoveryProofsDataGeneral.json");
-    string public json_proofs_key_eoa_recovery = vm.readFile("src/data/proofs/RecoveryProofsDataEOA.json");
-    string public json_proofs_key_webAuthn_recovery = vm.readFile("src/data/proofs/RecoveryProofsDataWebAuthn.json");
+    string public json_proofs_recovery =
+        vm.readFile("src/data/proofs/RecoveryProofsDataGeneral.json");
+    string public json_proofs_key_eoa_recovery =
+        vm.readFile("src/data/proofs/RecoveryProofsDataEOA.json");
+    string public json_proofs_key_webAuthn_recovery =
+        vm.readFile("src/data/proofs/RecoveryProofsDataWebAuthn.json");
 
     // ============================================================================
     // LOADING FUNCTIONS
     // ============================================================================
 
     function _loadGuardian1_RecoveryProof() internal {
-        guardian1_RecoveryProof.DOMAIN = stdJson.readString(path_recovery, ".Guardian1_RecoveryProof.domain");
+        guardian1_RecoveryProof.DOMAIN =
+            stdJson.readString(path_recovery, ".Guardian1_RecoveryProof.domain");
         guardian1_RecoveryProof.PUBLIC_KEY_HASH =
             stdJson.readBytes32(path_recovery, ".Guardian1_RecoveryProof.public_key_hash");
         guardian1_RecoveryProof.EMAIL_NULLIFIER =
             stdJson.readBytes32(path_recovery, ".Guardian1_RecoveryProof.email_nullifier");
-        guardian1_RecoveryProof.TIMESTAMP = stdJson.readUint(path_recovery, ".Guardian1_RecoveryProof.timestamp");
+        guardian1_RecoveryProof.TIMESTAMP =
+            stdJson.readUint(path_recovery, ".Guardian1_RecoveryProof.timestamp");
         guardian1_RecoveryProof.ACCOUNT_SALT =
             stdJson.readBytes32(path_recovery, ".Guardian1_RecoveryProof.account_salt");
         guardian1_RecoveryProof.IS_CODE_EXIST =
             stdJson.readBool(path_recovery, ".Guardian1_RecoveryProof.is_code_exist");
-        guardian1_RecoveryProof.PROOF = stdJson.readBytes(path_recovery, ".Guardian1_RecoveryProof.proof");
+        guardian1_RecoveryProof.PROOF =
+            stdJson.readBytes(path_recovery, ".Guardian1_RecoveryProof.proof");
     }
 
     function _loadGuardian2_RecoveryProof() internal {
-        guardian2_RecoveryProof.DOMAIN = stdJson.readString(path_recovery, ".Guardian2_RecoveryProof.domain");
+        guardian2_RecoveryProof.DOMAIN =
+            stdJson.readString(path_recovery, ".Guardian2_RecoveryProof.domain");
         guardian2_RecoveryProof.PUBLIC_KEY_HASH =
             stdJson.readBytes32(path_recovery, ".Guardian2_RecoveryProof.public_key_hash");
         guardian2_RecoveryProof.EMAIL_NULLIFIER =
             stdJson.readBytes32(path_recovery, ".Guardian2_RecoveryProof.email_nullifier");
-        guardian2_RecoveryProof.TIMESTAMP = stdJson.readUint(path_recovery, ".Guardian2_RecoveryProof.timestamp");
+        guardian2_RecoveryProof.TIMESTAMP =
+            stdJson.readUint(path_recovery, ".Guardian2_RecoveryProof.timestamp");
         guardian2_RecoveryProof.ACCOUNT_SALT =
             stdJson.readBytes32(path_recovery, ".Guardian2_RecoveryProof.account_salt");
         guardian2_RecoveryProof.IS_CODE_EXIST =
             stdJson.readBool(path_recovery, ".Guardian2_RecoveryProof.is_code_exist");
-        guardian2_RecoveryProof.PROOF = stdJson.readBytes(path_recovery, ".Guardian2_RecoveryProof.proof");
+        guardian2_RecoveryProof.PROOF =
+            stdJson.readBytes(path_recovery, ".Guardian2_RecoveryProof.proof");
     }
 
     /**
