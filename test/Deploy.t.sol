@@ -99,7 +99,7 @@ contract Deploy is BaseData {
         );
 
         bytes32 structHash =
-            keccak256(abi.encode(INIT_TYPEHASH, mkDataEnc, skDataEnc, _initialGuardian));
+            keccak256(abi.encode(INIT_TYPEHASH, mkDataEnc, skDataEnc));
 
         string memory name = "OPF7702Recoverable";
         string memory version = "1";
@@ -115,7 +115,7 @@ contract Deploy is BaseData {
         bytes memory sig = abi.encodePacked(r, s, v);
 
         vm.prank(owner);
-        account.initialize(mkReg, skReg, sig, _initialGuardian);
+        account.initialize(mkReg, skReg, sig);
 
         // Register initial guardian with recovery manager
         if (_initialGuardian != bytes32(0)) {

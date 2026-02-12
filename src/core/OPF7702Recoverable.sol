@@ -84,24 +84,18 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
      * @param _keyData          KeyReg data structure containing permissions and limits
      * @param _sessionKeyData   KeyReg data structure containing permissions and limits
      * @param _signature        Signature over `_hash` by this contract.
-     * @param _initialGuardian  Initialize Guardian. Must be at least one guardian!
      */
     function initialize(
         KeyDataReg calldata _keyData,
         KeyDataReg calldata _sessionKeyData,
-        bytes memory _signature,
-        bytes32 _initialGuardian
+        bytes memory _signature
     ) external initializer {
         _requireForExecute();
         _clearStorage();
 
         _masterKeyValidation(_keyData);
 
-        if (_initialGuardian == bytes32(0)) {
-            revert IOPF7702Recoverable.OPF7702Recoverable__AddressCantBeZero();
-        }
-
-        bytes32 digest = getDigestToInit(_keyData, _sessionKeyData, _initialGuardian);
+        bytes32 digest = getDigestToInit(_keyData, _sessionKeyData);
 
         if (!_checkSignature(digest, _signature)) {
             revert IBaseOPF7702.OpenfortBaseAccount7702V1__InvalidSignature();
@@ -208,13 +202,11 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
      *
      * @param _keyData          Master key registration payload.
      * @param _sessionKeyData   Session key registration payload.
-     * @param _initialGuardian  Guardian identifier used to seed the recovery set.
      * @return digest           EIP-712 typed data hash to be signed off-chain.
      */
     function getDigestToInit(
         KeyDataReg calldata _keyData,
-        KeyDataReg calldata _sessionKeyData,
-        bytes32 _initialGuardian
+        KeyDataReg calldata _sessionKeyData
     ) public view returns (bytes32 digest) {
         bytes memory keyDataEnc = abi.encode(
             _keyData.keyType,
@@ -236,7 +228,7 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
         );
 
         bytes32 structHash =
-            keccak256(abi.encode(INIT_TYPEHASH, keyDataEnc, skDataEnc, _initialGuardian));
+            keccak256(abi.encode(INIT_TYPEHASH, keyDataEnc, skDataEnc));
 
         return _hashTypedDataV4(structHash);
     }
