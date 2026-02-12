@@ -11,7 +11,7 @@
  */
 
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.29;
+pragma solidity ^0.8.29;
 
 import {LibEIP7702} from "solady/accounts/LibEIP7702.sol";
 import {OPF7702Recoverable} from "src/core/OPF7702Recoverable.sol";

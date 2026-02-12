@@ -1,9 +1,19 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.33;
+pragma solidity ^0.8.29;
 
 library Constants {
     // Entry Point
     address internal constant ENTRY_POINT_9 = 0x433709009B8330FDa32311DF1C2AFA402eD8D009;
+
+    // WebAuthn Verifier contract
+    address internal constant WEBAUTHN_VERIFIER = 0x83b7acb5A6aa8A34A97bdA13182aEA787AC3f10d;
+
+    /* ──────────────────────────────────────────────────────────────── gas policy data ──── */
+    uint256 internal constant DEFAULT_PVG = 110_000; // packaging/bytes for P-256/WebAuthn-ish signatures
+    uint256 internal constant DEFAULT_VGL = 360_000; // validation (session key checks, EIP-1271/P-256 parsing)
+    uint256 internal constant DEFAULT_CGL = 240_000; // ERC20 transfer/batch-ish execution
+    uint256 internal constant DEFAULT_PMV = 60_000; // paymaster validate (if used)
+    uint256 internal constant DEFAULT_PO = 60_000; // postOp (token charge/refund)
 
     // ------------------------------------------------------------------------------------
     //

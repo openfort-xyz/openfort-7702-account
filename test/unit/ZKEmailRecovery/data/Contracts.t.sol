@@ -1,8 +1,9 @@
 //SPDX-License-Identifier: MIT
-pragma solidity 0.8.33;
+pragma solidity ^0.8.29;
 
 import {Constants} from "./Constants.sol";
 import {Test} from "lib/forge-std/src/Test.sol";
+import {WebAuthnVerifierV2} from "src/utils/WebAuthnVerifierV2.sol";
 import {EntryPoint} from "lib/account-abstraction/contracts/core/EntryPoint.sol";
 import {EmailAuth} from "node_modules/@zk-email/ether-email-auth-contracts/src/EmailAuth.sol";
 import {IUserOverrideableDKIMRegistry} from "../interfaces/IUserOverrideableDKIMRegistry.sol";
@@ -20,6 +21,7 @@ import {
 
 abstract contract Contracts is Test {
     EntryPoint internal entryPoint;
+    WebAuthnVerifierV2 public webAuthn;
 
     EmailRecoveryUniversalFactory internal emailRecoveryUniversalFactory;
     UniversalEmailRecoveryModule internal universalEmailRecoveryModule;
@@ -31,6 +33,7 @@ abstract contract Contracts is Test {
 
     function _initExistContracts() internal {
         entryPoint = EntryPoint(payable(Constants.ENTRY_POINT_9));
+        webAuthn = WebAuthnVerifierV2(payable(Constants.WEBAUTHN_VERIFIER));
         emailRecoveryUniversalFactory =
             EmailRecoveryUniversalFactory(payable(Constants.EMAIL_RECOVERY_UNIVERSAL_FACTORY));
         universalEmailRecoveryModule =
