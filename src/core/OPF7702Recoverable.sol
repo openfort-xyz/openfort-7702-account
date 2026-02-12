@@ -59,12 +59,10 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
      * @param _webAuthnVerifier WebAuthn verifier contract for P-256/WebAuthn signature checks.
      * @param _gasPolicy        Gas/UserOp policy contract (used for custodial key policy init).
      */
-    constructor(
-        address _entryPoint,
-        address _webAuthnVerifier,
-        address _gasPolicy
-    ) OPF7702(_entryPoint, _webAuthnVerifier, _gasPolicy) EIP712("OPF7702Recoverable", "1") {
-    }
+    constructor(address _entryPoint, address _webAuthnVerifier, address _gasPolicy)
+        OPF7702(_entryPoint, _webAuthnVerifier, _gasPolicy)
+        EIP712("OPF7702Recoverable", "1")
+    {}
 
     // ──────────────────────────────────────────────────────────────────────────────
     //                          Public / External methods

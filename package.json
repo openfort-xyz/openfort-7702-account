@@ -5,8 +5,12 @@
   "author": "0xkoiner <alexgray.bcn.esp@gmail.com>",
   "license": "MIT",
   "dependencies": {
-    "dotenv": "^16.5.0",
-    "viem": "^2.29.4"
+    "dotenv": "^17.2.3",
+    "viem": "^2.29.4",
+    "@zk-email/ether-email-auth-contracts": "^1.1.1",
+    "@rhinestone/modulekit": "^0.5.9",
+    "@zk-email/contracts": "^6.3.2",
+    "@openzeppelin/contracts-upgradeable": "^5.4.0"
   },
   "devDependencies": {
     "@types/node": "^22.15.18",

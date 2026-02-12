@@ -34,9 +34,7 @@ contract OPF7702RecoverableTest is Deploy {
             RECOVERY_PERIOD, LOCK_PERIOD, SECURITY_PERIOD, SECURITY_WINDOW
         );
 
-        implementation = new OPF7702(
-            address(entryPoint), WEBAUTHN_VERIFIER, address(gasPolicy)
-        );
+        implementation = new OPF7702(address(entryPoint), WEBAUTHN_VERIFIER, address(gasPolicy));
 
         vm.stopPrank();
     }
@@ -53,9 +51,7 @@ contract OPF7702RecoverableTest is Deploy {
 
         _createInitialGuradian();
 
-        implementation = new OPF7702(
-            address(entryPoint), WEBAUTHN_VERIFIER, address(gasPolicy)
-        );
+        implementation = new OPF7702(address(entryPoint), WEBAUTHN_VERIFIER, address(gasPolicy));
 
         erc20 = new MockERC20();
 
@@ -118,9 +114,7 @@ contract OPF7702RecoverableTest is Deploy {
 
         _createInitialGuradian();
 
-        implementation = new OPF7702(
-            address(entryPoint), WEBAUTHN_VERIFIER, address(gasPolicy)
-        );
+        implementation = new OPF7702(address(entryPoint), WEBAUTHN_VERIFIER, address(gasPolicy));
 
         erc20 = new MockERC20();
 

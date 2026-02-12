@@ -23,9 +23,7 @@ contract Upgrade7702 is BaseData {
             RECOVERY_PERIOD, LOCK_PERIOD, SECURITY_PERIOD, SECURITY_WINDOW
         );
 
-        implementation = new OPF7702(
-            address(entryPoint), WEBAUTHN_VERIFIER, address(gasPolicy)
-        );
+        implementation = new OPF7702(address(entryPoint), WEBAUTHN_VERIFIER, address(gasPolicy));
 
         proxy = LibEIP7702.deployProxy(address(implementation), address(0));
 
@@ -47,11 +45,8 @@ contract Upgrade7702 is BaseData {
     }
 
     function test_upgradeProxyDelegation() external {
-        address newImpl = address(
-            new OPF7702(
-                address(entryPoint), WEBAUTHN_VERIFIER, address(gasPolicy)
-            )
-        );
+        address newImpl =
+            address(new OPF7702(address(entryPoint), WEBAUTHN_VERIFIER, address(gasPolicy)));
         address oldImpl = account._OPENFORT_CONTRACT_ADDRESS();
 
         vm.prank(owner);

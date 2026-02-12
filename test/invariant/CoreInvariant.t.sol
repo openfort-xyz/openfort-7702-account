@@ -39,9 +39,7 @@ contract DeployInvariantHelper is BaseData {
 
         _createInitialGuradian();
 
-        implementation = new OPF7702(
-            address(entryPoint), address(webAuthn), address(gasPolicy)
-        );
+        implementation = new OPF7702(address(entryPoint), address(webAuthn), address(gasPolicy));
 
         erc20 = new MockERC20();
 

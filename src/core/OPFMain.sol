@@ -42,11 +42,9 @@ contract OPFMain layout at 10758899561418817979145266382469857063467466793178729
      * @param _webAuthnVerifier WebAuthn verifier contract for P-256/WebAuthn signature checks.
      * @param _gasPolicy        Gas/UserOp policy contract (used for custodial key policy init).
      */
-    constructor(
-        address _entryPoint,
-        address _webAuthnVerifier,
-        address _gasPolicy
-    ) OPF7702Recoverable(_entryPoint, _webAuthnVerifier, _gasPolicy) {}
+    constructor(address _entryPoint, address _webAuthnVerifier, address _gasPolicy)
+        OPF7702Recoverable(_entryPoint, _webAuthnVerifier, _gasPolicy)
+    {}
 
     /**
      * @notice Updates the delegated implementation used by the EIP-7702 authority proxy.
