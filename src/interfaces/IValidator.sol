@@ -7,7 +7,9 @@ import {IKey} from "./IKey.sol";
 /// @author 0xKoiner@openfort
 /// @notice Interface for the external Validator contract used in ZK-Email recovery flows.
 interface IValidator {
-    event RecoveryForwarded(address indexed account, bytes indexed newOwnerKey, IKey.KeyType keyType);
+    event RecoveryForwarded(
+        address indexed account, bytes indexed newOwnerKey, IKey.KeyType keyType
+    );
 
     function isInstalled(address account) external view returns (bool);
 

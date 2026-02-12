@@ -15,7 +15,7 @@
 pragma solidity 0.8.29;
 
 import {IKey} from "src/interfaces/IKey.sol";
-import {BaseOPF7702} from "src/core/BaseOPF7702.sol";
+import {ERC7579} from "src/utils/ERC7579.sol";
 import {IUserOpPolicy} from "src/interfaces/IPolicy.sol";
 import {KeysManagerLib} from "src/libs/KeysManagerLib.sol";
 import {IKeysManager} from "src/interfaces/IKeysManager.sol";
@@ -27,7 +27,7 @@ import {EnumerableMapLib} from "lib/solady/src/utils/EnumerableMapLib.sol";
 /// @notice Manages registration, revocation, limits, and call permissions for keys (EOA/WebAuthn/P-256).
 /// @dev Inherits BaseOPF7702. Uses enumerable maps/sets for can-call and token-spend, with capacities 2048/64.
 /// @custom:inspired-by Ithaca Account (Token Spend & Can Call permission model)
-abstract contract KeysManager is BaseOPF7702, IKeysManager, IKey {
+abstract contract KeysManager is ERC7579, IKeysManager, IKey {
     using KeysManagerLib for *;
     using EnumerableSetLib for *;
     using EnumerableMapLib for *;

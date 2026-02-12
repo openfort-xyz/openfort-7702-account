@@ -16,7 +16,7 @@ interface IOPF7702Account {
 }
 
 /**
- * @title Validator
+ * @title ERC7579Module
  * @author 0xKoiner@openfort
  * @notice External validator that forwards startRecovery(Key) to account
  * @dev Allows passing full Key struct during ZK-Email recovery
@@ -33,11 +33,16 @@ interface IOPF7702Account {
  *
  * By using an external validator, we can use startRecovery(Key) selector!
  */
-contract Validator is IKey {
+contract ERC7579Module {
+    uint256 constant MODULE_TYPE_VALIDATOR = 1;
+    uint256 constant MODULE_TYPE_EXECUTOR = 2;
+
     // Track which accounts have installed this validator
     mapping(address account => bool installed) public isInstalled;
 
-    event RecoveryForwarded(address indexed account, bytes indexed newOwnerKey, KeyType keyType);
+    event RecoveryForwarded(
+        address indexed account, bytes indexed newOwnerKey, IKey.KeyType keyType
+    );
 
     function onInstall(bytes calldata) external {
         isInstalled[msg.sender] = true;
@@ -47,12 +52,16 @@ contract Validator is IKey {
         isInstalled[msg.sender] = false;
     }
 
+    function isModuleType(uint256 _moduleTypeId) external pure returns (bool) {
+        return _moduleTypeId == MODULE_TYPE_VALIDATOR || _moduleTypeId == MODULE_TYPE_EXECUTOR;
+    }
+
     /**
      * @notice Called by account via executeFromExecutor during recovery
      * @dev msg.sender is the account. Forwards Key to account's startRecovery
      * @param _newOwnerKey The new owner KeyDataReg struct
      */
-    function completeRecovery(KeyDataReg memory _newOwnerKey) external {
+    function completeRecovery(IKey.KeyDataReg memory _newOwnerKey) external {
         require(isInstalled[msg.sender], "Validator not installed");
 
         emit RecoveryForwarded(msg.sender, _newOwnerKey.key, _newOwnerKey.keyType);

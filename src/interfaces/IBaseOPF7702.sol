@@ -58,6 +58,16 @@ interface IBaseOPF7702 is
     /// @param newVerifier Address of the new verifier.
     event WebAuthnVerifierUpdated(address indexed newVerifier);
 
+    /// @notice Emitted when modules are installed on the account.
+    /// @param moduleTypeId Identifier for the type of module (e.g., recovery, session key, etc.).
+    /// @param module Address of the module being installed or uninstalled.
+    event ModuleInstalled(uint256 moduleTypeId, address module);
+
+    /// @notice Emitted when modules are uninstalled on the account.
+    /// @param moduleTypeId Identifier for the type of module (e.g., recovery, session key, etc.).
+    /// @param module Address of the module being installed or uninstalled.
+    event ModuleUninstalled(uint256 moduleTypeId, address module);
+
     // =============================================================
     //                        EXTERNAL FUNCTIONS
     // =============================================================

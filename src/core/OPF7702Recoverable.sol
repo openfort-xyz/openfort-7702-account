@@ -22,6 +22,7 @@ import {KeysManagerLib} from "src/libs/KeysManagerLib.sol";
 import {IBaseOPF7702} from "src/interfaces/IBaseOPF7702.sol";
 import {IKeysManager} from "src/interfaces/IKeysManager.sol";
 import {IOPF7702Recoverable} from "src/interfaces/IOPF7702Recoverable.sol";
+import {EnumerableSetLib} from "lib/solady/src/utils/EnumerableSetLib.sol";
 import {ECDSA} from "lib/openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
 import {EIP712} from "lib/openzeppelin-contracts/contracts/utils/cryptography/EIP712.sol";
 
@@ -40,6 +41,7 @@ import {EIP712} from "lib/openzeppelin-contracts/contracts/utils/cryptography/EI
 contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
     using ECDSA for bytes32;
     using KeysManagerLib for *;
+    using EnumerableSetLib for *;
 
     // ──────────────────────────────────────────────────────────────────────────────
     //                               Constants
@@ -47,16 +49,6 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
     /// @dev EIP‑712 type hash for the Initialize struct.
     bytes32 private constant INIT_TYPEHASH =
         0x82dc6262fca76342c646d126714aa4005dfcd866448478747905b2e7b9837183;
-
-    // Module type constants
-    uint256 public constant TYPE_VALIDATOR = 1;
-    uint256 public constant TYPE_EXECUTOR = 2;
-
-    // Owner validator (for basic validation)
-    address public ownerValidator;
-
-    // Installed modules
-    mapping(uint256 moduleType => mapping(address module => bool installed)) internal _installedModules;
 
     // ──────────────────────────────────────────────────────────────────────────────
     //                              Constructor
@@ -131,61 +123,11 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
     // ──────────────────────────────────────────────────────────────────────────────
 
     /**
-     * @notice Install a module on the account
-     * @param _moduleTypeId The type of module to install (1 = validator, 2 = executor)
-     * @param _module The module address
-     * @param _initData Initialization data for the module
-     */
-    function installModule(uint256 _moduleTypeId, address _module, bytes calldata _initData) external {
-        _requireForExecute();
-
-        _module.checkAddress();
-
-        if (_installedModules[_moduleTypeId][_module]) {
-            revert IBaseOPF7702.IOPF7702Recoverable__ModuleAlreadyInstalled();
-        }
-
-        _installedModules[_moduleTypeId][_module] = true;
-
-        // If this is a validator being installed, set it as the owner validator
-        if (_moduleTypeId == TYPE_VALIDATOR && ownerValidator == address(0)) {
-            ownerValidator = _module;
-        }
-        
-        IValidator(VALIDATOR).onInstall(_initData);
-    }
-
-    /**
-     * @notice Uninstall a module from the account
-     * @param _moduleTypeId The type of module to uninstall (1 = validator, 2 = executor)
-     * @param _module The module address
-     * @param _deInitData Deinitialization data for the module
-     */
-    function uninstallModule(uint256 _moduleTypeId, address _module, bytes calldata _deInitData) external payable {
-        _requireForExecute();
-        
-        _module.checkAddress();
-
-        if (!_installedModules[_moduleTypeId][_module]) {
-            revert IBaseOPF7702.IOPF7702Recoverable__ModuleNotInstalled();
-        }
-
-        _installedModules[_moduleTypeId][_module] = false;
-
-        if (_moduleTypeId == TYPE_VALIDATOR && ownerValidator == _module) {
-            ownerValidator = address(0);
-        }
-
-        // Call onUninstall on the module
-        IValidator(_module).onUninstall(_deInitData);
-    }
-
-    /**
      * @notice Completes recovery after the timelock by providing the required guardian signatures.
      * @param _recoveryKey The new owner key data.
      */
     function completeRecovery(KeyDataReg memory _recoveryKey) external virtual {
-        if (msg.sender != VALIDATOR || msg.sender != ownerValidator) {
+        if (msg.sender != VALIDATOR || !_validators.contains(msg.sender)) {
             revert IBaseOPF7702.OpenfortBaseAccount7702V1_UnauthorizedCaller();
         }
         _deleteOldKeys();
