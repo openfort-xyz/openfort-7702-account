@@ -32,6 +32,7 @@ contract Deploy is BaseData {
         vm.startPrank(sender);
 
         entryPoint = IEntryPoint(payable(ENTRYPOINT_V8));
+        vm.etch(WEBAUTHN_VERIFIER, address(new WebAuthnVerifierV2()).code);
         webAuthn = WebAuthnVerifierV2(payable(WEBAUTHN_VERIFIER));
         gasPolicy = new GasPolicy(DEFAULT_PVG, DEFAULT_VGL, DEFAULT_CGL, DEFAULT_PMV, DEFAULT_PO);
         recoveryManager = new SocialRecoveryManager(
@@ -115,6 +116,16 @@ contract Deploy is BaseData {
 
         vm.prank(owner);
         account.initialize(mkReg, skReg, sig, _initialGuardian);
+
+        // Register initial guardian with recovery manager
+        if (_initialGuardian != bytes32(0)) {
+            bytes memory guardianData = abi.encodeWithSelector(
+                SocialRecoveryManager.initializeGuardians.selector,
+                address(account),
+                _initialGuardian
+            );
+            _callRecoveryManager(guardianData);
+        }
     }
 
     function _getNonce() internal view returns (uint256) {

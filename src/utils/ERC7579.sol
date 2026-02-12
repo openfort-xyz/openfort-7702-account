@@ -92,7 +92,10 @@ abstract contract ERC7579 is BaseOPF7702 {
         virtual
         returns (bytes[] memory returnData)
     {
-        require(_executors.contains(msg.sender), ERC7579UninstalledModule(MODULE_TYPE_EXECUTOR, msg.sender));
+        require(
+            _executors.contains(msg.sender),
+            ERC7579UninstalledModule(MODULE_TYPE_EXECUTOR, msg.sender)
+        );
 
         uint8 callType = uint8(bytes1(mode));
 
@@ -127,7 +130,11 @@ abstract contract ERC7579 is BaseOPF7702 {
         return false;
     }
 
-    function isModuleInstalled(uint256 moduleTypeId, address module, bytes calldata /*additionalContext*/)
+    function isModuleInstalled(
+        uint256 moduleTypeId,
+        address module,
+        bytes calldata /*additionalContext*/
+    )
         external
         view
         virtual

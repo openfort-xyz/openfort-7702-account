@@ -97,6 +97,10 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
 
         _masterKeyValidation(_keyData);
 
+        if (_initialGuardian == bytes32(0)) {
+            revert IOPF7702Recoverable.OPF7702Recoverable__AddressCantBeZero();
+        }
+
         bytes32 digest = getDigestToInit(_keyData, _sessionKeyData, _initialGuardian);
 
         if (!_checkSignature(digest, _signature)) {

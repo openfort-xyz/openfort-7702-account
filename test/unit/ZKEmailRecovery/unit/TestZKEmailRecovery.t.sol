@@ -107,19 +107,33 @@ contract TestZKEmailRecovery is Helpers {
         bytes memory installData =
             _createInstallDataForKeyRecovery(address(erc7579Module), guardians, weights);
 
-        _installModule(Constants.MODULE_TYPE_EXECUTOR, address(universalEmailRecoveryModule), installData);
+        _installModule(
+            Constants.MODULE_TYPE_EXECUTOR, address(universalEmailRecoveryModule), installData
+        );
 
         _verifyGuardianConfig(guardians, Constants.THRESHOLD);
     }
 
-    function _installModule(uint256 _moduleType, address _emailRecoveryModule, bytes memory _installData) internal {
+    function _installModule(
+        uint256 _moduleType,
+        address _emailRecoveryModule,
+        bytes memory _installData
+    ) internal {
         vm.prank(__OWNER_7702_ADDRESS);
-        OPFMain(payable(__OWNER_7702_ADDRESS)).installModule(_moduleType, _emailRecoveryModule, _installData);
+        OPFMain(payable(__OWNER_7702_ADDRESS))
+            .installModule(_moduleType, _emailRecoveryModule, _installData);
     }
 
-    function _verifyGuardianConfig(address[] memory _guardians, uint256 expectedThreshold) internal view {
-        (uint256 guardianCount, uint256 totalWeight, uint256 acceptedWeight, uint256 thresholdValue) =
-            _getGuardianConfig(__OWNER_7702_ADDRESS);
+    function _verifyGuardianConfig(address[] memory _guardians, uint256 expectedThreshold)
+        internal
+        view
+    {
+        (
+            uint256 guardianCount,
+            uint256 totalWeight,
+            uint256 acceptedWeight,
+            uint256 thresholdValue
+        ) = _getGuardianConfig(__OWNER_7702_ADDRESS);
 
         assertEq(guardianCount, _guardians.length, "Guardian count mismatch");
         assertEq(totalWeight, _guardians.length, "Total weight mismatch");
@@ -127,15 +141,20 @@ contract TestZKEmailRecovery is Helpers {
         assertEq(acceptedWeight, 0, "Accepted weight should be 0 initially");
 
         for (uint256 i = 0; i < _guardians.length; i++) {
-            (uint256 status, uint256 weight) = _getGuardianStatus(__OWNER_7702_ADDRESS, _guardians[i]);
+            (uint256 status, uint256 weight) =
+                _getGuardianStatus(__OWNER_7702_ADDRESS, _guardians[i]);
             assertEq(status, 1, "Guardian status should be REQUESTED (1)");
             assertEq(weight, 1, "Guardian weight mismatch");
         }
     }
 
     function _registerDKIM() internal {
-        _registerDKIMPublicKeyHash(guardian1_Proof.DOMAIN, guardian1_Proof.PUBLIC_KEY_HASH, __OWNER_7702_ADDRESS);
-        _registerDKIMPublicKeyHash(guardian2_Proof.DOMAIN, guardian2_Proof.PUBLIC_KEY_HASH, __OWNER_7702_ADDRESS);
+        _registerDKIMPublicKeyHash(
+            guardian1_Proof.DOMAIN, guardian1_Proof.PUBLIC_KEY_HASH, __OWNER_7702_ADDRESS
+        );
+        _registerDKIMPublicKeyHash(
+            guardian2_Proof.DOMAIN, guardian2_Proof.PUBLIC_KEY_HASH, __OWNER_7702_ADDRESS
+        );
     }
 
     function _acceptGuardians() internal {
@@ -168,9 +187,7 @@ contract TestZKEmailRecovery is Helpers {
         bool _isCodeExist,
         uint256 _timestamp,
         bytes memory _zkProof
-    )
-        internal
-    {
+    ) internal {
         EmailAuthMsg memory emailAuthMsg = _buildEmailAuthMsgReal(
             __OWNER_7702_ADDRESS,
             _domain,
@@ -207,12 +224,14 @@ contract TestZKEmailRecovery is Helpers {
 
     function _requestRecovery() internal returns (uint256) {
         // Guardian 1 votes
-        EmailAuthMsg memory emailAuthMsg1 = _buildRecoveryEmailAuthMsgGuardian1(__OWNER_7702_ADDRESS, recoveryDataHash);
+        EmailAuthMsg memory emailAuthMsg1 =
+            _buildRecoveryEmailAuthMsgGuardian1(__OWNER_7702_ADDRESS, recoveryDataHash);
         vm.prank(__RELAYER_ADDRESS);
         universalEmailRecoveryModule.handleRecovery(emailAuthMsg1, 0);
 
         // Guardian 2 votes
-        EmailAuthMsg memory emailAuthMsg2 = _buildRecoveryEmailAuthMsgGuardian2(__OWNER_7702_ADDRESS, recoveryDataHash);
+        EmailAuthMsg memory emailAuthMsg2 =
+            _buildRecoveryEmailAuthMsgGuardian2(__OWNER_7702_ADDRESS, recoveryDataHash);
         vm.prank(__RELAYER_ADDRESS);
         universalEmailRecoveryModule.handleRecovery(emailAuthMsg2, 0);
 
@@ -230,14 +249,16 @@ contract TestZKEmailRecovery is Helpers {
         bytes32 keyId = _computeKeyId(newOwnerKey.keyType, newOwnerKey.key);
         // Verify owner changed to full Key struct
         KeyData memory currentOwner = OPFMain(payable(__OWNER_7702_ADDRESS)).getKey(keyId);
-        assertEq(uint8(currentOwner.keyType), uint8(newOwnerKey.keyType), "Owner keyType should match");
-        assertTrue(currentOwner.isActive, "Owner key should be active"); 
-        assertTrue(currentOwner.masterKey, "Owner key should be master key"); 
-        assertFalse(currentOwner.isDelegatedControl, "Owner key should not be delegated control"); 
-        assertEq(currentOwner.validUntil, newOwnerKey.validUntil, "Owner validUntil should match"); 
+        assertEq(
+            uint8(currentOwner.keyType), uint8(newOwnerKey.keyType), "Owner keyType should match"
+        );
+        assertTrue(currentOwner.isActive, "Owner key should be active");
+        assertTrue(currentOwner.masterKey, "Owner key should be master key");
+        assertFalse(currentOwner.isDelegatedControl, "Owner key should not be delegated control");
+        assertEq(currentOwner.validUntil, newOwnerKey.validUntil, "Owner validUntil should match");
         assertEq(currentOwner.validAfter, newOwnerKey.validAfter, "Owner validAfter should match");
-        assertEq(currentOwner.limits, newOwnerKey.limits, "Owner limits should match"); 
-        assertEq(keccak256(currentOwner.key), keccak256(newOwnerKey.key), "Owner key should match"); 
+        assertEq(currentOwner.limits, newOwnerKey.limits, "Owner limits should match");
+        assertEq(keccak256(currentOwner.key), keccak256(newOwnerKey.key), "Owner key should match");
         console.log("SUCCESS: Full Key-based recovery cycle completed with real ZK proofs");
     }
 

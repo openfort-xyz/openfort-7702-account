@@ -26,8 +26,10 @@ abstract contract Proofs is Etch {
     GuardianProof guardian2_Proof;
 
     string public path;
-    string public json_proofs = vm.readFile("test/unit/ZKEmailRecovery/data/proofs/ProofsDataGeneral.json");
-    string public json_proofs_key_eoa = vm.readFile("test/unit/ZKEmailRecovery/data/proofs/ProofsDataKeyEOA.json");
+    string public json_proofs =
+        vm.readFile("test/unit/ZKEmailRecovery/data/proofs/ProofsDataGeneral.json");
+    string public json_proofs_key_eoa =
+        vm.readFile("test/unit/ZKEmailRecovery/data/proofs/ProofsDataKeyEOA.json");
     string public json_proofs_key_webAuthn =
         vm.readFile("test/unit/ZKEmailRecovery/data/proofs/ProofsDataKeyWebAuthn.json");
 
