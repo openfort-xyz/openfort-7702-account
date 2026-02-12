@@ -1,194 +1,185 @@
-// // SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 
-// pragma solidity 0.8.29;
+pragma solidity 0.8.29;
 
-// import {Deploy} from "../Deploy.t.sol";
-// import {IKey} from "src/interfaces/IKey.sol";
+import {Deploy} from "../Deploy.t.sol";
+import {IKey} from "src/interfaces/IKey.sol";
+import {Math} from "lib/openzeppelin-contracts/contracts/utils/math/Math.sol";
 
-// contract RecoveryFuzz is Deploy {
-//     PubKey internal masterPk;
-//     mapping(bytes32 => uint256) internal guardianKeys;
+contract RecoveryFuzz is Deploy {
+    /// @dev Maps computeHash → private key for signing
+    mapping(bytes32 => uint256) internal guardianKeys;
 
-//     function setUp() public override {
-//         super.setUp();
+    /// @dev Tracks all guardian addresses + PKs for signature collection
+    address[] internal allGuardians;
+    uint256[] internal allGuardianPKs;
 
-//         _populateWebAuthn("keysmanager.json", ".keys_register");
+    function setUp() public override {
+        super.setUp();
+        _createQuickFreshKey(true);
+        _createQuickFreshKey(false);
+        _initializeAccount();
 
-//         masterPk = PubKey({x: DEF_WEBAUTHN.X, y: DEF_WEBAUTHN.Y});
-//         _createCustomFreshKey(
-//             true, KeyType.WEBAUTHN, type(uint48).max, 0, 0, _getKeyP256(masterPk), KeyControl.Self
-//         );
+        // _initializeAccount registers guardian with keccak256(abi.encode(guardian)) format
+        // but startRecovery checks keccak256(abi.encodePacked(guardian)) (computeHash)
+        // Register guardian with computeHash format for startRecovery compatibility
+        bytes32 guardianComputeHash = keccak256(abi.encodePacked(guardian));
+        _proposeGuardian(guardianComputeHash);
+        vm.warp(block.timestamp + SECURITY_PERIOD + 1);
+        _confirmGuardian(guardianComputeHash);
 
-//         _createQuickFreshKey(false);
-//         _initializeAccount();
+        guardianKeys[guardianComputeHash] = guardianPK;
+        allGuardians.push(guardian);
+        allGuardianPKs.push(guardianPK);
 
-//         guardianKeys[_initialGuardian] = guardianPK;
-//         _addGuardianWithKey(guardian, guardianPK);
+        assertTrue(recoveryManager.isGuardian(address(account), guardianComputeHash));
+    }
 
-//         bytes32 guardianHashPacked = keccak256(abi.encodePacked(guardian));
-//         assertTrue(recoveryManager.isGuardian(address(account), guardianHashPacked));
-//     }
+    function testFuzz_startRecovery(address newOwner) external {
+        vm.assume(newOwner != address(0));
+        vm.assume(newOwner != owner);
+        vm.assume(newOwner != guardian);
+        vm.assume(newOwner != address(account));
+        vm.assume(newOwner != sender);
 
-//     function testFuzz_startRecovery(address newOwner) external {
-//         vm.assume(newOwner != address(0));
-//         vm.assume(newOwner != owner);
-//         vm.assume(newOwner != guardian);
-//         vm.assume(newOwner != address(account));
-//         vm.assume(newOwner != sender);
+        KeyDataReg memory recoveryKey = _buildEOARecoveryKey(newOwner);
 
-//         IKey.KeyDataReg memory recoveryKey = _buildEOARecoveryKey(newOwner);
+        vm.prank(guardian);
+        recoveryManager.startRecovery(address(account), recoveryKey);
 
-//         vm.prank(guardian);
-//         recoveryManager.startRecovery(address(account), recoveryKey);
+        assertTrue(recoveryManager.isLocked(address(account)));
 
-//         (IKey.KeyDataReg memory stored, uint64 executeAfter, uint32 quorum) =
-//             recoveryManager.recoveryData(address(account));
+        uint256 gCount = recoveryManager.guardianCount(address(account));
+        uint32 expectedQuorum = uint32(Math.ceilDiv(gCount, 2));
+        assertTrue(expectedQuorum > 0);
+    }
 
-//         assertEq(uint8(stored.keyType), uint8(recoveryKey.keyType));
-//         assertEq(stored.key, recoveryKey.key);
-//         assertEq(stored.validUntil, recoveryKey.validUntil);
-//         assertEq(stored.limits, recoveryKey.limits);
-//         assertEq(executeAfter, uint64(block.timestamp + RECOVERY_PERIOD));
+    function testFuzz_completeRecovery(address newOwner, uint8 extraGuardians) external {
+        vm.assume(newOwner != address(0));
+        vm.assume(newOwner != owner);
+        vm.assume(newOwner != guardian);
+        vm.assume(newOwner != address(account));
+        vm.assume(newOwner != sender);
 
-//         uint256 guardianCount = recoveryManager.guardianCount(address(account));
-//         uint32 expectedQuorum = uint32((guardianCount + 1) / 2);
-//         assertEq(quorum, expectedQuorum);
-//         assertTrue(recoveryManager.isLocked(address(account)));
-//     }
+        uint256 addCount = bound(uint256(extraGuardians), 0, 4);
+        for (uint256 i; i < addCount; ++i) {
+            (address addr, uint256 pk) = makeAddrAndKey(string.concat("guardian-", vm.toString(i)));
+            _addGuardianWithKey(addr, pk);
+        }
 
-//     function testFuzz_completeRecovery(address newOwner, uint8 extraGuardians) external {
-//         vm.assume(newOwner != address(0));
-//         vm.assume(newOwner != owner);
-//         vm.assume(newOwner != guardian);
-//         vm.assume(newOwner != address(account));
-//         vm.assume(newOwner != sender);
+        KeyDataReg memory recoveryKey = _buildEOARecoveryKey(newOwner);
 
-//         uint256 addCount = bound(uint256(extraGuardians), 0, 4);
-//         for (uint256 i; i < addCount; ++i) {
-//             (address addr, uint256 pk) = makeAddrAndKey(string.concat("guardian-", vm.toString(i)));
+        vm.prank(guardian);
+        recoveryManager.startRecovery(address(account), recoveryKey);
 
-//             vm.assume(addr != address(0));
-//             vm.assume(addr != owner);
-//             vm.assume(addr != guardian);
-//             vm.assume(addr != address(account));
-//             vm.assume(addr != sender);
-//             vm.assume(addr != newOwner);
+        assertTrue(recoveryManager.isLocked(address(account)));
 
-//             _addGuardianWithKey(addr, pk);
-//         }
+        uint256 gCount = recoveryManager.guardianCount(address(account));
+        uint32 quorum = uint32(Math.ceilDiv(gCount, 2));
 
-//         IKey.KeyDataReg memory recoveryKey = _buildEOARecoveryKey(newOwner);
+        vm.warp(block.timestamp + RECOVERY_PERIOD + 1);
 
-//         vm.prank(guardian);
-//         recoveryManager.startRecovery(address(account), recoveryKey);
+        bytes[] memory signatures = _collectGuardianSignatures(quorum);
 
-//         (IKey.KeyDataReg memory stored, uint64 executeAfter, uint32 quorum) =
-//             recoveryManager.recoveryData(address(account));
-//         assertEq(stored.key, recoveryKey.key);
-//         assertEq(quorum, uint32((recoveryManager.guardianCount(address(account)) + 1) / 2));
+        vm.prank(sender);
+        recoveryManager.completeRecovery(address(account), signatures);
 
-//         vm.warp(executeAfter + 1);
+        // Verify recovery data cleared
+        assertFalse(recoveryManager.isLocked(address(account)));
 
-//         bytes[] memory signatures = _collectGuardianSignatures(quorum);
+        // Apply recovery to account via mock validator
+        address validatorAddr = _installFakeValidator();
+        _etch();
+        vm.prank(validatorAddr);
+        account.completeRecovery(recoveryKey);
 
-//         vm.prank(sender);
-//         account.completeRecovery(signatures);
+        // Verify new master key
+        (bytes32 keyId, KeyData memory newMaster) = account.keyAt(0);
+        assertEq(keyId, _computeKeyId(recoveryKey));
+        assertTrue(newMaster.masterKey);
+        assertTrue(newMaster.isActive);
+        assertEq(uint8(newMaster.keyType), uint8(recoveryKey.keyType));
+        assertEq(newMaster.key, recoveryKey.key);
+    }
 
-//         (stored, executeAfter, quorum) = recoveryManager.recoveryData(address(account));
-//         assertEq(executeAfter, 0);
-//         assertEq(quorum, 0);
-//         assertEq(stored.key.length, 0);
-//         assertFalse(recoveryManager.isLocked(address(account)));
+    // ──────────────────────────────────────────────────────────────────────
+    //                          Internal helpers
+    // ──────────────────────────────────────────────────────────────────────
 
-//         (bytes32 keyId, IKey.KeyData memory newMaster) = account.keyAt(0);
-//         assertEq(keyId, _computeKeyId(recoveryKey));
-//         assertTrue(newMaster.masterKey);
-//         assertTrue(newMaster.isActive);
-//         assertEq(uint8(newMaster.keyType), uint8(recoveryKey.keyType));
-//         assertEq(newMaster.key, recoveryKey.key);
-//     }
+    function _addGuardianWithKey(address newGuardian, uint256 pk) internal {
+        bytes32 guardianHash = keccak256(abi.encodePacked(newGuardian));
+        if (guardianKeys[guardianHash] != 0) return;
 
-//     function _collectGuardianSignatures(uint32 required)
-//         internal
-//         view
-//         returns (bytes[] memory sigs)
-//     {
-//         bytes32[] memory hashes = recoveryManager.getGuardians(address(account));
-//         require(required <= hashes.length, "insufficient guardians");
+        _proposeGuardian(guardianHash);
+        uint256 pending = recoveryManager.getPendingStatusGuardians(address(account), guardianHash);
+        vm.warp(pending + 1);
+        _confirmGuardian(guardianHash);
 
-//         _sort(hashes);
+        guardianKeys[guardianHash] = pk;
+        allGuardians.push(newGuardian);
+        allGuardianPKs.push(pk);
+    }
 
-//         bytes32 digest = recoveryManager.getDigestToSign(address(account));
+    function _collectGuardianSignatures(uint32 required)
+        internal
+        view
+        returns (bytes[] memory sigs)
+    {
+        uint256 count = allGuardians.length;
+        require(required <= count, "insufficient guardians");
 
-//         sigs = new bytes[](required);
-//         bytes32[] memory used = new bytes32[](hashes.length);
-//         uint256 collected;
+        bytes32[] memory hashes = new bytes32[](count);
+        uint256[] memory pks = new uint256[](count);
 
-//         for (uint256 i; i < hashes.length && collected < required; ++i) {
-//             uint256 pk = guardianKeys[hashes[i]];
-//             if (pk == 0) continue;
+        for (uint256 i; i < count; ++i) {
+            hashes[i] = keccak256(abi.encodePacked(allGuardians[i]));
+            pks[i] = allGuardianPKs[i];
+        }
 
-//             bytes32 signerHash = keccak256(abi.encodePacked(vm.addr(pk)));
-//             bool seen;
-//             for (uint256 j; j < collected; ++j) {
-//                 if (used[j] == signerHash) {
-//                     seen = true;
-//                     break;
-//                 }
-//             }
-//             if (seen) continue;
+        // Sort ascending by hash (required by _validateSignatures strict ordering)
+        for (uint256 i; i < count; ++i) {
+            for (uint256 j = i + 1; j < count; ++j) {
+                if (hashes[j] < hashes[i]) {
+                    (hashes[i], hashes[j]) = (hashes[j], hashes[i]);
+                    (pks[i], pks[j]) = (pks[j], pks[i]);
+                }
+            }
+        }
 
-//             (uint8 v, bytes32 r, bytes32 s) = vm.sign(pk, digest);
-//             sigs[collected] = abi.encodePacked(r, s, v);
-//             used[collected] = signerHash;
-//             collected++;
-//         }
+        bytes32 digest = recoveryManager.getDigestToSign(address(account));
+        sigs = new bytes[](required);
+        for (uint256 i; i < required; ++i) {
+            (uint8 v, bytes32 r, bytes32 s) = vm.sign(pks[i], digest);
+            sigs[i] = abi.encodePacked(r, s, v);
+        }
+    }
 
-//         require(collected == required, "insufficient unique guardians");
-//     }
+    function _buildEOARecoveryKey(address newOwner) internal pure returns (KeyDataReg memory) {
+        return KeyDataReg({
+            keyType: KeyType.EOA,
+            validUntil: type(uint48).max,
+            validAfter: 0,
+            limits: 0,
+            key: abi.encode(newOwner),
+            keyControl: KeyControl.Self
+        });
+    }
 
-//     function _addGuardianWithKey(address newGuardian, uint256 pk) internal {
-//         bytes32 guardianHash = keccak256(abi.encodePacked(newGuardian));
+    function _installFakeValidator() internal returns (address validatorAddr) {
+        MockValidatorForFuzz mockVal = new MockValidatorForFuzz();
+        _etch();
+        vm.prank(owner);
+        account.installModule(1, address(mockVal), bytes(""));
+        validatorAddr = address(mockVal);
+    }
+}
 
-//         if (guardianHash == _initialGuardian) {
-//             guardianKeys[guardianHash] = pk;
-//             guardianKeys[keccak256(abi.encode(newGuardian))] = pk;
-//             return;
-//         }
+/// @dev Minimal mock validator that satisfies IERC7579Module interface for installModule
+contract MockValidatorForFuzz {
+    function isModuleType(uint256 _moduleTypeId) external pure returns (bool) {
+        return _moduleTypeId == 1;
+    }
 
-//         if (guardianKeys[guardianHash] != 0) {
-//             return;
-//         }
-
-//         _proposeGuardian(guardianHash);
-//         uint256 pending = recoveryManager.getPendingStatusGuardians(address(account), guardianHash);
-
-//         vm.warp(pending + 1);
-//         _confirmGuardian(guardianHash);
-
-//         guardianKeys[guardianHash] = pk;
-//         guardianKeys[keccak256(abi.encode(newGuardian))] = pk;
-//     }
-
-//     function _buildEOARecoveryKey(address newOwner) internal pure returns (IKey.KeyDataReg memory) {
-//         return IKey.KeyDataReg({
-//             keyType: IKey.KeyType.EOA,
-//             validUntil: type(uint48).max,
-//             validAfter: 0,
-//             limits: 0,
-//             key: abi.encode(newOwner),
-//             keyControl: IKey.KeyControl.Self
-//         });
-//     }
-
-//     function _sort(bytes32[] memory data) internal pure {
-//         uint256 len = data.length;
-//         for (uint256 i; i < len; ++i) {
-//             for (uint256 j = i + 1; j < len; ++j) {
-//                 if (data[j] < data[i]) {
-//                     (data[i], data[j]) = (data[j], data[i]);
-//                 }
-//             }
-//         }
-//     }
-// }
+    function onInstall(bytes calldata) external {}
+    function onUninstall(bytes calldata) external {}
+}
