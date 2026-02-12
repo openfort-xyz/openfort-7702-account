@@ -97,6 +97,15 @@ abstract contract ERC7579 is BaseOPF7702 {
         return false;
     }
 
+    function isModuleInstalled(uint256 moduleTypeId, address module, bytes calldata /*additionalContext*/)
+        external
+        view
+        virtual
+        returns (bool)
+    {
+        return isModuleInstalled(moduleTypeId, module);
+    }
+
     function supportsModule(uint256 moduleTypeId) public view virtual returns (bool) {
         return moduleTypeId == MODULE_TYPE_VALIDATOR || moduleTypeId == MODULE_TYPE_EXECUTOR;
     }

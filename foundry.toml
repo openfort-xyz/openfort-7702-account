@@ -30,7 +30,8 @@ remappings = [
 ]
 
 fs_permissions = [
-  { access = "read", path = "./test/data" }
+  { access = "read", path = "./test/data" },
+  { access = "read", path = "./test/unit/ZKEmailRecovery/data/proofs" }
 ]
 
 [profile.default.fuzz]
