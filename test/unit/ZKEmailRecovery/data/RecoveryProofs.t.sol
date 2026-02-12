@@ -37,12 +37,11 @@ abstract contract RecoveryProofs is Proofs {
 
     string public path_recovery;
     string public json_proofs_recovery =
-        vm.readFile("src/data/proofs/RecoveryProofsDataGeneral.json");
+        vm.readFile("test/unit/ZKEmailRecovery/data/proofs/RecoveryProofsDataGeneral.json");
     string public json_proofs_key_eoa_recovery =
-        vm.readFile("src/data/proofs/RecoveryProofsDataEOA.json");
+        vm.readFile("test/unit/ZKEmailRecovery/data/proofs/RecoveryProofsDataEOA.json");
     string public json_proofs_key_webAuthn_recovery =
-        vm.readFile("src/data/proofs/RecoveryProofsDataWebAuthn.json");
-
+        vm.readFile("test/unit/ZKEmailRecovery/data/proofs/RecoveryProofsDataWebAuthn.json");
     // ============================================================================
     // LOADING FUNCTIONS
     // ============================================================================

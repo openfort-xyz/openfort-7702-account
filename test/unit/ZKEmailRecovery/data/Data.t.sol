@@ -24,7 +24,7 @@ abstract contract Data is RecoveryProofs {
     address internal __RELAYER_ADDRESS = vm.addr(__RELAYER_PRIVATE_KEY);
 
     // Read guardian accountSalts from ProofsData.json (source of truth from ZK proofs)
-    string public proofsJson = vm.readFile("src/data/proofs/ProofsDataGeneral.json");
+    string public proofsJson = vm.readFile("test/unit/ZKEmailRecovery/data/proofs/ProofsDataGeneral.json");
     bytes32 internal __GUARDIAN_1_ACCOUNT_SALT =
         stdJson.readBytes32(proofsJson, ".Guardian1_Proof.account_salt");
     bytes32 internal __GUARDIAN_2_ACCOUNT_SALT =
