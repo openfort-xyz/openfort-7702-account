@@ -112,7 +112,7 @@ contract BaseOPF7702Test is Deploy {
             pK
         );
 
-        userOpHash = 0xb3dc75bdf6e0365104000f50a3e9c7c6cb96a8729b2ef110f284e8dc9084f6a7;
+        userOpHash = 0x77108d53c8625912f76b5837ea4dfb59d5ffd183453ce40c9304b04c50f703ef;
 
         res = account.isValidSignature(userOpHash, signature);
         assertEq(res, this.isValidSignature.selector);

@@ -965,7 +965,7 @@ contract KeysManager is Deploy {
             assertEq(uint8(data.keyType), uint8(_keys[i].keyType));
             assertEq(data.limits, 20);
             assertEq(data.validAfter, _keys[i].validAfter);
-            assertEq(data.validUntil, uint48(1790949874));
+            assertEq(data.validUntil, uint48(2907045939));
             assertEq(keyId, _computeKeyId(_keys[i]));
 
             unchecked {
@@ -1096,7 +1096,7 @@ contract KeysManager is Deploy {
         for (uint256 i = 0; i < _keys.length;) {
             _etch();
             vm.prank(owner);
-            account.updateKeyData(_computeKeyId(_keys[i]), uint48(1790949874), 20);
+            account.updateKeyData(_computeKeyId(_keys[i]), uint48(2907045939), 20);
             unchecked {
                 ++i;
             }
@@ -1230,7 +1230,7 @@ contract KeysManager is Deploy {
         _createCustomFreshKey(
             false,
             KeyType.EOA,
-            uint48(1764665153),
+            uint48(2843887539),
             0,
             uint48(10),
             _getKeyEOA(makeAddr("1")),
@@ -1243,7 +1243,7 @@ contract KeysManager is Deploy {
         _createCustomFreshKey(
             false,
             KeyType.WEBAUTHN,
-            uint48(1764665153),
+            uint48(2843887539),
             0,
             uint48(10),
             _getKeyP256(pK),
@@ -1253,7 +1253,7 @@ contract KeysManager is Deploy {
 
         pK = PubKey({x: keccak256(abi.encode("x", 2)), y: keccak256(abi.encode("y", 2))});
         _createCustomFreshKey(
-            false, KeyType.P256, uint48(1764665153), 0, uint48(10), _getKeyP256(pK), KeyControl.Self
+            false, KeyType.P256, uint48(2843887539), 0, uint48(10), _getKeyP256(pK), KeyControl.Self
         );
         sKsP256.push(skReg);
 
@@ -1261,7 +1261,7 @@ contract KeysManager is Deploy {
         _createCustomFreshKey(
             false,
             KeyType.P256NONKEY,
-            uint48(1764665153),
+            uint48(2843887539),
             0,
             uint48(10),
             _getKeyP256(pK),
@@ -1329,7 +1329,7 @@ contract KeysManager is Deploy {
             address(account),
             0,
             abi.encodeWithSelector(
-                account.updateKeyData.selector, _computeKeyId(sKsEOA[0]), uint48(1790949874), 20
+                account.updateKeyData.selector, _computeKeyId(sKsEOA[0]), uint48(2907045939), 20
             )
         );
         calls[1] = _createCall(
@@ -1338,7 +1338,7 @@ contract KeysManager is Deploy {
             abi.encodeWithSelector(
                 account.updateKeyData.selector,
                 _computeKeyId(sKsWebAuthn[0]),
-                uint48(1790949874),
+                uint48(2907045939),
                 20
             )
         );
@@ -1346,7 +1346,7 @@ contract KeysManager is Deploy {
             address(account),
             0,
             abi.encodeWithSelector(
-                account.updateKeyData.selector, _computeKeyId(sKsP256[0]), uint48(1790949874), 20
+                account.updateKeyData.selector, _computeKeyId(sKsP256[0]), uint48(2907045939), 20
             )
         );
         calls[3] = _createCall(
@@ -1355,7 +1355,7 @@ contract KeysManager is Deploy {
             abi.encodeWithSelector(
                 account.updateKeyData.selector,
                 _computeKeyId(sKsP256NONKEY[0]),
-                uint48(1790949874),
+                uint48(2907045939),
                 20
             )
         );
