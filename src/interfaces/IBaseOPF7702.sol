@@ -5,12 +5,15 @@ import {IAccount} from "lib/account-abstraction/contracts/interfaces/IAccount.so
 import {IEntryPoint} from "lib/account-abstraction/contracts/interfaces/IEntryPoint.sol";
 import {IERC165} from "lib/openzeppelin-contracts/contracts/utils/introspection/IERC165.sol";
 import {IERC1271} from "lib/openzeppelin-contracts/contracts/interfaces/IERC1271.sol";
-import {IERC721Receiver} from
-    "lib/openzeppelin-contracts/contracts/token/ERC721/IERC721Receiver.sol";
-import {IERC1155Receiver} from
-    "lib/openzeppelin-contracts/contracts/token/ERC1155/IERC1155Receiver.sol";
-import {IERC777Recipient} from
-    "lib/openzeppelin-contracts/contracts/interfaces/IERC777Recipient.sol";
+import {
+    IERC721Receiver
+} from "lib/openzeppelin-contracts/contracts/token/ERC721/IERC721Receiver.sol";
+import {
+    IERC1155Receiver
+} from "lib/openzeppelin-contracts/contracts/token/ERC1155/IERC1155Receiver.sol";
+import {
+    IERC777Recipient
+} from "lib/openzeppelin-contracts/contracts/interfaces/IERC777Recipient.sol";
 
 /// @title IBaseOPF7702
 /// @notice Canonical surface for the shared Openfort 7702 account logic.

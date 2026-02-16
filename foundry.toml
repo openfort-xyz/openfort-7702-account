@@ -7,8 +7,31 @@ optimizer = true
 optimizer_runs = 5
 dotenv = ".env.p256"
 
+remappings = [
+    "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",
+    "@openzeppelin/contracts-upgradeable/=node_modules/@openzeppelin/contracts-upgradeable/",
+    "account-abstraction/=lib/account-abstraction/contracts/",
+    "forge-std/=lib/forge-std/src/",
+    "openzeppelin-contracts/=lib/openzeppelin-contracts/",
+    # ZK-Email packages
+    "@zk-email/contracts/=node_modules/@zk-email/contracts/",
+    "@zk-email/ether-email-auth-contracts/=node_modules/@zk-email/ether-email-auth-contracts/",
+    "solidity-stringutils/=node_modules/solidity-stringutils/",
+    # Rhinestone packages
+    "@rhinestone/modulekit/=node_modules/@rhinestone/modulekit/",
+    "sentinellist/=node_modules/@rhinestone/sentinellist/src/",
+    # ERC4337 - used by rhinestone modulekit
+    "@ERC4337/account-abstraction/contracts/=lib/account-abstraction/contracts/",
+    # ERC7579 - map to modulekit interfaces
+    "erc7579/interfaces/=node_modules/@rhinestone/modulekit/src/accounts/common/interfaces/",
+    "erc7579/=node_modules/@rhinestone/modulekit/src/accounts/common/",
+    # Local contracts
+    "zk-email-recovery-contracts/=zk-email-recovery-contracts/",
+]
+
 fs_permissions = [
-  { access = "read", path = "./test/data" }
+  { access = "read", path = "./test/data" },
+  { access = "read", path = "./test/unit/ZKEmailRecovery/data/proofs" }
 ]
 
 [profile.default.fuzz]
@@ -33,6 +56,9 @@ optimizer_runs = 5
 fs_permissions = [
   { access = "read", path = "./test/data" }
 ]
+
+[lint]
+lint_on_build = false
 
 [fmt]
 line_length = 100

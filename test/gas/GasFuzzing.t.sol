@@ -3,8 +3,9 @@ pragma solidity ^0.8.29;
 
 import {GasPolicy} from "src/utils/GasPolicy.sol";
 import {Test, console2 as console} from "lib/forge-std/src/Test.sol";
-import {PackedUserOperation} from
-    "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
+import {
+    PackedUserOperation
+} from "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
 
 contract GasFuzzing is Test {
     GasPolicy gP;

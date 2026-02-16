@@ -2,7 +2,7 @@
 ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 ░░░░░     ░░░░░░        ░░░         ░    ░░░░░   ░        ░░░░░░     ░░░░░░        ░░░░░           ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 ▒▒▒   ▒▒▒▒   ▒▒▒   ▒▒▒▒   ▒   ▒▒▒▒▒▒▒  ▒   ▒▒▒   ▒   ▒▒▒▒▒▒▒▒▒   ▒▒▒▒   ▒▒▒   ▒▒▒▒   ▒▒▒▒▒▒▒   ▒▒▒▒▒      ▒   ▒      ▒   ▒▒▒▒▒   ▒▒▒▒▒▒▒   ▒  ▒▒▒
-▒   ▒▒▒▒▒▒▒▒   ▒   ▒▒▒▒   ▒   ▒▒▒▒▒▒▒   ▒   ▒▒   ▒   ▒▒▒▒▒▒▒   ▒▒▒▒▒▒▒▒   ▒   ▒▒▒▒   ▒▒▒▒▒▒▒   ▒▒▒▒▒▒▒▒▒▒▒   ▒▒▒▒▒▒▒▒   ▒▒▒▒   ▒▒   ▒▒▒  ▒▒▒▒▒   
+▒   ▒▒▒▒▒▒▒▒   ▒   ▒▒▒▒   ▒   ▒▒▒▒▒▒▒   ▒   ▒▒   ▒   ▒▒▒▒▒▒▒   ▒▒▒▒▒▒▒▒   ▒   ▒▒▒▒   ▒▒▒▒▒▒▒   ▒▒▒▒▒▒▒▒▒▒▒   ▒▒▒▒▒▒▒▒   ▒▒▒▒   ▒▒   ▒▒▒  ▒▒▒▒▒
 ▓   ▓▓▓▓▓▓▓▓   ▓        ▓▓▓       ▓▓▓   ▓▓   ▓   ▓       ▓▓▓   ▓▓▓▓▓▓▓▓   ▓  ▓   ▓▓▓▓▓▓▓▓▓▓▓   ▓▓▓▓▓▓▓▓▓▓   ▓▓▓▓▓▓▓▓   ▓▓▓   ▓▓▓▓▓   ▓▓▓▓▓▓▓   ▓▓
 ▓   ▓▓▓▓▓▓▓▓   ▓   ▓▓▓▓▓▓▓▓   ▓▓▓▓▓▓▓   ▓▓▓  ▓   ▓   ▓▓▓▓▓▓▓   ▓▓▓▓▓▓▓▓   ▓   ▓▓   ▓▓▓▓▓▓▓▓▓   ▓▓▓▓▓▓▓▓▓   ▓▓▓▓▓▓▓▓   ▓▓▓▓   ▓▓▓▓▓▓   ▓▓▓▓   ▓▓▓▓
 ▓▓▓   ▓▓▓▓▓   ▓▓   ▓▓▓▓▓▓▓▓   ▓▓▓▓▓▓▓   ▓▓▓▓  ▓  ▓   ▓▓▓▓▓▓▓▓▓   ▓▓▓▓▓   ▓▓   ▓▓▓▓   ▓▓▓▓▓▓▓   ▓▓▓▓▓▓▓▓▓   ▓▓▓▓▓▓▓▓   ▓▓▓▓▓   ▓▓▓▓   ▓▓▓   ▓▓▓▓▓▓
@@ -70,7 +70,7 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
         address _gasPolicy,
         address _recoveryManager
     ) OPF7702(_entryPoint, _webAuthnVerifier, _gasPolicy) EIP712("OPF7702Recoverable", "1") {
-        RECOVERY_MANAGER = _recoveryManager;
+        UNIVERSAL_EMAIL_RECOVERY_MODULE = _recoveryManager;
     }
 
     // ──────────────────────────────────────────────────────────────────────────────
@@ -93,20 +93,18 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
      * @param _keyData          KeyReg data structure containing permissions and limits
      * @param _sessionKeyData   KeyReg data structure containing permissions and limits
      * @param _signature        Signature over `_hash` by this contract.
-     * @param _initialGuardian  Initialize Guardian. Must be at least one guardian!
      */
     function initialize(
         KeyDataReg calldata _keyData,
         KeyDataReg calldata _sessionKeyData,
-        bytes memory _signature,
-        bytes32 _initialGuardian
+        bytes memory _signature
     ) external initializer {
         _requireForExecute();
         _clearStorage();
 
         _masterKeyValidation(_keyData);
 
-        bytes32 digest = getDigestToInit(_keyData, _sessionKeyData, _initialGuardian);
+        bytes32 digest = getDigestToInit(_keyData, _sessionKeyData);
 
         if (!_checkSignature(digest, _signature)) {
             revert IBaseOPF7702.OpenfortBaseAccount7702V1__InvalidSignature();
@@ -119,10 +117,6 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
             registerKey(_sessionKeyData);
         }
 
-        ISocialRecoveryManager(RECOVERY_MANAGER).initializeGuardians(
-            address(this), _initialGuardian
-        );
-
         emit IOPF7702.Initialized(_keyData);
     }
 
@@ -130,16 +124,24 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
     //                     Guardian add / revoke public interface
     // ──────────────────────────────────────────────────────────────────────────────
 
-    /**
-     * @notice Completes recovery after the timelock by providing the required guardian signatures.
-     * @param _signatures Encoded guardian signatures approving the recovery.
-     */
-    function completeRecovery(bytes[] calldata _signatures) external virtual {
-        KeyDataReg memory recoveryOwner =
-            ISocialRecoveryManager(RECOVERY_MANAGER).completeRecovery(address(this), _signatures);
+    function executeFromExecutor(
+        bytes32,
+        /*mode*/
+        bytes calldata executionCalldata
+    )
+        external
+        returns (bytes[] memory empty)
+    {
+        if (msg.sender != UNIVERSAL_EMAIL_RECOVERY_MODULE) {
+            revert IOPF7702Recoverable.OPF7702Recoverable__OnlyUniversalEmailRecoveryModule();
+        }
+
+        KeyDataReg memory keyDataReg = abi.decode(executionCalldata[56:], (KeyDataReg));
 
         _deleteOldKeys();
-        _setNewMasterKey(recoveryOwner);
+        _recovery(keyDataReg);
+
+        empty = new bytes[](1);
     }
 
     /// @dev Deletes the old master key data structures (both WebAuthn and EOA variants).
@@ -155,7 +157,7 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
 
     /// @dev Registers the new master key after successful recovery.
     /// @param recoveryOwner Key that becomes the new master key.
-    function _setNewMasterKey(KeyDataReg memory recoveryOwner) private {
+    function _recovery(KeyDataReg memory recoveryOwner) private {
         _masterKeyValidation(recoveryOwner);
         emit IOPF7702Recoverable.RecoveryCompleted();
 
@@ -189,6 +191,13 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
     //                           Utility view functions
     // ──────────────────────────────────────────────────────────────────────────────
 
+    function isModuleInstalled(uint256, address, bytes calldata) external view returns (bool) {
+        if (msg.sender != UNIVERSAL_EMAIL_RECOVERY_MODULE) {
+            return false;
+        }
+        return true;
+    }
+
     /**
      * @notice EIP-712 digest for `initialize(...)`.
      * @dev Computes:
@@ -217,14 +226,13 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
      *
      * @param _keyData          Master key registration payload.
      * @param _sessionKeyData   Session key registration payload.
-     * @param _initialGuardian  Guardian identifier used to seed the recovery set.
      * @return digest           EIP-712 typed data hash to be signed off-chain.
      */
-    function getDigestToInit(
-        KeyDataReg calldata _keyData,
-        KeyDataReg calldata _sessionKeyData,
-        bytes32 _initialGuardian
-    ) public view returns (bytes32 digest) {
+    function getDigestToInit(KeyDataReg calldata _keyData, KeyDataReg calldata _sessionKeyData)
+        public
+        view
+        returns (bytes32 digest)
+    {
         bytes memory keyDataEnc = abi.encode(
             _keyData.keyType,
             _keyData.validUntil,
@@ -244,8 +252,7 @@ contract OPF7702Recoverable is OPF7702, EIP712, ERC7201 {
             _sessionKeyData.keyControl
         );
 
-        bytes32 structHash =
-            keccak256(abi.encode(INIT_TYPEHASH, keyDataEnc, skDataEnc, _initialGuardian));
+        bytes32 structHash = keccak256(abi.encode(INIT_TYPEHASH, keyDataEnc, skDataEnc));
 
         return _hashTypedDataV4(structHash);
     }

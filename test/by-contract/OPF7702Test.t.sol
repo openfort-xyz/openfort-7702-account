@@ -5,8 +5,9 @@ pragma solidity 0.8.29;
 import {Deploy} from "./../Deploy.t.sol";
 import {MockERC20} from "src/mocks/MockERC20.sol";
 import {console2 as console} from "lib/forge-std/src/Test.sol";
-import {PackedUserOperation} from
-    "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
+import {
+    PackedUserOperation
+} from "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
 import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 
 contract BaseOPF7702Test is Deploy {

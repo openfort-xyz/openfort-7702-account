@@ -13,8 +13,9 @@ import {EntryPoint} from "lib/account-abstraction/contracts/core/EntryPoint.sol"
 import {SafeCast} from "lib/openzeppelin-contracts/contracts/utils/math/SafeCast.sol";
 import {WebAuthnVerifierV2} from "src/utils/WebAuthnVerifierV2.sol";
 import {GasPolicy} from "src/utils/GasPolicy.sol";
-import {MessageHashUtils} from
-    "lib/openzeppelin-contracts/contracts/utils/cryptography/MessageHashUtils.sol";
+import {
+    MessageHashUtils
+} from "lib/openzeppelin-contracts/contracts/utils/cryptography/MessageHashUtils.sol";
 import {IEntryPoint} from "lib/account-abstraction/contracts/interfaces/IEntryPoint.sol";
 import {Math} from "lib/openzeppelin-contracts/contracts/utils/math/Math.sol";
 import {MockERC20} from "src/mocks/MockERC20.sol";
@@ -132,7 +133,7 @@ contract DeployInvariantHelper is BaseData {
         bytes memory sig = abi.encodePacked(r, s, v);
 
         vm.prank(owner);
-        account.initialize(mkReg, skReg, sig, _initialGuardian);
+        account.initialize(mkReg, skReg, sig);
     }
 }
 
@@ -315,30 +316,6 @@ contract InvariantHandler is Test {
 
         vm.prank(address(account));
         recoveryManager.cancelRecovery(address(account));
-    }
-
-    function completeRecovery(uint256) external {
-        (IKey.KeyDataReg memory data, uint64 executeAfter, uint32 guardiansRequired) =
-            recoveryManager.recoveryData(address(account));
-
-        if (guardiansRequired == 0) return;
-
-        uint256 targetTime = uint256(executeAfter) + 1;
-        if (targetTime > block.timestamp) {
-            vm.warp(targetTime);
-        }
-
-        bytes[] memory signatures = _collectSignatures(guardiansRequired);
-        if (signatures.length != guardiansRequired) return;
-
-        _ensureAccountCode();
-        vm.prank(sender);
-        account.completeRecovery(signatures);
-
-        // Ensure we can sign with the new master key in future scenarios.
-        bytes32 newMasterId = data.computeKeyId();
-        delete guardianAddress[newMasterId];
-        delete guardianPrivateKey[newMasterId];
     }
 
     function registerKey(uint256 seed) external {
@@ -570,7 +547,7 @@ contract CoreInvariantTest is StdInvariant {
         selectors[1] = handler.revokeGuardian.selector;
         selectors[2] = handler.startRecovery.selector;
         selectors[3] = handler.cancelRecovery.selector;
-        selectors[4] = handler.completeRecovery.selector;
+        // selectors[4] = handler.completeRecovery.selector;
         selectors[5] = handler.registerKey.selector;
         selectors[6] = handler.revokeKey.selector;
         selectors[7] = handler.updateKey.selector;

@@ -10,8 +10,9 @@ import {SocialRecoveryManager} from "src/utils/SocialRecover.sol";
 import {WebAuthnVerifierV2} from "src/utils/WebAuthnVerifierV2.sol";
 import {IOPF7702Recoverable} from "src/interfaces/IOPF7702Recoverable.sol";
 import {IEntryPoint} from "lib/account-abstraction/contracts/interfaces/IEntryPoint.sol";
-import {MessageHashUtils} from
-    "lib/openzeppelin-contracts/contracts/utils/cryptography/MessageHashUtils.sol";
+import {
+    MessageHashUtils
+} from "lib/openzeppelin-contracts/contracts/utils/cryptography/MessageHashUtils.sol";
 
 contract OPF7702RecoverableTest is Deploy {
     error GasPolicy__InitializationIncorrect();
@@ -83,8 +84,7 @@ contract OPF7702RecoverableTest is Deploy {
             skReg.keyControl
         );
 
-        bytes32 structHash =
-            keccak256(abi.encode(INIT_TYPEHASH, mkDataEnc, skDataEnc, _initialGuardian));
+        bytes32 structHash = keccak256(abi.encode(INIT_TYPEHASH, mkDataEnc, skDataEnc));
 
         string memory name = "OPF7702Recoverable";
         string memory version = "0";
@@ -102,7 +102,7 @@ contract OPF7702RecoverableTest is Deploy {
         _etch();
         vm.expectRevert(OpenfortBaseAccount7702V1__InvalidSignature.selector);
         vm.prank(owner);
-        account.initialize(mkReg, skReg, sig, _initialGuardian);
+        account.initialize(mkReg, skReg, sig);
     }
 
     function test_RevertOPF7702Recoverable__AddressCantBeZero() external {
@@ -173,6 +173,6 @@ contract OPF7702RecoverableTest is Deploy {
         _etch();
         vm.expectRevert(OPF7702Recoverable__AddressCantBeZero.selector);
         vm.prank(owner);
-        account.initialize(mkReg, skReg, sig, bytes32(0));
+        account.initialize(mkReg, skReg, sig);
     }
 }

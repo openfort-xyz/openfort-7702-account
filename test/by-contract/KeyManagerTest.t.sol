@@ -836,8 +836,9 @@ contract KeyManagerTest is Deploy {
     }
 }
 
-import {MessageHashUtils} from
-    "lib/openzeppelin-contracts/contracts/utils/cryptography/MessageHashUtils.sol";
+import {
+    MessageHashUtils
+} from "lib/openzeppelin-contracts/contracts/utils/cryptography/MessageHashUtils.sol";
 
 contract KeysManagerMasterKey is Deploy {
     function setUp() public virtual override {

@@ -10,8 +10,9 @@ import {OPFMain as OPF7702} from "src/core/OPFMain.sol";
 import {WebAuthnVerifierV2} from "src/utils/WebAuthnVerifierV2.sol";
 import {EntryPoint} from "lib/account-abstraction/contracts/core/EntryPoint.sol";
 import {IEntryPoint} from "lib/account-abstraction/contracts/interfaces/IEntryPoint.sol";
-import {PackedUserOperation} from
-    "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
+import {
+    PackedUserOperation
+} from "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
 
 contract BaseData is Data {
     uint256 internal ownerPK;

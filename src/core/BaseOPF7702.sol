@@ -2,7 +2,7 @@
 ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 ░░░░░     ░░░░░░        ░░░         ░    ░░░░░   ░        ░░░░░░     ░░░░░░        ░░░░░           ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 ▒▒▒   ▒▒▒▒   ▒▒▒   ▒▒▒▒   ▒   ▒▒▒▒▒▒▒  ▒   ▒▒▒   ▒   ▒▒▒▒▒▒▒▒▒   ▒▒▒▒   ▒▒▒   ▒▒▒▒   ▒▒▒▒▒▒▒   ▒▒▒▒▒      ▒   ▒      ▒   ▒▒▒▒▒   ▒▒▒▒▒▒▒   ▒  ▒▒▒
-▒   ▒▒▒▒▒▒▒▒   ▒   ▒▒▒▒   ▒   ▒▒▒▒▒▒▒   ▒   ▒▒   ▒   ▒▒▒▒▒▒▒   ▒▒▒▒▒▒▒▒   ▒   ▒▒▒▒   ▒▒▒▒▒▒▒   ▒▒▒▒▒▒▒▒▒▒▒   ▒▒▒▒▒▒▒▒   ▒▒▒▒   ▒▒   ▒▒▒  ▒▒▒▒▒   
+▒   ▒▒▒▒▒▒▒▒   ▒   ▒▒▒▒   ▒   ▒▒▒▒▒▒▒   ▒   ▒▒   ▒   ▒▒▒▒▒▒▒   ▒▒▒▒▒▒▒▒   ▒   ▒▒▒▒   ▒▒▒▒▒▒▒   ▒▒▒▒▒▒▒▒▒▒▒   ▒▒▒▒▒▒▒▒   ▒▒▒▒   ▒▒   ▒▒▒  ▒▒▒▒▒
 ▓   ▓▓▓▓▓▓▓▓   ▓        ▓▓▓       ▓▓▓   ▓▓   ▓   ▓       ▓▓▓   ▓▓▓▓▓▓▓▓   ▓  ▓   ▓▓▓▓▓▓▓▓▓▓▓   ▓▓▓▓▓▓▓▓▓▓   ▓▓▓▓▓▓▓▓   ▓▓▓   ▓▓▓▓▓   ▓▓▓▓▓▓▓   ▓▓
 ▓   ▓▓▓▓▓▓▓▓   ▓   ▓▓▓▓▓▓▓▓   ▓▓▓▓▓▓▓   ▓▓▓  ▓   ▓   ▓▓▓▓▓▓▓   ▓▓▓▓▓▓▓▓   ▓   ▓▓   ▓▓▓▓▓▓▓▓▓   ▓▓▓▓▓▓▓▓▓   ▓▓▓▓▓▓▓▓   ▓▓▓▓   ▓▓▓▓▓▓   ▓▓▓▓   ▓▓▓▓
 ▓▓▓   ▓▓▓▓▓   ▓▓   ▓▓▓▓▓▓▓▓   ▓▓▓▓▓▓▓   ▓▓▓▓  ▓  ▓   ▓▓▓▓▓▓▓▓▓   ▓▓▓▓▓   ▓▓   ▓▓▓▓   ▓▓▓▓▓▓▓   ▓▓▓▓▓▓▓▓▓   ▓▓▓▓▓▓▓▓   ▓▓▓▓▓   ▓▓▓▓   ▓▓▓   ▓▓▓▓▓▓
@@ -63,8 +63,7 @@ abstract contract BaseOPF7702 is
     address public immutable GAS_POLICY;
 
     /// @notice The Social Recovery Manager contract used to manage guardians and execute account recovery.
-    /// @dev by OPF7702Recoverable.sol calling `initializeGuardians` and `completeRecovery`.
-    address public immutable RECOVERY_MANAGER;
+    address public immutable UNIVERSAL_EMAIL_RECOVERY_MODULE;
 
     // =============================================================
     //                       RECEIVE / FALLBACK
@@ -158,6 +157,7 @@ abstract contract BaseOPF7702 is
             sstore(add(baseSlot, 5), 0)
         }
     }
+
     /**
      * ╭------------------+------------------------------------------------------------+--------------------------------------------------------------------------------+--------+-------+------------------------------╮
      * | Name             | Type                                                       | Slot                                                                           | Offset | Bytes | Contract                     |
@@ -200,6 +200,7 @@ abstract contract BaseOPF7702 is
     function _requireFromEntryPoint() internal view virtual override {
         require(msg.sender == address(entryPoint()), NotFromEntryPoint());
     }
+
     // =============================================================
     //                    GETTERS PUBLIC FUNCTIONS
     // =============================================================
@@ -241,7 +242,8 @@ abstract contract BaseOPF7702 is
         returns (bool)
     {
         return _interfaceId == type(IERC165).interfaceId
-            || _interfaceId == type(IAccount).interfaceId || _interfaceId == type(IERC1271).interfaceId
+            || _interfaceId == type(IAccount).interfaceId
+            || _interfaceId == type(IERC1271).interfaceId
             || _interfaceId == type(IERC7821).interfaceId
             || _interfaceId == type(IERC721Receiver).interfaceId
             || _interfaceId == type(IERC1155Receiver).interfaceId

@@ -1,0 +1,27 @@
+{
+  "Guardian1_RecoveryProof": {
+    "domain": "gmail.com",
+    "public_key_hash": "0x0ea9c777dc7110e5a9e89b13f0cfc540e3845ba120b2b6dc24024d61488d4788",
+    "email_nullifier": "0x053b181bf2bf18cad7dd5d7cc20e8da7a70218ae6b5dbe64daa376ee2ea50e40",
+    "timestamp": 1771005974,
+    "account_salt": "0x2d68909504ee8095b745800d3aea9f054bc7c6302709706824c30eab16788a08",
+    "is_code_exist": false,
+    "proof": "0x1f630adeae046ade3de3ef992632d44189da9d75b68de66f4f70fd7f05fbd987128a80b9f2bb1460dd2de3b471de11c2ae255f938650cdfce004b39553a2345123a19310e3e82c727d7ae29b91bf27b2ff8a97792ff9a85ad5baaf26fc00f1212d69d51fe4495059dcfe65d53b6a0d6ea0789596892c4d2c02a3a576eafe08f003b21f9a50c2a3db7d7f5fb42e5bf4165f130f6ad99ddcb0fcf7584bf5798e572a7aced6d159158a73ad57107aa19b7b17aacbc73a072e26fe708ee2250b47b5210d0a32aa066f59ec1820714f858ec0b04017fb12ab38d6b6cabbc23224c9e118bcaafdb5d28a8f56f2aaa070464daa8c4ab79d6c941e2620b01d976c01247c"
+  },
+  "Guardian2_RecoveryProof": {
+    "domain": "openfort.xyz",
+    "public_key_hash": "0x032848ff51a44087fa21e8b554ddce2298bf70e8d78decd1f8a3823cca04aab6",
+    "email_nullifier": "0x1d1a369f7dedda9a70cd03ebc5cad9985b09a42d72978ba64f3e1bc68e5d9b99",
+    "timestamp": 1771005960,
+    "account_salt": "0x2147059c49163031712819e4892280ce02f44793911a5a1ef6da1e4147eec6a6",
+    "is_code_exist": false,
+    "proof": "0x21704509a1dbe7386718a5b809d4a021022117f2c2d664eec82b1baa403756ec225632cf7b0fcb139a8514140ea99214636fd2b0ef9eddb0a6cb66d40cd5b0ea209ebd9f1b11a21c773683dbdedf354875dafc16999a5e8821bcfe629a8006011a7be6bd04014626d204216ef0d1a11f908a65cc13968043cad5e4f3313de76624b0a660a09b37d68c11dfa4c9f5e6c9ae201dd5432cb07f960cce2ef1f985771ff94c718ff747ab220b819dbe50110e6f7bf8c7344a95b0a86f615ad7e69cb0203d6b708f9fed48984e23b4b3e6f16ccc26ab2bc3ad020e6b2a837cbeb0ceb5032f02594ac54e2e3e72a10e05785d108047d1939eb33be02498a201db813ec6"
+  },
+  "_metadata": {
+    "generatedAt": "2026-02-13T18:20:20.407Z",
+    "guardians": [
+      "nekotattoosbcn@gmail.com",
+      "alex@openfort.xyz"
+    ]
+  }
+}

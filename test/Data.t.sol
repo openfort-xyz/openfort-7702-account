@@ -53,13 +53,11 @@ abstract contract Data is IKey, IKeysManager, SignersData {
 
     function registerKey(IKey.KeyDataReg calldata _keyData) external {}
     function setTokenSpend(bytes32 _keyId, address _token, uint256 _limit, SpendPeriod _period)
-        external
-    {}
+        external {}
     function setCanCall(bytes32 _keyId, address _target, bytes4 _funSel, bool can) external {}
     function updateKeyData(bytes32 _keyId, uint48 _validUntil, uint48 _limits) external {}
     function updateTokenSpend(bytes32 _keyId, address _token, uint256 _limit, SpendPeriod _period)
-        external
-    {}
+        external {}
     function revokeKey(bytes32 _keyId) external {}
     function removeTokenSpend(bytes32 _keyId, address _token) external {}
     function keyCount() external view returns (uint256) {}
