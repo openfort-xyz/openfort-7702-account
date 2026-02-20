@@ -19,7 +19,7 @@
 
 <a id="finding-open-2"></a>
 ### OPEN-2 — Token spend limits bypass via unaccounted ERC-20 allowance/transfer methods (permit/increaseAllowance/etc.)
-
+✅ Valid
 ##### Summary
 
 The token spend limiter relies on selector‑based parsing to determine how much value a session key intends to move when interacting with ERC‑20 tokens. Only a small set of selectors (`transfer`, `transferFrom`, `approve`, and empty‑calldata native ETH transfers) are recognized. Any other selector results in a parsed spend amount of zero, yet the call is still accepted as long as a spend rule exists. This allows session keys to invoke unaccounted allowance‑ or transfer‑related token functions while consuming zero spend budget. A session key can therefore bypass configured per‑token spend limits by invoking methods such as `increaseAllowance` or custom transfer helpers, enabling attackers to authorize or directly move tokens far beyond the intended limit.
@@ -335,7 +335,7 @@ Tests focus on canonical ERC‑20 methods and do not verify behavior for unknown
 
 <a id="finding-open-8"></a>
 ### OPEN-8 — Session keys can self-call via target=address(0) to bypass validation and gain persistent key-manager control
-
+✅ Valid
 ##### Summary
 
 A validation and execution mismatch allows session keys to bypass self-call restrictions and invoke privileged key‑management functions. During validation, calls are rejected only when `call.target == address(this)`; however, execution rewrites `call.target == address(0)` into `address(this)`. Because permission checks operate on the un-normalized target, a session key with broad can‑call permissions (e.g., `ANY_TARGET`) can pass validation using `target = address(0)` and subsequently execute a privileged self‑call. This enables unauthorized updates to key lifecycle state, including extending validity, refreshing limits, registering new keys, and modifying or revoking other session keys. As a result, a non-master session key can escalate privileges, achieve persistent access, and undermine the intended expiry and quota constraints governing session‑key behavior.
@@ -529,7 +529,7 @@ Tests focus on rejecting explicit self‑calls (`target == address(this)`) and d
 
 <a id="finding-open-6"></a>
 ### OPEN-6 — Session key can drain ERC-4337 EntryPoint deposit via withdrawTo without native spend-limit accounting
-
+✅ Valid
 ##### Summary
 
 A session key permitted to call `EntryPoint.withdrawTo(address,uint256)` can drain the account’s entire ERC‑4337 EntryPoint deposit without triggering native ETH spend-limit accounting. The validation logic interprets native spend exclusively as `call.value > 0`, while EntryPoint-managed deposits are withdrawn via internal accounting with `call.value == 0`. Because spend enforcement for non‑native buckets relies on selector-based parsing that does not decode `withdrawTo`, the withdrawn amount is never charged against any spend rule. As a result, an attacker with a compromised session key can transfer all deposit-held ETH to an arbitrary address, bypassing the configured native ETH limits and rendering the account unable to fund future UserOperations.
@@ -873,7 +873,7 @@ Tests focused on ETH transfer via `call.value` and ERC‑20 transfers with suppo
 
 <a id="finding-open-5"></a>
 ### OPEN-5 — SocialRecoveryManager.initializeGuardians is re-callable and bypasses guardian timelocks/lock, enabling guardian injection and full recovery takeover
-
+✅ Valid
 ##### Summary
 
 `SocialRecoveryManager.initializeGuardians` is intended as a one-time bootstrap method to seed an account’s first guardian during initialization. However, it remains callable indefinitely and lacks the timelock, lock-state, and recovery-state protections enforced by all other guardian-mutating functions. Any caller able to make the account itself invoke this function—most realistically a compromised session key with permissive `canExecute` permissions—can immediately inject new attacker-controlled guardians without delay. Once inserted, these guardians can start and later complete recovery, enabling rotation of the master key to an attacker-owned key. This breaks core recovery-security invariants and collapses the intended trust and timelock model, allowing a full and persistent account takeover.
@@ -1188,7 +1188,7 @@ Tests only verify that `initializeGuardians` rejects non-account callers and tha
 
 <a id="finding-open-4"></a>
 ### OPEN-4 — Token spend limits bypass via allowance-based spenders (e.g., Permit2/routers): spend accounting keys off call.target, not actual token outflow
-
+✅ Valid
 ##### Summary
 
 The wallet’s spend-limiting mechanism enforces per‑token limits only when a session‑key call directly targets the token contract or transfers native ETH. When the call instead targets an allowance‑based spender such as a DEX router, Permit2-like contract, or aggregator, the validator does not attribute the token outflow to the underlying token. As a result, any pre‑existing ERC‑20 allowance can be used to drain tokens far beyond configured spend caps, provided the session key is permitted to call the spender. This bypass aligns with common real‑world wallet states, where lingering approvals to widely used spender contracts are typical. The enforcement gap allows a malicious or compromised session key to execute arbitrary pull‑based transfers without incrementing the token’s spend counter, breaking the intended “per‑token spend per period” safety rail and enabling direct loss of funds.
@@ -1422,7 +1422,7 @@ Tests focus only on direct calls to token contracts and do not model pull‑base
 
 <a id="finding-open-3"></a>
 ### OPEN-3 — ERC-1271 accepts paused master keys (isValidSignature ignores isActive)
-
+✅ Valid
 ##### Summary
 
 The ERC-1271 implementation in `OPF7702` incorrectly validates signatures from paused master keys. Although the key manager supports disabling keys via `pauseKey`, which sets `isActive = false`, the ERC-1271 validation paths only verify that the recovered key is marked as `masterKey` and never inspect its active state. As a result, external protocols relying on `IERC1271.isValidSignature` will continue to accept signatures from a paused master key even though ERC‑4337 user operations correctly reject those keys through `_keyValidation`. This inconsistency creates a revocation gap where users believe a compromised master key has been disabled, while it remains fully effective for off-chain approvals verified via ERC‑1271. The issue affects both EOA and WebAuthn signature paths and undermines the expected key‑lifecycle semantics.
@@ -1628,7 +1628,7 @@ Tests cover valid/invalid signatures and key pausing for non‑master keys, but 
 ### OPEN-1 — Session key with broad canCall can take permanent control via SocialRecoveryManager guardian injection
 
 ##### Summary
-
+✅ Valid
 A session key granted broad execution permissions can indirectly perform privileged recovery actions by invoking the SocialRecoveryManager through the wallet’s `execute(...)` flow. Because guardian-management functions authorize solely based on `msg.sender == account`, any session key permitted to call arbitrary external contracts can add attacker-controlled guardians, start recovery, and ultimately rotate the master key. This escalation bypasses intended restrictions that prevent session keys from calling privileged wallet functions and results in a permanent account takeover. Spend limits do not mitigate the issue, as the exploit path relies on administrative, zero-value calls. Once the attacker becomes the new master key, they gain full control over configuration and assets.
 
 ##### Details
@@ -1927,7 +1927,7 @@ Tests assume only the master key initiates guardian-management actions and do no
 
 <a id="finding-open-7"></a>
 ### OPEN-7 — Unauthenticated SocialRecoveryManager.completeRecovery enables third-party front-run to cancel and brick master-key recovery
-
+✅ Valid
 ##### Summary
 
 `SocialRecoveryManager.completeRecovery` performs irreversible state transitions—deleting `recoveryData[_account]` and clearing the account lock—without authenticating the caller. Because guardian signatures are not bound to `msg.sender`, any third party can reuse the same signatures intended for `OPF7702Recoverable.completeRecovery` and front‑run the account’s completion attempt in public orderflow. This causes the manager to clear recovery state before the account rotates keys, making the account’s subsequent completion call revert with “no ongoing recovery.” Guardians must restart the entire recovery process and wait through the timelock again. An attacker can repeat this indefinitely, preventing key rotation and undermining the reliability of social recovery, especially when the current master key is compromised.

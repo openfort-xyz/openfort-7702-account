@@ -48,7 +48,7 @@ No **CRITICAL** findings survived verification. The original V-1 (P256 master ke
 ---
 
 ### V-2: Token Spend Bypass via Unrecognized ERC-20 Selectors
-
+✅ Valid
 **Severity:** HIGH
 **File:** `src/core/OPF7702.sol:479-512`
 **Status:** CONFIRMED
@@ -159,7 +159,7 @@ Consider requiring a minimum quorum (e.g., 2 guardians or ceil(n/3)) to initiate
 **Severity:** MEDIUM
 **File:** `src/core/KeysManager.sol:509-516`
 **Status:** CONFIRMED
-
+✅ Valid
 #### Description
 
 `pauseKey()` has no guard against pausing the master key:
