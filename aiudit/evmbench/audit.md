@@ -199,7 +199,7 @@ Fix:
   }
 ```
 
-# V-004
+# V-004  ✅
 
 ## high
 
@@ -239,7 +239,26 @@ A session key intended to be limited (by quota and spend rules) can become a per
 
 Make initializeGuardians a true one-time initializer: require guardiansData[_account].guardians.length == 0 (or a dedicated initialized flag) and revert otherwise. Consider further restricting it so it can only be called during the account's initialize(...) flow (e.g., by having the account call a recovery-manager initializeGuardians that verifies a wallet-provided initialization nonce or uses a dedicated initialization-only entrypoint).
 
-# V-005
+Fix:
+```solidity
+  function _validateCall(KeyData storage sKey, Call memory call) private returns (bool) {                                                                                                                                                       
+      if (call.target == address(this)) return false;                                                                                                                                                                                           
+      if (call.target == address(0)) return false;                        // V-001 fix                                                                                                                                                          
+      if (call.target == UNIVERSAL_EMAIL_RECOVERY_MODULE) return false;   // V-004 fix                                                                                                                                                          
+      if (call.target == address(entryPoint())) return false;             // prevent EP manipulation                                                                                                                                            
+      if (!sKey.hasQuota()) return false;                                                                                                                                                                                                       
+      // ... rest unchanged
+  }
+```
+# V-005 ❌ 
+```ts
+  The signer == address(this) check is a fundamental requirement of EIP-7702, not a vulnerability. The EOA private key is the authority that signed the setCode delegation — it must remain valid to sign future setCode transactions to      
+  re-delegate or revoke delegation. Removing this path would break the EIP-7702 lifecycle.                                                                                                                                                      
+                                                                                                                                                                                                                                                
+  If the EOA private key is compromised, the attacker gains control regardless of the on-chain account implementation. This is true for any EOA — 7702 or not — and is an inherent property of ECDSA accounts, not a flaw in the contract logic.
+                                                                                                                                                                                                                                              
+  Classification: Informational — known EIP-7702 design requirement.                                                                                                                                                                        
+```
 
 ## high
 
