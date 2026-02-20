@@ -4,8 +4,9 @@ pragma solidity 0.8.29;
 
 import {Deploy} from "./../Deploy.t.sol";
 import {console2 as console} from "lib/forge-std/src/Test.sol";
-import {PackedUserOperation} from
-    "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
+import {
+    PackedUserOperation
+} from "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
 import {IOPF7702Recoverable} from "src/interfaces/IOPF7702Recoverable.sol";
 import {IKeysManager} from "src/interfaces/IKeysManager.sol";
 import {Math} from "lib/openzeppelin-contracts/contracts/utils/math/Math.sol";
@@ -475,19 +476,13 @@ contract Recoverable is Deploy {
         _assertCancelRecovery();
     }
 
-    function test_RevertConfirmGuardianProposalWhenPendingNotOver()
-        external
-        createGuardians(1)
-    {
+    function test_RevertConfirmGuardianProposalWhenPendingNotOver() external createGuardians(1) {
         _executeGuardianAction(GuardianAction.PROPOSE, 1);
         vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__PendingProposalNotOver.selector);
         _confirmGuardian(guardiansID[0]);
     }
 
-    function test_RevertConfirmGuardianProposalWhenExpired()
-        external
-        createGuardians(1)
-    {
+    function test_RevertConfirmGuardianProposalWhenExpired() external createGuardians(1) {
         _executeGuardianAction(GuardianAction.PROPOSE, 1);
         vm.warp(block.timestamp + SECURITY_PERIOD + SECURITY_WINDOW + 1);
         vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__PendingProposalExpired.selector);
@@ -594,9 +589,7 @@ contract Recoverable is Deploy {
         _executeGuardianAction(GuardianAction.START_RECOVERY, 1);
         _signGuardians(2);
         (_signatures[0], _signatures[1]) = (_signatures[1], _signatures[0]);
-        vm.expectRevert(
-            IOPF7702Recoverable.OPF7702Recoverable__InvalidRecoverySignatures.selector
-        );
+        vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__InvalidRecoverySignatures.selector);
         _executeConfirmRecovery();
     }
 
@@ -741,9 +734,7 @@ contract Recoverable is Deploy {
         (_signatures[0], _signatures[1]) = (_signatures[1], _signatures[0]);
         vm.warp(block.timestamp + RECOVERY_PERIOD + 1);
         _etch();
-        vm.expectRevert(
-            IOPF7702Recoverable.OPF7702Recoverable__InvalidRecoverySignatures.selector
-        );
+        vm.expectRevert(IOPF7702Recoverable.OPF7702Recoverable__InvalidRecoverySignatures.selector);
         vm.prank(address(account));
         recoveryManager.completeRecovery(address(account), _signatures);
     }
@@ -866,9 +857,9 @@ contract Recoverable is Deploy {
             for (uint256 j = i + 1; j < sortedGuardians.length; ++j) {
                 if (sortedGuardians[j] < sortedGuardians[i]) {
                     (sortedGuardians[i], sortedGuardians[j]) =
-                        (sortedGuardians[j], sortedGuardians[i]);
+                    (sortedGuardians[j], sortedGuardians[i]);
                     (sortedGuardiansPK[i], sortedGuardiansPK[j]) =
-                        (sortedGuardiansPK[j], sortedGuardiansPK[i]);
+                    (sortedGuardiansPK[j], sortedGuardiansPK[i]);
                 }
             }
         }

@@ -5,8 +5,9 @@ pragma solidity 0.8.29;
 import {Deploy} from "./../Deploy.t.sol";
 import {MockERC20} from "src/mocks/MockERC20.sol";
 import {console2 as console} from "lib/forge-std/src/Test.sol";
-import {PackedUserOperation} from
-    "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
+import {
+    PackedUserOperation
+} from "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
 import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 
 contract OPF7702WithDiffKeys is Deploy {
@@ -199,11 +200,7 @@ contract OPF7702WithDiffKeys is Deploy {
         external
         registerSkWebAuthnCustodial
         setTokenSpendM(
-            KeyType.WEBAUTHN,
-            _getKeyP256(pK_SK),
-            address(erc20),
-            10 ether,
-            SpendPeriod.Month
+            KeyType.WEBAUTHN, _getKeyP256(pK_SK), address(erc20), 10 ether, SpendPeriod.Month
         )
         setCanCallM(KeyType.WEBAUTHN, _getKeyP256(pK_SK), address(erc20), ANY_FN_SEL, true)
     {
@@ -235,11 +232,7 @@ contract OPF7702WithDiffKeys is Deploy {
         external
         registerSkWebAuthnCustodial
         setTokenSpendM(
-            KeyType.WEBAUTHN,
-            _getKeyP256(pK_SK),
-            NATIVE_ADDRESS,
-            10 ether,
-            SpendPeriod.Month
+            KeyType.WEBAUTHN, _getKeyP256(pK_SK), NATIVE_ADDRESS, 10 ether, SpendPeriod.Month
         )
         setCanCallM(KeyType.WEBAUTHN, _getKeyP256(pK_SK), reciver, ANY_FN_SEL, true)
     {
@@ -273,7 +266,9 @@ contract OPF7702WithDiffKeys is Deploy {
     function test_ExecuteAAWithSKP256SelfFailedAllValidations()
         external
         registerSkP256Custodial
-        setTokenSpendM(KeyType.P256, _getKeyP256(pK_SK), NATIVE_ADDRESS, 0.1 ether, SpendPeriod.Month)
+        setTokenSpendM(
+            KeyType.P256, _getKeyP256(pK_SK), NATIVE_ADDRESS, 0.1 ether, SpendPeriod.Month
+        )
         setCanCallM(KeyType.P256, _getKeyP256(pK_SK), NATIVE_ADDRESS, EMPTY_CALLDATA_FN_SEL, true)
         setCanCallM(KeyType.P256, _getKeyP256(pK_SK), reciver, EMPTY_CALLDATA_FN_SEL, true)
     {

@@ -4,8 +4,9 @@ pragma solidity 0.8.29;
 
 import {Deploy} from "./../Deploy.t.sol";
 import {console2 as console} from "lib/forge-std/src/Test.sol";
-import {PackedUserOperation} from
-    "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
+import {
+    PackedUserOperation
+} from "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
 
 contract StubSignature is Deploy {
     PubKey internal pK_SK;
@@ -20,6 +21,7 @@ contract StubSignature is Deploy {
         );
         _createQuickFreshKey(false);
     }
+
     function test_getEOAStubSig() external view {
         PackedUserOperation memory userOp = _getFreshUserOp();
         bytes memory signature = _signUserOp(userOp);

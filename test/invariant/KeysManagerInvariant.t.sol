@@ -12,12 +12,15 @@ import {KeysManagerLib} from "src/libs/KeysManagerLib.sol";
 import {SocialRecoveryManager} from "src/utils/SocialRecover.sol";
 import {IERC165} from "lib/openzeppelin-contracts/contracts/interfaces/IERC165.sol";
 import {IERC1271} from "lib/openzeppelin-contracts/contracts/interfaces/IERC1271.sol";
-import {IERC1155Receiver} from
-    "lib/openzeppelin-contracts/contracts/token/ERC1155/IERC1155Receiver.sol";
-import {IERC721Receiver} from
-    "lib/openzeppelin-contracts/contracts/token/ERC721/IERC721Receiver.sol";
-import {IERC777Recipient} from
-    "lib/openzeppelin-contracts/contracts/interfaces/IERC777Recipient.sol";
+import {
+    IERC1155Receiver
+} from "lib/openzeppelin-contracts/contracts/token/ERC1155/IERC1155Receiver.sol";
+import {
+    IERC721Receiver
+} from "lib/openzeppelin-contracts/contracts/token/ERC721/IERC721Receiver.sol";
+import {
+    IERC777Recipient
+} from "lib/openzeppelin-contracts/contracts/interfaces/IERC777Recipient.sol";
 import {IAccount} from "lib/account-abstraction/contracts/interfaces/IAccount.sol";
 import {IERC7821} from "src/interfaces/IERC7821.sol";
 import {IEntryPoint} from "lib/account-abstraction/contracts/interfaces/IEntryPoint.sol";
@@ -295,11 +298,7 @@ contract KeysManagerHandler is Test {
         }
     }
 
-    function _collectKeysWithExecutePermissions()
-        internal
-        view
-        returns (bytes32[] memory results)
-    {
+    function _collectKeysWithExecutePermissions() internal view returns (bytes32[] memory results) {
         uint256 total = account.keyCount();
         bytes32[] memory temp = new bytes32[](total);
         uint256 count;

@@ -170,11 +170,7 @@ contract RecoveryFuzz is Deploy {
         guardianKeys[keccak256(abi.encode(newGuardian))] = pk;
     }
 
-    function _buildEOARecoveryKey(address newOwner)
-        internal
-        pure
-        returns (IKey.KeyDataReg memory)
-    {
+    function _buildEOARecoveryKey(address newOwner) internal pure returns (IKey.KeyDataReg memory) {
         return IKey.KeyDataReg({
             keyType: IKey.KeyType.EOA,
             validUntil: type(uint48).max,

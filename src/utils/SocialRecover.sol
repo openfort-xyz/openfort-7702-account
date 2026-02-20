@@ -314,9 +314,7 @@ contract SocialRecoveryManager is EIP712, ISocialRecoveryManager {
         emit IOPF7702Recoverable.RecoveryStarted(executeAfter, quorum);
 
         recoveryData[_account] = IOPF7702Recoverable.RecoveryData({
-            key: _recoveryKey,
-            executeAfter: executeAfter,
-            guardiansRequired: quorum
+            key: _recoveryKey, executeAfter: executeAfter, guardiansRequired: quorum
         });
 
         _setLock(_account, block.timestamp + lockPeriod);

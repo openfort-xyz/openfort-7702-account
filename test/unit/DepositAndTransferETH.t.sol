@@ -4,8 +4,9 @@ pragma solidity 0.8.29;
 
 import {Deploy} from "./../Deploy.t.sol";
 import {console2 as console} from "lib/forge-std/src/Test.sol";
-import {PackedUserOperation} from
-    "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
+import {
+    PackedUserOperation
+} from "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
 
 contract DepositAndTransferETH is Deploy {
     address reciver;
@@ -292,13 +293,11 @@ contract DepositAndTransferETH is Deploy {
         external
         registerSkEOASelf
         setTokenSpendM(
-            KeyType.EOA,
-            _getKeyEOA(sessionKey),
-            NATIVE_ADDRESS,
-            0.1 ether,
-            SpendPeriod.Month
+            KeyType.EOA, _getKeyEOA(sessionKey), NATIVE_ADDRESS, 0.1 ether, SpendPeriod.Month
         )
-        setCanCallM(KeyType.EOA, _getKeyEOA(sessionKey), NATIVE_ADDRESS, EMPTY_CALLDATA_FN_SEL, true)
+        setCanCallM(
+            KeyType.EOA, _getKeyEOA(sessionKey), NATIVE_ADDRESS, EMPTY_CALLDATA_FN_SEL, true
+        )
         setCanCallM(KeyType.EOA, _getKeyEOA(sessionKey), reciver, EMPTY_CALLDATA_FN_SEL, true)
     {
         _getBalances(true);
@@ -327,13 +326,11 @@ contract DepositAndTransferETH is Deploy {
         external
         registerSkEOASelf
         setTokenSpendM(
-            KeyType.EOA,
-            _getKeyEOA(sessionKey),
-            NATIVE_ADDRESS,
-            0.3 ether,
-            SpendPeriod.Month
+            KeyType.EOA, _getKeyEOA(sessionKey), NATIVE_ADDRESS, 0.3 ether, SpendPeriod.Month
         )
-        setCanCallM(KeyType.EOA, _getKeyEOA(sessionKey), NATIVE_ADDRESS, EMPTY_CALLDATA_FN_SEL, true)
+        setCanCallM(
+            KeyType.EOA, _getKeyEOA(sessionKey), NATIVE_ADDRESS, EMPTY_CALLDATA_FN_SEL, true
+        )
         setCanCallM(KeyType.EOA, _getKeyEOA(sessionKey), reciver, EMPTY_CALLDATA_FN_SEL, true)
     {
         _getBalances(true);
@@ -361,7 +358,9 @@ contract DepositAndTransferETH is Deploy {
     function test_ExecuteAAWithSKP256Self()
         external
         registerSkP256Self
-        setTokenSpendM(KeyType.P256, _getKeyP256(pK_SK), NATIVE_ADDRESS, 0.1 ether, SpendPeriod.Month)
+        setTokenSpendM(
+            KeyType.P256, _getKeyP256(pK_SK), NATIVE_ADDRESS, 0.1 ether, SpendPeriod.Month
+        )
         setCanCallM(KeyType.P256, _getKeyP256(pK_SK), NATIVE_ADDRESS, EMPTY_CALLDATA_FN_SEL, true)
         setCanCallM(KeyType.P256, _getKeyP256(pK_SK), reciver, EMPTY_CALLDATA_FN_SEL, true)
     {
@@ -392,7 +391,9 @@ contract DepositAndTransferETH is Deploy {
     function test_ExecuteAABatchWithSKP256Self()
         external
         registerSkP256SelfBatch
-        setTokenSpendM(KeyType.P256, _getKeyP256(pK_SK), NATIVE_ADDRESS, 0.3 ether, SpendPeriod.Month)
+        setTokenSpendM(
+            KeyType.P256, _getKeyP256(pK_SK), NATIVE_ADDRESS, 0.3 ether, SpendPeriod.Month
+        )
         setCanCallM(KeyType.P256, _getKeyP256(pK_SK), NATIVE_ADDRESS, EMPTY_CALLDATA_FN_SEL, true)
         setCanCallM(KeyType.P256, _getKeyP256(pK_SK), reciver, EMPTY_CALLDATA_FN_SEL, true)
     {
@@ -424,13 +425,11 @@ contract DepositAndTransferETH is Deploy {
         external
         registerSkP256NonSelf
         setTokenSpendM(
-            KeyType.P256NONKEY,
-            _getKeyP256(pK_SK),
-            NATIVE_ADDRESS,
-            0.1 ether,
-            SpendPeriod.Month
+            KeyType.P256NONKEY, _getKeyP256(pK_SK), NATIVE_ADDRESS, 0.1 ether, SpendPeriod.Month
         )
-        setCanCallM(KeyType.P256NONKEY, _getKeyP256(pK_SK), NATIVE_ADDRESS, EMPTY_CALLDATA_FN_SEL, true)
+        setCanCallM(
+            KeyType.P256NONKEY, _getKeyP256(pK_SK), NATIVE_ADDRESS, EMPTY_CALLDATA_FN_SEL, true
+        )
         setCanCallM(KeyType.P256NONKEY, _getKeyP256(pK_SK), reciver, EMPTY_CALLDATA_FN_SEL, true)
     {
         _getBalances(true);
@@ -461,13 +460,11 @@ contract DepositAndTransferETH is Deploy {
         external
         registerSkP256NonSelfBatch
         setTokenSpendM(
-            KeyType.P256NONKEY,
-            _getKeyP256(pK_SK),
-            NATIVE_ADDRESS,
-            0.3 ether,
-            SpendPeriod.Month
+            KeyType.P256NONKEY, _getKeyP256(pK_SK), NATIVE_ADDRESS, 0.3 ether, SpendPeriod.Month
         )
-        setCanCallM(KeyType.P256NONKEY, _getKeyP256(pK_SK), NATIVE_ADDRESS, EMPTY_CALLDATA_FN_SEL, true)
+        setCanCallM(
+            KeyType.P256NONKEY, _getKeyP256(pK_SK), NATIVE_ADDRESS, EMPTY_CALLDATA_FN_SEL, true
+        )
         setCanCallM(KeyType.P256NONKEY, _getKeyP256(pK_SK), reciver, EMPTY_CALLDATA_FN_SEL, true)
     {
         _getBalances(true);

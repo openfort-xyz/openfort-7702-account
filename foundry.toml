@@ -34,6 +34,9 @@ fs_permissions = [
   { access = "read", path = "./test/data" }
 ]
 
+[lint]
+lint_on_build = false
+
 [fmt]
 line_length = 100
 bracket_spacing = false
