@@ -1,4 +1,4 @@
-# V-001
+# V-001 ✅
 
 ## high
 
@@ -51,7 +51,22 @@ A compromised (or overly-permissive) session key can escalate into full account 
 
 Treat Call.target == address(0) as a self-call during validation and forbid it for session keys (e.g., if (call.target == address(this) || call.target == address(0)) return false;). Alternatively, remove the address(0) -> address(this) remapping from Execution._run and require explicit self-call targets (so checkTargetAddress can consistently prevent them), or implement an explicit, separately-authorized self-call mode.
 
-# V-002
+# V-002 ❌ 
+```ts
+Session keys surviving recovery is by design, not a vulnerability.                                                                                                                                                                                                        
+                                                                                                                                                                                                                                                                        
+Recovery targets the master key only. It restores account control to the rightful owner by rotating the master key via _deleteOldKeys() + _recovery(). Session key management is a separate concern.
+                                                                                                                                                                                                                                                                        
+After recovery completes, the new master key owner can immediately call revokeKey() for any compromised session key — this can be batched into a single UserOp as the first post-recovery action.                                                                       
+                                                                                                                                                                                                                                                                        
+The scenario requires an unlikely conjunction: the master key is lost and a session key is simultaneously compromised and that session key still has remaining quota and hasn't expired. Even in this edge case, the damage is bounded by the session key's permissions   
+(canCall restrictions), spend limits (tokenSpend), transaction quota (limits), and validity window (validUntil). Session keys cannot escalate to master-level access — they cannot call registerKey, revokeKey, or any self-call on the account.
+
+Auto-invalidating all session keys on recovery would be a gas-expensive design tradeoff that breaks legitimate active sessions. The current design correctly separates master key recovery from session key lifecycle, and provides revokeKey() as the tool to handle
+revocation post-recovery.
+
+Classification: Informational — known design constraint, not a security vulnerability.
+```
 
 ## high
 

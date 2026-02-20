@@ -110,6 +110,14 @@ contract TestFindingsEvmBench is Deploy {
         _relayUserOp(userOp);
     }
 
+    function test_v_002_evmbench() external {
+        console.log("The recovery module applies only on master key, if session key was compromised the owner/master ket can revoke the session key");
+        console.log("Edge case: Master key lost and not have access to the account, in the same time the session key was compromised. In this case owner must to compelte full recovery procces and revoke the session key");
+    }
+
+    function test_v_003_evmbench() external {
+    }
+
     function _relayUserOp(PackedUserOperation memory _userOp) internal {
         PackedUserOperation[] memory ops = new PackedUserOperation[](1);
         ops[0] = _userOp;
