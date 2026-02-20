@@ -104,7 +104,7 @@ Users expect social recovery to restore control after compromise. However, if an
 
 On recovery completion, invalidate all non-master keys. If you rely on idKeys as an index of registered keys, iterate for (i = 1; i < id; ++i) and revoke each keys[idKeys[i]], clearing permissions and spendStore for each keyId. If on-chain iteration can become too expensive, introduce an epoch/version (e.g., keysEpoch) that is incorporated into computeKeyId or into validation (reject keys from previous epochs) so recovery can invalidate all existing session keys in O(1).
 
-# V-003
+# V-003  ✅
 
 ## high
 
@@ -161,6 +161,43 @@ Target association bypass example:
 ### Remediation
 
 If the design goal is strict spend caps, enforce spend based on observable balance deltas (pre/post balances) for relevant tokens and ETH, or integrate a dedicated policy module per target that can correctly account spends for routers/vaults. At minimum, extend _isTokenSpend to handle widely-used allowance-changing and token-moving methods (e.g., increaseAllowance, decreaseAllowance, and known permit variants), and consider disallowing or heavily restricting session-key access to non-token contracts unless those targets are explicitly modeled and audited for spend accounting.
+
+Fix:
+```solidity
+  function _isTokenSpend(bytes32 _keyId, address _target, uint256 _value, bytes memory _data)                                                                                                                                                   
+      internal                                                                                                                                                                                                                                  
+      returns (bool)                                                                                                                                                                                                                            
+  {                                                                                                                                                                                                                                             
+      bytes4 fnSel = ANY_FN_SEL;                                                                                                                                                                                                                
+
+      if (_data.length >= 4) {
+          assembly {
+              fnSel := mload(add(_data, 0x20))
+          }
+      }
+
+      if (_data.length == uint256(0)) fnSel = EMPTY_CALLDATA_FN_SEL;
+
+      uint256 tokenAmout;
+
+      if (fnSel == EMPTY_CALLDATA_FN_SEL) {
+          tokenAmout = _value;
+          _target = NATIVE_ADDRESS;
+      } else if (fnSel == 0xa9059cbb) {
+          tokenAmout = uint256(LibBytes.load(_data, 0x24));
+      } else if (fnSel == 0x23b872dd) {
+          tokenAmout = uint256(LibBytes.load(_data, 0x44));
+      } else if (fnSel == 0x095ea7b3) {
+          tokenAmout = uint256(LibBytes.load(_data, 0x24));
+      } else {
+          return false; // <-- reject unrecognized selectors on spend-limited tokens
+      }
+
+      if (!_manageTokenSpend(_keyId, _target, tokenAmout)) return false;
+
+      return true;
+  }
+```
 
 # V-004
 
